@@ -29,7 +29,9 @@ preserve=yes
 hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
  pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
 
-_kernver="${version}_${revision}"
+_valvever=valve1
+_kernver="${version}-${_valvever}_${revision}"
+#_kernver="${version}_${revision}"
 triggers="kernel-hooks"
 kernel_hooks_version="${_kernver}"
 
