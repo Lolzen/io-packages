@@ -1,0 +1,16 @@
+# Template file for 'io-base'
+pkgname=io-base
+version=0.1.0
+revision=1
+bootstrap=yes
+depends="xbps>=0.45"
+short_desc="Io base configuration for Steam Deck"
+maintainer="Georg <deine@mail>"
+license="MIT"
+homepage="https://github.com/<user>/io-packages"
+
+do_install() {
+	vmkdir usr/share/xbps.d
+	vinstall ${FILESDIR}/20-io.conf 644 usr/share/xbps.d
+	vlicense ${FILESDIR}/LICENSE
+}
