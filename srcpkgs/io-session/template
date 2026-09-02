@@ -1,0 +1,25 @@
+# Template file for 'io-session'
+pkgname=io-session
+version=0.1.0
+revision=1
+depends="gamescope steam pipewire wireplumber"
+short_desc="Io game mode session scripts and Steam compatibility stubs"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+
+do_build() {
+	:
+}
+
+do_install() {
+	vbin ${FILESDIR}/io-gamemode
+	vbin ${FILESDIR}/io-start
+	vbin ${FILESDIR}/steamos-update
+	vbin ${FILESDIR}/steamos-select-branch
+	vbin ${FILESDIR}/jupiter-biosupdate
+	vmkdir usr/bin/steamos-polkit-helpers
+	for f in ${FILESDIR}/polkit-helpers/*; do
+		vinstall ${f} 755 usr/bin/steamos-polkit-helpers
+	done
+}

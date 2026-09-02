@@ -1,0 +1,18 @@
+# Template file for 'deck-firmware-cirrus'
+pkgname=deck-firmware-cirrus
+version=20250731
+revision=1
+depends="alsa-utils"
+short_desc="Cirrus CS35L41 DSP firmware and mixer setup for Steam Deck"
+maintainer="Georg <funer@gmx.at>"
+license="custom:Proprietary"
+homepage="https://gitlab.com/evlaV/linux-firmware-neptune"
+
+do_install() {
+	vmkdir usr/lib/firmware/cirrus
+	vinstall ${FILESDIR}/cs35l41-dsp1-spk-prot.wmfw 644 usr/lib/firmware/cirrus
+	vinstall ${FILESDIR}/cs35l41-dsp1-spk-prot-vlv1776.bin 644 usr/lib/firmware/cirrus
+	vbin ${FILESDIR}/deck-audio-init
+	vmkdir etc/sv/deck-audio-init
+	vinstall ${FILESDIR}/sv-run 755 etc/sv/deck-audio-init run
+}

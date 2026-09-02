@@ -1,0 +1,3 @@
+#!/bin/sh
+# Io: Powerbutton wird von Steam behandelt, hier keine Aktion
+logger -t io-powerbutton "power button pressed"

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <clipPath id="jup"><circle cx="128" cy="128" r="52"/></clipPath>
+  </defs>
+  <circle cx="128" cy="128" r="96" fill="none" stroke="#c8761e" stroke-width="11"/>
+  <circle cx="128" cy="128" r="52" fill="#7a5c42"/>
+  <g clip-path="url(#jup)">
+    <rect x="76" y="90" width="104" height="9" fill="#a07a58"/>
+    <rect x="76" y="108" width="104" height="14" fill="#96704f"/>
+    <rect x="76" y="132" width="104" height="8" fill="#ab8560"/>
+    <rect x="76" y="150" width="104" height="13" fill="#8d6849"/>
+    <ellipse cx="153" cy="118" rx="14" ry="7" fill="#c4643a"/>
+  </g>
+  <circle cx="128" cy="32" r="14" fill="#f2b134"/>
+</svg>

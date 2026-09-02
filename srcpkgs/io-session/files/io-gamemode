@@ -1,0 +1,8 @@
+#!/bin/sh
+if pgrep -x gamescope > /dev/null; then
+    echo "io: gamescope laeuft bereits" >&2
+    exit 1
+fi
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+pgrep -x pipewire > /dev/null || pipewire &
+exec gamescope -e -W 1280 -H 800 -- steam -gamepadui

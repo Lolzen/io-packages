@@ -1,0 +1,32 @@
+{
+    "logo": {
+        "type": "file",
+        "source": "/usr/share/io/io.txt",
+        "color": {
+            "1": "38;2;242;177;52",
+            "2": "38;2;200;118;30",
+            "3": "38;2;138;111;87"
+        }
+    },
+    "display": {
+        "separator": "  "
+    },
+    "modules": [
+        "title",
+        "separator",
+        "os",
+        "kernel",
+        "uptime",
+        "packages",
+        "shell",
+        "de",
+        "wm",
+        "terminal",
+        "cpu",
+        "gpu",
+        "memory",
+        "swap",
+        "disk",
+        "localip"
+    ]
+}

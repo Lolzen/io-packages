@@ -1,0 +1,21 @@
+# Template file for 'io-desktop'
+pkgname=io-desktop
+version=0.2.0
+revision=1
+metapackage=yes
+depends="
+ base-system
+ io-base io-branding io-session
+ linux-neptune deck-firmware-cirrus
+ gamescope steam
+ mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit
+ pipewire wireplumber alsa-pipewire sof-firmware alsa-utils
+ NetworkManager elogind seatd polkit dbus
+ xdg-desktop-portal xdg-desktop-portal-wlr
+ bluez chrony dracut grub-x86_64-efi efibootmgr
+ fastfetch
+"
+short_desc="Io meta package: complete Steam Deck game mode system"
+maintainer="Georg <funer@gmx.atl>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"

@@ -1,0 +1,36 @@
+#!/bin/sh
+# Io: CS35L41-Verstaerker des Steam Deck initialisieren
+set -eu
+
+CARD=""
+i=0
+while [ $i -lt 30 ]; do
+    CARD=$(grep -l acp5x /proc/asound/card*/id 2>/dev/null | head -1 || true)
+    [ -n "$CARD" ] && break
+    sleep 1
+    i=$((i + 1))
+done
+
+if [ -z "$CARD" ]; then
+    echo "deck-audio-init: acp5x nicht gefunden" >&2
+    exit 1
+fi
+
+C=$(echo "$CARD" | sed 's|/proc/asound/card||; s|/id||')
+
+# DSP-Firmware laden (Schutzalgorithmus)
+amixer -c "$C" sset "Left DSP1 Preload" on > /dev/null
+amixer -c "$C" sset "Right DSP1 Preload" on > /dev/null
+sleep 1
+
+# Kanalzuordnung: links ASPRX1, rechts ASPRX2
+amixer -c "$C" sset "Left DSP RX1 Source" ASPRX1 > /dev/null
+amixer -c "$C" sset "Left DSP RX2 Source" ASPRX1 > /dev/null
+amixer -c "$C" sset "Right DSP RX1 Source" ASPRX2 > /dev/null
+amixer -c "$C" sset "Right DSP RX2 Source" ASPRX2 > /dev/null
+
+# Signalweg ueber den DSP
+amixer -c "$C" sset "Left PCM Source" DSP > /dev/null
+amixer -c "$C" sset "Right PCM Source" DSP > /dev/null
+
+echo "deck-audio-init: card $C initialisiert"

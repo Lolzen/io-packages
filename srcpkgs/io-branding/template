@@ -1,0 +1,24 @@
+# Template file for 'io-branding'
+pkgname=io-branding
+version=0.1.0
+revision=1
+conf_files="/etc/os-release"
+short_desc="Io distribution branding: os-release, logo, fastfetch config"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/<user>/io-packages"
+
+do_build() {
+	:
+}
+
+do_install() {
+	vinstall ${FILESDIR}/os-release 644 etc
+	vmkdir usr/share/io
+	vinstall ${FILESDIR}/io.txt 644 usr/share/io
+	vinstall ${FILESDIR}/mklogo.py 755 usr/share/io
+	vmkdir usr/share/icons/hicolor/scalable/apps
+	vinstall ${FILESDIR}/io-logo.svg 644 usr/share/icons/hicolor/scalable/apps
+	vmkdir etc/xdg/fastfetch
+	vinstall ${FILESDIR}/fastfetch.jsonc 644 etc/xdg/fastfetch config.jsonc
+}
