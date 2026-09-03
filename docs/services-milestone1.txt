@@ -1,0 +1,17 @@
+NetworkManager
+acpid
+agetty-tty1
+agetty-tty2
+agetty-tty3
+agetty-tty4
+agetty-tty5
+agetty-tty6
+bluetoothd
+chronyd
+dbus
+deck-audio-init
+elogind
+polkitd
+seatd
+sshd
+udevd
