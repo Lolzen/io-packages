@@ -1,0 +1,3 @@
+# Benutzer fuer den automatischen Login im Game Mode.
+# Leer lassen, dann wird der erste regulaere Benutzer verwendet.
+IO_USER=deck

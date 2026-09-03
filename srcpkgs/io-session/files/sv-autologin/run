@@ -1,0 +1,7 @@
+#!/bin/sh
+[ -r conf ] && . ./conf
+if [ -z "$IO_USER" ]; then
+    IO_USER=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1; exit }' /etc/passwd)
+fi
+[ -n "$IO_USER" ] || exit 1
+exec chpst -P agetty --noclear --autologin "$IO_USER" tty1 38400 linux

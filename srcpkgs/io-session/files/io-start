@@ -1,2 +1,2 @@
 #!/bin/sh
-exec dbus-run-session -- /usr/local/bin/io-gamemode
+exec dbus-run-session -- /usr/bin/io-gamemode

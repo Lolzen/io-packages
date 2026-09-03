@@ -1,7 +1,8 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.1.0
-revision=1
+revision=3
+conf_files="/etc/sv/io-autologin/conf"
 depends="gamescope steam pipewire wireplumber"
 short_desc="Io game mode session scripts and Steam compatibility stubs"
 maintainer="Georg <funer@gmx.at>"
@@ -22,4 +23,9 @@ do_install() {
 	for f in ${FILESDIR}/polkit-helpers/*; do
 		vinstall ${f} 755 usr/bin/steamos-polkit-helpers
 	done
+	vmkdir etc/sv/io-autologin
+	vinstall ${FILESDIR}/sv-autologin/run 755 etc/sv/io-autologin run
+	vinstall ${FILESDIR}/sv-autologin/conf 644 etc/sv/io-autologin conf
+	vmkdir etc/skel
+	vinstall ${FILESDIR}/bash_profile 644 etc/skel .bash_profile
 }
