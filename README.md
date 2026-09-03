@@ -44,19 +44,9 @@ neuer Tag, neuer Patch, neues Fragment.
 
 ## Offen
 
-### Kurzfristig
-
-- [ ] Powerbutton mit Paketkonfiguration testen (`logind.conf.d` statt
-      handgeänderter `handler.sh`); falls elogind das Verzeichnis nicht liest,
-      auf `conf_files` für die Hauptdatei umstellen
-- [ ] `deck-audio-init` klären: Ton funktioniert derzeit ohne den Dienst. Wenn
-      beide Lautsprecher spielen, kann das Paket auf die reine Firmware
-      reduziert werden
-- [ ] Versionsnummer von `io-base` hochsetzen, damit Updates greifen
-
 ### Phase 4: Session
 
-- [ ] Autologin auf tty1 plus automatischer Start des Game Mode
+- [x] Autologin auf tty1 plus automatischer Start des Game Mode
 - [ ] `steamos-session-select` schreiben (wird von Steam beim Wechsel zum
       Desktop aufgerufen)
 - [ ] Desktop-Sitzung testen — Plasma ist installiert, aber nie gestartet
