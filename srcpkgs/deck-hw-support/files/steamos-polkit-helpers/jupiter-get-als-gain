@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -eu
+
+if [[ $EUID -ne 0 ]];
+then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+SLOT=2
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -s|--slot)
+      SLOT="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    *)
+      echo "Unknown option $1"
+      exit 22 # EINVAL
+      ;;
+  esac
+done
+
+dmidecode --oem-string "$SLOT"

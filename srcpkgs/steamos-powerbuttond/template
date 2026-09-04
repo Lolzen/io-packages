@@ -1,0 +1,23 @@
+# Template file for 'steamos-powerbuttond'
+pkgname=steamos-powerbuttond
+version=3.1
+revision=1
+hostmakedepends="pkg-config"
+makedepends="libevdev-devel eudev-libudev-devel"
+depends="gamescope"
+short_desc="Power button daemon for SteamOS"
+maintainer="Georg <funer@gmx.at>"
+license="BSD-2-Clause"
+homepage="https://gitlab.com/evlaV/powerbuttond"
+distfiles="https://gitlab.com/evlaV/powerbuttond/-/archive/v${version}/powerbuttond-v${version}.tar.gz"
+checksum=85022db8c841518b9e0d99236b19e587933b6c1b16058d4320c4138123a01497
+
+do_build() {
+	make CC="$CC" CFLAGS="$CFLAGS $(pkg-config --cflags libevdev libudev)" LDFLAGS="$LDFLAGS $(pkg-config --libs libevdev libudev)"
+}
+
+do_install() {
+	make install DESTDIR=${DESTDIR}
+	rm -rf ${DESTDIR}/usr/lib/systemd
+	vinstall ${FILESDIR}/run 755 etc/sv/steamos-powerbuttond run
+}

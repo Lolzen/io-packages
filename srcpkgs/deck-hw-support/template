@@ -1,0 +1,42 @@
+# Template file for 'deck-hw-support'
+pkgname=deck-hw-support
+version=20250728.1
+revision=3
+depends="polkit jq alsa-utils"
+short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.com/evlaV/jupiter-hw-support"
+
+do_build() {
+	:
+}
+
+do_install() {
+	vmkdir usr/bin/steamos-polkit-helpers
+	for f in ${FILESDIR}/steamos-polkit-helpers/*; do
+		vinstall "$f" 755 usr/bin/steamos-polkit-helpers
+	done
+
+	vmkdir usr/lib/hwsupport
+	for f in ${FILESDIR}/hwsupport/*; do
+		vinstall "$f" 755 usr/lib/hwsupport
+	done
+
+	vmkdir usr/lib/udev/rules.d
+	for f in ${FILESDIR}/udev/rules.d/*; do
+		vinstall "$f" 644 usr/lib/udev/rules.d
+	done
+
+	vmkdir usr/share/polkit-1/actions
+	vinstall ${FILESDIR}/polkit-1/actions/org.valve.steamos.policy 644 usr/share/polkit-1/actions
+
+	vmkdir usr/share/polkit-1/rules.d
+	vinstall ${FILESDIR}/polkit-1/rules.d/org.valve.steamos.rules 644 usr/share/polkit-1/rules.d
+
+	for f in steamos-update steamos-select-branch jupiter-biosupdate; do
+		ln -sf steamos-polkit-helpers/$f ${DESTDIR}/usr/bin/$f
+	done
+
+	vbin ${FILESDIR}/bin/jupiter-check-support
+}

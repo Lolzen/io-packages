@@ -1,0 +1,18 @@
+# Template file for 'io-volumed'
+pkgname=io-volumed
+version=0.1.0
+revision=1
+python_version=3
+depends="python3 python3-libevdev wireplumber"
+short_desc="Volume key handler for Steam Deck game mode"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+
+do_build() {
+	:
+}
+
+do_install() {
+	vbin ${FILESDIR}/io-volumed
+}

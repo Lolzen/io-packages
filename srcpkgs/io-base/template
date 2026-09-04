@@ -1,7 +1,7 @@
 # Template file for 'io-base'
 pkgname=io-base
 version=0.3.0
-revision=1
+revision=2
 bootstrap=yes
 depends="xbps>=0.45"
 conf_files="/etc/elogind/logind.conf.d/10-io.conf"
@@ -17,4 +17,6 @@ do_install() {
 	vinstall ${FILESDIR}/logind-io.conf 644 etc/elogind/logind.conf.d 10-io.conf
 	vmkdir usr/lib/dracut/dracut.conf.d
 	vinstall ${FILESDIR}/dracut-io.conf 644 usr/lib/dracut/dracut.conf.d 10-io.conf
+	vmkdir usr/share/polkit-1/rules.d
+	vinstall ${FILESDIR}/polkit-io.rules 644 usr/share/polkit-1/rules.d 10-io.rules
 }
