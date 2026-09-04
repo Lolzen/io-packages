@@ -6,8 +6,8 @@ metapackage=yes
 depends="
  base-system
  io-base io-branding io-session
- linux-neptune deck-firmware-cirrus
- gamescope steam
+ jupiter-fan-control linux-neptune 
+ deck-firmware-cirrus gamescope steam
  mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit
  pipewire wireplumber alsa-pipewire sof-firmware alsa-utils
  NetworkManager elogind seatd polkit dbus

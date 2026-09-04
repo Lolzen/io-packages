@@ -1,0 +1,27 @@
+# Template file for 'jupiter-fan-control'
+pkgname=jupiter-fan-control
+version=20240523.3
+revision=1
+python_version=3
+depends="python3 python3-yaml"
+short_desc="Jupiter fan controller for Steam Deck"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.com/evlaV/jupiter-fan-control"
+distfiles="https://gitlab.com/evlaV/jupiter-fan-control/-/archive/20240523.3/jupiter-fan-control-20240523.3.tar.gz"
+checksum=cc7a55acfca41ccf8f3aeb2ad0b38fc1a6507231c5297f567e90a16629412481
+
+do_build() {
+	:
+}
+
+do_install() {
+	vmkdir usr/share/jupiter-fan-control
+	vinstall usr/share/jupiter-fan-control/fancontrol.py 755 usr/share/jupiter-fan-control
+	vinstall usr/share/jupiter-fan-control/PID.py 644 usr/share/jupiter-fan-control
+	vinstall usr/share/jupiter-fan-control/jupiter-config.yaml 644 usr/share/jupiter-fan-control
+	vinstall usr/share/jupiter-fan-control/galileo-config.yaml 644 usr/share/jupiter-fan-control
+	vmkdir etc/sv/jupiter-fan-control
+	vinstall ${FILESDIR}/run 755 etc/sv/jupiter-fan-control run
+	vinstall ${FILESDIR}/finish 755 etc/sv/jupiter-fan-control finish
+}
