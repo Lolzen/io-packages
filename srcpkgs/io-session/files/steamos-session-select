@@ -1,0 +1,34 @@
+#!/bin/sh
+# steamos-session-select <plasma|gamescope>
+#
+# Wird von Steam aus dem pressure-vessel-Container heraus aufgerufen.
+# Dort ist die Prozesssicht eingeschraenkt: pgrep und pkill sehen weder
+# gamescope noch kwin. Deshalb schreibt dieses Skript nur den Zielzustand;
+# das Beenden der laufenden Sitzung uebernimmt der Waechter in io-gamemode.
+#
+# Beim Aufruf aus der Desktop-Sitzung (Verknuepfung auf dem Desktop) laeuft
+# es dagegen ausserhalb des Containers und kann kwin selbst beenden.
+
+STATE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/io-session-next"
+
+case "$1" in
+    plasma|plasma-x11|desktop)
+        echo desktop > "$STATE" || exit 1
+        ;;
+    gamescope|steamos|steam)
+        echo gamemode > "$STATE" || exit 1
+        ;;
+    *)
+        echo "steamos-session-select: unbekanntes Ziel '$1'" >&2
+        echo "Verwendung: steamos-session-select <plasma|gamescope>" >&2
+        exit 1
+        ;;
+esac
+
+# Desktop-Sitzung beenden, falls sichtbar. Abgekoppelt, damit dieses Skript
+# zurueckkehren kann, bevor sein Elternprozess mitstirbt.
+if pgrep -x kwin_wayland > /dev/null 2>&1; then
+    setsid sh -c 'sleep 1; pkill -TERM kwin_wayland' > /dev/null 2>&1 &
+fi
+
+exit 0

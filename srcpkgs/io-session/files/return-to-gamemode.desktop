@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Zurück zum Game Mode
+Name[en]=Return to Game Mode
+Comment=Beendet die Desktop-Sitzung und startet Steam im Game Mode
+Exec=/usr/bin/steamos-session-select gamescope
+Icon=io-logo
+Terminal=false
+Categories=System;

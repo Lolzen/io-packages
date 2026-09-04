@@ -1,2 +1,21 @@
 #!/bin/sh
-exec dbus-run-session -- /usr/bin/io-gamemode
+RUNDIR="/run/user/$(id -u)"
+i=0
+while [ ! -d "$RUNDIR" ] && [ $i -lt 15 ]; do
+    sleep 1
+    i=$((i + 1))
+done
+
+if [ ! -d "$RUNDIR" ]; then
+    echo "io: $RUNDIR wurde nicht angelegt, elogind pruefen." >&2
+    exit 1
+fi
+
+STATE="$RUNDIR/io-session-next"
+SESSION=gamemode
+[ -r "$STATE" ] && SESSION=$(cat "$STATE")
+
+case "$SESSION" in
+    desktop) exec dbus-run-session -- /usr/bin/io-plasma ;;
+    *)       exec dbus-run-session -- /usr/bin/io-gamemode ;;
+esac

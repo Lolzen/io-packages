@@ -1,8 +1,16 @@
 #!/bin/sh
-if pgrep -x gamescope > /dev/null; then
+if pgrep -x gamescope-wl > /dev/null; then
     echo "io: gamescope laeuft bereits" >&2
     exit 1
 fi
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
+STATE="$XDG_RUNTIME_DIR/io-session-next"
+
+echo gamemode > "$STATE"
+
 pgrep -x pipewire > /dev/null || pipewire &
-exec gamescope -e -W 1280 -H 800 -- steam -gamepadui
+
+# Waechter: beendet gamescope, sobald ein Sitzungswechsel angefordert wird
+setsid /usr/bin/io-session-watch > /dev/null 2>&1 &
+
+exec env vk_xwayland_wait_ready=true gamescope -e -W 1280 -H 800 -- steam -steamdeck -steamos3

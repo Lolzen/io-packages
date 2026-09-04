@@ -1,7 +1,8 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.1.0
-revision=3
+revision=10
+optdepends="kde-plasma: Desktop-Session ueber steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
 depends="gamescope steam pipewire wireplumber"
 short_desc="Io game mode session scripts and Steam compatibility stubs"
@@ -28,4 +29,9 @@ do_install() {
 	vinstall ${FILESDIR}/sv-autologin/conf 644 etc/sv/io-autologin conf
 	vmkdir etc/skel
 	vinstall ${FILESDIR}/bash_profile 644 etc/skel .bash_profile
+	vbin ${FILESDIR}/io-plasma
+	vbin ${FILESDIR}/steamos-session-select
+	vmkdir etc/skel/Desktop
+	vinstall ${FILESDIR}/return-to-gamemode.desktop 755 etc/skel/Desktop
+	vbin ${FILESDIR}/io-session-watch
 }
