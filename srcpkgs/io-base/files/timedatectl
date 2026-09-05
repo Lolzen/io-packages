@@ -1,0 +1,28 @@
+#!/bin/sh
+# Minimaler timedatectl-Ersatz fuer Void.
+# Steam ruft ueber steamos-set-timezone nur set-timezone auf;
+# die uebrigen Unterkommandos sind der Vollstaendigkeit halber dabei.
+
+ZONEDIR=/usr/share/zoneinfo
+
+case "$1" in
+    set-timezone)
+        [ -n "$2" ] || exit 1
+        [ -f "$ZONEDIR/$2" ] || exit 1
+        ln -sf "$ZONEDIR/$2" /etc/localtime
+        printf '%s\n' "$2" > /etc/timezone
+        ;;
+    show)
+        printf '%s\n' "$(readlink -f /etc/localtime | sed "s|$ZONEDIR/||")"
+        ;;
+    list-timezones)
+        find "$ZONEDIR" -type f -not -name '*.tab' -not -name 'posixrules' -printf '%P\n' | sort
+        ;;
+    status|"")
+        printf '               Local time: %s\n' "$(date)"
+        printf '                Time zone: %s\n' "$(readlink -f /etc/localtime | sed "s|$ZONEDIR/||")"
+        ;;
+    *)
+        exit 0
+        ;;
+esac
