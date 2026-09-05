@@ -1,0 +1,32 @@
+# Template file for 'inputplumber'
+pkgname=inputplumber
+version=0.79.0
+revision=1
+build_style=cargo
+hostmakedepends="pkg-config clang"
+makedepends="libevdev-devel libiio-devel eudev-libudev-devel dbus-devel"
+depends="dbus"
+short_desc="Open source input router and remapper daemon for Linux"
+maintainer="Georg <funer@gmx.at>"
+license="GPL-3.0-only"
+homepage="https://github.com/ShadowBlip/InputPlumber"
+distfiles="https://github.com/ShadowBlip/InputPlumber/archive/refs/tags/v${version}.tar.gz"
+checksum=@@SETME@@
+
+post_install() {
+	vmkdir usr/share/inputplumber
+	vcopy rootfs/usr/share/inputplumber/* usr/share/inputplumber
+	vmkdir usr/lib/udev/rules.d
+	vinstall rootfs/usr/lib/udev/rules.d/60-inputplumber-uaccess.rules 644 usr/lib/udev/rules.d
+	vinstall rootfs/usr/lib/udev/rules.d/99-inputplumber-device-setup.rules 644 usr/lib/udev/rules.d
+	vmkdir usr/lib/udev/hwdb.d
+	vinstall rootfs/usr/lib/udev/hwdb.d/59-inputplumber.hwdb 644 usr/lib/udev/hwdb.d
+	vmkdir usr/share/dbus-1/system.d
+	vinstall rootfs/usr/share/dbus-1/system.d/org.shadowblip.InputPlumber.conf 644 usr/share/dbus-1/system.d
+	vmkdir usr/share/polkit-1/actions
+	vinstall rootfs/usr/share/polkit-1/actions/org.shadowblip.InputPlumber.policy 644 usr/share/polkit-1/actions
+	vmkdir usr/share/polkit-1/rules.d
+	vinstall rootfs/usr/share/polkit-1/rules.d/org.shadowblip.InputPlumber.rules 644 usr/share/polkit-1/rules.d
+	vmkdir etc/sv/inputplumber
+	vinstall ${FILESDIR}/run 755 etc/sv/inputplumber run
+}
