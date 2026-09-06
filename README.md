@@ -40,26 +40,34 @@ creates it sitting on the ring.
 |---|---|
 | `linux-neptune` | Kernel 6.15.8 from the kernel.org tarball plus Valve's patch set and the Deck config fragment |
 | `deck-firmware-cirrus` | CS35L41 DSP firmware for the speaker amplifiers |
-| `deck-hw-support` | Valve's polkit helpers, udev rules and hwsupport scripts, trimmed and stubbed |
+| `deck-hw-support` | Valve's polkit helpers, udev rules and hwsupport scripts, trimmed and stubbed. **Frozen at 20250728.1**, see pitfalls |
 | `jupiter-fan-control` | Valve's fan daemon, unmodified, wrapped in a runit service |
 | `steamos-powerbuttond` | Valve's power button daemon, systemd unit replaced |
-| `io-base` | Repository config, elogind drop-in, dracut snippet, polkit rules |
+| `io-base` | Repository config, elogind drop-in, dracut snippet, polkit rules, `timedatectl` replacement |
 | `io-branding` | os-release, ASCII and SVG logo, fastfetch config |
 | `io-session` | Game mode startup, session switching, autologin service |
 | `io-volumed` | Volume key handler (Steam shows the OSD but does not set the level) |
 | `io-desktop` | Metapackage tying everything together |
+| `inputplumber` | Packaged and working, **but not enabled** — see pitfalls |
 
 The kernel is not maintained as a fork. Valve's delta is a single patch against
-the official tarball, and the config fragment comes unchanged from the
-jupiter-PKGBUILD mirror. A version bump means a new tag, a new patch and a new
-fragment.
+the official tarball, and the config fragment comes unchanged from Valve's
+sources. A version bump means a new tag, a new patch and a new fragment.
 
 ### Upstream sources
 
-Most packages are built from Valve's source mirrors. Note that the GitLab
-mirror at `gitlab.com/evlaV` was shut down in August 2025; `github.com/evlaV`
-is the successor and the active source. Existing distfile URLs still resolve,
-but check GitHub first when bumping versions.
+Valve's authoritative source mirror is
+`steamdeck-packages.steamos.cloud/archlinux-mirror/sources/`, split into
+`jupiter-main` (device-specific) and `holo-main` (the general OS layer). Both
+carry signature files.
+
+The GitLab mirror at `gitlab.com/evlaV` was shut down in August 2025;
+`github.com/evlaV` is the successor. Existing distfile URLs still resolve, but
+prefer Valve's own mirror when bumping versions.
+
+`pkgcheck.sh` fetches both listings, keeps the newest version of each package
+in `docs/`, and reports what changed since the last run. Useful for spotting
+upstream updates without trawling directory listings by hand.
 
 ---
 
@@ -73,14 +81,18 @@ but check GitHub first when bumping versions.
 - WLAN through NetworkManager
 - Suspend and resume, including wake via the power button
 - Fan control through Valve's daemon (idles at 1500 rpm, ramps above 55 °C)
+- Gyro works — `hid-steam` exposes it as `Steam Deck Motion Sensors` and Steam
+  reads it directly. It is *not* an IIO device, which is why tools looking
+  under `/sys/bus/iio/` find nothing
 
 **Game mode**
 
 - Cold boot lands directly in Steam, no login prompt
 - Steam runs with `-steamdeck -steamos3`, which enables the SteamOS system menu
-- Controller works fully: sticks, trackpads, Steam button, overlay
+- Controller works fully: sticks, trackpads, back buttons, Steam button, overlay
 - Volume keys change the volume and the OSD follows
 - Brightness slider works (through `steamos-priv-write`)
+- Timezone can be set from the client (through Io's `timedatectl` replacement)
 - Power off from the Steam menu works
 - Power button suspends and wakes the device
 - Proton runs — tested with Magic: The Gathering Arena, including sound
@@ -116,10 +128,8 @@ seconds it drops to a shell instead of restarting.
 
 ### Small
 
-- [ ] `timedatectl` is missing; Steam calls it twice at startup and the
-      timezone cannot be set from the client
-- [ ] `jupiter-amp-control` is a stub — the target script is not in any
-      available mirror. Audio works without it
+- [ ] `jupiter-amp-control` is a stub — the target script is in none of Valve's
+      published packages. Audio works without it
 - [ ] `steamos-reboot-other` is a stub; it belongs to SteamOS A/B updates,
       which Io does not have
 - [ ] Bump revisions consistently; several packages still carry numbers from
@@ -127,15 +137,15 @@ seconds it drops to a shell instead of restarting.
 
 ### Needs work
 
-- [ ] **Gyro and back buttons.** `inputplumber` would cover this, but it is a
-      Rust package with ~250 vendored crates, it defaults to
-      `auto_manage: false` on the Deck, and it would replace the working
-      controller with an emulated Xbox device. Not obviously worth it
 - [ ] **TDP and charge limit.** The menu entries exist under `-steamos3` but do
-      nothing. This needs `steamos-manager`, which hard-depends on systemd and
-      vendors ~190 crates. Deferred indefinitely
+      nothing. This needs `steamos-manager`, which hard-depends on systemd,
+      manages systemd units as part of its actual logic, and ships three user
+      units bound to `gamescope-session.service`. Porting it means forking its
+      system interface, not just repackaging it
 - [ ] **Screen capture.** `xdg-desktop-portal-wlr` fails in game mode, which
-      affects screenshots and streaming
+      affects screenshots and streaming. Valve ships
+      `xdg-desktop-portal-gamescope` and `xdg-desktop-portal-holo` — worth a
+      look before writing anything
 - [ ] **`CAP_SYS_NICE` for gamescope.** Would silence the performance warning,
       but file capabilities put the process into secure execution mode, which
       makes some Vulkan environment variables get ignored — including,
@@ -190,6 +200,27 @@ start. `~/.local/share/Steam/.crash` indicates the last run ended badly.
 **Do not update `io-session` while game mode is running.** The installed
 scripts end up empty.
 
+**inputplumber is packaged but must stay disabled.** Enabling it takes over the
+`AT Translated Set 2 keyboard` and re-emits everything through a virtual
+`InputPlumber Keyboard`, which breaks both `io-volumed` and
+`steamos-powerbuttond`. In exchange it delivers nothing on the Deck: back
+buttons already work without it, and its gyro support looks for an IIO device
+that the Deck does not have. The package stays in the repo in case that
+changes.
+
+**`deck-hw-support` is frozen at 20250728.1.** From 20260807.1 onwards Valve
+moved the general-purpose helpers into `holo-polkit-helpers` and renamed them
+to `holo-*`. The contents are byte-identical apart from a log tag, but the
+Steam client still calls the `steamos-*` names.
+
+**Valve's `.src.tar.gz` archives contain a bare git repository**, not the
+finished files. Check out with
+`git --git-dir=<pkg> archive --format=tar <tag> | tar -x`. The archives are
+large — 326 MB for a package of shell scripts, 3 GB for the kernel.
+
+**`post_extract` is not run** in templates without a `build_style`. Put the
+checkout step at the start of `do_install` instead.
+
 **The CS35L41 needs two firmware files** that are not in Void's
 `linux-firmware`: `cs35l41-dsp1-spk-prot.wmfw` and
 `cs35l41-dsp1-spk-prot-vlv1776.bin` from `linux-firmware-neptune`. Without them
@@ -202,12 +233,18 @@ module in the initramfs the screen stays black through early KMS.
 **`python_version=3` is required** in any template shipping a Python script,
 or the shebang rewrite hook aborts the build.
 
-**Valve's `python<3.14` constraints are too conservative.** Both
-`jupiter-fan-control` and the hw-support scripts run fine on 3.14.
+**Valve's `python<3.14` constraints were too conservative** and have since been
+relaxed upstream to `>=3.14`.
 
 **`steamos-priv-write` needs two edits** for Void: `chgrp deck` becomes
 `chgrp wheel` (matching Valve's own polkit rule, which checks group membership
 in `wheel`), and `systemd-cat` becomes `logger`.
+
+**Rust packages do not need Arch's vendored crate lists.** `build_style=cargo`
+resolves crates.io dependencies itself, including git dependencies pinned by
+revision. What it does need is `clang`, `llvm` and `clang21-devel` in the build
+dependencies — the versioned `-devel` package is the only one shipping the
+unversioned `libclang.so` symlink that `clang-sys` looks for.
 
 ---
 
