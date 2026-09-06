@@ -1,0 +1,43 @@
+# Template file for 'xdg-desktop-portal-gamescope'
+pkgname=xdg-desktop-portal-gamescope
+version=0.1.38
+revision=4
+_commit=c99b9f7a6357e4753391c13933ef8bbfc3a9b7bb
+build_style=cargo
+make_install_args="--path ."
+hostmakedepends="pkg-config git tar"
+makedepends="dbus-devel"
+depends="xdg-desktop-portal gamescope"
+short_desc="XDG desktop portal backend for gamescope"
+maintainer="Georg <funer@gmx.at>"
+license="BSD-3-Clause"
+homepage="https://gitlab.steamos.cloud/holo/xdg-desktop-portal-gamescope"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-0.1.38.c99b9f7-1.src.tar.gz"
+checksum=5814457558432ffef68066696640156d25236c5eac9cb35ef2a02a0fdddbea85
+wrksrc="${pkgname}"
+
+_busname="org.freedesktop.impl.portal.desktop.gamescope"
+_portalbin="/usr/libexec/${pkgname}"
+_portaldir="usr/share/xdg-desktop-portal/gamescope-portals"
+
+post_extract() {
+	git --git-dir=${pkgname} archive --format=tar ${_commit} | tar -x
+	rm -rf ${pkgname}
+	sed "s|@busname@|${_busname}|" src/config.rs.in > src/config.rs
+	sed -i 's|include!(concat!(env!("CARGO_TARGET_DIR"), "/config.rs"));|include!("config.rs");|' src/main.rs
+}
+
+post_install() {
+	vmkdir usr/libexec
+	mv ${DESTDIR}/usr/bin/${pkgname} ${DESTDIR}/usr/libexec/${pkgname}
+	rmdir ${DESTDIR}/usr/bin
+
+	vmkdir ${_portaldir}
+	sed -e "s|@busname@|${_busname}|" -e "s|@portalbin@|${_portalbin}|" data/gamescope.portal.in > ${DESTDIR}/${_portaldir}/gamescope.portal
+
+	vmkdir usr/share/dbus-1/services
+	sed -e "s|@busname@|${_busname}|" -e "s|@portalbin@|${_portalbin}|" data/${_busname}.service.in > ${DESTDIR}/usr/share/dbus-1/services/${_busname}.service
+
+	vmkdir usr/share/applications
+	sed -e "s|@portalbin@|${_portalbin}|" data/${pkgname}.desktop.in > ${DESTDIR}/usr/share/applications/${pkgname}.desktop
+}

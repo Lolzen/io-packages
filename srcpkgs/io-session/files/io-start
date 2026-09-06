@@ -16,6 +16,11 @@ SESSION=gamemode
 [ -r "$STATE" ] && SESSION=$(cat "$STATE")
 
 case "$SESSION" in
-    desktop) exec dbus-run-session -- /usr/bin/io-plasma ;;
-    *)       exec dbus-run-session -- /usr/bin/io-gamemode ;;
+    desktop)
+        exec dbus-run-session -- /usr/bin/io-plasma
+        ;;
+    *)
+        export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
+        exec dbus-run-session -- /usr/bin/io-gamemode
+        ;;
 esac
