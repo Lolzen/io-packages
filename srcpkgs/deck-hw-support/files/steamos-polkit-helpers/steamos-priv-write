@@ -100,4 +100,36 @@ if MatchFilenamePattern "$WRITE_PATH" "/sys/class/leds/status:white/led_brightne
     CommitWrite
 fi
 
+if MatchFilenamePattern "$WRITE_PATH" "/sys/class/hwmon/hwmon*/max_battery_charge_level"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/class/hwmon/hwmon*/max_battery_charge_rate"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/class/hwmon/hwmon*/max_battery_charge_level"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/class/hwmon/hwmon*/max_battery_charge_rate"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/class/drm/card*/device/pp_power_profile_mode"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/devices/system/cpu/cpufreq/boost"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/devices/system/cpu/cpufreq/policy*/scaling_governor"; then
+    CommitWrite
+fi
+
+if MatchFilenamePattern "$WRITE_PATH" "/sys/firmware/acpi/platform_profile"; then
+    CommitWrite
+fi
+
 DeclineWrite

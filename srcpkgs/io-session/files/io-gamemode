@@ -11,8 +11,6 @@ echo gamemode > "$STATE"
 pgrep -x pipewire > /dev/null || pipewire &
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
 pgrep -f io-volumed > /dev/null || setsid /usr/bin/io-volumed > /dev/null 2>&1 &
-
-# Waechter: beendet gamescope, sobald ein Sitzungswechsel angefordert wird
-setsid /usr/bin/io-session-watch > /dev/null 2>&1 &
+pgrep -f io-steamos-manager > /dev/null || setsid /usr/bin/io-steamos-manager > /dev/null 2>&1 &
 
 exec env vk_xwayland_wait_ready=true gamescope -e -W 1280 -H 800 -- steam -steamdeck -steamos3

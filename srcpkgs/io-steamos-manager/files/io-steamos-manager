@@ -1,0 +1,508 @@
+#!/usr/bin/python3
+"""io-steamos-manager: minimal reimplementation of Valve's
+com.steampowered.SteamOSManager1 D-Bus service for Io.
+
+Steam decides which quick-access controls to show by asking this service on
+the *session* bus, not by probing sysfs. Without it the TDP and charge limit
+sliders never appear, even though the kernel exposes both.
+
+Privileged writes go through steamos-priv-write from deck-hw-support, which
+elevates via pkexec. That is the same path Steam uses for brightness, so the
+polkit rules are already in place. Any sysfs path used here must also be
+listed in that helper, or the write fails silently.
+
+Interfaces are optional by design: Steam probes for each one and shows the
+matching controls only if it is present. Adding one is a small class plus a
+line in main().
+
+Deliberately not implemented:
+  Storage1, Job1, JobManager1, UdevEvents1 - need dynamic job objects
+  LowPowerMode1                            - returns file descriptors
+  HdmiCec*, ScreenReader*, WifiDebug*      - no use on this device
+  UpdateBios1, UpdateDock1, FactoryReset1  - dangerous, deliberately absent
+"""
+
+import asyncio
+import glob
+import os
+import subprocess
+import sys
+
+from dbus_fast import BusType, PropertyAccess
+from dbus_fast.aio import MessageBus
+from dbus_fast.service import ServiceInterface, dbus_property, method
+
+BUSNAME = "com.steampowered.SteamOSManager1"
+OBJPATH = "/com/steampowered/SteamOSManager1"
+IFACE = "com.steampowered.SteamOSManager1"
+
+HELPERS = "/usr/bin/steamos-polkit-helpers"
+PRIV_WRITE = f"{HELPERS}/steamos-priv-write"
+ALS_GAIN = f"{HELPERS}/jupiter-get-als-gain"
+
+STATE_DIR = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+SESSION_STATE = os.path.join(STATE_DIR, "io-session-next")
+
+
+# ---------------------------------------------------------------- helpers
+
+def _first(pattern):
+    """First path matching a glob, or None."""
+    matches = sorted(glob.glob(pattern))
+    return matches[0] if matches else None
+
+
+def _read(pattern, default=""):
+    path = _first(pattern)
+    if path is None:
+        return default
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return default
+
+
+def _read_int(pattern, default=0):
+    try:
+        return int(_read(pattern, str(default)))
+    except ValueError:
+        return default
+
+
+def _write_priv(pattern, value):
+    """Write through steamos-priv-write, which elevates via pkexec."""
+    path = _first(pattern)
+    if path is None:
+        return False
+    result = subprocess.run(
+        [PRIV_WRITE, path, str(value)],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return result.returncode == 0
+
+
+def _write_priv_all(pattern, value):
+    """Same, but for every match - CPU governors exist per policy."""
+    ok = False
+    for path in sorted(glob.glob(pattern)):
+        result = subprocess.run(
+            [PRIV_WRITE, path, str(value)],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        ok = ok or result.returncode == 0
+    return ok
+
+
+def _run(*args):
+    """Run a command, return stdout stripped, or '' on failure."""
+    try:
+        out = subprocess.run(
+            args, check=False, capture_output=True, text=True, timeout=10
+        )
+        return out.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _detach(command):
+    """Run a shell command detached, so it survives this process."""
+    subprocess.Popen(
+        ["setsid", "sh", "-c", command],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+# ------------------------------------------------------------- interfaces
+
+class Manager2(ServiceInterface):
+    """Base interface. Steam reads DeviceModel to identify the hardware."""
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.Manager2")
+
+    @method()
+    def ReloadConfig(self):
+        pass
+
+    @dbus_property(access=PropertyAccess.READ)
+    def DeviceModel(self) -> "(ss)":
+        board = _read("/sys/class/dmi/id/board_name", "unknown")
+        variant = "LCD" if board == "Jupiter" else "unknown"
+        return [board, variant]
+
+
+class TdpLimit1(ServiceInterface):
+    """Sustained power limit in watts, backed by the amdgpu hwmon."""
+
+    CAP = "/sys/class/hwmon/hwmon*/power1_cap"
+    CAP_MAX = "/sys/class/hwmon/hwmon*/power1_cap_max"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.TdpLimit1")
+
+    @dbus_property()
+    def TdpLimit(self) -> "u":
+        return _read_int(self.CAP) // 1000000
+
+    @TdpLimit.setter
+    def TdpLimit(self, value: "u"):
+        _write_priv(self.CAP, value * 1000000)
+        self.emit_properties_changed({"TdpLimit": value})
+
+    @dbus_property(access=PropertyAccess.READ)
+    def TdpLimitMin(self) -> "u":
+        return 3
+
+    @dbus_property(access=PropertyAccess.READ)
+    def TdpLimitMax(self) -> "u":
+        return _read_int(self.CAP_MAX, 15000000) // 1000000
+
+
+class BatteryChargeLimit1(ServiceInterface):
+    """Charge ceiling in percent. The kernel uses 0 for 'no limit', the
+    D-Bus interface uses -1, hence the translation."""
+
+    LEVEL = "/sys/class/hwmon/hwmon*/max_battery_charge_level"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.BatteryChargeLimit1")
+
+    @dbus_property()
+    def MaxChargeLevel(self) -> "i":
+        value = _read_int(self.LEVEL)
+        return value if value > 0 else -1
+
+    @MaxChargeLevel.setter
+    def MaxChargeLevel(self, value: "i"):
+        _write_priv(self.LEVEL, 0 if value < 0 else value)
+        self.emit_properties_changed({"MaxChargeLevel": value})
+
+    @dbus_property(access=PropertyAccess.READ)
+    def SuggestedMinimumLimit(self) -> "i":
+        return 10
+
+
+class AmbientLightSensor1(ServiceInterface):
+    """Calibration gain for the ambient light sensor. Returns -1.0 when
+    unavailable, as the interface description requires."""
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.AmbientLightSensor1")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AlsCalibrationGain(self) -> "ad":
+        out = _run(ALS_GAIN)
+        try:
+            values = [float(v) for v in out.split()]
+            return values if values else [-1.0]
+        except ValueError:
+            return [-1.0]
+
+
+class SessionManagement1(ServiceInterface):
+    """Session switching. Io writes a state flag that io-start reads on the
+    next login; runit respawns tty1 after the compositor exits.
+
+    Unlike steamos-session-select, this runs outside the pressure-vessel
+    container and can terminate the compositor directly."""
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.SessionManagement1")
+
+    def _switch(self, target):
+        try:
+            with open(SESSION_STATE, "w", encoding="utf-8") as f:
+                f.write(target)
+        except OSError:
+            return
+        if target == "desktop":
+            _detach("sleep 1; pkill -TERM gamescope-wl")
+        else:
+            _detach("sleep 1; pkill -TERM kwin_wayland")
+
+    @method()
+    def SwitchToDesktopMode(self):
+        self._switch("desktop")
+
+    @method()
+    def SwitchToGameMode(self):
+        self._switch("gamemode")
+
+    @method()
+    def SwitchToLoginMode(self, type: "s"):
+        self._switch("desktop" if type == "desktop" else "gamemode")
+
+    @method()
+    def SwitchToDesktopSession(self, sessions: "s"):
+        self._switch("desktop")
+
+    @method()
+    def ValidDesktopSessions(self) -> "as":
+        return ["plasma"]
+
+    @method()
+    def CleanTemporarySessions(self):
+        pass
+
+    @dbus_property()
+    def DefaultDesktopSession(self) -> "s":
+        return "plasma"
+
+    @DefaultDesktopSession.setter
+    def DefaultDesktopSession(self, value: "s"):
+        pass
+
+    @dbus_property()
+    def DefaultLoginMode(self) -> "s":
+        return "game"
+
+    @DefaultLoginMode.setter
+    def DefaultLoginMode(self, value: "s"):
+        pass
+
+
+class GpuPerformanceLevel1(ServiceInterface):
+    """amdgpu performance level and manual clock. Both sysfs paths are
+    already allowed by Valve's own steamos-priv-write."""
+
+    LEVEL = "/sys/class/drm/card*/device/power_dpm_force_performance_level"
+    OD_CLK = "/sys/class/drm/card*/device/pp_od_clk_voltage"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.GpuPerformanceLevel1")
+        self._clock = self.ManualGpuClockMax
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AvailableGpuPerformanceLevels(self) -> "as":
+        return ["auto", "low", "high", "manual", "profile_peak"]
+
+    @dbus_property()
+    def GpuPerformanceLevel(self) -> "s":
+        return _read(self.LEVEL, "auto")
+
+    @GpuPerformanceLevel.setter
+    def GpuPerformanceLevel(self, value: "s"):
+        _write_priv(self.LEVEL, value)
+        self.emit_properties_changed({"GpuPerformanceLevel": value})
+
+    def _od_range(self, index, default):
+        """Parse OD_RANGE / SCLK from pp_od_clk_voltage."""
+        for line in _read(self.OD_CLK).splitlines():
+            parts = line.split()
+            if parts and parts[0] == "SCLK:" and len(parts) >= 3:
+                try:
+                    return int(parts[1 + index].replace("Mhz", ""))
+                except (ValueError, IndexError):
+                    return default
+        return default
+
+    @dbus_property()
+    def ManualGpuClock(self) -> "u":
+        return self._clock
+
+    @ManualGpuClock.setter
+    def ManualGpuClock(self, value: "u"):
+        # pp_od_clk_voltage takes 's <index> <mhz>' lines, then 'c' to commit
+        _write_priv(self.OD_CLK, f"s 0 {value}")
+        _write_priv(self.OD_CLK, f"s 1 {value}")
+        _write_priv(self.OD_CLK, "c")
+        self._clock = value
+        self.emit_properties_changed({"ManualGpuClock": value})
+
+    @dbus_property(access=PropertyAccess.READ)
+    def ManualGpuClockMin(self) -> "u":
+        return self._od_range(0, 200)
+
+    @dbus_property(access=PropertyAccess.READ)
+    def ManualGpuClockMax(self) -> "u":
+        return self._od_range(1, 1600)
+
+
+class GpuPowerProfile1(ServiceInterface):
+    """amdgpu power profile mode. Indices are not contiguous - the Deck
+    reports 1, 3, 4, 5, 6, 8, 9 - so they are read from the file rather
+    than derived from list position."""
+
+    PROFILE = "/sys/class/drm/card*/device/pp_power_profile_mode"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.GpuPowerProfile1")
+
+    def _profiles(self):
+        result = {}
+        for line in _read(self.PROFILE).splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[0].isdigit():
+                result[parts[1].strip("*:").lower()] = int(parts[0])
+        return result
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AvailableGpuPowerProfiles(self) -> "as":
+        return list(self._profiles().keys()) or ["3d_full_screen"]
+
+    @dbus_property()
+    def GpuPowerProfile(self) -> "s":
+        for line in _read(self.PROFILE).splitlines():
+            if "*" in line:
+                parts = line.split()
+                if len(parts) >= 2:
+                    return parts[1].strip("*:").lower()
+        return "3d_full_screen"
+
+    @GpuPowerProfile.setter
+    def GpuPowerProfile(self, value: "s"):
+        index = self._profiles().get(value)
+        if index is not None:
+            _write_priv(self.PROFILE, index)
+        self.emit_properties_changed({"GpuPowerProfile": value})
+
+
+class CpuScaling1(ServiceInterface):
+    """CPU frequency governor. Written to every policy, not just the first."""
+
+    GOV = "/sys/devices/system/cpu/cpufreq/policy*/scaling_governor"
+    AVAIL = "/sys/devices/system/cpu/cpufreq/policy*/scaling_available_governors"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.CpuScaling1")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AvailableCpuScalingGovernors(self) -> "as":
+        return _read(self.AVAIL, "schedutil").split()
+
+    @dbus_property()
+    def CpuScalingGovernor(self) -> "s":
+        return _read(self.GOV, "schedutil")
+
+    @CpuScalingGovernor.setter
+    def CpuScalingGovernor(self, value: "s"):
+        _write_priv_all(self.GOV, value)
+        self.emit_properties_changed({"CpuScalingGovernor": value})
+
+
+class CpuBoost1(ServiceInterface):
+    """Turbo boost toggle. 0 = disabled, 1 = enabled."""
+
+    BOOST = "/sys/devices/system/cpu/cpufreq/boost"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.CpuBoost1")
+
+    @dbus_property()
+    def CpuBoostState(self) -> "u":
+        return 1 if _read_int(self.BOOST, 1) else 0
+
+    @CpuBoostState.setter
+    def CpuBoostState(self, value: "u"):
+        _write_priv(self.BOOST, 1 if value else 0)
+        self.emit_properties_changed({"CpuBoostState": 1 if value else 0})
+
+
+class CpuScheduler1(ServiceInterface):
+    """Only 'default' is available without scx_scheds installed."""
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.CpuScheduler1")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AvailableCpuSchedulers(self) -> "as":
+        return ["default"]
+
+    @dbus_property()
+    def CpuScheduler(self) -> "s":
+        return "default"
+
+    @CpuScheduler.setter
+    def CpuScheduler(self, value: "s"):
+        pass
+
+
+class PerformanceProfile1(ServiceInterface):
+    """Platform power profile. Falls back to an in-memory value when the
+    kernel does not expose /sys/firmware/acpi/platform_profile."""
+
+    PROFILE = "/sys/firmware/acpi/platform_profile"
+    CHOICES = "/sys/firmware/acpi/platform_profile_choices"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.PerformanceProfile1")
+        self._current = "balanced"
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AvailablePerformanceProfiles(self) -> "as":
+        choices = _read(self.CHOICES)
+        return choices.split() if choices else ["low-power", "balanced", "performance"]
+
+    @dbus_property()
+    def PerformanceProfile(self) -> "s":
+        return _read(self.PROFILE, self._current)
+
+    @PerformanceProfile.setter
+    def PerformanceProfile(self, value: "s"):
+        if _first(self.PROFILE):
+            _write_priv(self.PROFILE, value)
+        self._current = value
+        self.emit_properties_changed({"PerformanceProfile": value})
+
+    @dbus_property(access=PropertyAccess.READ)
+    def SuggestedDefaultPerformanceProfile(self) -> "s":
+        return "balanced"
+
+
+class RemoteInterface1(ServiceInterface):
+    """Io relays no interfaces from other processes."""
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.RemoteInterface1")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def RemoteInterfaces(self) -> "as":
+        return []
+
+
+# ------------------------------------------------------------------- main
+
+INTERFACES = (
+    Manager2,
+    TdpLimit1,
+    BatteryChargeLimit1,
+    AmbientLightSensor1,
+    SessionManagement1,
+    GpuPerformanceLevel1,
+    GpuPowerProfile1,
+    CpuScaling1,
+    CpuBoost1,
+    CpuScheduler1,
+    PerformanceProfile1,
+    RemoteInterface1,
+)
+
+
+async def main():
+    bus = await MessageBus(bus_type=BusType.SESSION).connect()
+
+    for cls in INTERFACES:
+        try:
+            bus.export(OBJPATH, cls())
+        except Exception as err:  # noqa: BLE001 - one bad interface must
+            # not take down the whole service
+            print(f"io-steamos-manager: {cls.__name__} failed: {err}",
+                  file=sys.stderr, flush=True)
+
+    await bus.request_name(BUSNAME)
+    print("io-steamos-manager: ready", flush=True)
+    await bus.wait_for_disconnect()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        sys.exit(0)

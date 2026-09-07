@@ -1,10 +1,10 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.2.0
-revision=2
+revision=4
 optdepends="kde-plasma: Desktop-Session ueber steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
-depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-volumed"
+depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-volumed io-steamos-manager"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -26,5 +26,4 @@ do_install() {
 	vbin ${FILESDIR}/steamos-session-select
 	vmkdir etc/skel/Desktop
 	vinstall ${FILESDIR}/return-to-gamemode.desktop 755 etc/skel/Desktop
-	vbin ${FILESDIR}/io-session-watch
 }

@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20250728.1
-revision=3
+revision=5
 depends="polkit jq alsa-utils"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
