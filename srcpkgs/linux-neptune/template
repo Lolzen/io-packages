@@ -1,8 +1,9 @@
 # Template file for 'linux-neptune'
 pkgname=linux-neptune
 version=6.15.8
-revision=1
+revision=2
 short_desc="Linux kernel with Valve neptune patches for Steam Deck"
+depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
 license="GPL-2.0-only"
 homepage="https://www.kernel.org"
@@ -13,8 +14,8 @@ if [ "${version##*.}" != 0 ]; then
 	skip_extraction="patch-${version}.xz"
 fi
 
-checksum="
- "
+checksum="7586962547803be7ecc4056efc927fb25214548722bd28171172f3599abb9764
+ effa3deecc0266054731349ecabb68455f125c7be2f88fd21a841080fd30a4c8"
 python_version=3
 
 # XXX Restrict archs until a proper <arch>-dotconfig is available in FILESDIR.
