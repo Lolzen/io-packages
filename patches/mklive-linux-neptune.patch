@@ -1,0 +1,26 @@
+diff --git a/mklive.sh b/mklive.sh
+index 069c8fa..b64a01c 100755
+--- a/mklive.sh
++++ b/mklive.sh
+@@ -645,6 +645,10 @@ case "$LINUX_VERSION" in
+         IGNORE_PKGS+=(linux)
+         PACKAGE_LIST+=(linux-asahi linux-base)
+         ;;
++    linux-neptune)
++        IGNORE_PKGS+=(linux)
++        PACKAGE_LIST+=(linux-neptune linux-base)
++        ;;
+     linux)
+         PACKAGE_LIST+=(linux)
+         LINUX_VERSION="$(XBPS_ARCH=$TARGET_ARCH $XBPS_QUERY_CMD -r "$ROOTFS" ${XBPS_REPOSITORY:=-R} -x linux | grep 'linux[0-9._]\+')"
+@@ -662,6 +666,10 @@ if [ "$LINUX_VERSION" = linux-asahi ]; then
+     KERNELVERSION="${KERNELVERSION%%_*}-asahi_${KERNELVERSION##*_}"
+ fi
+ 
++if [ "$LINUX_VERSION" = linux-neptune ]; then
++    KERNELVERSION="${KERNELVERSION%%_*}-valve1_${KERNELVERSION##*_}"
++fi
++
+ if [ "$?" -ne "0" ]; then
+     die "Failed to find kernel package version"
+ fi
