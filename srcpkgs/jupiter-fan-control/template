@@ -11,8 +11,8 @@ short_desc="Jupiter fan controller for Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="hhttps://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-mainl"
-istfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
-checksum=
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
+checksum=ccc3bcf34f6ad5a1cdb2c1c8e94d6c9251d82532888523f57127ea0b62868a77
 
 do_build() {
 	:
