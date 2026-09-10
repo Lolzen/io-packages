@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=2
+revision=3
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -18,7 +18,7 @@ depends="
  jupiter-fan-control steamos-powerbuttond
 
  gamescope steam
- mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit
+ mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit libcurl-32bit
  pipewire wireplumber alsa-pipewire sof-firmware alsa-utils
 
  NetworkManager elogind seatd polkit dbus
