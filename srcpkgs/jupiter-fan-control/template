@@ -1,7 +1,7 @@
 # Template file for 'jupiter-fan-control'
 pkgname=jupiter-fan-control
 version=20260902.1
-revision=1
+revision=2
 _pkgrel=1
 wrksrc="${pkgname}"
 python_version=3
