@@ -4,4 +4,9 @@ if [ -z "$IO_USER" ]; then
     IO_USER=$(awk -F: '$3 >= 1000 && $3 < 65534 { print $1; exit }' /etc/passwd)
 fi
 [ -n "$IO_USER" ] || exit 1
+i=0
+while [ ! -S /run/dbus/system_bus_socket ] && [ $i -lt 10 ]; do
+    sleep 1
+    i=$((i + 1))
+done
 exec chpst -P agetty --noclear --autologin "$IO_USER" tty1 38400 linux
