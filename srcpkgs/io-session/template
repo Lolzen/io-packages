@@ -1,7 +1,7 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.2.0
-revision=6
+revision=8
 optdepends="kde-plasma: Desktop-Session ueber steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
 depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-volumed io-steamos-manager"
@@ -9,6 +9,18 @@ short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://github.com/Lolzen/io-packages"
+
+post_install() {
+	mkdir -p /etc/pipewire/pipewire.conf.d
+	WP_CONF=$(find /usr/share/examples/wireplumber -maxdepth 1 -name "*.conf" 2>/dev/null | head -1)
+	PW_PULSE_CONF=$(find /usr/share/examples/pipewire -maxdepth 1 -name "*.conf" 2>/dev/null | head -1)
+	if [ -n "$WP_CONF" ]; then
+		ln -sf "$WP_CONF" /etc/pipewire/pipewire.conf.d/
+	fi
+	if [ -n "$PW_PULSE_CONF" ]; then
+		ln -sf "$PW_PULSE_CONF" /etc/pipewire/pipewire.conf.d/
+	fi
+}
 
 do_build() {
 	:
