@@ -1,0 +1,14 @@
+# INSTALL
+case "$ACTION" in
+post)
+	mkdir -p /etc/pipewire/pipewire.conf.d
+	WP_CONF=$(find /usr/share/examples/wireplumber -maxdepth 1 -name "*.conf" 2>/dev/null | head -1)
+	PW_PULSE_CONF=$(find /usr/share/examples/pipewire -maxdepth 1 -name "*.conf" 2>/dev/null | head -1)
+	if [ -n "$WP_CONF" ]; then
+		ln -sf "$WP_CONF" /etc/pipewire/pipewire.conf.d/
+	fi
+	if [ -n "$PW_PULSE_CONF" ]; then
+		ln -sf "$PW_PULSE_CONF" /etc/pipewire/pipewire.conf.d/
+	fi
+	;;
+esac
