@@ -130,9 +130,13 @@ cat > "$MNT/usr/local/bin/io-netcheck" << 'EOF'
 # straight through once resolved for this boot, instead of re-prompting
 # on every single restart.
 
-FLAG=/run/io-netcheck.done
+FLAG="$HOME/.cache/io-netcheck-boot"
+mkdir -p "$HOME/.cache"
+BOOT_ID=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)
 
-[ -f "$FLAG" ] && exit 0
+if [ -n "$BOOT_ID" ] && [ -f "$FLAG" ] && [ "$(cat "$FLAG" 2>/dev/null)" = "$BOOT_ID" ]; then
+    exit 0
+fi
 
 # NetworkManager may still be starting up right after boot; wait briefly
 # for it to actually be running before trusting its answer, rather than
@@ -156,7 +160,7 @@ connected() {
 }
 
 if connected; then
-    touch "$FLAG"
+    [ -n "$BOOT_ID" ] && echo "$BOOT_ID" > "$FLAG"
     exit 0
 fi
 
@@ -220,7 +224,7 @@ while ! connected; do
     esac
 done
 
-touch "$FLAG"
+[ -n "$BOOT_ID" ] && echo "$BOOT_ID" > "$FLAG"
 exit 0
 EOF
 chmod 755 "$MNT/usr/local/bin/io-netcheck"
@@ -248,6 +252,12 @@ mount --bind /dev "$MNT/dev"
 mount --bind /proc "$MNT/proc"
 mount --bind /sys "$MNT/sys"
 mount --bind /run "$MNT/run"
+
+echo "== reconfiguring packages"
+# Catches any package whose INSTALL/trigger script needs a working chroot
+# (/proc etc.) to run - those get silently deferred if xbps-install ran
+# before the binds above were in place.
+chroot "$MNT" xbps-reconfigure -a
 
 echo "== creating users"
 # Root stays usable for alpha testing. SteamOS locks it; Io does not, yet.
