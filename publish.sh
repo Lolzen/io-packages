@@ -113,4 +113,4 @@ gh release upload "$GHTAG" \
 
 echo
 echo "published to https://github.com/$GHREPO/releases/tag/$GHTAG"
-xbps-query --repository="$PUBDIR" -s io- || true
+#xbps-query --repository="$PUBDIR" -s io- || true
