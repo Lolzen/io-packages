@@ -76,11 +76,20 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
 - Power off from the Steam menu works
 - Power button suspends and wakes the device
 - Proton runs — tested with Magic: The Gathering Arena, including sound
+- TDP limit, GPU clock, and performance profile menus work — served by
+  `io-steamos-manager`, a from-scratch Python reimplementation of Valve's
+  `com.steampowered.SteamOSManager1` DBus interface (Valve's own daemon
+  hard-depends on systemd)
+- Charge limit works the same way
 
 **Session switching**
 
-- Steam menu → *Switch to Desktop* brings up Plasma within a few seconds
-- A desktop shortcut brings you back to game mode
+- Steam menu → *Switch to Desktop* brings up Plasma within a few seconds —
+  as of this reimplementation, Steam calls `io-steamos-manager`'s
+  `SwitchToDesktopMode` directly over DBus for this direction, rather than
+  going through the flag file
+- A desktop shortcut brings you back to game mode (still the flag-file path
+  — `io-steamos-manager` doesn't survive the switch to Plasma, see below)
 - Plasma has correct rotation, working touchscreen and working trackpads
 
 See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for how this actually works under the hood.
@@ -104,11 +113,24 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
 
 ### Needs work
 
-- [ ] **TDP and charge limit.** The menu entries exist under `-steamos3` but do
-      nothing. This needs `steamos-manager`, which hard-depends on systemd,
-      manages systemd units as part of its actual logic, and ships three user
-      units bound to `gamescope-session.service`. Porting it means forking its
-      system interface, not just repackaging it
+- [ ] **Ambient light sensor / adaptive brightness.** Calibration gain reads
+      back correctly over DBus, the sensor itself gives plausible lux values
+      in sysfs, `dmidecode` is in place — the toggle still stayed greyed out
+      in Steam. Last lead was `in_illuminance_integration_time`, a sysfs path
+      `steamos-priv-write` may need to expose before Steam considers the
+      sensor usable
+- [ ] **`io-steamos-manager` dies on session switch.** It runs inside
+      `dbus-run-session` in game mode, so it exits with that session — no
+      manager is running once Plasma comes up. Fine for now since Plasma has
+      no Steam menus to serve, but worth keeping alive across the switch if
+      a desktop-side control panel is ever wanted
+- [ ] **Power button short-press: possible black-screen edge case.** Backlight
+      stays on, Steam UI sounds play, but nothing is drawn — looked like an
+      unexecuted suspend request, alongside an unrelated-looking
+      `InteractiveAuthorizationRequired` polkit error seen once in Steam's
+      log. Never confirmed fixed; worth a dedicated short-press test now that
+      elogind/seatd/dbus are solid, separate from the long-press poweroff
+      path that's already confirmed working
 - [ ] **Screen capture.** `xdg-desktop-portal-wlr` fails in game mode, which
       affects screenshots and streaming. Valve ships
       `xdg-desktop-portal-gamescope` and `xdg-desktop-portal-holo` — worth a
