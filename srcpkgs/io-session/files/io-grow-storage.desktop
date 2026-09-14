@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Speicherplatz erweitern
+Comment=Root-Partition auf volle SD-Kartengroesse erweitern
+Exec=/usr/local/bin/io-grow-storage
+Icon=drive-harddisk
+Terminal=true
+Categories=System;

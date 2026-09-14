@@ -1,0 +1,64 @@
+#!/bin/sh
+# io-grow-storage - manually grow the root partition and its filesystem to
+# fill the card. Not run automatically at boot: a silent resize at boot
+# blocks the entire rest of startup (it runs in runit stage 1, before
+# anything else can start) with zero indication anything is happening -
+# and interrupting resize2fs on the root filesystem can actually damage
+# the card. Triggered from a desktop shortcut instead, in a visible
+# terminal, only when the user asks for it.
+
+set -eu
+
+ROOT_SRC=$(findmnt -n -o SOURCE /)
+ROOT_DISK=$(lsblk -no PKNAME "$ROOT_SRC")
+ROOT_PART=$(echo "$ROOT_SRC" | grep -o '[0-9]*$')
+
+echo "=========================================="
+echo " Io - Speicherplatz erweitern"
+echo "=========================================="
+echo
+echo "Root-Geraet: /dev/$ROOT_DISK, Partition $ROOT_PART"
+echo
+lsblk "/dev/$ROOT_DISK"
+echo
+printf "Root-Partition auf volle Kartengroesse erweitern? [y/N] "
+read confirm
+if [ "$confirm" != "y" ]; then
+    echo "Abgebrochen."
+    printf "Enter zum Schliessen..."
+    read _dummy
+    exit 0
+fi
+
+echo
+echo "Erweitere Partition. BITTE NICHT AUSSCHALTEN..."
+set +e
+GROW_OUT=$(sudo growpart "/dev/$ROOT_DISK" "$ROOT_PART" 2>&1)
+GROW_RC=$?
+set -e
+echo "$GROW_OUT"
+
+if [ $GROW_RC -ne 0 ]; then
+    case "$GROW_OUT" in
+        *NOCHANGE*)
+            echo "Partition ist bereits auf voller Groesse."
+            ;;
+        *)
+            echo "Fehler beim Erweitern der Partition." >&2
+            printf "Enter zum Schliessen..."
+            read _dummy
+            exit 1
+            ;;
+    esac
+else
+    echo "Vergroessere Dateisystem. Bitte warten..."
+    sudo resize2fs "$ROOT_SRC"
+    sync
+    echo "Fertig."
+fi
+
+echo
+df -h /
+echo
+printf "Enter zum Schliessen..."
+read _dummy
