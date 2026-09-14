@@ -15,15 +15,25 @@ void-mklive has not caught up, so self-built ISOs drop to an emergency shell.
 There is no display manager and no systemd. The chain is
 `agetty --autologin → /etc/profile.d/io-session.sh → io-start → dbus-run-session → io-gamemode → gamescope`.
 
-Steam calls `steamos-session-select`, which only writes a state flag to
-`$XDG_RUNTIME_DIR` — it runs inside the pressure-vessel container, where
-`pgrep` and `pkill` cannot see the host processes. A watcher started by
-`io-gamemode` polls that flag and terminates gamescope when it changes. runit
-respawns tty1, autologin fires again, and `io-start` reads the flag to decide
-which session to start.
-
 `io-session.sh` guards against boot loops: if the session dies in under 15
 seconds it drops to a shell instead of restarting.
+
+**Switching to desktop** goes through `io-steamos-manager`, a from-scratch
+Python reimplementation of Valve's `com.steampowered.SteamOSManager1` DBus
+interface (Valve's own daemon hard-depends on systemd, so it isn't just
+repackaged). Steam calls its `SwitchToDesktopMode` method directly over DBus
+— confirmed via `dbus-monitor` — rather than going through the older
+`steamos-session-select` + flag-file mechanism.
+
+`io-steamos-manager` runs inside game mode's `dbus-run-session` and exits
+with it, so nothing is running once Plasma comes up. **Switching back to
+game mode** therefore still uses the original path: a desktop shortcut runs
+`steamos-session-select`, which writes a state flag to `$XDG_RUNTIME_DIR`.
+Since `steamos-session-select` runs inside Steam's pressure-vessel
+container, it can't see host processes directly — a watcher started by
+`io-gamemode` polls the flag and terminates gamescope when it changes. runit
+respawns tty1, autologin fires again, and `io-start` reads the flag to
+decide which session to start next.
 
 ## First boot
 
