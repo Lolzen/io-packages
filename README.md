@@ -9,8 +9,10 @@ system. The sulphur it throws into space forms a plasma ring around Jupiter,
 the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
-> **Status:** working prototype on an SD card. Boots, plays games, switches
-> between game mode and desktop. Packaging and ISO are still ahead.
+> **Status:** [Alpha 1](https://github.com/Lolzen/io-packages/releases/tag/alpha1)
+> released. Ships as a disk image (not a live ISO — see the wiki), written
+> straight to an SD card with `dd`. Boots directly into game mode, plays
+> games, switches to desktop and back.
 
 ```
                   ==
@@ -34,40 +36,16 @@ creates it sitting on the ring.
 
 ---
 
-## Packages
+## Documentation
 
-| Package | Contents |
-|---|---|
-| `linux-neptune` | Kernel 6.15.8 from the kernel.org tarball plus Valve's patch set and the Deck config fragment |
-| `deck-firmware-cirrus` | CS35L41 DSP firmware for the speaker amplifiers |
-| `deck-hw-support` | Valve's polkit helpers, udev rules and hwsupport scripts, trimmed and stubbed. **Frozen at 20250728.1**, see pitfalls |
-| `jupiter-fan-control` | Valve's fan daemon, unmodified, wrapped in a runit service |
-| `steamos-powerbuttond` | Valve's power button daemon, systemd unit replaced |
-| `io-base` | Repository config, elogind drop-in, dracut snippet, polkit rules, `timedatectl` replacement |
-| `io-branding` | os-release, ASCII and SVG logo, fastfetch config |
-| `io-session` | Game mode startup, session switching, autologin service |
-| `io-volumed` | Volume key handler (Steam shows the OSD but does not set the level) |
-| `io-desktop` | Metapackage tying everything together |
-| `inputplumber` | Packaged and working, **but not enabled** — see pitfalls |
+Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wiki):
 
-The kernel is not maintained as a fork. Valve's delta is a single patch against
-the official tarball, and the config fragment comes unchanged from Valve's
-sources. A version bump means a new tag, a new patch and a new fragment.
-
-### Upstream sources
-
-Valve's authoritative source mirror is
-`steamdeck-packages.steamos.cloud/archlinux-mirror/sources/`, split into
-`jupiter-main` (device-specific) and `holo-main` (the general OS layer). Both
-carry signature files.
-
-The GitLab mirror at `gitlab.com/evlaV` was shut down in August 2025;
-`github.com/evlaV` is the successor. Existing distfile URLs still resolve, but
-prefer Valve's own mirror when bumping versions.
-
-`pkgcheck.sh` fetches both listings, keeps the newest version of each package
-in `docs/`, and reports what changed since the last run. Useful for spotting
-upstream updates without trawling directory listings by hand.
+- [Packages](https://github.com/Lolzen/io-packages/wiki/Packages) — what each package contains, upstream sources
+- [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) — boot, session switching, first-boot steps
+- [Pitfalls](https://github.com/Lolzen/io-packages/wiki/Pitfalls) — things that cost real time, documented nowhere else
+- [Helper status](https://github.com/Lolzen/io-packages/wiki/Helper-Status) — which of Valve's polkit helpers are real vs. stubbed
+- [Building](https://github.com/Lolzen/io-packages/wiki/Building) — how to build and write an image
+- [Alpha 1](https://github.com/Lolzen/io-packages/wiki/Alpha-1) — known limitations of the current release
 
 ---
 
@@ -78,9 +56,11 @@ upstream updates without trawling directory listings by hand.
 - Boots on the Steam Deck LCD with correct panel rotation
 - Graphics through radv on Van Gogh, gamescope directly on DRM
 - Audio through both CS35L41 amplifiers, headphones and internal microphone
-- WLAN through NetworkManager
+- WLAN and Ethernet (including dock) through NetworkManager
 - Suspend and resume, including wake via the power button
 - Fan control through Valve's daemon (idles at 1500 rpm, ramps above 55 °C)
+- Bluetooth pairing and device discovery (audio output over Bluetooth does not
+  yet work — see Pitfalls)
 - Gyro works — `hid-steam` exposes it as `Steam Deck Motion Sensors` and Steam
   reads it directly. It is *not* an IIO device, which is why tools looking
   under `/sys/bus/iio/` find nothing
@@ -103,24 +83,11 @@ upstream updates without trawling directory listings by hand.
 - A desktop shortcut brings you back to game mode
 - Plasma has correct rotation, working touchscreen and working trackpads
 
+See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for how this actually works under the hood.
+
 **Branding**
 
 - `Io` appears in fastfetch and in the Steam system menu
-
-### How session switching works
-
-There is no display manager and no systemd. The chain is
-`agetty → .bash_profile → io-start → dbus-run-session → io-gamemode → gamescope`.
-
-Steam calls `steamos-session-select`, which only writes a state flag to
-`$XDG_RUNTIME_DIR` — it runs inside the pressure-vessel container, where
-`pgrep` and `pkill` cannot see the host processes. A watcher started by
-`io-gamemode` polls that flag and terminates gamescope when it changes. runit
-respawns tty1, autologin fires again, and `io-start` reads the flag to decide
-which session to start.
-
-`.bash_profile` guards against boot loops: if the session dies in under 15
-seconds it drops to a shell instead of restarting.
 
 ---
 
@@ -146,130 +113,29 @@ seconds it drops to a shell instead of restarting.
       affects screenshots and streaming. Valve ships
       `xdg-desktop-portal-gamescope` and `xdg-desktop-portal-holo` — worth a
       look before writing anything
-- [ ] **`CAP_SYS_NICE` for gamescope.** Would silence the performance warning,
-      but file capabilities put the process into secure execution mode, which
-      makes some Vulkan environment variables get ignored — including,
-      possibly, `vk_xwayland_wait_ready`, which Io depends on. Testable in one
-      command and reversible in one, but not a priority
+- [ ] **Bluetooth audio.** PipeWire's BlueZ SPA plugin is missing or broken;
+      pairing works but no audio route exists yet
+- [ ] **`CAP_SYS_NICE` for gamescope.** Would silence the performance warning.
+      Needs a root-started wrapper that sets an ambient capability and drops
+      to `deck` in one step, replacing part of the autologin chain — a PAM
+      session hook does not survive the `setuid()` to an unprivileged user,
+      and a file capability breaks Steam's overlay injection. Not a
+      one-line fix; see Pitfalls
+- [ ] **SD/USB automount.** Disabled for now — needs `udisks2` packaged, and
+      the boot device itself excluded from the udev rules to avoid a boot-time
+      race (see Pitfalls)
+- [ ] **Visible, opt-in partition growth.** Currently a silent first-boot
+      `growpart` run; planned replacement is a desktop shortcut the user
+      triggers manually, in a visible terminal, like the game-mode switch
 
 ### Infrastructure
 
-- [ ] Publish the signed package repository as a GitHub release; the URL in
-      `io-base` currently points nowhere
-- [ ] Wiki: installation, pitfalls, kernel bump procedure
 - [ ] GitHub Actions for automated builds (optional)
-- [ ] ISO through `void-mklive` once the metapackage is complete
 
 ### Larger decision
 
 - [ ] **Move to the internal NVMe.** The SD card is too slow for games and has
       caused several timing-related failures during development.
-
----
-
-## Pitfalls
-
-Things that cost real time and are documented nowhere.
-
-**Never start wireplumber manually.** Void configures PipeWire to launch the
-session manager itself through a symlink in `/etc/pipewire/pipewire.conf.d/`.
-Starting wireplumber separately creates a second instance. The symptoms are an
-`auto_null` sink instead of the real devices *and* a gamescope that runs but
-shows no window — with no useful error message anywhere.
-
-**elogind must not start twice.** Void enables the runit service, but dbus also
-ships an activation file with `Exec=`. At boot they race; if runit loses, it
-retries every second and the session never settles. Disable the activation
-file.
-
-**acpid and elogind fight over the power button.** The Void handbook is
-explicit: either disable acpid, or set every `Handle*` option in `logind.conf`
-to `ignore`. Doing half of each means elogind politely ignores the button while
-acpid's `handler.sh` shuts the machine down.
-
-**Set `vk_xwayland_wait_ready=true`** before gamescope on slow storage.
-Otherwise Steam starts before Xwayland is ready and none of its windows are
-ever mapped.
-
-**Never kill Steam with `pkill -9`.** It leaves state that cripples the next
-start. `~/.local/share/Steam/.crash` indicates the last run ended badly.
-
-**gamescope's process name is `gamescope-wl`**, not `gamescope`. Every
-`pgrep -x gamescope` silently matches nothing.
-
-**Do not update `io-session` while game mode is running.** The installed
-scripts end up empty.
-
-**inputplumber is packaged but must stay disabled.** Enabling it takes over the
-`AT Translated Set 2 keyboard` and re-emits everything through a virtual
-`InputPlumber Keyboard`, which breaks both `io-volumed` and
-`steamos-powerbuttond`. In exchange it delivers nothing on the Deck: back
-buttons already work without it, and its gyro support looks for an IIO device
-that the Deck does not have. The package stays in the repo in case that
-changes.
-
-**`deck-hw-support` is frozen at 20250728.1.** From 20260807.1 onwards Valve
-moved the general-purpose helpers into `holo-polkit-helpers` and renamed them
-to `holo-*`. The contents are byte-identical apart from a log tag, but the
-Steam client still calls the `steamos-*` names.
-
-**Valve's `.src.tar.gz` archives contain a bare git repository**, not the
-finished files. Check out with
-`git --git-dir=<pkg> archive --format=tar <tag> | tar -x`. The archives are
-large — 326 MB for a package of shell scripts, 3 GB for the kernel.
-
-**`post_extract` is not run** in templates without a `build_style`. Put the
-checkout step at the start of `do_install` instead.
-
-**The CS35L41 needs two firmware files** that are not in Void's
-`linux-firmware`: `cs35l41-dsp1-spk-prot.wmfw` and
-`cs35l41-dsp1-spk-prot-vlv1776.bin` from `linux-firmware-neptune`. Without them
-one speaker stays silent. No mixer gymnastics are needed beyond that —
-wireplumber handles channel assignment through the UCM profile.
-
-**`force_drivers+=" amdgpu "` in the dracut config is mandatory.** Without the
-module in the initramfs the screen stays black through early KMS.
-
-**`python_version=3` is required** in any template shipping a Python script,
-or the shebang rewrite hook aborts the build.
-
-**Valve's `python<3.14` constraints were too conservative** and have since been
-relaxed upstream to `>=3.14`.
-
-**`steamos-priv-write` needs two edits** for Void: `chgrp deck` becomes
-`chgrp wheel` (matching Valve's own polkit rule, which checks group membership
-in `wheel`), and `systemd-cat` becomes `logger`.
-
-**Rust packages do not need Arch's vendored crate lists.** `build_style=cargo`
-resolves crates.io dependencies itself, including git dependencies pinned by
-revision. What it does need is `clang`, `llvm` and `clang21-devel` in the build
-dependencies — the versioned `-devel` package is the only one shipping the
-unversioned `libclang.so` symlink that `clang-sys` looks for.
-
----
-
-## Helper status
-
-`deck-hw-support` ships all 22 of Valve's polkit helpers so the policy file
-stays intact, but many of them are stubs. Keeping the entries prevents polkit
-actions from pointing at missing paths.
-
-**Real:** `steamos-priv-write`, `steamos-poweroff-now`, `steamos-reboot-now`,
-`jupiter-check-support`, `jupiter-get-als-gain`, `steamos-set-hostname`,
-`steamos-set-timezone`, `steamos-trim-devices`,
-`steamos-disable-wireless-power-management`
-
-**Stubbed, target missing:** `jupiter-amp-control`, `steamos-reboot-other`
-
-**Stubbed, needs systemd:** `jupiter-fan-control`, `steamos-devkit-mode`,
-`steamos-enable-sshd`, `steamos-restart-sddm`
-
-**Stubbed, dangerous or pointless here:** `jupiter-biosupdate`,
-`jupiter-dock-updater`, `steamos-format-device`, `steamos-format-sdcard`,
-`steamos-factory-reset-config`, `steamos-update`, `steamos-select-branch`
-
-Steam looks for `steamos-update` and `steamos-select-branch` under `/usr/bin`,
-not only in the helper directory, so symlinks are installed for both.
 
 ---
 
