@@ -59,8 +59,8 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
 - WLAN and Ethernet (including dock) through NetworkManager
 - Suspend and resume, including wake via the power button
 - Fan control through Valve's daemon (idles at 1500 rpm, ramps above 55 °C)
-- Bluetooth pairing and device discovery (audio output over Bluetooth does not
-  yet work — see Pitfalls)
+- Bluetooth pairing, device discovery, and audio output/input both work —
+  confirmed with a real headset appearing as a PipeWire sink and source
 - Gyro works — `hid-steam` exposes it as `Steam Deck Motion Sensors` and Steam
   reads it directly. It is *not* an IIO device, which is why tools looking
   under `/sys/bus/iio/` find nothing
@@ -74,7 +74,8 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
 - Brightness slider works (through `steamos-priv-write`)
 - Timezone can be set from the client (through Io's `timedatectl` replacement)
 - Power off from the Steam menu works
-- Power button suspends and wakes the device
+- Power button suspends immediately on a single press and wakes the device
+  — no power drain observed over an overnight suspend
 - Proton runs — tested with Magic: The Gathering Arena, including sound
 - TDP limit, GPU clock, and performance profile menus work — served by
   `io-steamos-manager`, a from-scratch Python reimplementation of Valve's
@@ -113,12 +114,14 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
 
 ### Needs work
 
-- [ ] **Ambient light sensor / adaptive brightness.** Calibration gain reads
-      back correctly over DBus, the sensor itself gives plausible lux values
-      in sysfs, `dmidecode` is in place — the toggle still stayed greyed out
-      in Steam. Last lead was `in_illuminance_integration_time`, a sysfs path
-      `steamos-priv-write` may need to expose before Steam considers the
-      sensor usable
+- [ ] **Ambient light sensor / adaptive brightness — root cause still unclear.**
+      `iio-sensor-proxy` now ships and is enabled, the sensor reports live lux
+      values, `AlsCalibrationGain` reads correctly at the expected value, and
+      the DBus interface was checked line-by-line against Valve's own
+      `steamos-manager` source (26.4.1-2) — identical property set, no
+      missing method. The toggle in Steam still stays greyed out regardless.
+      Not a systems problem as far as we can tell; something Steam checks
+      beyond this DBus interface remains unidentified
 - [ ] **`io-steamos-manager` dies on session switch.** It runs inside
       `dbus-run-session` in game mode, so it exits with that session — no
       manager is running once Plasma comes up. Fine for now since Plasma has
@@ -135,8 +138,6 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
       affects screenshots and streaming. Valve ships
       `xdg-desktop-portal-gamescope` and `xdg-desktop-portal-holo` — worth a
       look before writing anything
-- [ ] **Bluetooth audio.** PipeWire's BlueZ SPA plugin is missing or broken;
-      pairing works but no audio route exists yet
 - [ ] **`CAP_SYS_NICE` for gamescope.** Would silence the performance warning.
       Needs a root-started wrapper that sets an ambient capability and drops
       to `deck` in one step, replacing part of the autologin chain — a PAM
