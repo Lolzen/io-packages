@@ -40,7 +40,7 @@ TIMEZONE="${TIMEZONE:-Europe/Vienna}"
 
 KERNEL_CMDLINE="loglevel=4 amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
 
-SERVICES="NetworkManager bluetoothd chronyd dbus elogind polkitd seatd sshd udevd jupiter-fan-control io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
+SERVICES="NetworkManager bluetoothd chronyd dbus elogind iio-sensor-proxy polkitd seatd sshd udevd jupiter-fan-control io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
 # Belongs logically in io-desktop's own depends (same reasoning as every
 # other package on this list), but installed explicitly here too so a
@@ -48,7 +48,7 @@ SERVICES="NetworkManager bluetoothd chronyd dbus elogind polkitd seatd sshd udev
 # sync. Without these, the running system has no persistent
 # /etc/xbps.d/ entry for nonfree/multilib - the -R flags below only grant
 # access for this one install call, not for anything done on-device later.
-EXTRA_PACKAGES="void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree cloud-guest-utils"
+EXTRA_PACKAGES="void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree"
 
 # Hashed on the host, not inside the chroot: chpasswd's internal crypt()
 # call silently failed to write root's entry there before (the shadow line
@@ -106,33 +106,6 @@ echo "== branding"
 # mkimg does not go through mklive's -I option, so this has to be copied by
 # hand. Without it the image boots with Void's stock os-release.
 cp "$INCLUDE/etc/os-release" "$MNT/etc/os-release"
-
-# Grows the root partition and its ext4 filesystem to fill whatever card
-# the image ends up on (64G, 128G, ...) instead of staying stuck at $SIZE.
-# cloud-guest-utils ships this as a runit core-service, so it just runs on
-# every boot; a partition that's already full-size is a cheap no-op.
-sed -i 's/^#ENABLE_ROOT_GROWPART=yes/ENABLE_ROOT_GROWPART=yes/' "$MNT/etc/default/growpart"
-
-# Wrap the resize core-service with a visible boot message and a hard
-# sync at the end - a silent resize gives zero indication anything is
-# happening, and powering off mid-resize2fs is exactly the kind of thing
-# that can actually damage the card. Found dynamically since the exact
-# filename is a cloud-guest-utils implementation detail.
-RESIZE_SCRIPT=$(find "$MNT/etc/runit/core-services" -iname "*resize*" 2>/dev/null | head -1)
-if [ -n "$RESIZE_SCRIPT" ]; then
-    REL="${RESIZE_SCRIPT#$MNT}"
-    mv "$RESIZE_SCRIPT" "${RESIZE_SCRIPT}.orig"
-    cat > "$RESIZE_SCRIPT" << EOF
-#!/bin/sh
-echo "io: Erweitere Root-Partition auf volle Kartengroesse, bitte nicht ausschalten..." > /dev/console
-${REL}.orig
-sync
-echo "io: Partition erweitert." > /dev/console
-EOF
-    chmod 755 "$RESIZE_SCRIPT"
-else
-    echo "   growpart core-service not found, skipping notice wrapper" >&2
-fi
 
 echo "== network check script"
 # Build-injected, not a package: Steam needs a real connection on first
