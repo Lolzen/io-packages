@@ -113,6 +113,27 @@ cp "$INCLUDE/etc/os-release" "$MNT/etc/os-release"
 # every boot; a partition that's already full-size is a cheap no-op.
 sed -i 's/^#ENABLE_ROOT_GROWPART=yes/ENABLE_ROOT_GROWPART=yes/' "$MNT/etc/default/growpart"
 
+# Wrap the resize core-service with a visible boot message and a hard
+# sync at the end - a silent resize gives zero indication anything is
+# happening, and powering off mid-resize2fs is exactly the kind of thing
+# that can actually damage the card. Found dynamically since the exact
+# filename is a cloud-guest-utils implementation detail.
+RESIZE_SCRIPT=$(find "$MNT/etc/runit/core-services" -iname "*resize*" 2>/dev/null | head -1)
+if [ -n "$RESIZE_SCRIPT" ]; then
+    REL="${RESIZE_SCRIPT#$MNT}"
+    mv "$RESIZE_SCRIPT" "${RESIZE_SCRIPT}.orig"
+    cat > "$RESIZE_SCRIPT" << EOF
+#!/bin/sh
+echo "io: Erweitere Root-Partition auf volle Kartengroesse, bitte nicht ausschalten..." > /dev/console
+${REL}.orig
+sync
+echo "io: Partition erweitert." > /dev/console
+EOF
+    chmod 755 "$RESIZE_SCRIPT"
+else
+    echo "   growpart core-service not found, skipping notice wrapper" >&2
+fi
+
 echo "== network check script"
 # Build-injected, not a package: Steam needs a real connection on first
 # boot / after updates, and unlike the ethernet-only wait this also
@@ -254,9 +275,11 @@ mount --bind /sys "$MNT/sys"
 mount --bind /run "$MNT/run"
 
 echo "== reconfiguring packages"
-# Catches any package whose INSTALL/trigger script needs a working chroot
-# (/proc etc.) to run - those get silently deferred if xbps-install ran
-# before the binds above were in place.
+# xbps-install above ran before /proc et al. were bind-mounted, so any
+# package with a post_install/trigger script (io-session's PipeWire
+# symlink hook, among possibly others) got left unpacked but never
+# configured - xbps silently defers that without a working chroot. Redo
+# it now that the binds are in place.
 chroot "$MNT" xbps-reconfigure -a
 
 echo "== creating users"
