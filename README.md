@@ -73,6 +73,16 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
 - Volume keys change the volume and the OSD follows
 - Brightness slider works (through `steamos-priv-write`)
 - Timezone can be set from the client (through Io's `timedatectl` replacement)
+- Screenshots work (captured directly by gamescope, not through a desktop
+  portal)
+- Screen recording / streaming works — `xdg-desktop-portal-gamescope`'s
+  `ScreenCast` interface registers and responds correctly (two bugs fixed
+  to get there: a `JournalLog::new().unwrap()` that crashed the backend
+  outright with no systemd-journald to talk to, and the portal's `.portal`
+  file living in an isolated directory that made `xdg-desktop-portal`
+  register it in an exclusive mode where nothing else could grant it
+  permission — installing it to the standard portals directory fixed both
+  at once)
 - Power off from the Steam menu works
 - Power button suspends immediately on a single press and wakes the device
   — no power drain observed over an overnight suspend
@@ -134,10 +144,6 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
       log. Never confirmed fixed; worth a dedicated short-press test now that
       elogind/seatd/dbus are solid, separate from the long-press poweroff
       path that's already confirmed working
-- [ ] **Screen capture.** `xdg-desktop-portal-wlr` fails in game mode, which
-      affects screenshots and streaming. Valve ships
-      `xdg-desktop-portal-gamescope` and `xdg-desktop-portal-holo` — worth a
-      look before writing anything
 - [ ] **`CAP_SYS_NICE` for gamescope.** Would silence the performance warning.
       Needs a root-started wrapper that sets an ambient capability and drops
       to `deck` in one step, replacing part of the autologin chain — a PAM
