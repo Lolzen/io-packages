@@ -141,3 +141,16 @@ Steam's screenshot/recording overlay injection. The correct fix (matching
 what Valve does with `AmbientCapabilities=`) is a root-started wrapper that
 sets an ambient capability and changes to `deck` in one controlled step —
 not a PAM session hook, and not a one-line `setcap`.# Pitfalls
+
+**A warm reboot (`reboot`, including Steam's own restart menu entry) can
+boot into a completely different OS, not just fail to restart Io cleanly.**
+On a dual-boot setup where Io lives on a removable SD card (`--removable`
+GRUB install, no NVRAM entry — necessary since the card's partition GUIDs
+change on every rebuild) alongside an internal drive with its own
+registered NVRAM default, a warm reboot skips the boot-selector screen
+entirely and goes straight to the firmware's stored default — which is
+whatever owns NVRAM, not necessarily the card you just booted from. Looks
+identical to a broken service from inside the session (network still
+connects, but SSH refuses and nothing in Io's own service list explains
+why) until you actually look at the console and see a different OS's
+login prompt.
