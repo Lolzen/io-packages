@@ -172,6 +172,11 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
       rebuild. A cold boot with the card-selection key combo is currently
       the only reliable way back into Io; this goes away entirely once Io
       owns the drive outright
+- [ ] **A/B updates, post-1.0.** Not a Beta goal — worth revisiting once Io
+      is stable enough to matter. GitHub Releases (or another free hosting
+      option) as the update backend, atomic like SteamOS's own A/B scheme.
+      See the [Valve package survey](https://github.com/Lolzen/io-packages/wiki/Valve-Package-Survey)
+      for what the A/B-dependent Valve packages would bring if this happens
 
 ---
 
