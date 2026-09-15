@@ -1,7 +1,7 @@
 # Template file for 'xdg-desktop-portal-gamescope'
 pkgname=xdg-desktop-portal-gamescope
 version=0.1.38
-revision=4
+revision=5
 _commit=c99b9f7a6357e4753391c13933ef8bbfc3a9b7bb
 build_style=cargo
 make_install_args="--path ."
@@ -25,6 +25,11 @@ post_extract() {
 	rm -rf ${pkgname}
 	sed "s|@busname@|${_busname}|" src/config.rs.in > src/config.rs
 	sed -i 's|include!(concat!(env!("CARGO_TARGET_DIR"), "/config.rs"));|include!("config.rs");|' src/main.rs
+
+	# systemd-journald does not exist under runit; JournalLog::new() fails
+	# there and the double unwrap() takes the whole process down before
+	# main() does anything else. Install only if it succeeds.
+	perl -0777 -pi -e 's/systemd_journal_logger::JournalLog::new\(\)\s*\n\s*\.unwrap\(\)\s*\n\s*\.install\(\)\s*\n\s*\.unwrap\(\);/if let Ok(l) = systemd_journal_logger::JournalLog::new() { let _ = l.install(); }/s' src/main.rs
 }
 
 post_install() {
@@ -37,6 +42,7 @@ post_install() {
 
 	vmkdir usr/share/dbus-1/services
 	sed -e "s|@busname@|${_busname}|" -e "s|@portalbin@|${_portalbin}|" data/${_busname}.service.in > ${DESTDIR}/usr/share/dbus-1/services/${_busname}.service
+	sed -i '/^SystemdService=/d' ${DESTDIR}/usr/share/dbus-1/services/${_busname}.service
 
 	vmkdir usr/share/applications
 	sed -e "s|@portalbin@|${_portalbin}|" data/${pkgname}.desktop.in > ${DESTDIR}/usr/share/applications/${pkgname}.desktop
