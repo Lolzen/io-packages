@@ -158,7 +158,14 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
 ### Larger decision
 
 - [ ] **Move to the internal NVMe.** The SD card is too slow for games and has
-      caused several timing-related failures during development.
+      caused several timing-related failures during development. It also
+      means a warm reboot (`reboot`, including Steam's own restart menu
+      entry) boots straight back into the internal SteamOS install instead
+      of Io — Io's GRUB is deliberately installed `--removable`, with no
+      NVRAM boot entry, since the SD card's partition GUIDs change on every
+      rebuild. A cold boot with the card-selection key combo is currently
+      the only reliable way back into Io; this goes away entirely once Io
+      owns the drive outright
 
 ---
 
