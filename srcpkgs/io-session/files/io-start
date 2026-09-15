@@ -20,7 +20,6 @@ case "$SESSION" in
         exec dbus-run-session -- /usr/bin/io-plasma
         ;;
     *)
-        export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
         exec dbus-run-session -- /usr/bin/io-gamemode
         ;;
 esac
