@@ -1,0 +1,16 @@
+# Template file for 'holo-dmi-rules'
+pkgname=holo-dmi-rules
+version=1.1
+revision=1
+wrksrc="${pkgname}"
+short_desc="Loosen DMI serial number permissions for unprivileged reads (Valve's dmi-product-serial.conf, tmpfiles.d has no Void equivalent so a boot-time chmod/chgrp is used instead)"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=788e62abe238577bf8118888dedca63c3b5143189e885747706c2e7d7f7e5522
+
+do_install() {
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/20-dmi-serial-perms.sh 755 etc/runit/core-services
+}

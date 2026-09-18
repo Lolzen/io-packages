@@ -1,0 +1,13 @@
+# Template file for 'steamos-passwd'
+pkgname=steamos-passwd
+version=1.0
+revision=1
+depends="bash"
+short_desc="SteamOS password setter tool (stdin-driven wrapper around passwd)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+
+do_install() {
+	vbin ${FILESDIR}/steamos-passwd
+}

@@ -1,0 +1,20 @@
+# Template file for 'steamos-tuning'
+pkgname=steamos-tuning
+version=1.0
+revision=2
+short_desc="Valve's SteamOS sysctl/limits tuning for gaming workloads (net timeout, MTU probing, scheduler, split-lock, vm.max_map_count, Proton nice limit)"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+
+do_install() {
+ vinstall ${FILESDIR}/20-mtu-probing.conf 644 usr/lib/sysctl.d
+	vmkdir usr/lib/sysctl.d
+	vinstall ${FILESDIR}/20-net-timeout.conf 644 usr/lib/sysctl.d
+	vinstall ${FILESDIR}/20-sched.conf 644 usr/lib/sysctl.d
+	vinstall ${FILESDIR}/30-splitlock.conf 644 usr/lib/sysctl.d
+	vinstall ${FILESDIR}/30-vm.conf 644 usr/lib/sysctl.d
+
+	vmkdir etc/security/limits.d
+	vinstall ${FILESDIR}/15-proton-nice.conf 644 etc/security/limits.d
+}

@@ -1,0 +1,22 @@
+# Template file for 'holo-fstab-repair'
+pkgname=holo-fstab-repair
+version=0.2
+revision=1
+wrksrc="${pkgname}"
+short_desc="Disable invalid /dev/mmcblk* fstab entries that block UDisks2 (github.com/ValveSoftware/SteamOS#1208)"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=da1ccd864f62d788b19b172bae8c6c5d2c9ef53e5281370ae5211b86bb023a17
+
+# Upstream's systemd service re-runs this on every boot because SteamOS's
+# /etc lives on an atomic overlay, reset to a golden image on every A/B
+# update. Io's /etc is a plain, persistent filesystem - nothing resets
+# fstab behind the user's back, so a one-shot boot check is sufficient.
+# Currently a no-op in practice: udisks2/automount isn't enabled yet, this
+# is prep work for when it is.
+do_install() {
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/20-fstab-repair.sh 755 etc/runit/core-services
+}
