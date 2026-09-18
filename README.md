@@ -56,6 +56,14 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
 - Boots on the Steam Deck LCD with correct panel rotation
 - Graphics through radv on Van Gogh, gamescope directly on DRM
 - Audio through both CS35L41 amplifiers, headphones and internal microphone
+  — speaker tuning happens in the amplifier's own hardware DSP (no separate
+  software DSP exists for this model), microphone noise suppression and
+  tuning run in software via `steamdeck-dsp` (Faust LV2 plugins, ported
+  from Valve's own DSP package) and `rnnoise-ladspa` (a from-scratch port
+  of werman/noise-suppression-for-voice, since Void's NoiseTorch package
+  is GUI-only and ships no system-wide LADSPA plugin)
+- ZRAM swap (`holo-zram-swap` + `zramen`) and `earlyoom` both run with
+  Valve's own tuning, ported from `holo-zram-swap`/`holo-earlyoom`
 - WLAN and Ethernet (including dock) through NetworkManager
 - Suspend and resume, including wake via the power button
 - Fan control through Valve's daemon (idles at 1500 rpm, ramps above 55 °C)
@@ -73,6 +81,10 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
 - Volume keys change the volume and the OSD follows
 - Brightness slider works (through `steamos-priv-write`)
 - Timezone can be set from the client (through Io's `timedatectl` replacement)
+- Storage can be grown to fill the card from a desktop shortcut (visible
+  terminal, confirm-before-running) instead of a silent first-boot step —
+  the old silent `growpart` run blocked all of boot stage 2 with zero
+  on-screen indication, and could corrupt the card if powered off mid-resize
 - Screenshots work (captured directly by gamescope, not through a desktop
   portal)
 - Screen recording / streaming works — `xdg-desktop-portal-gamescope`'s
@@ -153,9 +165,20 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
 - [ ] **SD/USB automount.** Disabled for now — needs `udisks2` packaged, and
       the boot device itself excluded from the udev rules to avoid a boot-time
       race (see Pitfalls)
-- [ ] **Visible, opt-in partition growth.** Currently a silent first-boot
-      `growpart` run; planned replacement is a desktop shortcut the user
-      triggers manually, in a visible terminal, like the game-mode switch
+- [ ] **Microphone loopback isn't visible in Steam's own audio dropdown.**
+      Technically complete and verified — the loopback node exists, has the
+      right priority, and produces real audio (`pw-record` against it
+      writes a full 3 seconds of a real capture, not silence). Steam's own
+      microphone-selection UI still shows nothing, or on manual testing
+      shows the raw technical node name instead of a human-readable one.
+      Investigated two concrete hypotheses (Steam reading `DeviceModel` for
+      hardware identity; the exact property WirePlumber sets on a "hidden"
+      loopback) and fixed a real, independent bug in `io-steamos-manager`'s
+      `DeviceModel` along the way — neither changed Steam's behavior. Steam's
+      actual selection logic here is closed and unverifiable from our side
+- [ ] **`CpuBoost1`/`CpuScaling1`/`CpuScheduler1` untested.** `io-steamos-manager`
+      exposes these DBus interfaces (found alongside the TDP/GPU-clock ones),
+      but nobody has tried them from Steam's own menus yet
 
 ### Infrastructure
 
