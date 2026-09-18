@@ -242,3 +242,15 @@ particular hardware, are pure on/off switches. The warning is the expected,
 harmless result of a broad compatibility layer meeting one specific card;
 patching it out would mean patching shared, generic system files used by
 every other sound card on the system too, for a purely cosmetic log line.
+
+**`/etc/sysctl.d` is rejected by Void's own package linter.** A package
+installing files there fails at `pre-pkg` with "is forbidden. Use
+/usr/lib/sysctl.d." — `/etc` is reserved for the user's own overrides,
+packages ship their defaults under `/usr/lib/sysctl.d` instead, which the
+user can then shadow from `/etc/sysctl.d` if they want to override a
+specific value.
+
+**`vcopy` doesn't create its destination directory, unlike `vinstall`/`vbin`.**
+Copying a whole directory tree with `vcopy src dst` fails with "cannot
+create directory" if `dst`'s parent doesn't already exist in the
+destination — needs an explicit `vmkdir` for the parent path first.
