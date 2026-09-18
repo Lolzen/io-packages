@@ -41,3 +41,13 @@ upstream updates without trawling directory listings by hand.
 | `rnnoise-ladspa` | werman/noise-suppression-for-voice, built from source (LADSPA target only, no VST/JUCE dependency) — the actual RNNoise plugin `steamdeck-dsp`'s filter chain calls; Void's `NoiseTorch` package is GUI-only and doesn't ship this |
 | `holo-earlyoom` | Valve's `earlyoom` tuning (SteamOS's kill thresholds, SteamAppId-aware kill logging) — depends on Void's `earlyoom`, supplies its runit `conf` file |
 | `holo-zram-swap` | Valve's ZRAM tuning (50% RAM, zstd, priority 100) — depends on Void's `zramen`, supplies its runit `conf` file instead of the systemd-only `zram-generator` upstream ships |
+
+## Small system tuning, ported today
+
+| Package | Contents |
+|---|---|
+| `steamos-tuning` | Valve's sysctl/limits gaming tweaks — TCP MTU probing, faster TCP port reuse, scheduler slice, split-lock mitigation disabled, raised `vm.max_map_count`, Proton's `nice` ceiling |
+| `steamos-passwd` | Stdin-driven wrapper around `passwd`, meant for Steam's own UI to call when setting a device password |
+| `holo-dmi-rules` | Makes the DMI serial number readable without root — Void has no `tmpfiles.d` equivalent, so this runs as a boot-time core-service `chmod`/`chgrp` instead |
+| `holo-fstab-repair` | Disables invalid `/dev/mmcblk*` fstab entries that block UDisks2 from mounting SD cards ([ValveSoftware/SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) — currently a no-op since SD/USB automount isn't enabled |
+| `holo-plymouth-themes` | Valve's "holo" Plymouth boot-splash theme, Jupiter/LCD logo included — package builds and installs the theme, not yet wired into dracut/GRUB to actually display at boot |
