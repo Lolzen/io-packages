@@ -32,3 +32,12 @@ prefer Valve's own mirror when bumping versions.
 `pkgcheck.sh` fetches both listings, keeps the newest version of each package
 in `docs/`, and reports what changed since the last run. Useful for spotting
 upstream updates without trawling directory listings by hand.
+
+## Audio, memory, and OOM handling (Alpha 2)
+
+| Package | Contents |
+|---|---|
+| `steamdeck-dsp` | Valve's Jupiter/LCD speaker and microphone DSP — Faust LV2 plugins, UCM profiles, PipeWire/WirePlumber hardware-profile fragments, a microphone loopback for Steam's mic selection. Galileo (OLED)-specific parts stripped |
+| `rnnoise-ladspa` | werman/noise-suppression-for-voice, built from source (LADSPA target only, no VST/JUCE dependency) — the actual RNNoise plugin `steamdeck-dsp`'s filter chain calls; Void's `NoiseTorch` package is GUI-only and doesn't ship this |
+| `holo-earlyoom` | Valve's `earlyoom` tuning (SteamOS's kill thresholds, SteamAppId-aware kill logging) — depends on Void's `earlyoom`, supplies its runit `conf` file |
+| `holo-zram-swap` | Valve's ZRAM tuning (50% RAM, zstd, priority 100) — depends on Void's `zramen`, supplies its runit `conf` file instead of the systemd-only `zram-generator` upstream ships |
