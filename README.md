@@ -135,18 +135,13 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
       which Io does not have
 - [ ] Bump revisions consistently; several packages still carry numbers from
       testing
-- [ ] **Five small Valve packages ported, not yet device-verified:**
-      `steamos-tuning` (sysctl/limits gaming tweaks: TCP MTU probing, faster
-      TCP port reuse, scheduler slice, split-lock mitigation disabled,
-      raised `vm.max_map_count`, Proton's `nice` ceiling), `steamos-passwd`
-      (stdin-driven password-setter wrapper Steam's own UI would call),
-      `holo-dmi-rules` (readable DMI serial without root — no Void
-      `tmpfiles.d` equivalent, so this runs as a boot-time core-service
-      instead), `holo-fstab-repair` (disables invalid `/dev/mmcblk*` fstab
-      entries that block UDisks2 — currently a no-op, SD/USB automount
-      isn't enabled yet either), `holo-plymouth-themes` (Valve's Jupiter
-      boot-splash theme, package builds and installs the theme files —
-      not yet wired into dracut/GRUB to actually show during boot)
+- [ ] **`holo-plymouth-themes` not yet wired into boot.** Theme files install
+      correctly, everything else from today's small-package round is
+      confirmed working live (`steamos-tuning`'s sysctls and the Proton
+      `nice` ceiling — the latter needed an extra fix, `pam_limits.so` was
+      missing from `/etc/pam.d/login`'s chain entirely; `steamos-passwd`;
+      `holo-dmi-rules`; `holo-fstab-repair`'s no-op state). Just needs
+      dracut/GRUB integration to actually display during boot
 
 ### Needs work
 
