@@ -73,3 +73,63 @@ update, so the repair has to re-run every boot. Io's port dropped that
 condition since Io's `/etc` is plain and persistent - revisit this
 specific package's condition (and the general assumption "Io's /etc never
 resets itself") if Io ever gets its own atomic /etc overlay.
+
+# Full triage of the "unreviewed" list (Sept 2026)
+
+Everything that was in "Everything else, unreviewed" got worked through.
+Outcomes below — packages now ported are in [Packages](Packages), not
+repeated here.
+
+**Ported:** `steamos-tweak-mtu-probing`, `holo-fstab-repair` (folded into
+`steamos-tuning`/its own package respectively — see Packages)
+
+**Nothing to port, with reason:**
+- `holo-session-selection` — the actual session-switch script
+  (`holo-session-select`) is itself marked deprecated upstream in favour of
+  `steamosctl`, which is exactly what Io's own `io-steamos-manager` already
+  implements. The other half of the package (`holo.conf`) is pure SDDM
+  config — Io has no display manager
+- `steamos-alias` — a pacman/libalpm hook mechanism (auto-creates
+  `steamos-*` symlinks for `holo-*` files on install/remove). No xbps
+  equivalent, and the underlying problem it solves — a historical
+  `steamos`→`holo` rename needing back-compat symlinks — never happened on
+  Io in the first place
+- `jupiter-legacy-support` — upstream's own `PKGBUILD` header says it best:
+  "Everything still in here should be either removed or re-homed to a
+  proper package." A grab-bag of QA/devkit tooling, Valve's own workarounds
+  for their broken `/var/boot` mechanics, and other cruft even Valve wants
+  gone
+- `jupiter-resolved-nomdns` — `systemd-resolved`-specific (Io uses
+  NetworkManager directly), and exists only to stop mDNS colliding with
+  `avahi`, which is only there for `steamos-devkit-service` — a chain of
+  two things Io doesn't have
+- `steamos-customizations-git` — a stale, unmaintained snapshot of the same
+  repo as `steamos-customizations-jupiter` (frozen since 2023-09, confirmed
+  by comparing tag histories); superseded by `-jupiter`, nothing to look at
+  independently
+- `holo-nfs-utils-tmpfiles`, `holo-debuginfod-config`,
+  `holo-rust-packaging-tools` — never actually opened; no plausible Io use
+  case (no NFS setup, debug-symbol server convenience for developers,
+  Arch-specific build tooling `xbps-src` doesn't use)
+
+**`steamos-customizations-jupiter` itself** (the actively maintained one,
+`jupiter-main`) is a large, still-growing repo (tags up to the day before
+this survey). Reviewed folder-by-folder:
+- `misc/` — the useful part, source of `steamos-tuning`/`holo-fstab-repair`
+  above. `sysctl.d`, `limits.d`, `sleep.conf.d` (suspend-then-hibernate,
+  not yet looked at), `modules-load.d/ntsync.conf` (needs the kernel bump
+  to 7.2, see the kernel-bump note elsewhere) still have unreviewed pieces
+- `atomic-update/`, `chainloader/`, most of `initrd/` — A/B mechanics, see
+  the dedicated section above
+- `swap/`, `grub/`, `NetworkManager/`, `offload/` — not opened yet
+
+## Deprioritized for now ("Stufe 4/5"), parked deliberately
+
+Not pursued in this pass on purpose — low expected value, or needs
+something Io doesn't have yet. Revisit if the underlying gap closes
+(e.g. NVMe migration, desktop-mode maturity) or on request:
+
+- `jupiter-dock-updater-bin` — needs Valve's own official dock hardware
+- `steamos-devkit-service` — only relevant for the Steamworks devkit
+  developer workflow
+- `steamos-kdumpst-layer` — kernel crash-dump tooling, developer-facing
