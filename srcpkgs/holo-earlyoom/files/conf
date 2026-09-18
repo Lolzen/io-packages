@@ -1,0 +1,1 @@
+OPTS="-P /usr/lib/holo-earlyoom/steamos-earlyoom-prehook -N /usr/lib/holo-earlyoom/holo-earlyoom-logger.sh -M 409600,307200 -S 409600,307200"

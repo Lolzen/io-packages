@@ -1,0 +1,30 @@
+# Template file for 'holo-earlyoom'
+pkgname=holo-earlyoom
+version=1.1
+revision=1
+wrksrc="${pkgname}"
+depends="earlyoom>=1.8.2_1"
+short_desc="Valve's earlyoom tuning (SteamOS defaults, SteamAppId-aware kill logging)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-2.src.tar.gz"
+checksum=3ff613ed4c72248ad32226753ce57612a22cf232463dcaf6d132d04925f767f6
+
+do_build() {
+	gcc -Wall -O1 -o holo-earlyoom-prehook holo-earlyoom-prehook.c
+	strip holo-earlyoom-prehook
+}
+
+do_install() {
+	vmkdir usr/lib/holo-earlyoom
+	vinstall holo-earlyoom-prehook 755 usr/lib/holo-earlyoom steamos-earlyoom-prehook
+	vinstall holo-earlyoom-logger.sh 755 usr/lib/holo-earlyoom
+
+	# Void's own earlyoom run script (/etc/sv/earlyoom/run) already sources
+	# an optional ./conf file for extra OPTS - no systemd unit override
+	# mechanism needed, just supply that file with Valve's SteamOS
+	# defaults baked in.
+	vmkdir etc/sv/earlyoom
+	vinstall ${FILESDIR}/conf 644 etc/sv/earlyoom
+}
