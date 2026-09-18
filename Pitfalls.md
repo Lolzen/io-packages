@@ -154,3 +154,91 @@ identical to a broken service from inside the session (network still
 connects, but SSH refuses and nothing in Io's own service list explains
 why) until you actually look at the console and see a different OS's
 login prompt.
+
+**A PipeWire module's `.conf` filename can collide with an unrelated PipeWire
+concept of the same name.** `libpipewire-module-filter-chain` is meant to be
+loaded as a fragment in `pipewire.conf.d/`, joining the already-running main
+session. But PipeWire *also* ships its own standalone `filter-chain.conf`
+base config, meant to be run as `pipewire -c filter-chain.conf` — a
+completely separate, standalone server with its own new `pipewire-0`
+socket. Naming a fragment directory `filter-chain.conf.d/` (as Valve's
+source does) makes it easy to load the fragment as if it were that
+standalone config instead of a `pipewire.conf.d/` addition — it will load
+without error, produce a node that looks correct in isolation, and connect
+to nothing in the real session. Always install PipeWire module fragments
+into `pipewire.conf.d/`, never a directory that shares a name with one of
+PipeWire's own top-level configs.
+
+**`exec` inside a script that's `.`-sourced (not executed) takes down
+everything after it, not just itself.** Void's `/etc/runit/1` reads each
+`core-services/*.sh` file with `. "$f"` in a loop, not by running it as its
+own process. A `core-services` script that ends in `exec some-binary`
+replaces runit's own stage-1 process with that binary — once the binary
+exits, runit treats stage 1 as finished and moves on to stage 2, silently
+skipping every remaining script in the loop (in our case, several actual
+system-init steps got skipped this way, boot looked completely normal
+regardless). Use a plain call, not `exec`, in anything sourced into another
+script's process.
+
+**A `libpipewire-module-loopback` bound to a `target.object` at session
+start can bind to nothing and never retry.** If the target node (in our
+case, an ALSA capture node WirePlumber hadn't enumerated yet) doesn't exist
+the moment PipeWire loads the module, the loopback comes up fully formed —
+correct properties, correct priority, no error anywhere — but is connected
+to nothing, and stays that way permanently; nothing about it will indicate
+the problem short of manually confirming a live capture through it. Fix by
+setting `target.delay.sec` (module option, since PipeWire 0.3.60) high
+enough to guarantee the target already exists — a plain resource-startup
+race, not a bug in the target itself. A quicker but misleading way to
+"confirm" the fix is working is checking `wpctl status`/`pw-dump`: an idle,
+correctly-bound loopback and a permanently-broken one look identical there
+in both cases (both report `"state": "suspended"` with no visible link) —
+only an actual read/write against the node (e.g. `pw-record`, checking the
+resulting file size isn't just an empty header) tells them apart.
+
+**WirePlumber's `node.create-loopback=true` property (set by
+`alsa-loopback.conf`, meant to auto-hide raw ALSA sources behind a
+higher-priority loopback) silently does nothing on wireplumber 0.5.17,
+despite being present and working in the exact same file on real SteamOS's
+0.5.14.** Confirmed this isn't a Valve patch — the reactive code (function
+`CreateLoopback` in `monitors/alsa.lua`) is present unmodified in real
+SteamOS's own pristine, unpatched `alsa.lua.orig`, so it's an upstream
+WirePlumber change/removal somewhere between those two versions, not
+something Valve added. Diffing SteamOS's patched vs. unpatched `alsa.lua`
+is a good way to separate genuine Valve patches from stock upstream
+behavior when chasing something like this — most of what looks
+Valve-specific in a diff often isn't. Worked around with a plain,
+hand-built `libpipewire-module-loopback` instead of relying on this
+property (see the `target.delay.sec` entry above for what that needed).
+
+**A rename-then-source udev/init script can lose its executable bit on the
+renamed file.** A `mv script script.orig` + replacement-wrapper pattern
+(used for the growpart boot-notice wrapper) left `script.orig` non-executable
+after a package rebuild — the wrapper's call to it failed with "Permission
+denied" while the wrapper's own "done" message still printed, making the
+failure invisible unless you go looking. Confirm the moved file's mode
+explicitly after any such rename, don't assume `mv` always preserves it in
+every packaging context.
+
+**A `here-doc`'d config file can end up truncated by one line with no
+error at the point of writing.** A `sudo tee file << 'EOF' ... EOF` copy-paste
+silently lost its closing bracket line once — `tee` and the shell reported
+no error, the file was simply short by exactly the content that would have
+closed the outermost block. PipeWire's own config parser caught it cleanly
+(`Mismatched bracket`, with a line/column), but only in its own startup log,
+which nothing else surfaces — a config that fails to parse this way doesn't
+throw an error anywhere else, the module and everything it would have
+provided is just silently absent. `wc -l` against the file right after
+writing it is a fast, cheap sanity check worth doing by habit for anything
+written via heredoc.
+
+**PipeWire/ALSA "probe_volumes: Path X is not a volume or mute control"
+warnings are not a config bug and not fixable from a device-specific
+package.** They come from `alsa-card-profile`'s generic, PulseAudio-derived
+mixer-path files (`/usr/share/alsa-card-profile/mixer/paths/*.conf`) —
+written to cover many different sound cards' worth of possible mixer
+elements at once, they probe for `volume` support on elements that, on this
+particular hardware, are pure on/off switches. The warning is the expected,
+harmless result of a broad compatibility layer meeting one specific card;
+patching it out would mean patching shared, generic system files used by
+every other sound card on the system too, for a purely cosmetic log line.
