@@ -134,8 +134,9 @@ class Manager2(ServiceInterface):
     @dbus_property(access=PropertyAccess.READ)
     def DeviceModel(self) -> "(ss)":
         board = _read("/sys/class/dmi/id/board_name", "unknown")
-        variant = "LCD" if board == "Jupiter" else "unknown"
-        return [board, variant]
+        device = "steam_deck" if board == "Jupiter" else "unknown"
+        variant = board if board == "Jupiter" else "unknown"
+        return [device, variant]
 
 
 class TdpLimit1(ServiceInterface):
