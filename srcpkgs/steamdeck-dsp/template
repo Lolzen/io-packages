@@ -1,0 +1,103 @@
+# Template file for 'steamdeck-dsp'
+pkgname=steamdeck-dsp
+version=1.02
+revision=8
+wrksrc="${pkgname}"
+hostmakedepends="git tar which"
+makedepends="faust lv2 boost-devel"
+depends="pipewire wireplumber rnnoise-ladspa"
+short_desc="Valve's Steam Deck speaker/microphone DSP (Faust LV2 plugins, UCM, hardware profiles)"
+maintainer="Georg <funer@gmx.at>"
+license="custom:Proprietary"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=33cbb5fe073c69db2fb061258f3212a2b60143513446efb2dcf9cfc86fcd1712
+
+# Jupiter/LCD only. Galileo (OLED) needs a different soundcard
+# (sof-nau8821-max) and its own SOF firmware build - out of scope until
+# Io supports that model.
+archs="x86_64*"
+
+post_extract() {
+	git --git-dir=valve-hardware-audio-processing archive --format=tar ${version} | tar -x
+
+	# Upstream's filter-chain.conf references rnnoise_ladspa.so, but the
+	# actual plugin we build (rnnoise-ladspa package) is librnnoise_ladspa.so
+	# - that's upstream's own build output filename, not something we made
+	# up, matches Gentoo's packaging of the same project too.
+	sed -i 's|plugin = /usr/lib/ladspa/rnnoise_ladspa.so|plugin = /usr/lib/ladspa/librnnoise_ladspa.so|' pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf
+
+	# Valve's config also uses "nt-filter" as the LADSPA label, which is
+	# specific to NoiseTorch's own fork/build of the plugin. The upstream
+	# source we actually build (werman/noise-suppression-for-voice)
+	# exposes "noise_suppressor_mono" / "noise_suppressor_stereo" instead
+	# - confirmed with listplugins against our own built .so. Both filter
+	# nodes here are per-channel (left/right), so the mono label is
+	# correct for both.
+	sed -i 's|label = nt-filter|label = noise_suppressor_mono|' pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf
+}
+
+do_build() {
+	make FAUSTINC="/usr/include/faust" FAUSTLIB="/usr/lib/faust"
+}
+
+do_install() {
+	make DEST_DIR="${DESTDIR}" install
+
+	# Upstream's install_plugins.sh copies the microphone plugin to a path
+	# ending in .dsp instead of .lv2, not .lv2 like the other two plugins.
+	# Kept exactly as upstream ships it, unpatched, on purpose.
+
+	# Galileo/OLED-only SOF firmware - Jupiter/LCD doesn't have that
+	# soundcard. setup_sof_fw.sh has no guard of its own, so remove what
+	# it wrote instead of patching the Makefile.
+	rm -rf ${DESTDIR}/usr/lib/firmware/amd
+
+	# Upstream's whole /run-symlink, boot-time-model-switch mechanism (the
+	# hwconfig scripts, the hardware-profiles trees, the /etc/wireplumber
+	# symlink, the systemd units) exists so a read-only /usr on real
+	# SteamOS can still pick an audio profile at boot without writing
+	# there. Io's /etc is always writable and only ever supports Jupiter -
+	# confirmed pipewire/wireplumber never actually read the /run copies
+	# anyway. Install the Jupiter fragments straight into the real,
+	# standard search paths instead, drop everything upstream installed
+	# for the mechanism we're not using.
+	rm -f ${DESTDIR}/etc/wireplumber
+	rm -rf ${DESTDIR}/usr/share/pipewire/hardware-profiles
+	rm -rf ${DESTDIR}/usr/share/wireplumber/hardware-profiles
+	rm -rf ${DESTDIR}/usr/lib/systemd
+
+	# pipewire.conf.d/context-properties.conf and
+	# filter-chain.conf.d/context-properties.conf both set context.properties
+	# with different, overlapping values (different clock quantum ranges;
+	# the filter-chain one also wants mem.mlock-all, left out here until
+	# it's been tested against Io's actual MEMLOCK ulimit). Rather than
+	# install both and let the loader's alphabetical merge order decide
+	# which wins by accident, keep one deliberately combined file with the
+	# wider quantum range from the base profile.
+	vmkdir etc/pipewire/pipewire.conf.d
+	vinstall ${FILESDIR}/10-valve-jupiter.conf 644 etc/pipewire/pipewire.conf.d
+	vinstall pipewire-confs/hardware-profiles/valve-jupiter/pipewire.conf.d/module-access-args.conf 644 etc/pipewire/pipewire.conf.d
+	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/pipewire.conf.d 20-filter-chain.conf
+
+	# Upstream's wireplumber alsa-loopback.conf rule (sets
+	# node.create-loopback=true) has no effect on the wireplumber version
+	# Io ships - confirmed the reactive code for that property present in
+	# real SteamOS's wireplumber 0.5.14 is simply gone from this version's
+	# alsa.lua, not a Valve patch, an upstream change somewhere between
+	# 0.5.14 and 0.5.17. Rather than chase that upstream regression, get
+	# the same visible result (a named, higher-priority loopback node so
+	# Steam shows a microphone instead of hiding behind the raw ALSA
+	# source) with a plain libpipewire-module-loopback, which upstream
+	# still ships and works fine on its own. target.delay.sec is required:
+	# without it, the loopback tries to bind to the raw mic node before
+	# wireplumber has enumerated it at session start, binds nothing, and
+	# never retries - confirmed via pw-link showing no connection at all
+	# until this delay was added.
+	vinstall ${FILESDIR}/30-mic-loopback.conf 644 etc/pipewire/pipewire.conf.d
+
+	vmkdir etc/wireplumber/wireplumber.conf.d
+	for f in wireplumber/hardware-profiles/valve-jupiter/wireplumber.conf.d/*.conf; do
+		vinstall "$f" 644 etc/wireplumber/wireplumber.conf.d
+	done
+}
