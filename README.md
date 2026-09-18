@@ -63,7 +63,9 @@ Full documentation lives in the [wiki](https://github.com/Lolzen/io-packages/wik
   of werman/noise-suppression-for-voice, since Void's NoiseTorch package
   is GUI-only and ships no system-wide LADSPA plugin)
 - ZRAM swap (`holo-zram-swap` + `zramen`) and `earlyoom` both run with
-  Valve's own tuning, ported from `holo-zram-swap`/`holo-earlyoom`
+  Valve's own tuning, ported from `holo-zram-swap`/`holo-earlyoom` —
+  confirmed live (`zramctl`/`swapon --show` show the right size/algorithm,
+  `earlyoom`'s process listing shows Valve's exact arguments)
 - WLAN and Ethernet (including dock) through NetworkManager
 - Suspend and resume, including wake via the power button
 - Fan control through Valve's daemon (idles at 1500 rpm, ramps above 55 °C)
@@ -133,6 +135,18 @@ See [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) for 
       which Io does not have
 - [ ] Bump revisions consistently; several packages still carry numbers from
       testing
+- [ ] **Five small Valve packages ported, not yet device-verified:**
+      `steamos-tuning` (sysctl/limits gaming tweaks: TCP MTU probing, faster
+      TCP port reuse, scheduler slice, split-lock mitigation disabled,
+      raised `vm.max_map_count`, Proton's `nice` ceiling), `steamos-passwd`
+      (stdin-driven password-setter wrapper Steam's own UI would call),
+      `holo-dmi-rules` (readable DMI serial without root — no Void
+      `tmpfiles.d` equivalent, so this runs as a boot-time core-service
+      instead), `holo-fstab-repair` (disables invalid `/dev/mmcblk*` fstab
+      entries that block UDisks2 — currently a no-op, SD/USB automount
+      isn't enabled yet either), `holo-plymouth-themes` (Valve's Jupiter
+      boot-splash theme, package builds and installs the theme files —
+      not yet wired into dracut/GRUB to actually show during boot)
 
 ### Needs work
 
