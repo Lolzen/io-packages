@@ -51,3 +51,25 @@ renames packages over time, worth re-running before acting on this list.
 Fewer dead stubs is good, but never at the cost of Io's own stability or
 security. Most of this is "adapt", not "copy" — Beta-phase work, not a
 rush now.
+
+## A/B mechanics, found while reading steamos-customizations-jupiter (Sept 2026)
+
+Not catalogued individually before — the specific pieces behind the atomic
+A/B system, found while browsing this package's full source tree:
+
+- `atomic-update/` — RAUC integration, `steamos-atomupd` client hookup,
+  systemd units, tmpfiles rules
+- `chainloader/` — GRUB-level slot switching between A/B partition sets
+- `initrd/holo-etc-overlay.ash` — mounts `/etc` as a writable overlay on
+  top of the read-only root, at initramfs time, before anything else runs
+- `initrd/holo-factory-reset.ash`, `initrd/holo-var.ash`,
+  `initrd/holo-var-lib-modules.ash` — factory reset and `/var`/module
+  overlay handling, same initramfs stage
+
+`holo-fstab-repair` (ported, see Packages) is a small, concrete example of
+what changes once `/etc` is atomic: upstream's systemd unit only exists
+because SteamOS's `/etc/fstab` gets reset from a golden image on every A/B
+update, so the repair has to re-run every boot. Io's port dropped that
+condition since Io's `/etc` is plain and persistent - revisit this
+specific package's condition (and the general assumption "Io's /etc never
+resets itself") if Io ever gets its own atomic /etc overlay.
