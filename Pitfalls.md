@@ -254,3 +254,33 @@ specific value.
 Copying a whole directory tree with `vcopy src dst` fails with "cannot
 create directory" if `dst`'s parent doesn't already exist in the
 destination — needs an explicit `vmkdir` for the parent path first.
+
+**Valve's kernel git tree can carry a second, much larger config file that
+looks like the real fragment but isn't.** `linux-neptune-72`'s source
+(`linux-integration` git tree) contains both
+`ci/kernel-config/neptune/config` (a full ~12,500-line reference config,
+apparently Arch's own defaults plus everything Valve enables, used for CI
+verification) and `ci/kernel-config/neptune/config-neptune` (the actual
+small fragment referenced by the `PKGBUILD`'s `source=()`  and genuinely
+merged at build time). A setting present in the first file but absent from
+the second will build fine, look correct in the source tree, and then
+silently not apply — `grep` the whole patch for a missing option before
+concluding it's actually part of Valve's real fragment; check which of the
+two files it's actually in.
+
+**A `cat >> file << 'EOF'` append can silently do nothing.** Happened twice
+this project (once for a PipeWire loopback config, once for a kernel
+`config-io` fragment) — the command returns success, the file is later read
+back as unchanged, and nothing in the shell's own output flags a problem.
+Always `cat` the file immediately after any heredoc write, append or
+otherwise, before relying on its content in a downstream build step —
+cheap enough to do every time, and the failure mode gives zero warning on
+its own.
+
+**`EV_FF` (force-feedback capability, `/proc/bus/input/devices`'s `B: EV=`
+line) is bit `0x200000`, not `0x100000`.** Misquoted this once while
+checking whether a device reported FF support — cost a wasted grep pass and
+a wrong conclusion before the real bit position was confirmed against a
+device (`Microsoft X-Box 360 pad 0`, Steam Deck's emulated gamepad, not the
+raw `hid-steam` HID nodes) that was actually already reporting it
+correctly.
