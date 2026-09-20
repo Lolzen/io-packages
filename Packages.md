@@ -51,3 +51,10 @@ upstream updates without trawling directory listings by hand.
 | `holo-dmi-rules` | Makes the DMI serial number readable without root — Void has no `tmpfiles.d` equivalent, so this runs as a boot-time core-service `chmod`/`chgrp` instead |
 | `holo-fstab-repair` | Disables invalid `/dev/mmcblk*` fstab entries that block UDisks2 from mounting SD cards ([ValveSoftware/SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) — currently a no-op since SD/USB automount isn't enabled |
 | `holo-plymouth-themes` | Valve's "holo" Plymouth boot-splash theme, Jupiter/LCD logo included — package builds and installs the theme, not yet wired into dracut/GRUB to actually display at boot |
+
+## Kernel
+
+| Package | Contents |
+|---|---|
+| `linux-neptune-72` | Steam Deck kernel, 7.2.4-valve1. Same build shape as `linux-neptune` (Void's own base config + Valve's `config-neptune` fragment merged on top via `merge_config.sh`, plus a self-generated `0001-neptune-72.patch` — diffed from Valve's `linux-integration` git tree against a vanilla kernel.org 7.2.4 tarball, since that tree carries no separate patch file of its own). Adds `CONFIG_HID_HAPTIC=y` to `config-io` (missing from Valve's actual `config-neptune` fragment — the `=y` value only exists in a much larger, never-read `ci/kernel-config/neptune/config` reference file in the same repo, not the real fragment). Installed alongside `linux-neptune` (6.15.8), not replacing it — both show up as separate GRUB entries |
+| `linux-neptune` | Steam Deck kernel, 6.15.8-valve1. Kept installed as a known-good fallback; not actively maintained further now that `-72` is the primary target |
