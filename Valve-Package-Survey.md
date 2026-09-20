@@ -36,16 +36,6 @@ renames packages over time, worth re-running before acting on this list.
 - `steamos-manager` (Valve's real, Rust one) — superseded by `io-steamos-manager`
 - `holo-keyring` — pacman/Arch signing, irrelevant to xbps
 
-## Everything else, unreviewed
-
-`holo-flatpak-tmpfiles`, `holo-nfs-utils-tmpfiles`, `holo-fstab-repair`,
-`holo-plymouth-config`, `holo-plymouth-themes`, `holo-debuginfod-config`,
-`holo-rust-packaging-tools`, `holo-session-selection`,
-`steamos-kdumpst-layer`, `steamos-passwd`, `steamos-tweak-mtu-probing`,
-`steamos-alias`, `steamos-devkit-service`, `jupiter-dock-updater-bin`,
-`jupiter-legacy-support`, `jupiter-resolved-nomdns`,
-`steamos-customizations-git`, `steamos-customizations-jupiter`
-
 ## Guiding principle
 
 Fewer dead stubs is good, but never at the cost of Io's own stability or
@@ -73,6 +63,12 @@ update, so the repair has to re-run every boot. Io's port dropped that
 condition since Io's `/etc` is plain and persistent - revisit this
 specific package's condition (and the general assumption "Io's /etc never
 resets itself") if Io ever gets its own atomic /etc overlay.
+
+`grub/grub.d/30_efi-prober.in` — also A/B-specific, no memory-file entry
+needed (self-explanatory once you see it): probes removable media only
+(`isremovable`) for `EFI/steamos/steamcl.efi`, SteamOS's own
+installer/recovery chainloader. Nothing to port; not something Io's normal
+boot path needs.
 
 # Full triage of the "unreviewed" list (Sept 2026)
 
@@ -133,3 +129,29 @@ something Io doesn't have yet. Revisit if the underlying gap closes
 - `steamos-devkit-service` — only relevant for the Steamworks devkit
   developer workflow
 - `steamos-kdumpst-layer` — kernel crash-dump tooling, developer-facing
+- `NetworkManager/conf.d/10-steamos-defaults.conf` — parked deliberately,
+see holovoid memory notes: this is a hardening/polish item, not something
+worth doing mid-development.
+
+## Kernel bump follow-ups (linux-neptune-72, Sept 2026)
+
+Three items motivated the 6.15.8 → 7.2.4 bump in the first place; the bump
+itself is done and verified, but none of these three has actually been
+checked against the new kernel yet:
+
+- `ntsync` — mainlined since Linux 6.14, needs a Kconfig check in
+  `config-neptune`/`config-io`, then `modinfo ntsync` on the Deck
+- `hid_nintendo`/`hid_playstation` — external Switch Pro/DualSense
+  controller support, needed for Steam to prefer `hidraw` over `evdev`
+- HDMI-CEC — relevant for docking to a TV
+
+**New, unrelated to the above:** trackpad swipe haptics (the fine texture
+under a finger swiping across a trackpad — not tap, not controller rumble)
+regressed between 6.15.8 and 7.2.4. Controller force feedback itself works
+fine (`CONFIG_STEAM_FF=y`, confirmed via `ff_memless` and the `EV_FF` bit
+on the Deck's emulated Xbox 360 pad). No Kconfig option covers it — nothing
+touchpad/trackpad-related exists in `drivers/hid/Kconfig` beyond the
+generic, unrelated `HID_HAPTIC`. Points to a real source-level change in
+`hid-steam.c` between Valve's two kernel branches; needs a direct diff of
+that one file between the `0001-neptune.patch` (6.15.8) and
+`0001-neptune-72.patch` (7.2.4) patch sets to find the actual change.
