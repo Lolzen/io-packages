@@ -1,60 +1,58 @@
 # Packages
 
+All packages live in [io-packages/srcpkgs](https://github.com/Lolzen/io-packages/tree/main/srcpkgs)
+and are published to the [io-repo](https://github.com/Lolzen/io-repo/releases/tag/current)
+release. `io-desktop` pulls in everything; `mkimg.sh` installs nothing
+else. Differences to Valve's originals are listed in [Deviations](Deviations).
+
+## Io's own
+
 | Package | Contents |
 |---|---|
-| `linux-neptune` | Kernel 6.15.8 from the kernel.org tarball plus Valve's patch set and the Deck config fragment |
-| `deck-firmware-cirrus` | CS35L41 DSP firmware for the speaker amplifiers |
-| `deck-hw-support` | Valve's polkit helpers, udev rules and hwsupport scripts, trimmed and stubbed. **Frozen at 20250728.1**, see [Pitfalls](Pitfalls) |
-| `jupiter-fan-control` | Valve's fan daemon, unmodified, wrapped in a runit service |
-| `steamos-powerbuttond` | Valve's power button daemon, systemd unit replaced |
-| `io-base` | Repository config, elogind drop-in, dracut snippet, polkit rules, `timedatectl` replacement |
-| `io-branding` | os-release, ASCII and SVG logo, fastfetch config |
-| `io-session` | Game mode startup, session switching, autologin service, PipeWire/WirePlumber autostart symlinks |
-| `io-volumed` | Volume key handler (Steam shows the OSD but does not set the level) |
-| `io-desktop` | Metapackage tying everything together |
-| `inputplumber` | Packaged and working, **but not enabled** — see [Pitfalls](Pitfalls) |
+| `io-desktop` | Metapackage: the whole system, including Void base, Steam, gamescope, PipeWire, KDE Plasma and all packages below |
+| `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, `timedatectl` replacement |
+| `io-session` | Login and sessions: `io-autologin` service, `io-start`, `io-gamemode`, `io-plasma`, `io-netcheck`, `steamos-session-select`, session logs (`io-devmode`), `io-grow-storage`, gamescope capability core service |
+| `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half |
+| `io-volumed` | Volume key handler |
+| `io-branding` | Logo, Plymouth boot splash theme, fastfetch configuration |
 
-The kernel is not maintained as a fork. Valve's delta is a single patch against
-the official tarball, and the config fragment comes unchanged from Valve's
-sources. A version bump means a new tag, a new patch and a new fragment.
+## Ported from Valve
+
+| Package | Upstream | Contents |
+|---|---|---|
+| `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: Void's base configuration plus Valve's `config-neptune` fragment, and one patch generated from Valve's tree against the kernel.org tarball |
+| `linux-neptune` | `linux-neptune` (6.15.8) | Previous kernel, kept as fallback until 7.2 has proven itself; not installed by `io-desktop` |
+| `deck-hw-support` | `jupiter-hw-support` 20250728.1 | Polkit helpers, udev rules, hwsupport scripts |
+| `deck-firmware-cirrus` | `linux-firmware-neptune` | CS35L41 amplifier firmware that Void's `linux-firmware` lacks |
+| `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
+| `steamos-powerbuttond` | `steamos-powerbuttond` 3.1 | Power button daemon |
+| `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, microphone loopback |
+| `xdg-desktop-portal-gamescope` | `xdg-desktop-portal-gamescope` | Portal backend for screenshots and recording in game mode |
+| `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
+| `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |
+| `steamos-tuning` | `steamos-customizations-jupiter` | sysctl tuning: TCP, scheduler, split lock, `vm.max_map_count`, `pid_max` |
+| `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
+| `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
+| `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |
+
+## From elsewhere
+
+| Package | Upstream | Contents |
+|---|---|---|
+| `rnnoise-ladspa` | [werman/noise-suppression-for-voice](https://github.com/werman/noise-suppression-for-voice) 1.10 | RNNoise LADSPA plugin for `steamdeck-dsp`'s filter chain |
 
 ## Upstream sources
 
-Valve's authoritative source mirror is
+Valve's source mirror is
 `steamdeck-packages.steamos.cloud/archlinux-mirror/sources/`, split into
-`jupiter-main` (device-specific) and `holo-main` (the general OS layer). Both
-carry signature files.
-
-The GitLab mirror at `gitlab.com/evlaV` was shut down in August 2025;
-`github.com/evlaV` is the successor. Existing distfile URLs still resolve, but
-prefer Valve's own mirror when bumping versions.
+`jupiter-main` (device-specific) and `holo-main` (the general OS layer).
+The former GitLab mirror at `gitlab.com/evlaV` was shut down in August
+2025; `github.com/evlaV` succeeds it. Existing distfile URLs still resolve,
+but new versions should come from Valve's own mirror.
 
 `pkgcheck.sh` fetches both listings, keeps the newest version of each package
-in `docs/`, and reports what changed since the last run. Useful for spotting
-upstream updates without trawling directory listings by hand.
+in `docs/`, and reports what changed since the last run.
 
-## Audio, memory, and OOM handling (Alpha 2)
-
-| Package | Contents |
-|---|---|
-| `steamdeck-dsp` | Valve's Jupiter/LCD speaker and microphone DSP — Faust LV2 plugins, UCM profiles, PipeWire/WirePlumber hardware-profile fragments, a microphone loopback for Steam's mic selection. Galileo (OLED)-specific parts stripped |
-| `rnnoise-ladspa` | werman/noise-suppression-for-voice, built from source (LADSPA target only, no VST/JUCE dependency) — the actual RNNoise plugin `steamdeck-dsp`'s filter chain calls; Void's `NoiseTorch` package is GUI-only and doesn't ship this |
-| `holo-earlyoom` | Valve's `earlyoom` tuning (SteamOS's kill thresholds, SteamAppId-aware kill logging) — depends on Void's `earlyoom`, supplies its runit `conf` file |
-| `holo-zram-swap` | Valve's ZRAM tuning (50% RAM, zstd, priority 100) — depends on Void's `zramen`, supplies its runit `conf` file instead of the systemd-only `zram-generator` upstream ships |
-
-## Small system tuning, ported today
-
-| Package | Contents |
-|---|---|
-| `steamos-tuning` | Valve's sysctl/limits gaming tweaks — TCP MTU probing, faster TCP port reuse, scheduler slice, split-lock mitigation disabled, raised `vm.max_map_count`, Proton's `nice` ceiling |
-| `steamos-passwd` | Stdin-driven wrapper around `passwd`, meant for Steam's own UI to call when setting a device password |
-| `holo-dmi-rules` | Makes the DMI serial number readable without root — Void has no `tmpfiles.d` equivalent, so this runs as a boot-time core-service `chmod`/`chgrp` instead |
-| `holo-fstab-repair` | Disables invalid `/dev/mmcblk*` fstab entries that block UDisks2 from mounting SD cards ([ValveSoftware/SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) — currently a no-op since SD/USB automount isn't enabled |
-| `holo-plymouth-themes` | Valve's "holo" Plymouth boot-splash theme, Jupiter/LCD logo included — package builds and installs the theme, not yet wired into dracut/GRUB to actually display at boot |
-
-## Kernel
-
-| Package | Contents |
-|---|---|
-| `linux-neptune-72` | Steam Deck kernel, 7.2.4-valve1. Same build shape as `linux-neptune` (Void's own base config + Valve's `config-neptune` fragment merged on top via `merge_config.sh`, plus a self-generated `0001-neptune-72.patch` — diffed from Valve's `linux-integration` git tree against a vanilla kernel.org 7.2.4 tarball, since that tree carries no separate patch file of its own). Adds `CONFIG_HID_HAPTIC=y` to `config-io` (missing from Valve's actual `config-neptune` fragment — the `=y` value only exists in a much larger, never-read `ci/kernel-config/neptune/config` reference file in the same repo, not the real fragment). Installed alongside `linux-neptune` (6.15.8), not replacing it — both show up as separate GRUB entries |
-| `linux-neptune` | Steam Deck kernel, 6.15.8-valve1. Kept installed as a known-good fallback; not actively maintained further now that `-72` is the primary target |
+The kernel is not maintained as a fork: Valve's delta is a single patch
+against the official tarball plus Valve's configuration fragment. A version
+bump means a new patch and a new fragment.

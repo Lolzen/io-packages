@@ -4,16 +4,16 @@
 SteamOS-specific naming. Snapshot as of September 2026 — Valve adds and
 renames packages over time, worth re-running before acting on this list.
 
-## Worth a look soon
+## Worth a look
 
-- `holo-grant-cap-sys-nice` — may already solve the CAP_SYS_NICE-for-gamescope
-  problem (root-started wrapper vs. PAM session, see Pitfalls) instead of us
-  building our own
-- `steamdeck-dsp` — possible source for the `jupiter-amp-control` stub target
-- `holo-zram-swap`, `holo-earlyoom` — memory pressure handling on a
-  memory-constrained handheld
-- `holo-upower-config` — battery reporting tuning
-- `steamdeck-kde-presets` — better Plasma defaults for the desktop-mode side
+- `holo-upower-config` — battery reporting tuning; `upower` is installed
+  since Plasma is part of `io-desktop`, and Steam queries it
+- `steamdeck-kde-presets` — Plasma defaults for the desktop side
+
+Done since this survey: `steamdeck-dsp`, `holo-zram-swap`, `holo-earlyoom`
+(see [Packages](Packages)). `holo-grant-cap-sys-nice` is no longer needed:
+the reference capture showed SteamOS gives gamescope `CAP_SYS_NICE` as a
+plain file capability, which Io now does too.
 
 ## Smaller, probably worth it
 
@@ -119,7 +119,7 @@ this survey). Reviewed folder-by-folder:
   the dedicated section above
 - `swap/`, `grub/`, `NetworkManager/`, `offload/` — not opened yet
 
-## Deprioritized for now ("Stufe 4/5"), parked deliberately
+## Deprioritized for now, parked deliberately
 
 Not pursued in this pass on purpose — low expected value, or needs
 something Io doesn't have yet. Revisit if the underlying gap closes
@@ -129,9 +129,9 @@ something Io doesn't have yet. Revisit if the underlying gap closes
 - `steamos-devkit-service` — only relevant for the Steamworks devkit
   developer workflow
 - `steamos-kdumpst-layer` — kernel crash-dump tooling, developer-facing
-- `NetworkManager/conf.d/10-steamos-defaults.conf` — parked deliberately,
-see holovoid memory notes: this is a hardening/polish item, not something
-worth doing mid-development.
+- `NetworkManager/conf.d/10-steamos-defaults.conf` — parked deliberately; tied
+  to the open Wi-Fi backend decision (SteamOS defaults to iwd, Io uses
+  wpa_supplicant)
 
 ## Kernel bump follow-ups (linux-neptune-72, Sept 2026)
 
@@ -149,14 +149,8 @@ checked against the new kernel yet:
   path). Functional test with real dock hardware still pending — own
   follow-up session
 
-**New, unrelated to the above:** trackpad swipe haptics (the fine texture
-under a finger swiping across a trackpad — not tap, not controller rumble)
-regressed between 6.15.8 and 7.2.4. Controller force feedback itself works
-fine (`CONFIG_STEAM_FF=y`, confirmed via `ff_memless` and the `EV_FF` bit
-on the Deck's emulated Xbox 360 pad). No Kconfig option covers it — nothing
-touchpad/trackpad-related exists in `drivers/hid/Kconfig` beyond the
-generic, unrelated `HID_HAPTIC`. Points to a real source-level change in
-`hid-steam.c` between Valve's two kernel branches; needs a direct diff of
-that one file between the `0001-neptune.patch` (6.15.8) and
-`0001-neptune-72.patch` (7.2.4) patch sets to find the actual change.
-
+**Trackpad swipe haptics** (the fine texture under a finger swiping across a
+trackpad) were suspected to have regressed with the kernel bump. Current
+SteamOS lacks them as well, so this is a change in the Steam client, not a
+kernel or Io issue. `CONFIG_HID_HAPTIC`, added while chasing it, is unrelated
+and will be removed with the next kernel build.

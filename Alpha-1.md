@@ -1,9 +1,16 @@
 # Alpha 1
 
-## Bekannte Einschränkungen
-- Bluetooth-Audio über PipeWire nicht unterstützt (BlueZ-SPA-Plugin fehlt/kaputt) — Pairing selbst funktioniert
-- TDP/Ladelimit-Menüs im Steam-Client nicht verifiziert
-- CAP_SYS_NICE für gamescope nicht gesetzt (Realtime-Priorität fehlt, kein funktionaler Blocker)
-- udisks2-Automount deaktiviert (Paket nicht installiert)
-- Root-Partitions-Wachstum beim ersten Boot: still im Hintergrund, für Alpha 2 auf manuellen Schalter umgestellt
-- Desktop-Sitzung (Plasma) ungetestet
+Released as [alpha1](https://github.com/Lolzen/io-packages/releases/tag/alpha1).
+This page records the state at release time and is not updated afterwards;
+see [Milestones](Milestones) for everything since.
+
+## Known limitations at release
+
+- TDP and charge limit menus in the Steam client not verified
+- `CAP_SYS_NICE` for gamescope not set (no realtime priority, not a
+  functional blocker)
+- udisks2 automount disabled (package not installed)
+- Root partition grown silently in the background on first boot
+- Desktop session (Plasma) untested
+
+Where each of these stands now is tracked on [Milestones](Milestones).

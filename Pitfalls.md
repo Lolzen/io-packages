@@ -1,286 +1,213 @@
 # Pitfalls
 
-Things that cost real time and are documented nowhere.
+Things that cost real time and are documented nowhere else.
 
-**Never start wireplumber manually.** Void configures PipeWire to launch the
-session manager itself through a symlink in `/etc/pipewire/pipewire.conf.d/`.
-Starting wireplumber separately creates a second instance. The symptoms are an
-`auto_null` sink instead of the real devices *and* a gamescope that runs but
-shows no window — with no useful error message anywhere.
+---
 
-**elogind must not start twice.** Void enables the runit service, but dbus also
-ships an activation file with `Exec=`. At boot they race; if runit loses, it
-retries every second and the session never settles. Disable the activation
-file.
+## Steam client
 
-**acpid and elogind fight over the power button.** The Void handbook is
-explicit: either disable acpid, or set every `Handle*` option in `logind.conf`
-to `ignore`. Doing half of each means elogind politely ignores the button while
-acpid's `handler.sh` shuts the machine down.
+**Many Steam features depend on launch flags and environment variables, not
+on D-Bus.** *Restart Steam* in the power menu needs `-gamepadui`; the
+adaptive brightness toggle needs `STEAM_ENABLE_DYNAMIC_BACKLIGHT=1`; the fan
+control toggle needs `STEAM_ENABLE_FAN_CONTROL=1`. Missing ones fail
+silently — the control is just absent or greyed out, and no D-Bus call is
+ever made. Copy Valve's `gamescope-session` environment instead of chasing
+individual controls through D-Bus.
 
-**Set `vk_xwayland_wait_ready=true`** before gamescope on slow storage.
-Otherwise Steam starts before Xwayland is ready and none of its windows are
-ever mapped.
+**Some Steam settings run helper scripts directly.** The fan control toggle
+runs `steamos-polkit-helpers/jupiter-fan-control --enable/--disable`. A stub
+that exits 0 makes Steam believe it worked.
+
+**Steam drops audio sources without a fixed format.** A virtual source that
+reports no channels while idle shows up through PipeWire's pulse layer as
+`source not ready: sample:0 map:0` and is left out of Steam's microphone
+list. Set `audio.channels` and `audio.position` on it.
+
+**Steam shows the node name of a loopback source, not its description.**
 
 **Never kill Steam with `pkill -9`.** It leaves state that cripples the next
-start. `~/.local/share/Steam/.crash` indicates the last run ended badly. A
-stale `~/.steam/steam.pipe` from an unclean shutdown can also make the *next*
-`steam.sh` silently no-op: it tries to hand off to an already-running
-instance via a placeholder binary that only gets real content while an
-instance is actually running, fails with `ENOEXEC`, and exits 0 as if
-nothing were wrong. Delete the pipe file if Steam launches and immediately
-exits with no output.
+start. A stale `~/.steam/steam.pipe` makes the next `steam.sh` exit silently
+with status 0; delete it if Steam launches and immediately exits without
+output.
 
-**gamescope's process name is `gamescope-wl`**, not `gamescope`. Every
-`pgrep -x gamescope` silently matches nothing.
-
-**Do not update `io-session` while game mode is running.** The installed
-scripts end up empty.
-
-**inputplumber is packaged but must stay disabled.** Enabling it takes over the
-`AT Translated Set 2 keyboard` and re-emits everything through a virtual
-`InputPlumber Keyboard`, which breaks both `io-volumed` and
-`steamos-powerbuttond`. In exchange it delivers nothing on the Deck: back
-buttons already work without it, and its gyro support looks for an IIO device
-that the Deck does not have. The package stays in the repo in case that
-changes.
-
-**`deck-hw-support` is frozen at 20250728.1.** From 20260807.1 onwards Valve
-moved the general-purpose helpers into `holo-polkit-helpers` and renamed them
-to `holo-*`. The contents are byte-identical apart from a log tag, but the
-Steam client still calls the `steamos-*` names.
-
-**`deck-hw-support`'s udev rules call `/bin/systemd-run`**, which does not
-exist under runit. Every MMC event fails silently right in the boot window
-`steamdeck_hwmon` needs to register, costing time it doesn't have to spare.
-Replace with `setsid --fork`.
-
-**The same rules also call `busctl` against `org.freedesktop.UDisks2`**,
-which Io does not install. Even with `udisks2` added, the rule still fires
-for the root/boot device itself during udev's coldplug pass in runit stage
-1 — before `dbus` exists at all in stage 2 — so it will always fail or hang
-for that one device regardless. Exclude the boot device explicitly, or
-disable the automount rules entirely until this is worth finishing.
-
-**`linux-neptune`'s `do_install` deliberately deletes its own bundled
-`/usr/lib/firmware`**, with a comment saying it's "provided by the
-linux-firmware pkg." Nothing pulled that in by default — `linux-neptune`
-needs an explicit `depends="linux-firmware-amd linux-firmware-network"`, or
-the Deck boots with a dead GPU and no WiFi/Bluetooth firmware, silently.
+**Steam's bootstrapper needs a real network connection**, not only on first
+start but after every client update. Offline, it fails with a misleading
+"needs to be online" message.
 
 **Steam's 32-bit bootstrapper needs `libcurl-32bit`.** Without it every
 update check fails with a generic `http error 0` that reads like a network
-problem but isn't.
+problem.
 
-**`seatd` needs the user in the `_seatd` group**, not just
-`wheel,audio,video,input,storage`. Without it `libseat` gets `Permission
-denied` on the socket and gamescope silently falls back to a headless
-backend — no crash, just a black screen with an otherwise normal-looking
-log.
+**gamescope's process name is `gamescope-wl`**, not `gamescope`.
 
-**A package's `post_install()` template function is a *build-time* hook
-only** — it runs during `xbps-src pkg <name>`, operating on the real build
-host, not the package's destdir. It never runs on the target system at
-`xbps-install` time. Code that needs to run when the package is actually
-installed belongs in a real `INSTALL` file (`srcpkgs/<pkg>/INSTALL`, using
-`$ACTION`), not a template function.
+---
 
-**`xbps-install -r` run before `/proc`, `/dev`, `/sys` are bind-mounted
-leaves any package's `INSTALL` script silently deferred**, not executed —
-xbps can't chroot to run it without a working `/proc`. If package
-installation happens before your bind mounts in an image-building script,
-follow up with `xbps-reconfigure -a` once they're in place.
+## runit, D-Bus and services
 
-**Steam's bootstrapper needs an actual network connection**, not just on
-first install but after every client update — a fully offline first boot
-fails with a misleading "needs to be online" error rather than retrying
-gracefully.
+**A service must not be both a runit service and D-Bus-activated.** At boot
+they race; the loser restarts every second, forever. Seen with elogind
+(runit service kept, activation file removed) and polkitd (runit service
+removed, D-Bus activation kept). The loop is invisible without a syslog:
+`polkitd` restarted every second for a long time before a syslog made it
+visible.
 
-**A silent `growpart` resize is a real risk, not just a UX gap.** It runs as
-a runit core-service in boot stage 1, blocking all of stage 2 (nothing else
-starts) until it finishes, with zero on-screen indication anything is
-happening. Powering off mid-`resize2fs` on the root filesystem is exactly
-the kind of interruption that can corrupt the card.
+**Without a syslog, runit service logs disappear.** Void's services log
+through `vlogger` to `/dev/log`; with nothing listening there, every message
+is lost. `socklog-void` fixes it.
 
-**`post_extract` is not run** in templates without a `build_style`. Put the
-checkout step at the start of `do_install` instead.
+**runit starts services in parallel.** earlyoom with a swap threshold (`-S`)
+refuses to start while there is no swap yet ("exceeds limit 0"); it has to
+wait for the zram service itself.
 
-**The CS35L41 needs two firmware files** that are not in Void's
-`linux-firmware`: `cs35l41-dsp1-spk-prot.wmfw` and
-`cs35l41-dsp1-spk-prot-vlv1776.bin` from `linux-firmware-neptune`. Without them
-one speaker stays silent. No mixer gymnastics are needed beyond that —
-wireplumber handles channel assignment through the UCM profile.
+**`modprobe zram num_devices=1` only creates devices on the first load.** If
+the module is already loaded, nothing happens. `zramctl --find` creates a
+device through the kernel's `hot_add` interface in any state.
 
-**`force_drivers+=" amdgpu "` in the dracut config is mandatory.** Without the
-module in the initramfs the screen stays black through early KMS.
+**acpid and elogind fight over the power button.** Either disable acpid or
+set every `Handle*` option in `logind.conf` to `ignore`; half of each means
+elogind ignores the button while acpid's `handler.sh` shuts the machine down.
+
+**`exec` in a sourced script replaces the parent.** Void's `/etc/runit/1`
+sources `core-services/*.sh` with `.`; a core service ending in
+`exec something` replaces runit's stage 1 process, and all remaining core
+services are silently skipped.
+
+**Never start WirePlumber by hand.** Void's PipeWire starts it through a
+symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
+`auto_null` sink and a gamescope without a window, with no useful error.
+
+**`seatd` needs the user in the `_seatd` group.** Otherwise libseat gets
+`Permission denied` and gamescope silently falls back to a headless backend:
+a black screen with a normal-looking log. (libseat prefers seatd whenever its
+socket exists; without seatd it uses logind.)
+
+**PipeWire keeps running across session switches.** A restarted session
+that finds PipeWire still running reuses it, attached to the D-Bus bus of
+the previous session. Test audio changes with a cold boot.
+
+---
+
+## Packaging (xbps-src)
+
+**Never ship or patch files that belong to another package.** A file owned by
+two packages is silently overwritten or removed by the other's updates; a
+file patched at image build time (as `mkimg.sh` once did to
+`/etc/profile.d/io-session.sh`) loses the patch on the owning package's next
+update. Use drop-in directories, own service directories, or ship the file
+in the package that owns it.
+
+**Bump `revision` for every change.** Same version and revision means the
+same file name; the new build is treated as already published.
+
+**`post_install()` is a build-time hook.** It runs during `xbps-src pkg`,
+never on the target at install time. Code for install time goes into
+`srcpkgs/<pkg>/INSTALL`, using `$ACTION`.
+
+**`post_extract` is not run in templates without a `build_style`.** Put the
+checkout step at the start of `do_install`.
+
+**`xbps-install -r` before `/proc`, `/dev` and `/sys` are bind-mounted defers
+every `INSTALL` script silently.** Follow up with `xbps-reconfigure -a` once
+the mounts are in place.
+
+**`/etc/sysctl.d` is rejected by Void's package linter.** Packages ship
+defaults in `/usr/lib/sysctl.d`.
+
+**`vcopy` does not create its destination directory**, unlike `vinstall` and
+`vbin`. Add a `vmkdir` first.
 
 **`python_version=3` is required** in any template shipping a Python script,
-or the shebang rewrite hook aborts the build.
-
-**Valve's `python<3.14` constraints were too conservative** and have since been
-relaxed upstream to `>=3.14`.
-
-**`steamos-priv-write` needs two edits** for Void: `chgrp deck` becomes
-`chgrp wheel` (matching Valve's own polkit rule, which checks group membership
-in `wheel`), and `systemd-cat` becomes `logger`.
+or the shebang rewrite aborts the build.
 
 **Rust packages do not need Arch's vendored crate lists.** `build_style=cargo`
-resolves crates.io dependencies itself, including git dependencies pinned by
-revision. What it does need is `clang`, `llvm` and `clang21-devel` in the build
-dependencies — the versioned `-devel` package is the only one shipping the
-unversioned `libclang.so` symlink that `clang-sys` looks for.
+resolves crates itself. It does need `clang`, `llvm` and `clang21-devel`: the
+versioned `-devel` package is the only one shipping the unversioned
+`libclang.so` that `clang-sys` looks for.
 
-**PAM capabilities (`pam_cap`) do not survive Io's autologin path.**
-`session optional pam_cap.so` correctly populates the inheritable set on the
-login process, but a plain `setuid()` to an unprivileged user (as Void's
-`login` does when switching to `deck`) clears all capability sets unless the
-code explicitly keeps them — Void's `login` doesn't. A file capability
-(`setcap`) on gamescope itself is worse, not better: it puts the binary into
-secure-execution mode, which makes `ld.so` drop `LD_PRELOAD`, breaking
-Steam's screenshot/recording overlay injection. The correct fix (matching
-what Valve does with `AmbientCapabilities=`) is a root-started wrapper that
-sets an ambient capability and changes to `deck` in one controlled step —
-not a PAM session hook, and not a one-line `setcap`.# Pitfalls
+**A heredoc write or append can silently do nothing or lose its last line.**
+Happened three times (PipeWire configuration, kernel configuration fragment).
+`cat` the file after writing it.
 
-**A warm reboot (`reboot`, including Steam's own restart menu entry) can
-boot into a completely different OS, not just fail to restart Io cleanly.**
-On a dual-boot setup where Io lives on a removable SD card (`--removable`
-GRUB install, no NVRAM entry — necessary since the card's partition GUIDs
-change on every rebuild) alongside an internal drive with its own
-registered NVRAM default, a warm reboot skips the boot-selector screen
-entirely and goes straight to the firmware's stored default — which is
-whatever owns NVRAM, not necessarily the card you just booted from. Looks
-identical to a broken service from inside the session (network still
-connects, but SSH refuses and nothing in Io's own service list explains
-why) until you actually look at the console and see a different OS's
+---
+
+## Kernel and hardware
+
+**`linux-neptune` deletes its bundled firmware** on purpose, expecting Void's
+`linux-firmware` packages; it needs an explicit
+`depends="linux-firmware-amd linux-firmware-network"`, or the Deck boots with
+a dead GPU and no Wi-Fi.
+
+**`force_drivers+=" amdgpu "` in the dracut configuration is mandatory.**
+Without the module in the initramfs the screen stays black through early KMS.
+
+**Valve's kernel tree contains two configuration files.**
+`ci/kernel-config/neptune/config` is a full 12,500-line reference used for CI;
+`ci/kernel-config/neptune/config-neptune` is the fragment that is actually
+merged. An option only in the first one never applies.
+
+**The CS35L41 needs two firmware files** Void's `linux-firmware` lacks:
+`cs35l41-dsp1-spk-prot.wmfw` and `cs35l41-dsp1-spk-prot-vlv1776.bin`. Without
+them one speaker stays silent.
+
+**`EV_FF` is bit `0x200000`** in `/proc/bus/input/devices`, not `0x100000`.
+
+**A warm reboot can boot a different OS.** With Io on an SD card (GRUB in
+removable mode, no NVRAM entry) next to an internal SteamOS, a warm reboot
+skips the boot selector and starts whatever owns the NVRAM default. From the
+outside it looks like a broken Io service until you see the other system's
 login prompt.
 
-**A PipeWire module's `.conf` filename can collide with an unrelated PipeWire
-concept of the same name.** `libpipewire-module-filter-chain` is meant to be
-loaded as a fragment in `pipewire.conf.d/`, joining the already-running main
-session. But PipeWire *also* ships its own standalone `filter-chain.conf`
-base config, meant to be run as `pipewire -c filter-chain.conf` — a
-completely separate, standalone server with its own new `pipewire-0`
-socket. Naming a fragment directory `filter-chain.conf.d/` (as Valve's
-source does) makes it easy to load the fragment as if it were that
-standalone config instead of a `pipewire.conf.d/` addition — it will load
-without error, produce a node that looks correct in isolation, and connect
-to nothing in the real session. Always install PipeWire module fragments
-into `pipewire.conf.d/`, never a directory that shares a name with one of
-PipeWire's own top-level configs.
+---
 
-**`exec` inside a script that's `.`-sourced (not executed) takes down
-everything after it, not just itself.** Void's `/etc/runit/1` reads each
-`core-services/*.sh` file with `. "$f"` in a loop, not by running it as its
-own process. A `core-services` script that ends in `exec some-binary`
-replaces runit's own stage-1 process with that binary — once the binary
-exits, runit treats stage 1 as finished and moves on to stage 2, silently
-skipping every remaining script in the loop (in our case, several actual
-system-init steps got skipped this way, boot looked completely normal
-regardless). Use a plain call, not `exec`, in anything sourced into another
-script's process.
+## Audio
 
-**A `libpipewire-module-loopback` bound to a `target.object` at session
-start can bind to nothing and never retry.** If the target node (in our
-case, an ALSA capture node WirePlumber hadn't enumerated yet) doesn't exist
-the moment PipeWire loads the module, the loopback comes up fully formed —
-correct properties, correct priority, no error anywhere — but is connected
-to nothing, and stays that way permanently; nothing about it will indicate
-the problem short of manually confirming a live capture through it. Fix by
-setting `target.delay.sec` (module option, since PipeWire 0.3.60) high
-enough to guarantee the target already exists — a plain resource-startup
-race, not a bug in the target itself. A quicker but misleading way to
-"confirm" the fix is working is checking `wpctl status`/`pw-dump`: an idle,
-correctly-bound loopback and a permanently-broken one look identical there
-in both cases (both report `"state": "suspended"` with no visible link) —
-only an actual read/write against the node (e.g. `pw-record`, checking the
-resulting file size isn't just an empty header) tells them apart.
+**A loopback bound with `target.object` at startup can bind to nothing and
+never retry**, if its target node does not exist yet. It looks complete,
+suspended and correct in `wpctl` and `pw-dump`. Set `target.delay.sec`, and
+verify with an actual recording (`pw-record`), not with the node list.
 
-**WirePlumber's `node.create-loopback=true` property (set by
-`alsa-loopback.conf`, meant to auto-hide raw ALSA sources behind a
-higher-priority loopback) silently does nothing on wireplumber 0.5.17,
-despite being present and working in the exact same file on real SteamOS's
-0.5.14.** Confirmed this isn't a Valve patch — the reactive code (function
-`CreateLoopback` in `monitors/alsa.lua`) is present unmodified in real
-SteamOS's own pristine, unpatched `alsa.lua.orig`, so it's an upstream
-WirePlumber change/removal somewhere between those two versions, not
-something Valve added. Diffing SteamOS's patched vs. unpatched `alsa.lua`
-is a good way to separate genuine Valve patches from stock upstream
-behavior when chasing something like this — most of what looks
-Valve-specific in a diff often isn't. Worked around with a plain,
-hand-built `libpipewire-module-loopback` instead of relying on this
-property (see the `target.delay.sec` entry above for what that needed).
+**Install PipeWire module fragments into `pipewire.conf.d/`**, never into a
+directory named after one of PipeWire's own top-level configurations.
+Valve's source has a `filter-chain.conf.d/`; loaded as if it were PipeWire's
+standalone `filter-chain.conf`, it starts a separate server that connects to
+nothing.
 
-**A rename-then-source udev/init script can lose its executable bit on the
-renamed file.** A `mv script script.orig` + replacement-wrapper pattern
-(used for the growpart boot-notice wrapper) left `script.orig` non-executable
-after a package rebuild — the wrapper's call to it failed with "Permission
-denied" while the wrapper's own "done" message still printed, making the
-failure invisible unless you go looking. Confirm the moved file's mode
-explicitly after any such rename, don't assume `mv` always preserves it in
-every packaging context.
+**`probe_volumes: Path X is not a volume or mute control` warnings are
+harmless.** They come from the generic mixer paths in `alsa-card-profile` and
+cannot be fixed from a device package.
 
-**A `here-doc`'d config file can end up truncated by one line with no
-error at the point of writing.** A `sudo tee file << 'EOF' ... EOF` copy-paste
-silently lost its closing bracket line once — `tee` and the shell reported
-no error, the file was simply short by exactly the content that would have
-closed the outermost block. PipeWire's own config parser caught it cleanly
-(`Mismatched bracket`, with a line/column), but only in its own startup log,
-which nothing else surfaces — a config that fails to parse this way doesn't
-throw an error anywhere else, the module and everything it would have
-provided is just silently absent. `wc -l` against the file right after
-writing it is a fast, cheap sanity check worth doing by habit for anything
-written via heredoc.
+**Separate Valve patches from upstream before chasing a difference.** Valve
+ships patched builds of some packages (WirePlumber's `CreateLoopback()` is
+one). Compare against the upstream release, not against SteamOS's installed
+files.
 
-**PipeWire/ALSA "probe_volumes: Path X is not a volume or mute control"
-warnings are not a config bug and not fixable from a device-specific
-package.** They come from `alsa-card-profile`'s generic, PulseAudio-derived
-mixer-path files (`/usr/share/alsa-card-profile/mixer/paths/*.conf`) —
-written to cover many different sound cards' worth of possible mixer
-elements at once, they probe for `volume` support on elements that, on this
-particular hardware, are pure on/off switches. The warning is the expected,
-harmless result of a broad compatibility layer meeting one specific card;
-patching it out would mean patching shared, generic system files used by
-every other sound card on the system too, for a purely cosmetic log line.
+---
 
-**`/etc/sysctl.d` is rejected by Void's own package linter.** A package
-installing files there fails at `pre-pkg` with "is forbidden. Use
-/usr/lib/sysctl.d." — `/etc` is reserved for the user's own overrides,
-packages ship their defaults under `/usr/lib/sysctl.d` instead, which the
-user can then shadow from `/etc/sysctl.d` if they want to override a
-specific value.
+## Valve packages
 
-**`vcopy` doesn't create its destination directory, unlike `vinstall`/`vbin`.**
-Copying a whole directory tree with `vcopy src dst` fails with "cannot
-create directory" if `dst`'s parent doesn't already exist in the
-destination — needs an explicit `vmkdir` for the parent path first.
+**`deck-hw-support` is frozen at 20250728.1.** From 20260807.1 Valve moved the
+general helpers into `holo-polkit-helpers` and renamed them `holo-*`; the
+Steam client still calls the `steamos-*` names.
 
-**Valve's kernel git tree can carry a second, much larger config file that
-looks like the real fragment but isn't.** `linux-neptune-72`'s source
-(`linux-integration` git tree) contains both
-`ci/kernel-config/neptune/config` (a full ~12,500-line reference config,
-apparently Arch's own defaults plus everything Valve enables, used for CI
-verification) and `ci/kernel-config/neptune/config-neptune` (the actual
-small fragment referenced by the `PKGBUILD`'s `source=()`  and genuinely
-merged at build time). A setting present in the first file but absent from
-the second will build fine, look correct in the source tree, and then
-silently not apply — `grep` the whole patch for a missing option before
-concluding it's actually part of Valve's real fragment; check which of the
-two files it's actually in.
+**`deck-hw-support`'s udev rules call `/bin/systemd-run`**, which does not
+exist under runit, and the automount rule calls `busctl` against udisks2 —
+including for the boot device during coldplug, before D-Bus exists. Replace
+`systemd-run` with `setsid --fork` and exclude the boot device before
+enabling automount.
 
-**A `cat >> file << 'EOF'` append can silently do nothing.** Happened twice
-this project (once for a PipeWire loopback config, once for a kernel
-`config-io` fragment) — the command returns success, the file is later read
-back as unchanged, and nothing in the shell's own output flags a problem.
-Always `cat` the file immediately after any heredoc write, append or
-otherwise, before relying on its content in a downstream build step —
-cheap enough to do every time, and the failure mode gives zero warning on
-its own.
+**`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
+(matching Valve's polkit rule), and `systemd-cat` becomes `logger`.
 
-**`EV_FF` (force-feedback capability, `/proc/bus/input/devices`'s `B: EV=`
-line) is bit `0x200000`, not `0x100000`.** Misquoted this once while
-checking whether a device reported FF support — cost a wasted grep pass and
-a wrong conclusion before the real bit position was confirmed against a
-device (`Microsoft X-Box 360 pad 0`, Steam Deck's emulated gamepad, not the
-raw `hid-steam` HID nodes) that was actually already reporting it
-correctly.
+**Valve's `python<3.14` constraints were too conservative** and have been
+relaxed upstream.
+
+---
+
+## Shell and tools
+
+**`sudo` resets the environment.** A terminal type the Deck does not know
+(`rxvt-unicode-256color`) breaks `sudo nano`; use
+`sudo TERM=xterm-256color nano ...`.
+
+**Wildcards are expanded by your own shell before `sudo` runs.** For paths
+only root can list, run the whole command under `sudo sh -c '...'`.

@@ -1,49 +1,126 @@
 # Architecture
 
-## Distribution
+How Io works where it cannot simply do what SteamOS does. For the reasons
+behind each difference, see [Deviations](Deviations).
 
-Io ships as a disk image, not a live ISO. The hardware is fixed, the partition
-layout is fixed, and there is nothing for an installer to ask — writing the
-image with `dd` is the whole installation.
+---
 
-The live-ISO route is blocked: dracut 112 changed its live-boot logic and
-void-mklive has not caught up, so self-built ISOs drop to an emergency shell.
-`mkimg.sh` builds the disk image directly instead.
+## Boot
 
-## Session switching
+1. **GRUB** from the card's EFI partition. It is installed in removable mode
+   without an NVRAM entry, because the card's partition GUIDs change with
+   every image build.
+2. **Initramfs** (dracut) with `amdgpu` built in for early display, and
+   Plymouth, which shows the Io splash from here on.
+3. **runit stage 1** runs Void's core services, plus Io's own:
+   - `20-dmi-serial-perms.sh` — DMI serial numbers readable by `wheel` only
+   - `20-fstab-repair.sh` — comments out invalid SD card lines in fstab
+   - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
+4. **runit stage 2** starts the services linked in `/var/service`, among them
+   `io-steamos-manager` (root half), `holo-zram-swap`, `earlyoom`,
+   `jupiter-fan-control`, `socklog-unix` and `nanoklogd`, and `io-autologin`.
+5. **`io-autologin`** waits for the system bus, ends the splash with
+   `plymouth quit --retain-splash` (the last frame stays until gamescope
+   draws) and runs `agetty --autologin deck` on tty1.
 
-There is no display manager and no systemd. The chain is
-`agetty --autologin → /etc/profile.d/io-session.sh → io-start → dbus-run-session → io-gamemode → gamescope`.
+---
 
-`io-session.sh` guards against boot loops: if the session dies in under 15
-seconds it drops to a shell instead of restarting.
+## Sessions
 
-**Switching to desktop** goes through `io-steamos-manager`, a from-scratch
-Python reimplementation of Valve's `com.steampowered.SteamOSManager1` DBus
-interface (Valve's own daemon hard-depends on systemd, so it isn't just
-repackaged). Steam calls its `SwitchToDesktopMode` method directly over DBus
-— confirmed via `dbus-monitor` — rather than going through the older
-`steamos-session-select` + flag-file mechanism.
+```
+agetty --autologin  →  /etc/profile.d/io-session.sh  →  io-netcheck
+                                                      →  io-start
+                                                           ├─ io-gamemode → gamescope → steam
+                                                           └─ io-plasma   → startplasma-wayland
+```
 
-`io-steamos-manager` runs inside game mode's `dbus-run-session` and exits
-with it, so nothing is running once Plasma comes up. **Switching back to
-game mode** therefore still uses the original path: a desktop shortcut runs
-`steamos-session-select`, which writes a state flag to `$XDG_RUNTIME_DIR`.
-Since `steamos-session-select` runs inside Steam's pressure-vessel
-container, it can't see host processes directly — a watcher started by
-`io-gamemode` polls the flag and terminates gamescope when it changes. runit
-respawns tty1, autologin fires again, and `io-start` reads the flag to
-decide which session to start next.
+- **`io-netcheck`** makes sure a network connection exists before the first
+  session of a boot; Steam cannot start without one.
+- **`io-start`** reads the requested session from
+  `/run/user/1000/io-session-next` (game mode by default) and starts it under
+  its own `dbus-run-session`. All output goes to a log, see *Logging*.
+- **`io-gamemode`** reproduces Valve's `gamescope-session`: the same
+  environment, gamescope arguments and Steam flags
+  (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Steam
+  directly as its child. It also starts PipeWire, the power button daemon,
+  `io-volumed` and the session half of `io-steamos-manager`.
+- **`io-plasma`** starts KDE Plasma. The session half of
+  `io-steamos-manager` starts there through XDG autostart.
+- **`io-session.sh`** guards against boot loops: a session that dies within
+  15 seconds drops to a shell on tty1 and shows the last 20 log lines. A
+  session that ran longer is restarted with `io-start`.
 
-## First boot
+### Switching
 
-Two things run before the first login, injected directly by `mkimg.sh`
-rather than shipped in a package (see [Pitfalls](Pitfalls) for why):
+- **Game mode → desktop:** Steam calls `SwitchToDesktopMode` on
+  `io-steamos-manager`. It writes `desktop` to the state file and ends
+  gamescope; `io-session.sh` restarts `io-start`, which now starts Plasma.
+- **Desktop → game mode:** the *Return to Game Mode* shortcut runs
+  `steamos-session-select gamescope`, which calls `SwitchToGameMode` on the
+  manager over D-Bus, as on SteamOS. If the manager cannot be reached, it
+  falls back to writing the state file and ending kwin itself.
 
-- `io-netcheck` blocks tty1 until a network connection exists (Ethernet or
-  WiFi, including dock-provided Ethernet) — Steam's bootstrapper cannot do
-  anything meaningful without one. Skipped on repeat logins within the same
-  boot via a boot-ID-tagged flag in `~/.cache`.
-- The root partition is grown to fill the actual card (12G image → however
-  large the card is) via `cloud-guest-utils`'s `growpart`, wrapped with a
-  visible on-console warning not to power off mid-resize.
+---
+
+## SteamOS Manager
+
+`io-steamos-manager` implements `com.steampowered.SteamOSManager1` in two
+halves, like Valve's daemon:
+
+| | Root half | Session half |
+|---|---|---|
+| Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
+| Bus | system | session |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `FanControlState`, ...) | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, ...) |
+| Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
+
+Access to the root half is limited to root and `wheel`
+(`/usr/share/dbus-1/system.d/com.steampowered.SteamOSManager1.conf`).
+
+Steam does not use D-Bus for everything. Some features are enabled by
+environment variables alone (the adaptive brightness toggle, fan control,
+VRR and tearing switches), and some are helper scripts Steam runs directly
+(`jupiter-fan-control`, `steamos-priv-write`); see
+[Helper status](Helper-Status).
+
+---
+
+## Logging
+
+- **Sessions:** `io-start` pipes all session output through `svlogd` into
+  `/run/user/1000/io-log-gamemode/` or `io-log-desktop/` — in RAM, rotated at
+  5 × 2 MB, gone after a reboot. While Steam's developer mode is on
+  (`io-devmode`), the logs go to `~/.local/state/io/` instead and survive
+  reboots (20 files).
+- **Services:** runit services log through `vlogger` to syslog,
+  `socklog-unix` sorts them into `/var/log/socklog/<category>/current`.
+- **Kernel:** `nanoklogd` feeds the kernel log into
+  `/var/log/socklog/kernel/`.
+- `deck` is in the `socklog` group and can read all of it without `sudo`.
+
+---
+
+## Memory
+
+`holo-zram-swap` sets up a zram swap device with half of RAM, zstd and
+priority 100, and turns zswap off. `earlyoom` waits for that swap to exist
+before it starts (its swap threshold would fail otherwise; runit starts
+services in parallel).
+
+---
+
+## Audio
+
+Hardware microphone → Valve's filter chain (RNNoise, Valve's microphone
+filter) → loopback source *Steam Deck Microphone*, which Steam and games
+use. Valve's WirePlumber access rules hide the raw hardware microphone from
+applications. Speaker tuning happens in the CS35L41 amplifiers' own DSP.
+
+---
+
+## Storage expansion
+
+The image is 12 GB. `io-grow-storage` (also *Expand storage* in the
+desktop menu) grows the root partition and its filesystem to the full card,
+using only util-linux. It shows what it will do and asks first; it never
+runs on its own.

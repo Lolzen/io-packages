@@ -71,7 +71,7 @@ against documentation or memory.
   SteamOS and OctoXBPS instead of Discover/Flatpak
 - **`publish.sh`** uploads only new files and cleans stale release assets
 
-### Open
+### Work list
 
 - [x] `io-desktop`: add every package the running system uses
       (`steamdeck-dsp`, `holo-zram-swap`, `holo-earlyoom`, `steamos-tuning`,
@@ -83,26 +83,35 @@ against documentation or memory.
 - [x] GPU reset udev rule: Valve restarts SDDM after a GPU crash; Io has no
       display manager, so the rule now ends gamescope and `io-session.sh`
       starts a fresh session (commit `76ad031`)
-- [ ] Screen recording: check whether the gamescope portal is still found;
-      SteamOS sets `XDG_DESKTOP_PORTAL_DIR` for the game mode session
-- [ ] Boot splash: wire `holo-plymouth-themes` into dracut and GRUB
-- [ ] Clean-up: remove `inputplumber` (not buildable, disabled on the Deck
-      even on SteamOS), `docs/handler.sh.io` (acpid leftover), the unused
-      files in `io-branding`, and review the helper scripts from before the
-      disk image (`mksd.sh`, `mkiso.sh`, `link.sh`, `build.sh`, `pkglist.sh`,
-      `mountsd.sh`, the second `mklogo.py`)
+- [ ] Screen recording: test with a game installed. The gamescope portal
+      file currently also sits in the standard portal directory as a manual
+      copy no package owns; SteamOS instead sets `XDG_DESKTOP_PORTAL_DIR` to
+      the isolated directory for the game mode session. Test Valve's way,
+      then package whichever works
+- [x] Boot splash: Io-branded Plymouth theme (proof of concept), Plymouth in
+      the initramfs, handed over to the session by `io-autologin`.
+      `holo-plymouth-themes` turned out to be the controller-update splash,
+      not the boot splash, and was dropped
+- [x] Clean-up: `inputplumber`, `holo-plymouth-themes`, `docs/handler.sh.io`,
+      `link.sh`, `pkglist.sh`, `mksd.sh` removed; `build.sh` now copies
+      packages into `void-packages` and can publish in the same step;
+      unused files in `io-branding` removed
+- [x] English throughout: all on-device messages, desktop entries, comments
+- [x] `io-netcheck` moved into `io-session`: `mkimg.sh` had patched it into a
+      file owned by `io-session`, so it vanished on the first update
 - [x] `io-selftest.sh`: checks a running system against the Alpha 2 state
       (60 checks; passes on the development card)
+- [ ] Test without `seatd` (elogind only)
+- [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
+- [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
+- [x] Documentation overhaul: README and wiki rewritten in English, new
+      [Deviations](Deviations) page
 
 ### Release acceptance (last step before tagging Alpha 2)
 
 - [ ] Build a fresh image with `mkimg.sh`, write it to a spare card, boot,
       grow storage, run `io-selftest.sh` - must match the development card
 - [ ] Write the final state below
-- [ ] Test without `seatd` (elogind only)
-- [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
-- [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
-- [ ] Documentation overhaul (README and wiki, English throughout)
 
 ### Deferred to after Alpha 2
 
@@ -116,6 +125,10 @@ against documentation or memory.
 - Kernel package naming (`linux-neptune` meta package pointing to the
   current version)
 - Plasma polish
+- Branding: the proof-of-concept splash is a static logo; a designed splash,
+  and filling the black gap while Steam loads inside gamescope (6–10 s from
+  the SD card), are open. Also check Io packages for remaining Valve
+  graphics
 - SD/USB automount (needs `systemd-run` replaced by `setsid --fork` in the
   rules and the boot device excluded); best done together with the move to
   the internal NVMe

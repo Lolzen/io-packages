@@ -1,22 +1,40 @@
 # Helper status
 
-`deck-hw-support` ships all 22 of Valve's polkit helpers so the policy file
-stays intact, but many of them are stubs. Keeping the entries prevents polkit
-actions from pointing at missing paths.
+Steam runs some privileged actions through helper scripts in
+`/usr/bin/steamos-polkit-helpers/`, not through D-Bus. `deck-hw-support`
+ships all 22 of Valve's helpers so the polkit policy stays intact; some are
+stubs.
 
-**Real:** `steamos-priv-write`, `steamos-poweroff-now`, `steamos-reboot-now`,
-`jupiter-check-support`, `jupiter-get-als-gain`, `steamos-set-hostname`,
-`steamos-set-timezone`, `steamos-trim-devices`,
-`steamos-disable-wireless-power-management`
+## Real
 
-**Stubbed, target missing:** `jupiter-amp-control`, `steamos-reboot-other`
+| Helper | Notes |
+|---|---|
+| `steamos-priv-write` | Brightness and other sysfs writes |
+| `jupiter-fan-control` | Asks `io-steamos-manager` to stop or start the fan daemon |
+| `steamos-disable-wireless-power-management` | Asks `io-steamos-manager`; the interface is found automatically |
+| `steamos-poweroff-now`, `steamos-reboot-now` | |
+| `steamos-set-hostname`, `steamos-set-timezone` | Timezone through Io's `timedatectl` replacement |
+| `steamos-trim-devices` | |
+| `jupiter-check-support`, `jupiter-get-als-gain` | |
 
-**Stubbed, needs systemd:** `jupiter-fan-control`, `steamos-devkit-mode`,
-`steamos-enable-sshd`, `steamos-restart-sddm`
+## Stubs worth implementing
 
-**Stubbed, dangerous or pointless here:** `jupiter-biosupdate`,
-`jupiter-dock-updater`, `steamos-format-device`, `steamos-format-sdcard`,
-`steamos-factory-reset-config`, `steamos-update`, `steamos-select-branch`
+| Helper | Would do |
+|---|---|
+| `steamos-enable-sshd` | SSH toggle in Steam's developer settings |
+| `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam; needs working automount first |
 
-Steam looks for `steamos-update` and `steamos-select-branch` under `/usr/bin`,
-not only in the helper directory, so symlinks are installed for both.
+## Stubs, not applicable to Io
+
+| Helper | Why |
+|---|---|
+| `jupiter-amp-control` | Target script is in none of Valve's published packages; audio works without it |
+| `steamos-reboot-other` | A/B slot switching |
+| `steamos-update`, `steamos-select-branch` | SteamOS system updates; `steamos-select-branch` reports `stable` |
+| `jupiter-biosupdate`, `jupiter-dock-updater` | Firmware updates; left to SteamOS |
+| `steamos-factory-reset-config` | Factory reset of the A/B system |
+| `steamos-devkit-mode` | Steamworks devkit workflow |
+| `steamos-restart-sddm` | Io has no display manager |
+
+Steam also looks for `steamos-update` and `steamos-select-branch` in
+`/usr/bin`, so symlinks are installed for both.
