@@ -1,10 +1,10 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.3.0
-revision=1
+revision=2
 optdepends="kde-plasma: Desktop-Session ueber steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
-depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-volumed io-steamos-manager cloud-guest-utils"
+depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-volumed io-steamos-manager cloud-guest-utils rtkit libcap-progs"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -33,4 +33,7 @@ do_install() {
 	vmkdir etc/pipewire/pipewire.conf.d
 	ln -sf /usr/share/examples/wireplumber/10-wireplumber.conf "${DESTDIR}/etc/pipewire/pipewire.conf.d/10-wireplumber.conf"
 	ln -sf /usr/share/examples/pipewire/20-pipewire-pulse.conf "${DESTDIR}/etc/pipewire/pipewire.conf.d/20-pipewire-pulse.conf"
+
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/90-io-gamescope-caps.sh 644 etc/runit/core-services
 }
