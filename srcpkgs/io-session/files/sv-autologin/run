@@ -9,4 +9,10 @@ while [ ! -S /run/dbus/system_bus_socket ] && [ $i -lt 10 ]; do
     sleep 1
     i=$((i + 1))
 done
+# Hand the screen over from the boot splash. --retain-splash leaves the last
+# splash frame on screen until gamescope draws its first frame, instead of
+# dropping to a text console in between.
+if command -v plymouth > /dev/null 2>&1 && plymouth --ping 2> /dev/null; then
+    plymouth quit --retain-splash
+fi
 exec chpst -P agetty --noclear --autologin "$IO_USER" tty1 38400 linux

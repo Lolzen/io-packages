@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=io
+Description=Io boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/io
+ScriptFile=/usr/share/plymouth/themes/io/io.script

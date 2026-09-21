@@ -38,7 +38,7 @@ ROOTPASS="${ROOTPASS:-deck}"
 HOSTNAME="${HOSTNAME:-io}"
 TIMEZONE="${TIMEZONE:-Europe/Vienna}"
 
-KERNEL_CMDLINE="loglevel=4 amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
+KERNEL_CMDLINE="loglevel=3 quiet splash amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
 
 SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy seatd sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 

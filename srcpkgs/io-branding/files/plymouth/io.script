@@ -1,0 +1,12 @@
+# Io boot splash: the Io logo centred on black, the same layout as
+# SteamOS's own boot splash (the "steamos" theme from jupiter-hw-support).
+# The panel orientation is handled by the kernel's quirk table, so the
+# image needs no rotation here.
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+image = Image("io.png");
+sprite = Sprite(image);
+sprite.SetX(Window.GetWidth() / 2 - image.GetWidth() / 2);
+sprite.SetY(Window.GetHeight() / 2 - image.GetHeight() / 2);
+sprite.SetZ(1);

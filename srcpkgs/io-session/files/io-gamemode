@@ -79,11 +79,11 @@ export GAMESCOPE_LIMITER_FILE="$(mktemp /tmp/gamescope-limiter.XXXXXXXX)"
 export GAMESCOPE_DISABLE_ASYNC_FLIPS=1
 
 board=$(cat /sys/class/dmi/id/board_name 2>/dev/null)
-bg=/usr/share/plymouth/themes/steamos/steamos.png
 if [ "$board" = "Jupiter" ]; then
     export STEAM_DISPLAY_REFRESH_LIMITS=40,60
-    bg=/usr/share/plymouth/themes/steamos/steamos-jupiter.png
 fi
+# Valve points Steam's update screen at its boot splash image; Io uses its own
+bg=/usr/share/plymouth/themes/io/io.png
 [ -r "$bg" ] && export STEAM_UPDATEUI_PNG_BACKGROUND="$bg"
 
 # ---------------------------------------- B: waiting for a dependency

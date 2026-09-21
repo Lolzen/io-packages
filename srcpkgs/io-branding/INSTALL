@@ -1,0 +1,11 @@
+# Make Io's splash the default Plymouth theme. plymouth-set-default-theme
+# is Plymouth's own interface for this; it edits the user-owned
+# /etc/plymouth/plymouthd.conf. The initramfs must be rebuilt afterwards to
+# carry the theme (mkimg.sh does that as its last step).
+case "${ACTION}" in
+post)
+	if [ -x usr/bin/plymouth-set-default-theme ]; then
+		usr/bin/plymouth-set-default-theme io || :
+	fi
+	;;
+esac
