@@ -139,11 +139,15 @@ Three items motivated the 6.15.8 → 7.2.4 bump in the first place; the bump
 itself is done and verified, but none of these three has actually been
 checked against the new kernel yet:
 
-- `ntsync` — mainlined since Linux 6.14, needs a Kconfig check in
-  `config-neptune`/`config-io`, then `modinfo ntsync` on the Deck
-- `hid_nintendo`/`hid_playstation` — external Switch Pro/DualSense
-  controller support, needed for Steam to prefer `hidraw` over `evdev`
-- HDMI-CEC — relevant for docking to a TV
+- `ntsync` — confirmed working: `CONFIG_NTSYNC=y`, `/dev/ntsync` exists
+  with correct permissions, no changes needed
+- `hid_nintendo`/`hid_playstation` — confirmed working: both built as
+  modules (`hid-nintendo.ko.zst`, `hid-playstation.ko.zst`), correctly
+  installed, no changes needed
+- HDMI-CEC — Kconfig-complete (`CEC_CORE`, `DRM_DISPLAY_HDMI_CEC_NOTIFIER_HELPER`,
+  `DRM_DISPLAY_DP_AUX_CEC` all correct for the Deck's USB-C/DP-AUX dock
+  path). Functional test with real dock hardware still pending — own
+  follow-up session
 
 **New, unrelated to the above:** trackpad swipe haptics (the fine texture
 under a finger swiping across a trackpad — not tap, not controller rumble)
@@ -155,3 +159,4 @@ generic, unrelated `HID_HAPTIC`. Points to a real source-level change in
 `hid-steam.c` between Valve's two kernel branches; needs a direct diff of
 that one file between the `0001-neptune.patch` (6.15.8) and
 `0001-neptune-72.patch` (7.2.4) patch sets to find the actual change.
+

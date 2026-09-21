@@ -83,8 +83,12 @@ against documentation or memory.
       SteamOS sets `XDG_DESKTOP_PORTAL_DIR` for the game mode session
 - [ ] Boot splash: wire `holo-plymouth-themes` into dracut and GRUB
 - [ ] Clean-up: remove `inputplumber` (not buildable, disabled on the Deck
-      even on SteamOS), `docs/handler.sh.io` (acpid leftover), and the unused
-      files in `io-branding`
+      even on SteamOS), `docs/handler.sh.io` (acpid leftover), the unused
+      files in `io-branding`, and review the helper scripts from before the
+      disk image (`mksd.sh`, `mkiso.sh`, `link.sh`, `build.sh`, `pkglist.sh`,
+      `mountsd.sh`, the second `mklogo.py`)
+- [ ] `io-selftest.sh`: checks a running system against the Alpha 2 state;
+      run it on the fresh image and keep it in the repository
 - [ ] Test without `seatd` (elogind only)
 - [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
 - [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
@@ -102,6 +106,10 @@ against documentation or memory.
 - Kernel package naming (`linux-neptune` meta package pointing to the
   current version)
 - Plasma polish
+- Kernel command line: compare with SteamOS's `amdgpu` options
+  (`lockup_timeout`, `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min`)
+- Live ISO: retry once void-mklive handles dracut 112's live-boot changes
+  (the reason Io ships as a disk image)
 
 ### Final state
 
