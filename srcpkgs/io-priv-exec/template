@@ -1,0 +1,15 @@
+# Template file for 'io-priv-exec'
+pkgname=io-priv-exec
+version=1.0
+revision=1
+depends="polkit runit-void"
+short_desc="Fixed-action polkit-elevated helper for io-steamos-manager (fan control, wifi power management)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+
+do_install() {
+	vbin ${FILESDIR}/io-priv-exec
+	vmkdir usr/share/polkit-1/actions
+	vinstall ${FILESDIR}/org.io.priv-exec.policy 644 usr/share/polkit-1/actions
+}

@@ -6,20 +6,38 @@ Steam decides which quick-access controls to show by asking this service on
 the *session* bus, not by probing sysfs. Without it the TDP and charge limit
 sliders never appear, even though the kernel exposes both.
 
-Privileged writes go through steamos-priv-write from deck-hw-support, which
-elevates via pkexec. That is the same path Steam uses for brightness, so the
-polkit rules are already in place. Any sysfs path used here must also be
-listed in that helper, or the write fails silently.
+Two kinds of privileged writes:
+  - Direct sysfs values go through steamos-priv-write from deck-hw-support,
+    which elevates via pkexec. That is the same path Steam uses for
+    brightness, so the polkit rules are already in place.
+  - Fixed actions that aren't a single file write (starting/stopping the
+    fan-control service, toggling wifi power-save) go through io-priv-exec
+    instead, Io's own equivalent - a whitelisted set of named actions, not
+    arbitrary commands, elevated via its own polkit action.
 
 Interfaces are optional by design: Steam probes for each one and shows the
 matching controls only if it is present. Adding one is a small class plus a
 line in main().
 
+ObjectManager at '/' is exported separately from the interfaces themselves.
+Confirmed via dbus-monitor against real SteamOS: Steam calls
+GetManagedObjects right after seeing the service register, before probing
+anything else directly. Tested in isolation against the Ambient Light
+Sensor toggle specifically - implementing this alone did not make the
+toggle available, so whatever gates it in Steam's client is something else,
+not yet found. Kept anyway: it now matches real SteamOS's discovery
+behavior exactly, and may matter for other interfaces or third-party tools.
+
 Deliberately not implemented:
   Storage1, Job1, JobManager1, UdevEvents1 - need dynamic job objects
   LowPowerMode1                            - returns file descriptors
-  HdmiCec*, ScreenReader*, WifiDebug*      - no use on this device
+  HdmiCec*, ScreenReader*, WifiDebug*      - HdmiCec kernel support confirmed
+                                              present (7.2.4 kernel bump),
+                                              needs a real dock to test the
+                                              ioctl-based /dev/cec* path -
+                                              own follow-up session
   UpdateBios1, UpdateDock1, FactoryReset1  - dangerous, deliberately absent
+  WifiBackend1 write side                  - see WifiBackend1 below
 """
 
 import asyncio
@@ -31,6 +49,7 @@ import sys
 from dbus_fast import BusType, PropertyAccess
 from dbus_fast.aio import MessageBus
 from dbus_fast.service import ServiceInterface, dbus_property, method
+from dbus_fast.signature import Variant
 
 BUSNAME = "com.steampowered.SteamOSManager1"
 OBJPATH = "/com/steampowered/SteamOSManager1"
@@ -38,6 +57,7 @@ IFACE = "com.steampowered.SteamOSManager1"
 
 HELPERS = "/usr/bin/steamos-polkit-helpers"
 PRIV_WRITE = f"{HELPERS}/steamos-priv-write"
+PRIV_EXEC = "/usr/bin/io-priv-exec"
 ALS_GAIN = f"{HELPERS}/jupiter-get-als-gain"
 
 STATE_DIR = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
@@ -98,6 +118,19 @@ def _write_priv_all(pattern, value):
     return ok
 
 
+def _priv_exec(action):
+    """Run one of io-priv-exec's fixed, whitelisted actions, elevated via
+    pkexec. Unlike _write_priv, the action name selects a hardcoded command
+    inside io-priv-exec itself - nothing here reaches a shell."""
+    result = subprocess.run(
+        [PRIV_EXEC, action],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return result.returncode == 0
+
+
 def _run(*args):
     """Run a command, return stdout stripped, or '' on failure."""
     try:
@@ -107,6 +140,14 @@ def _run(*args):
         return out.stdout.strip()
     except (OSError, subprocess.TimeoutExpired):
         return ""
+
+
+def _service_running(pattern):
+    """True if a process matching the given pgrep -f pattern is running.
+    Used instead of sv status, which requires root to read
+    /etc/sv/<service>/supervise/ (mode 0700) - unprivileged reads fail with
+    'access denied' and were silently read as 'not running'."""
+    return _run("pgrep", "-f", pattern) != ""
 
 
 def _detach(command):
@@ -477,6 +518,99 @@ class RemoteInterface1(ServiceInterface):
         return []
 
 
+class FanControl1(ServiceInterface):
+    """Fan control mode. jupiter-fan-control has no separate enable file -
+    running the daemon IS 'OS' mode (it actively writes fan1_target);
+    stopping it returns control to the embedded controller ('BIOS' mode).
+    Confirmed by the daemon's own --stop message: 'returning fan to EC
+    control loop'. 0 = BIOS, 1 = OS, matching Valve's own convention."""
+
+    SERVICE = "jupiter-fan-control"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.FanControl1")
+
+    @dbus_property()
+    def FanControlState(self) -> "u":
+        return 1 if _service_running("fancontrol.py") else 0
+
+    @FanControlState.setter
+    def FanControlState(self, value: "u"):
+        _priv_exec("fan-control-on" if value else "fan-control-off")
+        self.emit_properties_changed({"FanControlState": value})
+
+
+class WifiPowerManagement1(ServiceInterface):
+    """Wireless power-save toggle, via iw rather than a sysfs file - no
+    single stable sysfs path exists across the rtw88 driver's power-save
+    states; iw is the documented interface for this. 0 = Disabled,
+    1 = Enabled, matching Valve's own convention."""
+
+    IFNAME = "wlo1"
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.WifiPowerManagement1")
+
+    @dbus_property()
+    def WifiPowerManagementState(self) -> "u":
+        out = _run("iw", "dev", self.IFNAME, "get", "power_save")
+        return 1 if "on" in out.lower() else 0
+
+    @WifiPowerManagementState.setter
+    def WifiPowerManagementState(self, value: "u"):
+        _priv_exec("wifi-powersave-on" if value else "wifi-powersave-off")
+        self.emit_properties_changed({"WifiPowerManagementState": value})
+
+
+class WifiBackend1(ServiceInterface):
+    """Read-only on Io. Real SteamOS can switch between iwd/wpa_supplicant
+    at runtime by rewriting NetworkManager.conf and restarting the service;
+    Io deliberately only ever uses wpa_supplicant (see NetworkManager
+    hardening notes), so this just reports the fixed value rather than
+    risking a live NetworkManager restart for no practical benefit."""
+
+    def __init__(self):
+        super().__init__(f"{IFACE}.WifiBackend1")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def WifiBackend(self) -> "s":
+        return "wpa_supplicant"
+
+
+# --------------------------------------------------------- object manager
+
+class ObjectManager(ServiceInterface):
+    """Steam's primary discovery mechanism on real SteamOS: it calls
+    GetManagedObjects right after seeing the service register, before
+    probing anything else directly. Confirmed via dbus-monitor against real
+    SteamOS - Steam subscribes to this at path '/' immediately after
+    NameOwnerChanged fires for com.steampowered.SteamOSManager1, then calls
+    GetManagedObjects and gets back every interface's full property set in
+    one reply.
+
+    Exported at '/' rather than OBJPATH, matching how Steam subscribes to
+    it (path='/' in the AddMatch capture)."""
+
+    def __init__(self, instances):
+        super().__init__("org.freedesktop.DBus.ObjectManager")
+        self._instances = instances
+
+    @method()
+    def GetManagedObjects(self) -> "a{oa{sa{sv}}}":
+        ifaces = {}
+        for inst in self._instances:
+            props = {}
+            for p in inst.introspect().properties:
+                if p.access.name == "WRITE":
+                    continue
+                try:
+                    props[p.name] = Variant(p.signature, getattr(inst, p.name))
+                except Exception:  # noqa: BLE001 - one bad property must
+                    continue       # not break the whole discovery reply
+            ifaces[inst.name] = props
+        return {OBJPATH: ifaces}
+
+
 # ------------------------------------------------------------------- main
 
 INTERFACES = (
@@ -492,19 +626,27 @@ INTERFACES = (
     CpuScheduler1,
     PerformanceProfile1,
     RemoteInterface1,
+    FanControl1,
+    WifiPowerManagement1,
+    WifiBackend1,
 )
 
 
 async def main():
     bus = await MessageBus(bus_type=BusType.SESSION).connect()
 
+    instances = []
     for cls in INTERFACES:
         try:
-            bus.export(OBJPATH, cls())
+            inst = cls()
+            bus.export(OBJPATH, inst)
+            instances.append(inst)
         except Exception as err:  # noqa: BLE001 - one bad interface must
             # not take down the whole service
             print(f"io-steamos-manager: {cls.__name__} failed: {err}",
                   file=sys.stderr, flush=True)
+
+    bus.export("/", ObjectManager(instances))
 
     await bus.request_name(BUSNAME)
     print("io-steamos-manager: ready", flush=True)
