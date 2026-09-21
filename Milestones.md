@@ -73,12 +73,16 @@ against documentation or memory.
 
 ### Open
 
-- [ ] `io-desktop`: add every package the running system uses
+- [x] `io-desktop`: add every package the running system uses
       (`steamdeck-dsp`, `holo-zram-swap`, `holo-earlyoom`, `steamos-tuning`,
       `holo-dmi-rules`, `holo-fstab-repair`, `steamos-passwd`) and switch the
-      kernel to `linux-neptune-72`; then build and test a fresh image
-- [ ] udisks2 is now installed (pulled in by Plasma): check whether
-      `deck-hw-support`'s udev rules fire for the boot device during boot
+      kernel to `linux-neptune-72`
+- [x] udisks2 is now installed (pulled in by Plasma): checked -
+      `deck-hw-support`'s automount and SD rescan rules are fully commented
+      out, nothing fires at boot. Automount itself moves to after Alpha 2
+- [x] GPU reset udev rule: Valve restarts SDDM after a GPU crash; Io has no
+      display manager, so the rule now ends gamescope and `io-session.sh`
+      starts a fresh session (commit `76ad031`)
 - [ ] Screen recording: check whether the gamescope portal is still found;
       SteamOS sets `XDG_DESKTOP_PORTAL_DIR` for the game mode session
 - [ ] Boot splash: wire `holo-plymouth-themes` into dracut and GRUB
@@ -87,8 +91,14 @@ against documentation or memory.
       files in `io-branding`, and review the helper scripts from before the
       disk image (`mksd.sh`, `mkiso.sh`, `link.sh`, `build.sh`, `pkglist.sh`,
       `mountsd.sh`, the second `mklogo.py`)
-- [ ] `io-selftest.sh`: checks a running system against the Alpha 2 state;
-      run it on the fresh image and keep it in the repository
+- [x] `io-selftest.sh`: checks a running system against the Alpha 2 state
+      (60 checks; passes on the development card)
+
+### Release acceptance (last step before tagging Alpha 2)
+
+- [ ] Build a fresh image with `mkimg.sh`, write it to a spare card, boot,
+      grow storage, run `io-selftest.sh` - must match the development card
+- [ ] Write the final state below
 - [ ] Test without `seatd` (elogind only)
 - [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
 - [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
@@ -106,6 +116,9 @@ against documentation or memory.
 - Kernel package naming (`linux-neptune` meta package pointing to the
   current version)
 - Plasma polish
+- SD/USB automount (needs `systemd-run` replaced by `setsid --fork` in the
+  rules and the boot device excluded); best done together with the move to
+  the internal NVMe
 - Kernel command line: compare with SteamOS's `amdgpu` options
   (`lockup_timeout`, `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min`)
 - Live ISO: retry once void-mklive handles dracut 112's live-boot changes
@@ -120,3 +133,13 @@ against documentation or memory.
 ## Next milestone
 
 *Goals follow once Alpha 2 is released.*
+
+### Candidates
+
+- **Switch to SDDM for login and session switching**, as SteamOS does.
+  Would replace the `agetty → io-session.sh → io-start` chain. A deliberate
+  decision for its own milestone, not a side task.
+  If it happens, the GPU reset rule goes back to Valve's behaviour with
+  `sv restart sddm`: revert the Alpha 2 commit that changed
+  `80-gpu-reset.rules` (`76ad031`) and replace `systemctl` with
+  `sv`.
