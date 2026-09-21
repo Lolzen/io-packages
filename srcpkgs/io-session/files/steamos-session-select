@@ -1,21 +1,20 @@
 #!/bin/sh
 # steamos-session-select <plasma|gamescope>
 #
-# Legacy entry point, kept for Steam client compatibility (Valve's own
-# version is a thin wrapper around steamosctl nowadays). Current Steam
-# clients switch sessions through io-steamos-manager's SessionManagement1
-# over D-Bus instead; this script is still used by the "Return to Game
-# Mode" desktop shortcut.
+# Legacy entry point, kept for Steam client compatibility. Like Valve's
+# version (a wrapper around steamosctl) it asks the session's
+# io-steamos-manager to switch via SessionManagement1 over D-Bus. This is
+# also what the "Return to Game Mode" desktop shortcut uses; on SteamOS
+# that shortcut calls SwitchToGameMode the same way.
 #
-# It only records the target session in a state file that io-start reads
-# on the next login. When called from Steam it runs inside the
-# pressure-vessel container, where pgrep/pkill cannot see host processes,
-# so it cannot end the running session itself in that case.
-#
-# When called from the desktop session (the shortcut) it runs outside the
-# container and ends kwin itself.
+# Fallback when the manager is unreachable: record the target in the state
+# file io-start reads on the next login, and end kwin directly if visible.
+# (Inside Steam's pressure-vessel container pgrep/pkill cannot see host
+# processes, so there only the state file is written.)
 
 STATE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/io-session-next"
+SVC=com.steampowered.SteamOSManager1
+OBJ=/com/steampowered/SteamOSManager1
 
 case "$1" in
     plasma|plasma-x11|desktop)
@@ -31,8 +30,17 @@ case "$1" in
         ;;
 esac
 
-# End the desktop session if visible. Detached, so this script can return
-# before its parent process dies with the session.
+if [ "$(cat "$STATE")" = desktop ]; then
+    METHOD=SwitchToDesktopMode
+else
+    METHOD=SwitchToGameMode
+fi
+if command -v busctl > /dev/null 2>&1; then
+    busctl --user call $SVC $OBJ $SVC.SessionManagement1 $METHOD > /dev/null 2>&1 && exit 0
+fi
+
+# Fallback: end the desktop session if visible. Detached, so this script
+# can return before its parent process dies with the session.
 if pgrep -x kwin_wayland > /dev/null 2>&1; then
     setsid sh -c 'sleep 1; pkill -TERM kwin_wayland' > /dev/null 2>&1 &
 fi

@@ -1,0 +1,12 @@
+#!/bin/sh
+# io-devmode - exit status 0 when Steam's developer mode is enabled
+# (Settings -> System -> Enable Developer Mode), 1 otherwise.
+#
+# Steam writes the setting to config.vdf as soon as it is toggled:
+#   "developer" { "DevModeEnabled" "1" }
+# Used by io-start to keep session logs across reboots. It is read when a
+# session starts, so a change applies from the next session switch or boot.
+
+CFG="$HOME/.local/share/Steam/config/config.vdf"
+[ -r "$CFG" ] || exit 1
+grep -qE '"DevModeEnabled"[[:space:]]+"1"' "$CFG"

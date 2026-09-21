@@ -1,4 +1,16 @@
 #!/bin/sh
+# io-start - start the session recorded in io-session-next (game mode by
+# default) under its own D-Bus session bus.
+#
+# All output of the session (gamescope, Steam, Plasma, PipeWire, ...) goes
+# to a size-limited log instead of tty1:
+#   /run/user/<uid>/io-log-<session>/current   (RAM, gone after reboot)
+# svlogd from runit rotates it: at most 5 files of 2 MB per session.
+# io-session.sh shows the last lines when a session dies right away.
+#
+# Developer mode (see io-devmode) additionally keeps the logs across
+# reboots under ~/.local/state/io/log-<session>.
+
 RUNDIR="/run/user/$(id -u)"
 i=0
 while [ ! -d "$RUNDIR" ] && [ $i -lt 15 ]; do
@@ -14,12 +26,19 @@ fi
 STATE="$RUNDIR/io-session-next"
 SESSION=gamemode
 [ -r "$STATE" ] && SESSION=$(cat "$STATE")
-
 case "$SESSION" in
-    desktop)
-        exec dbus-run-session -- /usr/bin/io-plasma
-        ;;
-    *)
-        exec dbus-run-session -- /usr/bin/io-gamemode
-        ;;
+    desktop) PROG=/usr/bin/io-plasma ;;
+    *) SESSION=gamemode; PROG=/usr/bin/io-gamemode ;;
 esac
+
+LOGDIR="$RUNDIR/io-log-$SESSION"
+KEEP=5
+if command -v io-devmode > /dev/null && io-devmode; then
+    LOGDIR="$HOME/.local/state/io/log-$SESSION"
+    KEEP=20
+fi
+mkdir -p "$LOGDIR"
+printf 's2000000\nn%s\n' "$KEEP" > "$LOGDIR/config"
+
+echo "io: starte $SESSION, Log: $LOGDIR/current"
+dbus-run-session -- "$PROG" 2>&1 | svlogd -tt "$LOGDIR"

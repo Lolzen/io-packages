@@ -29,7 +29,8 @@ echo gamemode > "$STATE"
 pgrep -x pipewire > /dev/null || pipewire &
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
 pgrep -f io-volumed > /dev/null || setsid /usr/bin/io-volumed > /dev/null 2>&1 &
-pgrep -f io-steamos-manager > /dev/null || setsid /usr/bin/io-steamos-manager > /dev/null 2>&1 &
+# user half only - the root half (io-steamos-manager -r) runs as a runit service
+pgrep -u "$(id -u)" -f io-steamos-manager > /dev/null || setsid /usr/bin/io-steamos-manager > /dev/null 2>&1 &
 
 # ----------------------------------------------------- session identity
 export XDG_CURRENT_DESKTOP=gamescope
