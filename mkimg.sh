@@ -40,7 +40,7 @@ TIMEZONE="${TIMEZONE:-Europe/Vienna}"
 
 KERNEL_CMDLINE="loglevel=4 amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
 
-SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy polkitd seatd sshd udevd holo-zram-swap jupiter-fan-control io-steamos-manager io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
+SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy seatd sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
 # Belongs logically in io-desktop's own depends (same reasoning as every
 # other package on this list), but installed explicitly here too so a
@@ -262,7 +262,7 @@ echo "== creating users"
 # _seatd is required for libseat to grant socket access - without it
 # gamescope falls back to a permission error on /run/seatd.sock.
 chroot "$MNT" usermod -p "$ROOTHASH" root
-chroot "$MNT" useradd -m -G wheel,audio,video,input,storage,_seatd -s /bin/bash "$USERNAME"
+chroot "$MNT" useradd -m -G wheel,audio,video,input,storage,_seatd,socklog -s /bin/bash "$USERNAME"
 chroot "$MNT" usermod -p "$USERHASH" "$USERNAME"
 
 # wheel gets sudo, as on any Void install.
