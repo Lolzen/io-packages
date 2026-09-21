@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=io-steamos-manager
+Comment=SteamOS Manager session service (user half)
+Exec=/usr/bin/io-steamos-manager
+NoDisplay=true
+X-KDE-autostart-phase=1
