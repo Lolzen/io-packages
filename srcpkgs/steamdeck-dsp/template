@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=9
+revision=10
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -80,20 +80,13 @@ do_install() {
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/pipewire.conf.d/module-access-args.conf 644 etc/pipewire/pipewire.conf.d
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/pipewire.conf.d 20-filter-chain.conf
 
-	# Upstream's wireplumber alsa-loopback.conf rule (sets
-	# node.create-loopback=true) has no effect on the wireplumber version
-	# Io ships - confirmed the reactive code for that property present in
-	# real SteamOS's wireplumber 0.5.14 is simply gone from this version's
-	# alsa.lua, not a Valve patch, an upstream change somewhere between
-	# 0.5.14 and 0.5.17. Rather than chase that upstream regression, get
-	# the same visible result (a named, higher-priority loopback node so
-	# Steam shows a microphone instead of hiding behind the raw ALSA
-	# source) with a plain libpipewire-module-loopback, which upstream
-	# still ships and works fine on its own. target.delay.sec is required:
-	# without it, the loopback tries to bind to the raw mic node before
-	# wireplumber has enumerated it at session start, binds nothing, and
-	# never retries - confirmed via pw-link showing no connection at all
-	# until this delay was added.
+	# On SteamOS the mic loopback comes from Valve's own WirePlumber patch
+	# (CreateLoopback() in alsa.lua, triggered by node.create-loopback).
+	# That patch is not upstream - neither 0.5.14 nor 0.5.17 has it - so
+	# Void's WirePlumber ignores the property. The same loopback is
+	# declared as a plain libpipewire-module-loopback instead, with the
+	# same fixed format (2 channels, FL/FR) Valve's code sets; without it
+	# Steam drops the source from its microphone list.
 	vinstall ${FILESDIR}/30-mic-loopback.conf 644 etc/pipewire/pipewire.conf.d
 
 	vmkdir etc/wireplumber/wireplumber.conf.d
