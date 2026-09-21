@@ -1,2 +1,15 @@
 #!/bin/sh
-exit 0
+# Steam calls this helper directly (not over D-Bus) when the fan control
+# toggle is switched. On SteamOS it starts/stops jupiter-fan-control.service.
+# On Io it asks the root half of io-steamos-manager, which runs sv up/down;
+# the service's finish script hands the fan back to the EC.
+#
+# Steam's runtime libraries must not leak into the host busctl.
+SVC=com.steampowered.SteamOSManager1
+OBJ=/com/steampowered/SteamOSManager1
+case "${1:-}" in
+    --enable) STATE=1 ;;
+    --disable) STATE=0 ;;
+    *) echo "Unknown option ${1:-}"; exit 22 ;;
+esac
+exec env -u LD_LIBRARY_PATH -u LD_PRELOAD busctl --system set-property "$SVC" "$OBJ" "$SVC.RootManager" FanControlState u "$STATE"

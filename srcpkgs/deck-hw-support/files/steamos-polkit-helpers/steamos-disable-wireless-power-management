@@ -1,10 +1,7 @@
-#!/bin/bash
-
-set -eu
-
-if [[ $EUID -ne 0 ]];
-then
-    exec pkexec --disable-internal-agent "$0" "$@"
-fi
-
-exec iwconfig wlan0 power off
+#!/bin/sh
+# Valve's version runs 'iwconfig wlan0 power off'. Io has neither iwconfig
+# nor a fixed interface name, so it asks the root half of io-steamos-manager,
+# which finds the wireless interface itself and uses iw.
+SVC=com.steampowered.SteamOSManager1
+OBJ=/com/steampowered/SteamOSManager1
+exec env -u LD_LIBRARY_PATH -u LD_PRELOAD busctl --system call "$SVC" "$OBJ" "$SVC.RootManager" SetWifiPowerManagementState u 0
