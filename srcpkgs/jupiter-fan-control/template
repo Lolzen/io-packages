@@ -1,7 +1,7 @@
 # Template file for 'jupiter-fan-control'
 pkgname=jupiter-fan-control
 version=20260902.1
-revision=2
+revision=3
 _pkgrel=1
 wrksrc="${pkgname}"
 python_version=3
@@ -10,7 +10,7 @@ hostmakedepends="git tar"
 short_desc="Jupiter fan controller for Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
-homepage="hhttps://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-mainl"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
 checksum=ccc3bcf34f6ad5a1cdb2c1c8e94d6c9251d82532888523f57127ea0b62868a77
 

@@ -1,4 +1,5 @@
 #!/bin/sh
 export PYTHONUNBUFFERED=1
+echo -1000 > /proc/self/oom_score_adj
 exec 2>&1
 exec /usr/share/jupiter-fan-control/fancontrol.py --run
