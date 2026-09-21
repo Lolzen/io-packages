@@ -1,1 +1,25 @@
-OPTS="-P /usr/lib/holo-earlyoom/steamos-earlyoom-prehook -N /usr/lib/holo-earlyoom/holo-earlyoom-logger.sh -M 409600,307200 -S 409600,307200"
+# Sourced by Void's /etc/sv/earlyoom/run right before it runs
+#   exec earlyoom ${OPTS}
+# OPTS is expanded unquoted, so no argument may contain spaces or glob
+# characters - which is also why the --avoid regex has no quotes.
+#
+# Arguments: Valve's SteamOS defaults (holo-earlyoom.conf), then the
+# defaults Valve keeps from /etc/default/earlyoom, in the same order as on
+# SteamOS. --avoid names runit's processes instead of systemd, which Io
+# does not have.
+#
+# What systemd adds on SteamOS is done here, in the shell that becomes
+# earlyoom:
+#   tmpfiles.d/holo-earlyoom.conf  /run/holo-earlyoom for the prehook
+#   Nice=-20, OOMScoreAdjust=-100  react under memory pressure, never be
+#                                  the one that gets killed
+#   ordering after zram            -S is a swap threshold; with no swap yet
+#                                  earlyoom refuses to start ("exceeds
+#                                  limit 0"). runit starts services in
+#                                  parallel, so wait here: exiting makes
+#                                  runit retry a second later.
+grep -q '^/dev/zram' /proc/swaps || exit 1
+mkdir -p -m 0750 /run/holo-earlyoom
+renice -n -20 $$ > /dev/null 2>&1
+echo -100 > /proc/self/oom_score_adj
+OPTS="-P /usr/lib/holo-earlyoom/steamos-earlyoom-prehook -N /usr/lib/holo-earlyoom/holo-earlyoom-logger.sh -M 409600,307200 -S 409600,307200 -r 3600 -n --avoid (^|/)(init|runit|runsvdir|runsv|Xorg|sshd)$"

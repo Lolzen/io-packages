@@ -1,0 +1,33 @@
+#!/bin/sh
+# holo-zram-swap - Valve's zram swap setup for Io.
+#
+# SteamOS does this declaratively with systemd's zram-generator
+# (holo-zram-swap: zram-size = ram/2, compression-algorithm = zstd,
+# swap-priority = 100) plus tmpfiles.d/zswap-disable.conf. Io has neither,
+# so this runit service does the same with util-linux tools and then just
+# waits; the finish script tears the device down again.
+#
+# zramctl --find picks a free zram device or creates one through the
+# kernel's hot_add interface, so it works whether or not the zram module
+# was already loaded (modprobe's num_devices only applies on first load).
+exec 2>&1
+
+DEVFILE=/run/holo-zram-swap.dev
+
+# zswap off, as Valve's zswap-disable.conf does: with zram as swap, zswap
+# would compress the same pages a second time.
+if [ -w /sys/module/zswap/parameters/enabled ]; then
+    echo 0 > /sys/module/zswap/parameters/enabled
+fi
+
+if ! grep -q '^/dev/zram' /proc/swaps; then
+    modprobe zram 2> /dev/null
+    MEM_KB=$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)
+    DEV=$(zramctl --find --algorithm zstd --size "$((MEM_KB / 2))KiB") || exit 1
+    mkswap -q "$DEV" || exit 1
+    swapon -p 100 "$DEV" || exit 1
+    echo "$DEV" > "$DEVFILE"
+    echo "holo-zram-swap: $DEV active, $((MEM_KB / 2048)) MiB, zstd, priority 100"
+fi
+
+exec sleep infinity

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Tear down what run set up. Pages still in zram are moved back to RAM or
+# other swap by swapoff; this can take a moment under memory pressure.
+DEVFILE=/run/holo-zram-swap.dev
+[ -r "$DEVFILE" ] || exit 0
+DEV=$(cat "$DEVFILE")
+swapoff "$DEV" 2> /dev/null
+zramctl --reset "$DEV" 2> /dev/null
+rm -f "$DEVFILE"
+exit 0

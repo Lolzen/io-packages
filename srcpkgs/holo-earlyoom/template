@@ -1,7 +1,7 @@
 # Template file for 'holo-earlyoom'
 pkgname=holo-earlyoom
 version=1.1
-revision=1
+revision=4
 wrksrc="${pkgname}"
 depends="earlyoom>=1.8.2_1"
 short_desc="Valve's earlyoom tuning (SteamOS defaults, SteamAppId-aware kill logging)"

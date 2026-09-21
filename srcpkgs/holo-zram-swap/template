@@ -1,24 +1,23 @@
 # Template file for 'holo-zram-swap'
 pkgname=holo-zram-swap
 version=0.3
-revision=1
+revision=4
 wrksrc="${pkgname}"
-depends="zramen"
-short_desc="Valve's ZRAM swap tuning (50% RAM, zstd, priority 100)"
+depends="util-linux kmod"
+short_desc="Valve's ZRAM swap setup (50% RAM, zstd, priority 100, zswap off)"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/holo"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-0.src.tar.gz"
 checksum=bb63948b034c17fc9f9abe6c860628f580313044bd8e878d90a18844e58a056a
 
-# Upstream ships zram-generator.conf + zswap-disable.conf, meant for
-# systemd's zram-generator - Io uses zramen instead (its own runit
-# service already reads a conf file for exactly these settings), so
-# there's nothing from the upstream tarball to actually install here.
-# Kept as a real package anyway, not folded into io-base, so the
-# origin and tuning rationale stay documented and revision-tracked on
-# their own.
+# Upstream ships zram-generator.conf and tmpfiles.d/zswap-disable.conf for
+# systemd. Io has neither, so the same settings are applied by an own runit
+# service (files/holo-zram-swap/run) using util-linux tools. The upstream
+# tarball is kept as the documented source of those values.
+#
+# Earlier revisions wrote zramen's /etc/sv/zramen/conf, a file owned by the
+# zramen package. zramen is no longer needed.
 do_install() {
-	vmkdir etc/sv/zramen
-	vinstall ${FILESDIR}/conf 644 etc/sv/zramen
+	vsv holo-zram-swap
 }
