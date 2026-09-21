@@ -1,6 +1,7 @@
 #!/bin/sh
-# Holt die Paketlisten von Valves Quellmirror und meldet Aenderungen
-# gegenueber dem letzten Lauf.
+# pkgcheck.sh - fetch the package lists from Valve's source mirror
+# (jupiter-main, holo-main), keep the newest version of each package in
+# docs/, and report what changed since the last run.
 set -eu
 
 BASE=https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources
@@ -12,7 +13,7 @@ mkdir -p "$DOCS"
 
 for branch in jupiter-main holo-main; do
     curl -sf "$BASE/$branch/" > "$TMP/$branch.html" || {
-        echo "pkgcheck: $branch nicht erreichbar" >&2
+        echo "pkgcheck: $branch unreachable" >&2
         continue
     }
 
@@ -33,13 +34,13 @@ for branch in jupiter-main holo-main; do
 
     if [ -f "$old" ]; then
         if diff -q "$old" "$new" > /dev/null; then
-            echo "== $branch: keine Aenderungen"
+            echo "== $branch: no changes"
         else
-            echo "== $branch: Aenderungen"
+            echo "== $branch: changes"
             diff "$old" "$new" | grep '^[<>]'
         fi
     else
-        echo "== $branch: erste Aufnahme, $(wc -l < "$new") Pakete"
+        echo "== $branch: first run, $(wc -l < "$new") packages"
     fi
 
     cp "$new" "$old"
