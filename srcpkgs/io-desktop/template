@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=5
+revision=6
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -26,6 +26,8 @@ depends="
 
  bluez chrony dracut grub-x86_64-efi efibootmgr
  fastfetch dmidecode
+
+ kde-plasma konsole dolphin kate ark gwenview okular spectacle kdeconnect partitionmanager maliit-keyboard xdg-desktop-portal-gtk kio-extras kdialog octoxbps
 "
 short_desc="Io meta package: complete Steam Deck game mode system"
 maintainer="Georg <funer@gmx.atl>"
