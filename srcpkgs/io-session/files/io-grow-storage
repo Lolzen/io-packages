@@ -5,7 +5,7 @@
 # Deliberately never run automatically. A resize at boot would run in runit
 # stage 1 before anything else, invisible, and interrupting it can damage
 # the filesystem. It is a conscious user step instead:
-#   - from Plasma: application menu or desktop icon "Speicherplatz erweitern"
+#   - from Plasma: application menu or desktop icon "Expand storage"
 #   - from a terminal or SSH: io-grow-storage
 #
 # Uses only util-linux (sfdisk, resizepart) and the filesystem's own tool.
@@ -24,7 +24,7 @@ fi
 
 pause() {
     if [ -t 0 ]; then
-        printf "\nEnter zum Schliessen..."
+        printf "\nPress Enter to close..."
         read -r _dummy
     fi
 }
@@ -37,11 +37,11 @@ fail() {
 }
 
 ask() {
-    printf "%s [j/N] " "$1"
+    printf "%s [y/N] " "$1"
     read -r answer
     case "$answer" in
         j|J|y|Y) return 0 ;;
-        *) echo "Abgebrochen."; pause; exit 0 ;;
+        *) echo "Cancelled."; pause; exit 0 ;;
     esac
 }
 
@@ -53,7 +53,7 @@ ROOT_SRC=$(findmnt -n -o SOURCE /)
 ROOT_FS=$(findmnt -n -o FSTYPE /)
 ROOT_NAME=${ROOT_SRC##*/}
 DISK=$(lsblk -no PKNAME "$ROOT_SRC")
-[ -n "$DISK" ] || fail "Datentraeger von $ROOT_SRC nicht gefunden."
+[ -n "$DISK" ] || fail "Cannot find the disk holding $ROOT_SRC."
 PART=$(cat "/sys/class/block/$ROOT_NAME/partition")
 SYSPART=/sys/class/block/$ROOT_NAME
 
@@ -67,7 +67,7 @@ fs_bytes() { df -B1 --output=size / | tail -1 | tr -d ' '; }
 for p in /sys/block/"$DISK"/"$DISK"*; do
     [ -r "$p/start" ] || continue
     if [ "$(cat "$p/start")" -gt "$(part_start)" ]; then
-        fail "Hinter der Root-Partition liegt ${p##*/}; Io kann nicht erweitern."
+        fail "${p##*/} lies behind the root partition; Io cannot grow it."
     fi
 done
 
@@ -77,36 +77,36 @@ FS_GAP=$(( $(part_sectors) * 512 - $(fs_bytes) ))
 MIN=104857600
 
 grow_fs() {
-    echo "Vergroessere Dateisystem ($ROOT_FS). Bitte nicht ausschalten..."
+    echo "Growing the filesystem ($ROOT_FS). Do not power off..."
     case "$ROOT_FS" in
         ext2|ext3|ext4) resize2fs "$ROOT_SRC" ;;
         btrfs) btrfs filesystem resize max / ;;
         xfs) xfs_growfs / ;;
-        *) fail "Dateisystem $ROOT_FS kann im laufenden Betrieb nicht vergroessert werden." ;;
+        *) fail "A mounted $ROOT_FS filesystem cannot be grown." ;;
     esac
     sync
 }
 
 echo "=========================================="
-echo " Io - Speicherplatz erweitern"
+echo " Io - Expand storage"
 echo "=========================================="
 echo
-echo "Datentraeger:  /dev/$DISK ($(gib $(( $(disk_sectors) * 512 ))))"
+echo "Disk:          /dev/$DISK ($(gib $(( $(disk_sectors) * 512 ))))"
 echo "Root:          $ROOT_SRC, Partition $PART, $ROOT_FS"
 echo "Partition:     $(gib $(( $(part_sectors) * 512 )))"
-echo "Dateisystem:   $(gib "$(fs_bytes)"), frei: $(df -h --output=avail / | tail -1 | tr -d ' ')"
+echo "Filesystem:    $(gib "$(fs_bytes)"), free: $(df -h --output=avail / | tail -1 | tr -d ' ')"
 echo
 lsblk "/dev/$DISK"
 echo
 
 if [ "$GROWABLE" -lt "$MIN" ]; then
     if [ "$FS_GAP" -gt "$MIN" ]; then
-        echo "Die Partition ist bereits voll, das Dateisystem aber noch nicht."
-        ask "Dateisystem jetzt auf die volle Partition erweitern?"
+        echo "The partition is already full size, but the filesystem is not."
+        ask "Grow the filesystem to the full partition now?"
         grow_fs
     else
-        echo "Es gibt nichts zu erweitern: Partition und Dateisystem"
-        echo "nutzen den verfuegbaren Platz bereits vollstaendig."
+        echo "Nothing to grow: partition and filesystem already use"
+        echo "all available space."
     fi
     echo
     df -h /
@@ -114,36 +114,35 @@ if [ "$GROWABLE" -lt "$MIN" ]; then
     exit 0
 fi
 
-echo "Die Root-Partition kann um $(gib "$GROWABLE") wachsen."
-echo "Startsektor, UUID und Name der Partition bleiben unveraendert."
+echo "The root partition can grow by $(gib "$GROWABLE")."
+echo "Start sector, UUID and name of the partition stay the same."
 echo
-ask "Root-Partition jetzt auf volle Groesse erweitern?"
+ask "Grow the root partition to full size now?"
 
 echo
-echo "Erweitere Partition. Bitte nicht ausschalten..."
+echo "Growing the partition. Do not power off..."
 # An image written to a larger card still has its GPT backup where the old
 # end was; move it to the real end first, then grow the partition into the
 # freed space. --no-reread: the disk is in use, the kernel is told below.
 sfdisk -q --no-reread --relocate gpt-bak-std "/dev/$DISK" > /dev/null 2>&1 || true
-echo ", +" | sfdisk -q -N "$PART" --no-reread "/dev/$DISK" || fail "sfdisk konnte die Partition nicht erweitern."
+echo ", +" | sfdisk -q -N "$PART" --no-reread "/dev/$DISK" || fail "sfdisk could not grow the partition."
 
 NEW=$(sfdisk -q -l -o Device,Sectors "/dev/$DISK" | awk -v d="$ROOT_SRC" '$1 == d { print $2 }')
-[ -n "$NEW" ] || fail "Neue Partitionsgroesse nicht lesbar."
+[ -n "$NEW" ] || fail "Cannot read the new partition size."
 resizepart "/dev/$DISK" "$PART" "$NEW" 2> /dev/null || true
 sleep 1
 
 if [ "$(part_sectors)" -ne "$NEW" ]; then
     echo
-    echo "Die Partitionstabelle ist geaendert, der Kernel sieht die neue"
-    echo "Groesse aber erst nach einem Neustart. Bitte neu starten und"
-    echo "io-grow-storage danach noch einmal ausfuehren - es erweitert dann"
-    echo "nur noch das Dateisystem."
+    echo "The partition table is updated, but the kernel only sees the new"
+    echo "size after a reboot. Reboot and run io-grow-storage again - it"
+    echo "will then only grow the filesystem."
     pause
     exit 0
 fi
 
 grow_fs
-echo "Fertig."
+echo "Done."
 echo
 df -h /
 pause

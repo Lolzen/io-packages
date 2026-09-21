@@ -1,7 +1,7 @@
 #!/usr/bin/python3
-"""io-volumed: setzt die Systemlautstaerke bei Druck auf die
-Gehaeusetasten des Steam Deck. Steam zeigt das OSD, aendert aber
-den Pegel nicht selbst, weil es dafuer steamos-manager erwartet."""
+"""io-volumed: sets the system volume when the Steam Deck's volume keys
+are pressed. Steam shows the OSD but does not change the level itself
+in Io's current session setup."""
 import subprocess
 import sys
 
@@ -39,9 +39,9 @@ def set_volume(arg):
 def main():
     dev = find_keyboard()
     if dev is None:
-        print("io-volumed: Tastaturgeraet nicht gefunden", file=sys.stderr)
+        print("io-volumed: keyboard device not found", file=sys.stderr)
         return 1
-    print(f"io-volumed: lausche auf {dev.name}")
+    print(f"io-volumed: listening on {dev.name}")
 
     for event in dev.events():
         if event.value != 1:

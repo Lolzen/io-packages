@@ -1,0 +1,105 @@
+#!/bin/sh
+# io-netcheck - ensure a network connection exists before continuing.
+# Part of io-session; io-session.sh runs it before the first session on tty1.
+#
+# Runs on every tty1 login, and a crashed/restarted session produces a
+# fresh login each time - so this checks a /run flag first and skips
+# straight through once resolved for this boot, instead of re-prompting
+# on every single restart.
+
+FLAG="$HOME/.cache/io-netcheck-boot"
+mkdir -p "$HOME/.cache"
+BOOT_ID=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || true)
+
+if [ -n "$BOOT_ID" ] && [ -f "$FLAG" ] && [ "$(cat "$FLAG" 2>/dev/null)" = "$BOOT_ID" ]; then
+    exit 0
+fi
+
+# NetworkManager may still be starting up right after boot; wait briefly
+# for it to actually be running before trusting its answer, rather than
+# reading "not ready yet" as "no network".
+i=0
+while ! sv status NetworkManager 2>/dev/null | grep -q "^run:" && [ $i -lt 10 ]; do
+    sleep 1
+    i=$((i + 1))
+done
+
+has_ethernet() {
+    nmcli -t -f TYPE,STATE device 2>/dev/null | grep -q "^ethernet:connected"
+}
+
+has_wifi() {
+    nmcli -t -f TYPE,STATE device 2>/dev/null | grep -q "^wifi:connected"
+}
+
+connected() {
+    has_ethernet || has_wifi
+}
+
+if connected; then
+    [ -n "$BOOT_ID" ] && echo "$BOOT_ID" > "$FLAG"
+    exit 0
+fi
+
+while ! connected; do
+    clear
+    echo "== Network =="
+    echo
+    echo "No Ethernet or Wi-Fi connection found."
+    echo "Steam needs a network connection to start."
+    echo
+    echo "  1) Ethernet (e.g. through a dock)"
+    echo "  2) Wi-Fi"
+    echo "  3) Continue without a connection"
+    echo
+    printf "Choice [1/2/3]: "
+    read choice
+
+    case "$choice" in
+        1)
+            echo
+            echo "Connect the cable or dock. Waiting for a connection (30s)..."
+            i=0
+            while ! has_ethernet && [ $i -lt 30 ]; do
+                sleep 1
+                i=$((i + 1))
+            done
+            if has_ethernet; then
+                echo "Ethernet connected."
+                sleep 1
+            else
+                echo "No Ethernet connection detected."
+                sleep 2
+            fi
+            ;;
+        2)
+            echo
+            echo "Scanning for Wi-Fi networks..."
+            nmcli device wifi rescan >/dev/null 2>&1
+            sleep 2
+            nmcli -f SSID,SIGNAL,SECURITY device wifi list
+            echo
+            printf "SSID: "
+            read ssid
+            printf "Password: "
+            stty -echo
+            read pass
+            stty echo
+            echo
+            nmcli device wifi connect "$ssid" password "$pass"
+            sleep 2
+            ;;
+        3)
+            echo "Continuing without a network connection."
+            sleep 1
+            break
+            ;;
+        *)
+            echo "Invalid choice."
+            sleep 1
+            ;;
+    esac
+done
+
+[ -n "$BOOT_ID" ] && echo "$BOOT_ID" > "$FLAG"
+exit 0

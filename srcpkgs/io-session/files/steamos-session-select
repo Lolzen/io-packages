@@ -24,8 +24,8 @@ case "$1" in
         echo gamemode > "$STATE" || exit 1
         ;;
     *)
-        echo "steamos-session-select: unbekanntes Ziel '$1'" >&2
-        echo "Verwendung: steamos-session-select <plasma|gamescope>" >&2
+        echo "steamos-session-select: unknown target '$1'" >&2
+        echo "usage: steamos-session-select <plasma|gamescope>" >&2
         exit 1
         ;;
 esac

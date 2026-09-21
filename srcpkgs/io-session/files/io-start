@@ -19,7 +19,7 @@ while [ ! -d "$RUNDIR" ] && [ $i -lt 15 ]; do
 done
 
 if [ ! -d "$RUNDIR" ]; then
-    echo "io: $RUNDIR wurde nicht angelegt, elogind pruefen." >&2
+    echo "io: $RUNDIR was not created, check elogind." >&2
     exit 1
 fi
 
@@ -40,5 +40,5 @@ fi
 mkdir -p "$LOGDIR"
 printf 's2000000\nn%s\n' "$KEEP" > "$LOGDIR/config"
 
-echo "io: starte $SESSION, Log: $LOGDIR/current"
+echo "io: starting $SESSION, log: $LOGDIR/current"
 dbus-run-session -- "$PROG" 2>&1 | svlogd -tt "$LOGDIR"

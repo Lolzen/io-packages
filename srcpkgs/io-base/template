@@ -1,7 +1,7 @@
 # Template file for 'io-base'
 pkgname=io-base
 version=0.4.0
-revision=7
+revision=8
 bootstrap=yes
 depends="xbps>=0.45 polkit jq alsa-utils socklog-void plymouth"
 conf_files="/etc/elogind/logind.conf.d/10-io.conf"

@@ -1,9 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Speicherplatz erweitern
-Name[en]=Expand storage
-Comment=Root-Partition auf die volle Groesse der Karte erweitern
-Comment[en]=Grow the root partition to the full size of the card
+Name=Expand storage
+Comment=Grow the root partition to the full size of the card
 Exec=/usr/bin/io-grow-storage
 Icon=drive-harddisk
 Terminal=true

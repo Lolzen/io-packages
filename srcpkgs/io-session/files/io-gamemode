@@ -17,7 +17,7 @@
 #       exists.
 
 if pgrep -x gamescope-wl > /dev/null; then
-    echo "io: gamescope laeuft bereits" >&2
+    echo "io: gamescope already running" >&2
     exit 1
 fi
 

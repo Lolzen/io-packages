@@ -1,7 +1,7 @@
 #!/bin/sh
-# Minimaler timedatectl-Ersatz fuer Void.
-# Steam ruft ueber steamos-set-timezone nur set-timezone auf;
-# die uebrigen Unterkommandos sind der Vollstaendigkeit halber dabei.
+# Minimal timedatectl replacement for Void (no systemd).
+# Steam only calls set-timezone, through steamos-set-timezone; the other
+# subcommands are there for completeness.
 
 ZONEDIR=/usr/share/zoneinfo
 
