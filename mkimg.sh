@@ -40,7 +40,7 @@ TIMEZONE="${TIMEZONE:-Europe/Vienna}"
 
 KERNEL_CMDLINE="loglevel=4 amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
 
-SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy polkitd seatd sshd udevd zramen jupiter-fan-control io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
+SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy polkitd seatd sshd udevd zramen jupiter-fan-control io-steamos-manager io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
 # Belongs logically in io-desktop's own depends (same reasoning as every
 # other package on this list), but installed explicitly here too so a
