@@ -1,13 +1,19 @@
 #!/bin/sh
 # steamos-session-select <plasma|gamescope>
 #
-# Wird von Steam aus dem pressure-vessel-Container heraus aufgerufen.
-# Dort ist die Prozesssicht eingeschraenkt: pgrep und pkill sehen weder
-# gamescope noch kwin. Deshalb schreibt dieses Skript nur den Zielzustand;
-# das Beenden der laufenden Sitzung uebernimmt der Waechter in io-gamemode.
+# Legacy entry point, kept for Steam client compatibility (Valve's own
+# version is a thin wrapper around steamosctl nowadays). Current Steam
+# clients switch sessions through io-steamos-manager's SessionManagement1
+# over D-Bus instead; this script is still used by the "Return to Game
+# Mode" desktop shortcut.
 #
-# Beim Aufruf aus der Desktop-Sitzung (Verknuepfung auf dem Desktop) laeuft
-# es dagegen ausserhalb des Containers und kann kwin selbst beenden.
+# It only records the target session in a state file that io-start reads
+# on the next login. When called from Steam it runs inside the
+# pressure-vessel container, where pgrep/pkill cannot see host processes,
+# so it cannot end the running session itself in that case.
+#
+# When called from the desktop session (the shortcut) it runs outside the
+# container and ends kwin itself.
 
 STATE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/io-session-next"
 
@@ -25,8 +31,8 @@ case "$1" in
         ;;
 esac
 
-# Desktop-Sitzung beenden, falls sichtbar. Abgekoppelt, damit dieses Skript
-# zurueckkehren kann, bevor sein Elternprozess mitstirbt.
+# End the desktop session if visible. Detached, so this script can return
+# before its parent process dies with the session.
 if pgrep -x kwin_wayland > /dev/null 2>&1; then
     setsid sh -c 'sleep 1; pkill -TERM kwin_wayland' > /dev/null 2>&1 &
 fi

@@ -1,6 +1,0 @@
-# .bash_profile
-[ -f $HOME/.bashrc ] && . $HOME/.bashrc
-
-if [ "$(tty)" = "/dev/tty1" ]; then
-    exec io-start
-fi
