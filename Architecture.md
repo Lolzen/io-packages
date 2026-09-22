@@ -20,8 +20,9 @@ behind each difference, see [Deviations](Deviations).
    `io-steamos-manager` (root half), `holo-zram-swap`, `earlyoom`,
    `jupiter-fan-control`, `socklog-unix` and `nanoklogd`, and `io-autologin`.
 5. **`io-autologin`** waits for the system bus, ends the splash with
-   `plymouth quit --retain-splash` (the last frame stays until gamescope
-   draws) and runs `agetty --autologin deck` on tty1.
+   `plymouth quit` and runs `agetty --autologin deck` on tty1. (Not
+   `--retain-splash`: that leaves the console in graphics mode, and the
+   first-boot network prompt would be invisible.)
 
 ---
 
@@ -124,7 +125,7 @@ applications. Speaker tuning happens in the CS35L41 amplifiers' own DSP.
 
 ## Storage expansion
 
-The image is 12 GB. `io-grow-storage` (also *Expand storage* in the
+The image is 16 GiB. `io-grow-storage` (also *Expand storage* in the
 desktop menu) grows the root partition and its filesystem to the full card,
 using only util-linux. It shows what it will do and asks first; it never
 runs on its own.

@@ -179,6 +179,25 @@ login prompt.
 
 ---
 
+## First boot
+
+**`plymouth quit --retain-splash` leaves the console in graphics mode.**
+Text written to tty1 afterwards is not drawn at all — io-netcheck's network
+prompt was waiting invisibly for input on every fresh image, and it only
+showed up there, because a development card already knows its Wi-Fi.
+Test first boot with a fresh image, not on a development card.
+
+**An interrupted first Steam start leaves Steam broken.** If the bootstrap
+is cut off while unpacking, `~/.local/share/Steam/steam.sh` stays empty and
+every later start fails with `Exec format error`. Steam does not repair
+itself; delete `~/.local/share/Steam` and `~/.steam`.
+
+**A fresh Steam profile has fan control off** and applies that at start,
+stopping `jupiter-fan-control` on purpose (`down … normally up`). Not a
+failure.
+
+---
+
 ## Audio
 
 **A loopback bound with `target.object` at startup can bind to nothing and

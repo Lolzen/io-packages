@@ -21,7 +21,7 @@ time. Package and service lists of that image:
 
 ---
 
-## Alpha 2 — in progress
+## Alpha 2 — released
 
 **Goal:** match real SteamOS behaviour wherever Io can, based on a reference
 capture of SteamOS 3.8.4 on the same hardware instead of assumptions, and
@@ -88,7 +88,7 @@ against documentation or memory.
       and GTK portals Plasma installs no longer start and crash there
 - [x] VA-API: `mesa-vaapi` and `mesa-vaapi-32bit` added; Void ships the
       driver separately, SteamOS has it in Mesa
-- [ ] Screen recording: moved to after Alpha 2, see below
+- [→] Screen recording: moved to after Alpha 2, see below
 - [x] Boot splash: Io-branded Plymouth theme (proof of concept), Plymouth in
       the initramfs, handed over to the session by `io-autologin`.
       `holo-plymouth-themes` turned out to be the controller-update splash,
@@ -114,20 +114,33 @@ against documentation or memory.
 - [x] Documentation overhaul: README and wiki rewritten in English, new
       [Deviations](Deviations) page
 
-### Release acceptance (last step before tagging Alpha 2)
+### Release acceptance
 
-- [ ] Build a fresh image with `mkimg.sh`, write it to a spare card, boot,
-      grow storage, run `io-selftest.sh` - must match the development card
-- [ ] Write the final state below
+- [x] Fresh image built, written to a spare card, booted, storage grown,
+      `io-selftest.sh` passes. Found and fixed on the way: the first-boot
+      network prompt was invisible (`--retain-splash`), the image had grown
+      past 12 GB (now 16 GiB, 32 GB card needed)
+- [x] Final state written below
 
 ### Deferred to after Alpha 2
 
 - Regular review of boot logs for improvements and regressions
+- **First boot without a keyboard:** network setup usable with the Deck's
+  own controls; then reconsider `--retain-splash`. A live ISO with an
+  installer would solve this differently
+- **Broken first Steam start:** detect an interrupted bootstrap (empty
+  `steam.sh`) and redo it
 - **Screen recording** produces clips without video. Steam creates its audio
   encoder but never a video encoder, and gamescope's PipeWire stream arrives
   as shared memory (`dmabuf: 0`). VA-API works for Steam's 64-bit runtime
-  since `mesa-vaapi`. Next step: the same recording on SteamOS, comparing
-  `streaming_log.txt` (`dmabuf`, encoder lines)
+  since `mesa-vaapi`. On SteamOS the same stream is also shared memory
+  (`dmabuf: 0`) and Steam's runtime VA-API check fails there as well, so
+  neither is the cause. The difference: SteamOS logs "Trying to create an
+  encoder for recording" right after the format negotiation, Io never does
+  — the frames apparently never arrive. SteamOS reference while recording:
+  `gamescope:capture_1 → steam:input_1` active, both nodes running, Steam's
+  stream with `target.object = gamescope`, `media.role = Camera`. Next step:
+  the same dump on Io during a recording (`rec-dump.sh`)
 - The session has no `LANG`; SteamOS sets it (Qt falls back to `C.UTF-8`)
 - Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if iwd,
   implement `SetWifiBackend` for the developer menu switch
@@ -156,7 +169,21 @@ against documentation or memory.
 
 ### Final state
 
-*Written at release.*
+Released as [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2).
+
+- Boots into game mode with an Io splash; game mode session reproduces
+  Valve's `gamescope-session`; switching to Plasma and back works
+- `io-steamos-manager` with root and session half; TDP (3–15 W), GPU clock,
+  charge limit, fan control, Wi-Fi power management verified against sysfs
+- Audio: speakers, headphones, filtered microphone (visible in Steam),
+  Bluetooth audio; fresh PipeWire per session
+- Memory, logging, polkit, CAP_SYS_NICE, RTKit and portals as on SteamOS
+  (see [Deviations](Deviations) for what differs)
+- Image reproducible from the repository alone: `mkimg.sh` output passes
+  `io-selftest.sh` on a fresh card
+- Known limitations: screen recording without video; first-boot Wi-Fi setup
+  needs a keyboard; SSH enabled with the default password; see the list
+  above for everything moved to the next milestone
 
 ---
 

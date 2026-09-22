@@ -56,9 +56,9 @@ session switches, so audio configuration changes need one anyway.
 sudo ~/io-packages/mkimg.sh
 ```
 
-Builds `/home/gee/io.img` (12 GB) from the published repository: partitions,
+Builds `/home/gee/io.img` (16 GiB) from the published repository: partitions,
 installs `io-desktop`, creates the user, enables services, installs GRUB and
-the initramfs. Options through the environment: `SIZE=16G`, `OUT=...`,
+the initramfs. Options through the environment: `SIZE=24G`, `OUT=...`,
 `USERNAME`, `USERPASS`, `ROOTPASS`, `HOSTNAME`, `TIMEZONE`.
 
 Write it to a card (replace `sdX`; check with `lsblk` first):
@@ -93,4 +93,12 @@ FAIL.
 2. Fresh image built, written to a spare card, booted, storage grown,
    `io-selftest.sh` passes
 3. Final state written on the milestone page
-4. Tag and release
+4. Compress the image and split it below GitHub's 2 GiB asset limit:
+   ```
+   xz -T0 -k io.img
+   split -b 1900M -d io.img.xz io.img.xz.part
+   sha256sum io.img.xz > io.img.xz.sha256
+   ```
+5. Tag, create the release, attach the parts and the checksum
+
+Users rebuild the image with `cat io.img.xz.part* > io.img.xz`.
