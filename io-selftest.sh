@@ -41,7 +41,7 @@ for p in io-priv-exec cloud-guest-utils zramen; do
 done
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager jupiter-fan-control holo-zram-swap earlyoom socklog-unix nanoklogd; do
+for s in dbus elogind NetworkManager io-steamos-manager holo-zram-swap earlyoom socklog-unix nanoklogd; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "no runit polkitd service (D-Bus activated only)" sh -c '[ ! -e /var/service/polkitd ]'
@@ -68,7 +68,13 @@ check "session log exists (RAM or developer mode)" sh -c "[ -s $RAMLOG ] || [ -s
 echo "== steamos manager"
 check "root half running" sh -c 'pgrep -u 0 -f "io-steamos-manager -r"'
 check "session half running" sh -c "pgrep -u $U -f io-steamos-manager"
-check "fan daemon running (FanControlState 1)" pgrep -f 'fancontrol.py --run'
+# The fan daemon follows Steam's fan control setting (Settings > System);
+# a fresh Steam profile has it off, which stops the service on purpose.
+if pgrep -f 'fancontrol.py --run' > /dev/null; then
+    info "fan control: OS curve (jupiter-fan-control running)"
+else
+    info "fan control: firmware (off in Steam's settings, or service stopped)"
+fi
 
 echo "== audio"
 check "mic loopback config installed" test -r /etc/pipewire/pipewire.conf.d/30-mic-loopback.conf
