@@ -56,7 +56,7 @@ reason is documented in
   suspend and resume
 - Steam's performance menu: TDP limit, manual GPU clock; charge limit, fan
   control, Wi-Fi power management, adaptive brightness toggle, *Restart
-  Steam* — served by `io-steamos-manager`, Io's own implementation of
+  Steam* (with Steam's developer mode on) — served by `io-steamos-manager`, Io's own implementation of
   Valve's SteamOS Manager D-Bus service
 - Proton games, screenshots
 - Switching to the KDE Plasma desktop and back
