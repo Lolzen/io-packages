@@ -49,7 +49,17 @@ IO_LOCALES="bg_BG cs_CZ da_DK de_AT de_BE de_CH de_DE de_IT de_LI de_LU
  ro_RO ru_RU ru_UA sv_FI sv_SE th_TH tr_CY tr_TR uk_UA vi_VN zh_CN zh_HK
  zh_SG zh_TW"
 
-KERNEL_CMDLINE="loglevel=3 quiet splash amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
+# Kernel command line as on SteamOS 3.8.4 (captured), minus what is
+# systemd-, A/B- or SteamOS-specific (rd.systemd.gpt_auto, fsck.*,
+# steamos.efi) and with two Io differences: fbcon=rotate:1 instead of
+# fbcon=vc:4-6 (tty1 keeps a readable console for the fallback shell), and
+# no console=tty1. amdgpu.gttsize is gone: SteamOS sizes GTT through
+# ttm.pages_min instead.
+KCMD_LOG="log_buf_len=4M loglevel=3 quiet splash plymouth.ignore-serial-consoles"
+KCMD_GPU1="amd_iommu=off amdgpu.lockup_timeout=5000,10000,10000,5000"
+KCMD_GPU2="ttm.pages_min=2097152 amdgpu.sched_hw_submission=4 amdgpu.dcdebugmask=0x20000"
+KCMD_MISC="audit=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.dm=0 fbcon=rotate:1"
+KERNEL_CMDLINE="$KCMD_LOG $KCMD_GPU1 $KCMD_GPU2 $KCMD_MISC"
 
 SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
