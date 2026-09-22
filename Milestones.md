@@ -206,10 +206,18 @@ the larger items and the interface last.
       `deck-hw-support`, and `bootstrap` plus redundant dependencies in
       `io-base`
 
+- [x] Correction to Alpha 2: *Restart Steam* in the power menu also needs
+      Steam's developer mode, on SteamOS too; `-gamepadui` alone is not
+      enough. A fresh Steam profile has developer mode off
+
 ### Quick wins
 
-- [ ] `LANG` in the session: SteamOS has `en_US.UTF-8`, Io has none; look at
-      Valve's `holo-glibc-locales` at the same time
+- [x] `LANG` in the session: no locale was ever generated (all of
+      `libc-locales` commented out), and the session started before
+      `profile.d/locale.sh` ran. `mkimg.sh` now enables the locales SteamOS
+      ships (`holo-glibc-locales`, every Steam language) and writes only
+      `LANG` to `locale.conf`; the session profile script is now
+      `zz-io-session.sh` and runs last
 - [ ] Kernel command line: SteamOS's `amdgpu` options (`lockup_timeout`,
       `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min`)
 - [ ] Broken first Steam start: detect an interrupted bootstrap (empty

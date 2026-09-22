@@ -7,7 +7,9 @@ Things that cost real time and are documented nowhere else.
 ## Steam client
 
 **Many Steam features depend on launch flags and environment variables, not
-on D-Bus.** *Restart Steam* in the power menu needs `-gamepadui`; the
+on D-Bus.** *Restart Steam* in the power menu needs `-gamepadui` **and** Steam's
+developer mode (Settings → System) — without developer mode it is hidden,
+on SteamOS too; the
 adaptive brightness toggle needs `STEAM_ENABLE_DYNAMIC_BACKLIGHT=1`; the fan
 control toggle needs `STEAM_ENABLE_FAN_CONTROL=1`. Missing ones fail
 silently — the control is just absent or greyed out, and no D-Bus call is
