@@ -101,7 +101,12 @@ against documentation or memory.
       file owned by `io-session`, so it vanished on the first update
 - [x] `io-selftest.sh`: checks a running system against the Alpha 2 state
       (60 checks; passes on the development card)
-- [ ] Test without `seatd` (elogind only)
+- [x] Test without `seatd`: libseat uses elogind, game mode, session
+      switching and suspend work; seatd removed
+- [x] Session switching hung after the logging change: a PipeWire process
+      outliving the session kept the log pipe open. `io-start` now logs
+      through a FIFO and starts a fresh PipeWire per session
+- [x] SSH sessions are closed before the network goes down at shutdown
 - [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
 - [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
 - [x] Documentation overhaul: README and wiki rewritten in English, new

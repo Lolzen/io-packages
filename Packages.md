@@ -10,7 +10,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | Package | Contents |
 |---|---|
 | `io-desktop` | Metapackage: the whole system, including Void base, Steam, gamescope, PipeWire, KDE Plasma and all packages below |
-| `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, `timedatectl` replacement |
+| `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, `timedatectl` replacement, shutdown hook closing SSH sessions |
 | `io-session` | Login and sessions: `io-autologin` service, `io-start`, `io-gamemode`, `io-plasma`, `io-netcheck`, `steamos-session-select`, session logs (`io-devmode`), `io-grow-storage`, gamescope capability core service |
 | `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half |
 | `io-volumed` | Volume key handler |

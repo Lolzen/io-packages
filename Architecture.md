@@ -39,6 +39,8 @@ agetty --autologin  →  /etc/profile.d/io-session.sh  →  io-netcheck
 - **`io-start`** reads the requested session from
   `/run/user/1000/io-session-next` (game mode by default) and starts it under
   its own `dbus-run-session`. All output goes to a log, see *Logging*.
+  When the session ends, it also ends PipeWire, so the next session starts
+  a fresh PipeWire on its own session bus.
 - **`io-gamemode`** reproduces Valve's `gamescope-session`: the same
   environment, gamescope arguments and Steam flags
   (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Steam
@@ -87,7 +89,8 @@ VRR and tearing switches), and some are helper scripts Steam runs directly
 
 ## Logging
 
-- **Sessions:** `io-start` pipes all session output through `svlogd` into
+- **Sessions:** `io-start` sends all session output through a FIFO to a
+  background `svlogd`, and waits only for the session itself. Logs go to
   `/run/user/1000/io-log-gamemode/` or `io-log-desktop/` — in RAM, rotated at
   5 × 2 MB, gone after a reboot. While Steam's developer mode is on
   (`io-devmode`), the logs go to `~/.local/state/io/` instead and survive

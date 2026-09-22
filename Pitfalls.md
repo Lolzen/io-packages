@@ -76,14 +76,21 @@ services are silently skipped.
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
 `auto_null` sink and a gamescope without a window, with no useful error.
 
-**`seatd` needs the user in the `_seatd` group.** Otherwise libseat gets
-`Permission denied` and gamescope silently falls back to a headless backend:
-a black screen with a normal-looking log. (libseat prefers seatd whenever its
-socket exists; without seatd it uses logind.)
+**libseat prefers seatd whenever its socket exists**, and without the
+`_seatd` group gamescope then gets `Permission denied` and falls back to a
+headless backend: a black screen with a normal-looking log. Io no longer
+runs seatd; libseat uses elogind, as gamescope does on SteamOS through
+logind.
 
-**PipeWire keeps running across session switches.** A restarted session
-that finds PipeWire still running reuses it, attached to the D-Bus bus of
-the previous session. Test audio changes with a cold boot.
+**Never pipe a session into a logger and wait for the pipe.** `session |
+svlogd` only ends when every process holding the write end has exited.
+Processes that outlive the session (PipeWire's pulse server did) keep it
+open forever: the next session never starts, the screen stays on an empty
+tty. Log through a FIFO and wait for the session process only.
+
+**PipeWire outlives the session that started it**, still attached to that
+session's D-Bus bus. `io-start` ends it when the session ends. When testing
+audio configuration changes by hand, a cold boot is still the reliable way.
 
 ---
 

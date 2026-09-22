@@ -88,7 +88,6 @@ the session bus that Steam talks to.
 - **`CAP_SYS_NICE` for gamescope** is set as a file capability, exactly as
   on SteamOS, but by a boot-time core service, because gamescope comes from
   Void's package and an update would drop it.
-- **seatd** runs alongside elogind. Under review; SteamOS has no seatd.
 - **Boot splash** is ended by `io-autologin` right before login. There is no
   controller firmware update splash (`plymouth-wrap`), since Io has no
   controller update service.
