@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=9
+revision=10
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -17,7 +17,7 @@ depends="
  removed-packages glibc-locales
 
  io-base io-branding io-session io-volumed io-steamos-manager
- linux-neptune-72 deck-firmware-cirrus deck-hw-support
+ linux-neptune-72 linux-firmware deck-hw-support
  jupiter-fan-control steamos-powerbuttond
 
  steamdeck-dsp holo-zram-swap holo-earlyoom steamos-tuning

@@ -33,10 +33,10 @@ check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
 check "kernel.pid_max = 4194304" sh -c '[ "$(sysctl -n kernel.pid_max)" = 4194304 ]'
 
 echo "== packages"
-for p in io-desktop io-base io-branding io-session io-steamos-manager io-volumed linux-neptune-72 deck-hw-support deck-firmware-cirrus jupiter-fan-control steamos-powerbuttond steamdeck-dsp rnnoise-ladspa holo-zram-swap holo-earlyoom steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-desktop-portal-gamescope rtkit socklog-void kde-plasma; do
+for p in io-desktop io-base io-branding io-session io-steamos-manager io-volumed linux-neptune-72 deck-hw-support linux-firmware jupiter-fan-control steamos-powerbuttond steamdeck-dsp rnnoise-ladspa holo-zram-swap holo-earlyoom steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-desktop-portal-gamescope rtkit socklog-void kde-plasma; do
     check "installed: $p" xbps-query "$p"
 done
-for p in io-priv-exec cloud-guest-utils zramen; do
+for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptune; do
     check "not installed: $p" sh -c "! xbps-query $p"
 done
 
