@@ -38,6 +38,13 @@ export XDG_SESSION_DESKTOP=gamescope
 export DESKTOP_SESSION=gamescope-wayland
 export XDG_SESSION_TYPE=x11
 
+# As Valve's start-gamescope-session: game mode sees only the gamescope
+# portal, not the KDE and GTK ones Plasma installs (they crash here without
+# a KDE session). Set in the bus's activation environment, because D-Bus -
+# not this script - starts xdg-desktop-portal.
+export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
+dbus-update-activation-environment XDG_DESKTOP_PORTAL_DIR
+
 # ------------------------------------------------- A: same as Valve
 export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
 export HOMETEST_DESKTOP=1

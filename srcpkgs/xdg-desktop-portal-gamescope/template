@@ -1,7 +1,7 @@
 # Template file for 'xdg-desktop-portal-gamescope'
 pkgname=xdg-desktop-portal-gamescope
 version=0.1.38
-revision=6
+revision=7
 _commit=c99b9f7a6357e4753391c13933ef8bbfc3a9b7bb
 build_style=cargo
 make_install_args="--path ."
@@ -39,6 +39,10 @@ post_install() {
 
 	vmkdir ${_portaldir}
 	sed -e "s|@busname@|${_busname}|" -e "s|@portalbin@|${_portalbin}|" data/gamescope.portal.in > ${DESTDIR}/${_portaldir}/gamescope.portal
+	# Backend choice for the isolated portal directory. On SteamOS this file
+	# comes with Valve's gamescope package (default=holo;gamescope); Void's
+	# gamescope does not ship it, and Io has no holo portal.
+	printf '[preferred]\ndefault=gamescope\n' > ${DESTDIR}/${_portaldir}/gamescope-portals.conf
 
 	vmkdir usr/share/dbus-1/services
 	sed -e "s|@busname@|${_busname}|" -e "s|@portalbin@|${_portalbin}|" data/${_busname}.service.in > ${DESTDIR}/usr/share/dbus-1/services/${_busname}.service
