@@ -44,7 +44,8 @@ agetty --autologin  →  /etc/profile.d/io-session.sh  →  io-netcheck
 - **`io-gamemode`** reproduces Valve's `gamescope-session`: the same
   environment, gamescope arguments and Steam flags
   (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Steam
-  directly as its child. It also starts PipeWire, the power button daemon,
+  directly as its child. Like Valve's session it limits the portals to the
+  gamescope backend (`XDG_DESKTOP_PORTAL_DIR`). It also starts PipeWire, the power button daemon,
   `io-volumed` and the session half of `io-steamos-manager`.
 - **`io-plasma`** starts KDE Plasma. The session half of
   `io-steamos-manager` starts there through XDG autostart.

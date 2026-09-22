@@ -83,11 +83,12 @@ against documentation or memory.
 - [x] GPU reset udev rule: Valve restarts SDDM after a GPU crash; Io has no
       display manager, so the rule now ends gamescope and `io-session.sh`
       starts a fresh session (commit `76ad031`)
-- [ ] Screen recording: test with a game installed. The gamescope portal
-      file currently also sits in the standard portal directory as a manual
-      copy no package owns; SteamOS instead sets `XDG_DESKTOP_PORTAL_DIR` to
-      the isolated directory for the game mode session. Test Valve's way,
-      then package whichever works
+- [x] Portals isolated in game mode as on SteamOS (`XDG_DESKTOP_PORTAL_DIR`
+      in the bus activation environment, `gamescope-portals.conf`); the KDE
+      and GTK portals Plasma installs no longer start and crash there
+- [x] VA-API: `mesa-vaapi` and `mesa-vaapi-32bit` added; Void ships the
+      driver separately, SteamOS has it in Mesa
+- [ ] Screen recording: moved to after Alpha 2, see below
 - [x] Boot splash: Io-branded Plymouth theme (proof of concept), Plymouth in
       the initramfs, handed over to the session by `io-autologin`.
       `holo-plymouth-themes` turned out to be the controller-update splash,
@@ -122,6 +123,12 @@ against documentation or memory.
 ### Deferred to after Alpha 2
 
 - Regular review of boot logs for improvements and regressions
+- **Screen recording** produces clips without video. Steam creates its audio
+  encoder but never a video encoder, and gamescope's PipeWire stream arrives
+  as shared memory (`dmabuf: 0`). VA-API works for Steam's 64-bit runtime
+  since `mesa-vaapi`. Next step: the same recording on SteamOS, comparing
+  `streaming_log.txt` (`dmabuf`, encoder lines)
+- The session has no `LANG`; SteamOS sets it (Qt falls back to `C.UTF-8`)
 - Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if iwd,
   implement `SetWifiBackend` for the developer menu switch
 - SD card formatting from Steam (`steamos-format-sdcard` stub); needs

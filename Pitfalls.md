@@ -88,6 +88,19 @@ Processes that outlive the session (PipeWire's pulse server did) keep it
 open forever: the next session never starts, the screen stays on an empty
 tty. Log through a FIFO and wait for the session process only.
 
+**Environment set in a session script does not reach D-Bus-activated
+services.** They inherit the bus daemon's environment. Use
+`dbus-update-activation-environment VAR` (Valve uses `systemctl --user
+set-environment`). Needed for `XDG_DESKTOP_PORTAL_DIR`: without it, game
+mode starts every installed portal backend, and Plasma's KDE and GTK
+portals crash there over and over.
+
+**Void ships the VA-API driver separately** (`mesa-vaapi`, `-32bit`). Without
+it `vainfo` fails and Steam never creates a video encoder for recordings.
+Steam's runtime diagnostics (`steam-runtime-system-info-*.txt` in Steam's
+`logs/`) are only rewritten when Steam's system information page is opened,
+so an old file can show an already fixed error.
+
 **PipeWire outlives the session that started it**, still attached to that
 session's D-Bus bus. `io-start` ends it when the session ends. When testing
 audio configuration changes by hand, a cold boot is still the reliable way.
