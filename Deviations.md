@@ -19,6 +19,7 @@ is a bug.
 | Disk image written with `dd` | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The live ISO route is blocked by a dracut/void-mklive incompatibility |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
+| SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the test phase. Images for 1.0 will follow SteamOS |
 
 ---
 

@@ -107,8 +107,9 @@ against documentation or memory.
       outliving the session kept the log pipe open. `io-start` now logs
       through a FIFO and starts a fresh PipeWire per session
 - [x] SSH sessions are closed before the network goes down at shutdown
-- [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
-- [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
+- [x] SSH toggle in Steam's developer settings: `steamos-enable-sshd` is real
+      (links the runit service). The image keeps SSH enabled during the test
+      phase
 - [x] Documentation overhaul: README and wiki rewritten in English, new
       [Deviations](Deviations) page
 
@@ -121,6 +122,10 @@ against documentation or memory.
 ### Deferred to after Alpha 2
 
 - Regular review of boot logs for improvements and regressions
+- Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if iwd,
+  implement `SetWifiBackend` for the developer menu switch
+- SD card formatting from Steam (`steamos-format-sdcard` stub); needs
+  automount first
 - `steamos-powerbuttond` 4.2 (Io ships 3.1)
 - `deck-firmware-cirrus`: check whether Void's `linux-firmware` ships these
   files by now
@@ -153,6 +158,10 @@ against documentation or memory.
 *Goals follow once Alpha 2 is released.*
 
 ### Candidates
+
+- **For 1.0:** SSH off in images as on SteamOS (drop `sshd` from `SERVICES`
+  in `mkimg.sh`), and a way to replace the default password, e.g. a prompt on
+  first boot
 
 - **Switch to SDDM for login and session switching**, as SteamOS does.
   Would replace the `agetty → io-session.sh → io-start` chain. A deliberate

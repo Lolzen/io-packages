@@ -16,12 +16,12 @@ stubs.
 | `steamos-set-hostname`, `steamos-set-timezone` | Timezone through Io's `timedatectl` replacement |
 | `steamos-trim-devices` | |
 | `jupiter-check-support`, `jupiter-get-als-gain` | |
+| `steamos-enable-sshd` | Links the `sshd` runit service, the equivalent of Valve's `systemctl enable --now sshd` |
 
 ## Stubs worth implementing
 
 | Helper | Would do |
 |---|---|
-| `steamos-enable-sshd` | SSH toggle in Steam's developer settings |
 | `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam; needs working automount first |
 
 ## Stubs, not applicable to Io
