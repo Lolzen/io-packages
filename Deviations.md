@@ -100,10 +100,10 @@ the session bus that Steam talks to.
 - **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration` tree
   on top of Void's base configuration with Valve's `config-neptune` fragment
   merged in. SteamOS 3.8.4 runs 6.16.
-- **Kernel command line** lacks SteamOS's `amdgpu` options
-  (`lockup_timeout`, `sched_hw_submission`, `dcdebugmask`,
-  `ttm.pages_min`); to be compared after Alpha 2. `fbcon=rotate:1` rotates
-  the text console.
+- **Kernel command line** matches SteamOS except `fbcon=rotate:1` instead of
+  `fbcon=vc:4-6` (see *Login and sessions*), no `console=tty1`, and none of
+  the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
+  `steamos.efi`).
 - **No reboot on kernel panic.** SteamOS's panic sysctls are left out during
   the alpha phase: Valve pairs them with a crash log submitter, and without
   one a frozen device is more useful for debugging.

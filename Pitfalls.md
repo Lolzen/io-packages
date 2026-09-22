@@ -167,9 +167,18 @@ Without the module in the initramfs the screen stays black through early KMS.
 `ci/kernel-config/neptune/config-neptune` is the fragment that is actually
 merged. An option only in the first one never applies.
 
-**The CS35L41 needs two firmware files** Void's `linux-firmware` lacks:
-`cs35l41-dsp1-spk-prot.wmfw` and `cs35l41-dsp1-spk-prot-vlv1776.bin`. Without
-them one speaker stays silent.
+**The CS35L41 amplifier firmware is in Void's main `linux-firmware`
+package**, not in the split ones (`-amd`, `-network`) the kernel pulls in.
+Without it one speaker stays silent. With it, the amplifiers load the
+Deck-specific `cs35l41-dsp1-spk-prot-vlv1776.*` files.
+
+**Void does not route ALSA through PipeWire by default.** `alsa-pipewire`
+ships `50-pipewire.conf` and `99-pipewire-default.conf` in
+`/usr/share/alsa/alsa.conf.d/`, but they only take effect when linked into
+`/etc/alsa/conf.d/`. Without the links ALSA's default device tries to open
+the hardware PipeWire already holds (`unable to open slave`), and the
+`pipewire` device is unknown. Steam and Proton are unaffected (they use the
+pulse layer), which is why it went unnoticed.
 
 **`EV_FF` is bit `0x200000`** in `/proc/bus/input/devices`, not `0x100000`.
 

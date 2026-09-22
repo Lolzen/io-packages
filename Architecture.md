@@ -120,6 +120,8 @@ Hardware microphone → Valve's filter chain (RNNoise, Valve's microphone
 filter) → loopback source *Steam Deck Microphone*, which Steam and games
 use. Valve's WirePlumber access rules hide the raw hardware microphone from
 applications. Speaker tuning happens in the CS35L41 amplifiers' own DSP.
+Plain ALSA clients reach PipeWire through `alsa-pipewire`, linked in
+`/etc/alsa/conf.d/`.
 
 ---
 

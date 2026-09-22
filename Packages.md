@@ -10,7 +10,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | Package | Contents |
 |---|---|
 | `io-desktop` | Metapackage: the whole system, including Void base, Steam, gamescope, PipeWire, KDE Plasma and all packages below |
-| `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, `timedatectl` replacement, shutdown hook closing SSH sessions |
+| `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, ALSA routed through PipeWire, `timedatectl` replacement, shutdown hook closing SSH sessions |
 | `io-session` | Login and sessions: `io-autologin` service, `io-start`, `io-gamemode`, `io-plasma`, `io-netcheck`, `steamos-session-select`, session logs (`io-devmode`), `io-grow-storage`, gamescope capability core service |
 | `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half |
 | `io-volumed` | Volume key handler |
@@ -22,7 +22,6 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 |---|---|---|
 | `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: Void's base configuration plus Valve's `config-neptune` fragment, and one patch generated from Valve's tree against the kernel.org tarball |
 | `deck-hw-support` | `jupiter-hw-support` 20250728.1 | Polkit helpers, udev rules, hwsupport scripts |
-| `deck-firmware-cirrus` | `linux-firmware-neptune` | CS35L41 amplifier firmware that Void's `linux-firmware` lacks |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
 | `steamos-powerbuttond` | `steamos-powerbuttond` 3.1 | Power button daemon |
 | `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, microphone loopback |

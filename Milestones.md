@@ -218,15 +218,22 @@ the larger items and the interface last.
       ships (`holo-glibc-locales`, every Steam language) and writes only
       `LANG` to `locale.conf`; the session profile script is now
       `zz-io-session.sh` and runs last
-- [ ] Kernel command line: SteamOS's `amdgpu` options (`lockup_timeout`,
-      `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min`)
+- [x] Kernel command line as on SteamOS: `amdgpu` lockup timeouts,
+      `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min` instead of the
+      deprecated `amdgpu.gttsize` (whose GTT/TTM mismatch the kernel warned
+      about), `log_buf_len=4M`, `rd.*` skips. GTT now 8192M, as on SteamOS
 - [ ] Broken first Steam start: detect an interrupted bootstrap (empty
       `steam.sh`) and redo it
 - [ ] Steam's own volume handler (`STEAM_ENABLE_VOLUME_HANDLER`): test; if it
       works, `io-volumed` goes
 - [ ] `steamos-powerbuttond` 3.1 → 4.2, from Valve's mirror
 - [ ] Kernel metapackage `linux-neptune` pointing to the current kernel
-- [ ] `deck-firmware-cirrus`: drop if Void's `linux-firmware` ships the files
+- [x] `deck-firmware-cirrus` dropped: Void's main `linux-firmware` package
+      (30 MB) ships the Deck's CS35L41 files, newer and including the
+      device-specific `vlv1776` firmware the amplifiers now load
+- [x] Found on the way: ALSA's default device was not routed through
+      PipeWire — Void leaves the `alsa-pipewire` links to the admin, so
+      ALSA-only programs could not play at all. `io-base` now ships them
 
 ### Stub helpers: one decision each
 
