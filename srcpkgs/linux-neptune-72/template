@@ -76,11 +76,9 @@ post_patch() {
 
 do_configure() {
 	local arch=x86_64
-	# Void's own linux7.2 base config, with Valve's neptune fragment merged
-	# on top. config-io from the 6.15.8-era template is gone upstream (no
-	# replacement found in Valve's newer linux-integration source tree) -
-	# not carried forward, worth re-checking against a fresh Steam Deck
-	# diff if something Jupiter-specific turns out to be missing.
+	# Void's own linux7.2 base config (x86_64-dotconfig), with Valve's
+	# config-neptune fragment from linux-integration merged on top. Io adds
+	# no options of its own.
 	msg_normal "Using Void base config plus neptune fragment.\n"
 	cp -f ${FILESDIR}/${arch}-dotconfig .config
 	chmod +x scripts/kconfig/merge_config.sh

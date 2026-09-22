@@ -1,7 +1,7 @@
 # Template file for 'steamos-powerbuttond'
 pkgname=steamos-powerbuttond
 version=3.1
-revision=1
+revision=2
 hostmakedepends="pkg-config"
 makedepends="libevdev-devel eudev-libudev-devel"
 depends="gamescope"
@@ -18,6 +18,6 @@ do_build() {
 
 do_install() {
 	make install DESTDIR=${DESTDIR}
+	# SteamOS runs it as a user service; io-gamemode starts it per session.
 	rm -rf ${DESTDIR}/usr/lib/systemd
-	vinstall ${FILESDIR}/run 755 etc/sv/steamos-powerbuttond run
 }
