@@ -41,4 +41,24 @@ mkdir -p "$LOGDIR"
 printf 's2000000\nn%s\n' "$KEEP" > "$LOGDIR/config"
 
 echo "io: starting $SESSION, log: $LOGDIR/current"
-dbus-run-session -- "$PROG" 2>&1 | svlogd -tt "$LOGDIR"
+
+# The logger reads from a FIFO in the background, and io-start waits only
+# for the session itself. A plain "session | svlogd" pipe would only end
+# once every process holding its write end is gone - and processes that
+# outlive the session (PipeWire, portals) kept it open, so io-start never
+# returned and the next session never started.
+# A logger left over from an earlier run of this session type still holds
+# the directory lock; end it first, or the new one could not start.
+pkill -u "$(id -u)" -f "svlogd -tt $LOGDIR" 2> /dev/null
+FIFO="$LOGDIR/.fifo"
+rm -f "$FIFO"
+mkfifo "$FIFO"
+svlogd -tt "$LOGDIR" < "$FIFO" &
+dbus-run-session -- "$PROG" > "$FIFO" 2>&1
+
+# PipeWire and its helpers were started inside the session and stay
+# attached to its D-Bus session bus, which is gone now. End them, so the
+# next session starts a fresh PipeWire on its own bus. (On SteamOS PipeWire
+# is a user service on a bus that lives as long as the user.)
+pkill -u "$(id -u)" -x 'pipewire|pipewire-pulse|wireplumber' 2> /dev/null
+exit 0
