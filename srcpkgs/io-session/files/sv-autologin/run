@@ -9,10 +9,10 @@ while [ ! -S /run/dbus/system_bus_socket ] && [ $i -lt 10 ]; do
     sleep 1
     i=$((i + 1))
 done
-# Hand the screen over from the boot splash. --retain-splash leaves the last
-# splash frame on screen until gamescope draws its first frame, instead of
-# dropping to a text console in between.
+# Hand the screen over from the boot splash. Not --retain-splash: it leaves
+# the console in graphics mode, so nothing written to tty1 shows up - not
+# io-netcheck's network prompt on first boot, not the fallback shell.
 if command -v plymouth > /dev/null 2>&1 && plymouth --ping 2> /dev/null; then
-    plymouth quit --retain-splash
+    plymouth quit
 fi
 exec chpst -P agetty --noclear --autologin "$IO_USER" tty1 38400 linux

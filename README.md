@@ -68,16 +68,28 @@ Open items and plans are tracked on the
 
 ## Installation
 
-Download the image from the latest release and write it to an SD card
-(replace `sdX` with the card, all data on it is lost):
+Io needs an SD card of **at least 32 GB** (the image is 16 GiB). Download the
+image from the latest release and write it to the card (replace `sdX` with
+the card, all data on it is lost):
 
 ```
 sudo dd if=io.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
 Boot the Deck from the card (hold Volume Down, press Power, pick the card).
-The first boot needs a network connection for Steam's own download. Then
-run *Expand storage* from the desktop menu, or `io-grow-storage` in a
+
+**The first boot:**
+
+- needs a network connection. Io asks for one on screen before Steam
+  starts — Wi-Fi setup there needs a keyboard (USB or Bluetooth); an
+  Ethernet cable through a dock, plugged in before powering on, needs none
+- takes long: Steam downloads and installs itself before its start
+  animation appears, 10–20 minutes depending on card and connection.
+  **Do not power off during this** — an interrupted first Steam download
+  leaves a broken Steam behind (fix: delete `~/.local/share/Steam` and
+  `~/.steam`, then restart)
+
+Then run *Expand storage* from the desktop menu, or `io-grow-storage` in a
 terminal, to use the whole card.
 
 Default user and password: `deck` / `deck`. **The SSH server is enabled

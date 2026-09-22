@@ -11,7 +11,7 @@
 #
 # Usage:
 #   sudo ./mkimg.sh                 build io.img (default size)
-#   sudo SIZE=16G ./mkimg.sh        larger image
+#   sudo SIZE=24G ./mkimg.sh        larger image
 #   sudo OUT=/tmp/test.img ./mkimg.sh
 #
 # The image has two partitions: a 512M EFI system partition (IOESP) and an
@@ -25,7 +25,7 @@
 set -eu
 
 OUT="${OUT:-/home/gee/io.img}"
-SIZE="${SIZE:-12G}"
+SIZE="${SIZE:-16G}"
 MNT="${MNT:-/mnt/ioimg}"
 INCLUDE="${INCLUDE:-/home/gee/io-packages/iso-include}"
 
