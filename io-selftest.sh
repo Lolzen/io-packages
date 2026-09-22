@@ -79,6 +79,8 @@ fi
 echo "== audio"
 check "mic loopback config installed" test -r /etc/pipewire/pipewire.conf.d/30-mic-loopback.conf
 check "mic loopback has fixed format" grep -q 'audio.channels' /etc/pipewire/pipewire.conf.d/30-mic-loopback.conf
+check "ALSA default device goes through PipeWire" test -e /etc/alsa/conf.d/99-pipewire-default.conf
+check "locale en_US.UTF-8 generated" sh -c 'locale -a | grep -qi "^en_US.utf8$"'
 
 echo "== logging"
 check "syslog receives daemon messages" test -s /var/log/socklog/daemon/current
