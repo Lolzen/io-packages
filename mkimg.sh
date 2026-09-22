@@ -37,6 +37,17 @@ USERPASS="${USERPASS:-deck}"
 ROOTPASS="${ROOTPASS:-deck}"
 HOSTNAME="${HOSTNAME:-io}"
 TIMEZONE="${TIMEZONE:-Europe/Vienna}"
+LANG_DEFAULT="${LANG_DEFAULT:-en_US.UTF-8}"
+# The locales SteamOS ships precompiled (holo-glibc-locales): every
+# language and region Steam offers. Generated from Void's glibc-locales.
+IO_LOCALES="bg_BG cs_CZ da_DK de_AT de_BE de_CH de_DE de_IT de_LI de_LU
+ el_CY el_GR en_AG en_AU en_BW en_CA en_DK en_GB en_HK en_IE en_IL en_IN
+ en_NG en_NZ en_PH en_SC en_SG en_US en_ZA en_ZM en_ZW es_AR es_BO es_CL
+ es_CO es_CR es_CU es_DO es_EC es_ES es_GT es_HN es_MX es_NI es_PA es_PE
+ es_PR es_PY es_SV es_US es_UY es_VE fi_FI fr_BE fr_CA fr_CH fr_FR fr_LU
+ hu_HU it_CH it_IT ja_JP ko_KR nb_NO nl_AW nl_BE nl_NL pl_PL pt_BR pt_PT
+ ro_RO ru_RU ru_UA sv_FI sv_SE th_TH tr_CY tr_TR uk_UA vi_VN zh_CN zh_HK
+ zh_SG zh_TW"
 
 KERNEL_CMDLINE="loglevel=3 quiet splash amd_iommu=off audit=0 amdgpu.gttsize=8128 fbcon=rotate:1"
 
@@ -119,6 +130,15 @@ EOF
 echo "$HOSTNAME" > "$MNT/etc/hostname"
 ln -sf "/usr/share/zoneinfo/$TIMEZONE" "$MNT/etc/localtime"
 
+# Locales as on SteamOS: only LANG in locale.conf (Void's default also sets
+# LC_COLLATE=C), and the UTF-8 locales of every language Steam offers.
+# glibc-locales generates them from libc-locales when it is reconfigured
+# below.
+printf 'LANG=%s\n' "$LANG_DEFAULT" > "$MNT/etc/locale.conf"
+for loc in $IO_LOCALES; do
+    sed -i -E "s/^#[[:space:]]*(${loc}(\.UTF-8)? UTF-8)[[:space:]]*$/\1/" "$MNT/etc/default/libc-locales"
+done
+
 # Bind the pseudo filesystems so chroot commands behave.
 mount --bind /dev "$MNT/dev"
 mount --bind /proc "$MNT/proc"
@@ -132,6 +152,10 @@ echo "== reconfiguring packages"
 # configured - xbps silently defers that without a working chroot. Redo
 # it now that the binds are in place.
 chroot "$MNT" xbps-reconfigure -a
+# Force it for glibc-locales: it may already count as configured from the
+# install step, and only its configure step generates the locales enabled
+# above.
+chroot "$MNT" xbps-reconfigure -f glibc-locales
 
 echo "== creating users"
 # Root stays usable for alpha testing. SteamOS locks it; Io does not, yet.

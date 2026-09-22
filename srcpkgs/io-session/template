@@ -1,7 +1,7 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.3.0
-revision=10
+revision=11
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
 depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-volumed io-steamos-manager rtkit libcap-progs"
@@ -29,7 +29,10 @@ do_install() {
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 etc/skel/Desktop
 	vmkdir etc/profile.d
-	vinstall ${FILESDIR}/io-session.sh 755 etc/profile.d
+	# zz-: /etc/profile sources profile.d in name order, and this one starts
+	# the session, so every other profile script (locale.sh sets LANG) must
+	# have run before it.
+	vinstall ${FILESDIR}/io-session.sh 755 etc/profile.d zz-io-session.sh
 
 	vmkdir etc/pipewire/pipewire.conf.d
 	ln -sf /usr/share/examples/wireplumber/10-wireplumber.conf "${DESTDIR}/etc/pipewire/pipewire.conf.d/10-wireplumber.conf"
