@@ -1,8 +1,8 @@
 # Template file for 'io-base'
 pkgname=io-base
 version=0.4.0
-revision=10
-depends="xbps>=0.45 polkit socklog-void plymouth"
+revision=11
+depends="xbps>=0.45 polkit socklog-void plymouth alsa-pipewire"
 conf_files="/etc/elogind/logind.conf.d/10-io.conf"
 short_desc="Io base configuration for Steam Deck"
 maintainer="Georg <funer@gmx.at>"
@@ -19,6 +19,13 @@ do_install() {
 	vmkdir usr/share/polkit-1/rules.d
 	vinstall ${FILESDIR}/polkit-io.rules 644 usr/share/polkit-1/rules.d 10-io.rules
 	vbin ${FILESDIR}/timedatectl
+	# Route plain ALSA clients through PipeWire, as SteamOS does. Void's
+	# alsa-pipewire ships these files but leaves enabling them to the admin;
+	# without them ALSA's default device opens the hardware directly, which
+	# PipeWire already holds, and ALSA-only games stay silent.
+	vmkdir etc/alsa/conf.d
+	ln -s /usr/share/alsa/alsa.conf.d/50-pipewire.conf ${DESTDIR}/etc/alsa/conf.d/
+	ln -s /usr/share/alsa/alsa.conf.d/99-pipewire-default.conf ${DESTDIR}/etc/alsa/conf.d/
 	vmkdir etc/runit/shutdown.d
 	vinstall ${FILESDIR}/05-io-ssh-sessions.sh 644 etc/runit/shutdown.d
 }
