@@ -187,9 +187,18 @@ Released as [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2).
 
 ---
 
-## Next milestone
+## Alpha 3 — in progress
 
-*Goals follow once Alpha 2 is released.*
+**Goal:** to be set; see the candidates below.
+
+### Work list
+
+- [x] Clean-up: dropped the 6.15.8 fallback kernel `linux-neptune`; removed
+      the unused `config-io` from `linux-neptune-72` (it was never merged,
+      `CONFIG_HID_HAPTIC` was not in the 7.2 build), the never-enabled runit
+      service in `steamos-powerbuttond`, a second unused `timedatectl` in
+      `deck-hw-support`, and `bootstrap` plus redundant dependencies in
+      `io-base`
 
 ### Candidates
 

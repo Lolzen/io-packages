@@ -21,7 +21,6 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | Package | Upstream | Contents |
 |---|---|---|
 | `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: Void's base configuration plus Valve's `config-neptune` fragment, and one patch generated from Valve's tree against the kernel.org tarball |
-| `linux-neptune` | `linux-neptune` (6.15.8) | Previous kernel, kept as fallback until 7.2 has proven itself; not installed by `io-desktop` |
 | `deck-hw-support` | `jupiter-hw-support` 20250728.1 | Polkit helpers, udev rules, hwsupport scripts |
 | `deck-firmware-cirrus` | `linux-firmware-neptune` | CS35L41 amplifier firmware that Void's `linux-firmware` lacks |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |

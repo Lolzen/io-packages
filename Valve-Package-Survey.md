@@ -152,5 +152,5 @@ checked against the new kernel yet:
 **Trackpad swipe haptics** (the fine texture under a finger swiping across a
 trackpad) were suspected to have regressed with the kernel bump. Current
 SteamOS lacks them as well, so this is a change in the Steam client, not a
-kernel or Io issue. `CONFIG_HID_HAPTIC`, added while chasing it, is unrelated
-and will be removed with the next kernel build.
+kernel or Io issue. (`CONFIG_HID_HAPTIC`, once considered for it, was never
+actually part of the 7.2 build.)

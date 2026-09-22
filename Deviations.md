@@ -100,9 +100,6 @@ the session bus that Steam talks to.
 - **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration` tree
   on top of Void's base configuration with Valve's `config-neptune` fragment
   merged in. SteamOS 3.8.4 runs 6.16.
-- **`CONFIG_HID_HAPTIC=y`** is set in addition to Valve's fragment. It turned
-  out to be unrelated to the trackpad haptics it was added for and will be
-  removed with the next kernel build.
 - **Kernel command line** lacks SteamOS's `amdgpu` options
   (`lockup_timeout`, `sched_hw_submission`, `dcdebugmask`,
   `ttm.pages_min`); to be compared after Alpha 2. `fbcon=rotate:1` rotates
