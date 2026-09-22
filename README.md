@@ -80,7 +80,9 @@ The first boot needs a network connection for Steam's own download. Then
 run *Expand storage* from the desktop menu, or `io-grow-storage` in a
 terminal, to use the whole card.
 
-Default user and password: `deck` / `deck`.
+Default user and password: `deck` / `deck`. **The SSH server is enabled
+during the test phase** — change the password with `passwd` before using
+Io on a network you do not trust.
 
 ## Documentation
 

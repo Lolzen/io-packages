@@ -1,2 +1,13 @@
 #!/bin/sh
-exit 0
+# Enable the SSH server - Steam's developer settings run this helper.
+# Valve's version: systemctl enable --now sshd. With runit, linking the
+# service into /var/service both enables it and starts it (runsvdir picks
+# it up within a few seconds).
+
+set -eu
+
+if [ "$(id -u)" -ne 0 ]; then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+[ -e /var/service/sshd ] || ln -s /etc/sv/sshd /var/service/
