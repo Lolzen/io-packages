@@ -187,11 +187,17 @@ Released as [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2).
 
 ---
 
-## Alpha 3 — in progress
+## Alpha 3 — Parity & Quality of Life (in progress)
 
-**Goal:** to be set; see the candidates below.
+**Goal:** close the many small gaps to SteamOS that have piled up, and make
+everyday use smoother. A few larger items, mostly small ones — together
+they are about stability, consistency and user experience.
 
-### Work list
+Order: quick wins first, then a triage of the unported Valve packages (one
+decision per package), screen recording alongside since its path is clear,
+the larger items and the interface last.
+
+### Done
 
 - [x] Clean-up: dropped the 6.15.8 fallback kernel `linux-neptune`; removed
       the unused `config-io` from `linux-neptune-72` (it was never merged,
@@ -200,7 +206,84 @@ Released as [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2).
       `deck-hw-support`, and `bootstrap` plus redundant dependencies in
       `io-base`
 
-### Candidates
+### Quick wins
+
+- [ ] `LANG` in the session: SteamOS has `en_US.UTF-8`, Io has none; look at
+      Valve's `holo-glibc-locales` at the same time
+- [ ] Kernel command line: SteamOS's `amdgpu` options (`lockup_timeout`,
+      `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min`)
+- [ ] Broken first Steam start: detect an interrupted bootstrap (empty
+      `steam.sh`) and redo it
+- [ ] Steam's own volume handler (`STEAM_ENABLE_VOLUME_HANDLER`): test; if it
+      works, `io-volumed` goes
+- [ ] `steamos-powerbuttond` 3.1 → 4.2, from Valve's mirror
+- [ ] Kernel metapackage `linux-neptune` pointing to the current kernel
+- [ ] `deck-firmware-cirrus`: drop if Void's `linux-firmware` ships the files
+
+### Stub helpers: one decision each
+
+| Helper | Direction |
+|---|---|
+| `steamos-format-sdcard`, `steamos-format-device` | Port with automount (Alpha 4) |
+| `jupiter-biosupdate`, `jupiter-dock-updater` | Likely stay stubs: firmware updates are risky and SteamOS on the same device handles them |
+| `steamos-devkit-mode` | Only useful with Valve's devkit service; niche |
+| `jupiter-amp-control` | Target script exists in none of Valve's packages |
+| `steamos-update`, `-select-branch`, `-reboot-other`, `-factory-reset-config` | Tied to A/B updates; only with an own update mechanism |
+| `steamos-restart-sddm` | Only with SDDM |
+
+- [ ] Confirm each decision and record it on [Helper status](Helper-Status)
+
+### Unported Valve packages: triage
+
+Installed on SteamOS 3.8.4, missing on Io. Each gets a decision: port,
+integrate into an existing Io package, or drop with a reason.
+
+- [ ] `mangohud` (mangoapp) — Steam's performance overlay; **high**, visible
+      feature, several game mode environment variables depend on it
+- [ ] `gamemode` — requested by Steam or games? `@gamemode` nice limit
+- [ ] `steam-im-modules` — Steam's on-screen keyboard in Qt and GTK apps
+- [ ] `holo-upower-config` — battery reporting; UPower is installed now
+- [ ] `steamdeck-kde-presets` — Plasma defaults for the Deck
+- [ ] `holo-sudo` — sudo defaults
+- [ ] `steamos-networking-tools`
+- [ ] `steamos-systemreport` — system report for bug reports
+- [ ] `jupiter-firewall`
+- [ ] `holo-realtek-firmware-toggles`
+- [ ] `cecd`, `cec-audio-control` — HDMI-CEC through a dock; needs dock
+      hardware to test
+- [ ] `steamos-log-submitter`, `steamos-kdumpst-layer` — crash reports, only
+      without sending anything to Valve; would allow SteamOS's panic sysctls
+- [ ] `steamos-customizations-jupiter`, parts not yet reviewed: `swap/`,
+      `grub/`, `NetworkManager/`, `offload/` (`sleep.conf.d` belongs to the
+      hibernate work in Alpha 4)
+
+### Larger items
+
+- [ ] Screen recording without video — next step: `rec-dump.sh` on Io during
+      a recording, compare with the SteamOS reference (see Alpha 2)
+- [ ] Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if
+      iwd, implement `SetWifiBackend`
+- [ ] Audio as on SteamOS: a WirePlumber script rebuilding Valve's
+      `CreateLoopback` — localized device names, speaker and headphone
+      loopbacks
+- [ ] First boot without a keyboard: network setup usable with the Deck's
+      own controls; then reconsider `--retain-splash`
+
+### Interface and branding
+
+- [ ] Plasma polish: messages when switching, the notification service
+      requested in game mode
+- [ ] Designed boot splash; fill the black gap while Steam loads inside
+      gamescope; check Io packages for remaining Valve graphics
+
+### Not in Alpha 3
+
+- **Alpha 4 — Storage:** move to the internal NVMe, SD/USB automount,
+  formatting from Steam, suspend-then-hibernate
+- **Later:** SDDM, live ISO
+- **For 1.0:** SSH off in images, replace the default password
+
+## Candidates for later milestones
 
 - **For 1.0:** SSH off in images as on SteamOS (drop `sshd` from `SERVICES`
   in `mkimg.sh`), and a way to replace the default password, e.g. a prompt on
