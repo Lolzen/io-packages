@@ -33,10 +33,10 @@ check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
 check "kernel.pid_max = 4194304" sh -c '[ "$(sysctl -n kernel.pid_max)" = 4194304 ]'
 
 echo "== packages"
-for p in io-desktop io-base io-branding io-session io-steamos-manager io-volumed linux-neptune-72 deck-hw-support linux-firmware jupiter-fan-control steamos-powerbuttond steamdeck-dsp rnnoise-ladspa holo-zram-swap holo-earlyoom steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-desktop-portal-gamescope rtkit socklog-void kde-plasma; do
+for p in io-desktop io-base io-branding io-session io-steamos-manager linux-neptune-72 deck-hw-support linux-firmware jupiter-fan-control steamos-powerbuttond steamdeck-dsp rnnoise-ladspa holo-zram-swap holo-earlyoom steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-desktop-portal-gamescope rtkit socklog-void kde-plasma; do
     check "installed: $p" xbps-query "$p"
 done
-for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptune; do
+for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptune io-volumed; do
     check "not installed: $p" sh -c "! xbps-query $p"
 done
 
@@ -59,6 +59,7 @@ check "gamescope running" pgrep -x gamescope-wl
 check "gamescope file capability" sh -c 'getcap /usr/bin/gamescope | grep -q cap_sys_nice=ep'
 check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /proc/$(pgrep -x gamescope-wl)/status'
 check "steam started with -gamepadui" sh -c 'tr "\0" " " < /proc/$(pgrep -o -x steam)/cmdline | grep -q -- -gamepadui'
+check "STEAM_ENABLE_VOLUME_HANDLER set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_VOLUME_HANDLER=1'
 check "STEAM_ENABLE_DYNAMIC_BACKLIGHT set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_DYNAMIC_BACKLIGHT=1'
 check "rtkit-daemon running" pgrep -x rtkit-daemon
 RAMLOG=/run/user/$(id -u $U)/io-log-gamemode/current

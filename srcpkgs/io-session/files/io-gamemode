@@ -28,7 +28,6 @@ echo gamemode > "$STATE"
 # ------------------------------------------------------------ helpers
 pgrep -x pipewire > /dev/null || pipewire &
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
-pgrep -f io-volumed > /dev/null || setsid /usr/bin/io-volumed > /dev/null 2>&1 &
 # user half only - the root half (io-steamos-manager -r) runs as a runit service
 pgrep -u "$(id -u)" -f io-steamos-manager > /dev/null || setsid /usr/bin/io-steamos-manager > /dev/null 2>&1 &
 
@@ -67,6 +66,7 @@ export WINEDLLOVERRIDES=dxgi=n
 
 export STEAM_ENABLE_DYNAMIC_BACKLIGHT=1
 export STEAM_ENABLE_FAN_CONTROL=1
+export STEAM_ENABLE_VOLUME_HANDLER=1
 export SRT_URLOPEN_PREFER_STEAM=1
 export STEAM_DISABLE_AUDIO_DEVICE_SWITCHING=1
 export STEAM_MULTIPLE_XWAYLANDS=1
@@ -100,8 +100,6 @@ bg=/usr/share/plymouth/themes/io/io.png
 #export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
 #export STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND=1
 #export MANGOHUD_CONFIGFILE=...
-# Volume keys handled by Steam itself - test against io-volumed first:
-#export STEAM_ENABLE_VOLUME_HANDLER=1
 # cecd (HDMI-CEC daemon):
 #export STEAM_ENABLE_CEC=1
 # Galileo status LED, not present on Jupiter:

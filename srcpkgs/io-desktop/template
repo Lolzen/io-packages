@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=10
+revision=11
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -16,7 +16,7 @@ depends="
  void-artwork traceroute ethtool kmod eudev runit-void
  removed-packages glibc-locales
 
- io-base io-branding io-session io-volumed io-steamos-manager
+ io-base io-branding io-session io-steamos-manager
  linux-neptune-72 linux-firmware deck-hw-support
  jupiter-fan-control steamos-powerbuttond
 
