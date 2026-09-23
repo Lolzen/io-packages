@@ -15,4 +15,8 @@ done
 if command -v plymouth > /dev/null 2>&1 && plymouth --ping 2> /dev/null; then
     plymouth quit
 fi
-exec chpst -P agetty --noclear --autologin "$IO_USER" tty1 38400 linux
+# MEMLOCK: hard limit 100 MB for the session, soft left at the default, as
+# Valve does (8 MB for the user manager, 100 MB only for filter-chain.service).
+# Only root can raise the hard limit, so it happens here; the filter chain
+# raises its own soft limit within it.
+exec prlimit --memlock=8388608:104857600 chpst -P agetty --noclear --autologin "$IO_USER" tty1 38400 linux

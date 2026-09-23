@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=11
+revision=12
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -69,18 +69,21 @@ do_install() {
 	rm -rf ${DESTDIR}/usr/share/wireplumber/hardware-profiles
 	rm -rf ${DESTDIR}/usr/lib/systemd
 
-	# pipewire.conf.d/context-properties.conf and
-	# filter-chain.conf.d/context-properties.conf both set context.properties
-	# with different, overlapping values (different clock quantum ranges;
-	# the filter-chain one also wants mem.mlock-all, left out here until
-	# it's been tested against Io's actual MEMLOCK ulimit). Rather than
-	# install both and let the loader's alphabetical merge order decide
-	# which wins by accident, keep one deliberately combined file with the
-	# wider quantum range from the base profile.
+	# Upstream's two context-properties files are not alternatives: the one
+	# under pipewire.conf.d/ configures the main PipeWire daemon, the one
+	# under filter-chain.conf.d/ a second PipeWire instance that runs the
+	# filters on their own (Valve's package enables filter-chain.service
+	# for exactly that, "loads the filters in a separate process from
+	# pipewire"). Both go where they belong, so the filter chain gets its
+	# fixed quantum and mem.mlock-all without those applying to everything
+	# else. io-session starts the second instance per session.
 	vmkdir etc/pipewire/pipewire.conf.d
 	vinstall ${FILESDIR}/10-valve-jupiter.conf 644 etc/pipewire/pipewire.conf.d
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/pipewire.conf.d/module-access-args.conf 644 etc/pipewire/pipewire.conf.d
-	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/pipewire.conf.d 20-filter-chain.conf
+
+	vmkdir etc/pipewire/filter-chain.conf.d
+	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/context-properties.conf 644 etc/pipewire/filter-chain.conf.d 10-context-properties.conf
+	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/filter-chain.conf.d 20-filter-chain.conf
 
 	# Valve's patched WirePlumber creates the ALSA loopbacks applications
 	# talk to (CreateLoopback() in its alsa.lua, triggered by

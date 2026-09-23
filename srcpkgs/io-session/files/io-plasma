@@ -5,5 +5,26 @@ if pgrep -x kwin_wayland > /dev/null; then
 fi
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
 echo desktop > "$XDG_RUNTIME_DIR/io-session-next"
+# Valve runs the filter chain as its own PipeWire instance
+# (filter-chain.service), with a fixed quantum, locked memory and a single
+# malloc arena - settings that would be wrong for the main daemon. prlimit
+# raises this process's memlock soft limit to the hard limit io-autologin
+# set; MALLOC_ARENA_MAX matches Valve's drop-in.
+start_filter_chain() {
+    pgrep -f "pipewire -c filter-chain.conf" > /dev/null && return
+    # Wait for the main daemon's socket in the background: a PipeWire client
+    # started before it exits instead of retrying. Valve gets the ordering
+    # from socket activation.
+    (
+        i=0
+        while [ ! -S "$XDG_RUNTIME_DIR/pipewire-0" ] && [ $i -lt 15 ]; do
+            sleep 1
+            i=$((i + 1))
+        done
+        MALLOC_ARENA_MAX=1 exec prlimit --memlock=104857600 pipewire -c filter-chain.conf
+    ) > /dev/null 2>&1 &
+}
+
 pgrep -x pipewire > /dev/null || pipewire &
+start_filter_chain
 exec startplasma-wayland
