@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=12
+revision=14
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -22,6 +22,7 @@ depends="
 
  steamdeck-dsp holo-zram-swap holo-earlyoom steamos-tuning
  holo-dmi-rules holo-fstab-repair steamos-passwd
+ vpower holo-upower-config
 
  gamescope steam gamemode
  MangoHud MangoHud-32bit MangoHud-mangoapp

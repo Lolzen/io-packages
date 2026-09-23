@@ -1,0 +1,25 @@
+# Template file for 'holo-upower-config'
+pkgname=holo-upower-config
+version=1.0
+revision=3
+wrksrc="${pkgname}"
+depends="upower vpower"
+short_desc="Valve's UPower defaults: critical battery handled by vpower, not UPower"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=9fbd8408110b1f231ae5934746d5e409569c860cbcfbe468d7f57edcbfa05f67
+
+# Sets UPower's CriticalPowerAction to Ignore. Only safe together with
+# vpower, which takes over the critical battery shutdown - hence the hard
+# dependency.
+do_install() {
+	# Valve's file says AllowRiskyCriticalPowerAction=yes. UPower reads that
+	# key as a boolean and accepts only true/false, so "yes" counts as not
+	# allowed: UPower logs a warning and falls back to HybridSleep, and the
+	# file has no effect. Changed to "true" so Valve's intent applies.
+	sed -i 's/^AllowRiskyCriticalPowerAction=yes$/AllowRiskyCriticalPowerAction=true/' 10-holo-defaults.conf
+	grep -q '^AllowRiskyCriticalPowerAction=true$' 10-holo-defaults.conf
+	vinstall 10-holo-defaults.conf 644 etc/UPower/UPower.conf.d
+}

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Valve's unit: ConditionPathExistsGlob=/sys/class/power_supply/BAT[0-9],
+# After=dbus.service steamos-manager.service
+exec 2>&1
+set -- /sys/class/power_supply/BAT[0-9]
+if [ ! -e "$1" ]; then
+    echo "vpower: no battery, not running"
+    exec sleep infinity
+fi
+sv check dbus > /dev/null || exit 1
+exec /usr/lib/vpower

@@ -1,0 +1,40 @@
+# Template file for 'vpower'
+pkgname=vpower
+version=1.6.3
+revision=3
+wrksrc="vpower"
+build_style=cargo
+hostmakedepends="git tar"
+makedepends="libsensors-devel"
+depends="libsensors"
+short_desc="Valve's battery daemon: battery metrics and the critical battery shutdown"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/jupiter/vpower"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=701c1cf1b326e3ce55b27a4ea49cecb6463f3784e32e0896ce7deae307bc0585
+
+# On SteamOS vpower runs as a system service. It writes battery metrics to
+# /run/vpower/ (read by Steam), and at 0.5 % battery it asks Steam to shut
+# down, forcing `poweroff` after 10 seconds if Steam does not. That is why
+# holo-upower-config turns UPower's own critical action off - the two belong
+# together.
+#
+# patches/find-steamdeck-hwmon.patch: vpower hardcodes the charge limit file
+# under steamdeck-hwmon/hwmon/hwmon3/, which is where it sits on SteamOS. The
+# hwmon number depends on the kernel (hwmon6 on Io's 7.2), so vpower found
+# no charge limit and assumed 100 %. The patch looks the directory up.
+#
+# Valve's source archive carries the git repository; the tagged tree is
+# checked out here. Cargo resolves the crates itself (Valve's archive
+# vendors them for an offline Arch build).
+post_extract() {
+	git --git-dir=vpower archive --format=tar ${version} | tar -x
+}
+
+do_install() {
+	vinstall target/${RUST_TARGET}/release/vpower 755 usr/lib
+	vinstall vpower.toml 644 etc
+	vlicense LICENSE
+	vsv vpower
+}

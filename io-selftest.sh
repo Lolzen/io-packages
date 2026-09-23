@@ -41,9 +41,11 @@ for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptun
 done
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager holo-zram-swap earlyoom socklog-unix nanoklogd; do
+for s in dbus elogind NetworkManager io-steamos-manager vpower holo-zram-swap earlyoom socklog-unix nanoklogd; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
+check "vpower writes battery metrics" test -s /run/vpower/battery_percent
+check "UPower critical action handed to vpower" test -e /etc/UPower/UPower.conf.d/10-holo-defaults.conf
 check "no runit polkitd service (D-Bus activated only)" sh -c '[ ! -e /var/service/polkitd ]'
 check "exactly one polkitd" sh -c '[ "$(pgrep -c polkitd)" = 1 ]'
 check "no resize core service" sh -c '! ls /etc/runit/core-services/ | grep -q resize'
