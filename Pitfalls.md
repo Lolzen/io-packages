@@ -237,6 +237,11 @@ SteamOS). Merging them applies the filter chain's fixed quantum and
 it does not retry. systemd orders this through socket activation; a session
 script has to wait for `$XDG_RUNTIME_DIR/pipewire-0` itself.
 
+**X sockets in `/tmp/.X11-unix/` survive a session.** Waiting for `X0` to
+appear before starting an overlay or helper therefore succeeds immediately,
+with the socket of the session that just ended. Wait for the process
+(`pgrep -x gamescope-wl`) as well.
+
 **Steam localizes audio device names itself**, from the card identity
 (`device.id`, `card.profile.device`) on the node. Without it Steam falls back
 to the raw `node.name` — which is also why it shows the node name and not the

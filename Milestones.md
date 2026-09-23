@@ -253,9 +253,13 @@ the larger items and the interface last.
 Installed on SteamOS 3.8.4, missing on Io. Each gets a decision: port,
 integrate into an existing Io package, or drop with a reason.
 
-- [ ] `mangohud` (mangoapp) — Steam's performance overlay; **high**, visible
-      feature, several game mode environment variables depend on it
-- [ ] `gamemode` — requested by Steam or games? `@gamemode` nice limit
+- [x] `mangohud` / mangoapp: Steam's performance overlay works. Io starts
+      mangoapp per session (Valve uses a service with `Restart=always`) and
+      provides `MANGOHUD_CONFIGFILE`, written as `no_display` first as Valve
+      does; Steam sets the `STEAM_*MANGOAPP*` variables itself
+- [x] `gamemode`: Void's package ships everything (polkit rule and actions,
+      limits file, D-Bus activation); `deck` joins the `gamemode` group. The
+      daemon starts on demand through D-Bus instead of running always
 - [ ] `steam-im-modules` — Steam's on-screen keyboard in Qt and GTK apps
 - [ ] `holo-upower-config` — battery reporting; UPower is installed now
 - [ ] `steamdeck-kde-presets` — Plasma defaults for the Deck

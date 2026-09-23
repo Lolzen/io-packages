@@ -36,9 +36,13 @@ is a bug.
   it only feeds mangoapp.
 - **Steam launch flags, gamescope arguments and environment match
   SteamOS**, except variables whose counterpart Io does not have yet
-  (mangoapp, HDMI-CEC daemon, status LED, storage helpers, systemd scopes,
-  Steam input method modules, Steam's own volume handler). Setting them
-  would show controls in Steam that do nothing.
+  (HDMI-CEC daemon, status LED, storage helpers, systemd scopes, Steam input
+  method modules). Setting them would show controls in Steam that do
+  nothing.
+- **mangoapp and gamemode** are started differently: mangoapp by the session
+  script in a loop tied to gamescope (Valve: a user service with
+  `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
+  always runs).
 - **tty1 keeps its text console.** SteamOS moves the console to tty4–6
   (`fbcon=vc:4-6`). Io keeps it on tty1 because that is where the fallback
   shell and the last log lines appear when a session dies.
@@ -160,4 +164,4 @@ the session bus that Steam talks to.
 
 System updates (`steamos-atomupd`), BIOS and dock firmware updates, factory
 reset, controller firmware updates, the crash log submitter, the HDMI-CEC
-daemon, mangoapp (performance overlay), Steam's input method modules, SDDM.
+daemon, Steam's input method modules, SDDM.
