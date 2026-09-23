@@ -1,0 +1,43 @@
+
+# Template file for 'steam-jupiter'
+pkgname=steam-jupiter
+version=1.0.0.85
+revision=1
+_bootstrap=steam_jupiter_stable_bootstrapped_20251031.0.tar.xz
+wrksrc="steam-jupiter-stable"
+hostmakedepends="tar"
+depends="steam"
+short_desc="Valve's Steam Deck packaging of Steam: preinstalled client, Deck branch, udev rules"
+maintainer="Georg <funer@gmx.at>"
+license="custom:Proprietary"
+homepage="https://store.steampowered.com/steamdeck"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/steam-jupiter-stable-${version}-12.src.tar.gz"
+checksum=501192ec11ba049074d2883aa870c9e979082f7af8601934850f3f088a2aef27
+nostrip=yes
+
+# Valve's steam-jupiter-stable, layered on top of Void's steam package, which
+# keeps providing the launcher and the 32-bit dependencies.
+#
+# - A fully bootstrapped Steam client on the Deck's stable branch. Steam does
+#   not need to download itself on first start. It lives next to a copy of
+#   Valve's launcher script in /usr/lib/steam-jupiter, because the launcher
+#   takes the bootstrap from its own directory first.
+# - steam-jupiter: Valve's wrapper. It sets the update branch to
+#   steamdeck_stable (an empty package/beta means the desktop client's
+#   branch) and adds -steamdeck -pipewire, as on SteamOS.
+# - udev rules for input devices, the status LED and wakeup by controllers.
+do_install() {
+	vmkdir usr/lib/steam-jupiter
+	tar -xzf steam_${version}.tar.gz steam-launcher/bin_steam.sh
+	vinstall steam-launcher/bin_steam.sh 755 usr/lib/steam-jupiter steam
+	vinstall ${_bootstrap} 644 usr/lib/steam-jupiter bootstraplinux_ubuntu12_32.tar.xz
+
+	sed 's|/usr/lib/steam/steam|/usr/lib/steam-jupiter/steam|' steam-jupiter.sh > steam-jupiter
+	grep -q /usr/lib/steam-jupiter/steam steam-jupiter
+	vbin steam-jupiter
+
+	vmkdir usr/lib/udev/rules.d
+	vinstall 70-steam-jupiter-input.rules 644 usr/lib/udev/rules.d
+	vinstall 70-steam-jupiter-leds.rules 644 usr/lib/udev/rules.d
+	vinstall 99-power-wakeup.rules 644 usr/lib/udev/rules.d
+}

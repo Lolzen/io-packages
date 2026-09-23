@@ -180,4 +180,7 @@ set -- "$@" --cursor-scale-height 720
 set -- "$@" -e
 set -- "$@" -O '*',eDP-1
 
-exec gamescope "$@" -- steam -steamos3 -steampal -steamdeck -gamepadui
+# steam-jupiter is Valve's Deck wrapper: it keeps Steam on the Deck's
+# branch and adds -steamdeck -pipewire, so the full command line matches
+# SteamOS (including -steamdeck twice).
+exec gamescope "$@" -- steam-jupiter -steamos3 -steampal -steamdeck -gamepadui
