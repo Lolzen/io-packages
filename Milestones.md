@@ -21,7 +21,7 @@ time. Package and service lists of that image:
 
 ---
 
-## Alpha 2 — released
+## Alpha 2 — in progress
 
 **Goal:** match real SteamOS behaviour wherever Io can, based on a reference
 capture of SteamOS 3.8.4 on the same hardware instead of assumptions, and
@@ -71,81 +71,28 @@ against documentation or memory.
   SteamOS and OctoXBPS instead of Discover/Flatpak
 - **`publish.sh`** uploads only new files and cleans stale release assets
 
-### Work list
+### Open
 
-- [x] `io-desktop`: add every package the running system uses
+- [ ] `io-desktop`: add every package the running system uses
       (`steamdeck-dsp`, `holo-zram-swap`, `holo-earlyoom`, `steamos-tuning`,
       `holo-dmi-rules`, `holo-fstab-repair`, `steamos-passwd`) and switch the
-      kernel to `linux-neptune-72`
-- [x] udisks2 is now installed (pulled in by Plasma): checked -
-      `deck-hw-support`'s automount and SD rescan rules are fully commented
-      out, nothing fires at boot. Automount itself moves to after Alpha 2
-- [x] GPU reset udev rule: Valve restarts SDDM after a GPU crash; Io has no
-      display manager, so the rule now ends gamescope and `io-session.sh`
-      starts a fresh session (commit `76ad031`)
-- [x] Portals isolated in game mode as on SteamOS (`XDG_DESKTOP_PORTAL_DIR`
-      in the bus activation environment, `gamescope-portals.conf`); the KDE
-      and GTK portals Plasma installs no longer start and crash there
-- [x] VA-API: `mesa-vaapi` and `mesa-vaapi-32bit` added; Void ships the
-      driver separately, SteamOS has it in Mesa
-- [→] Screen recording: moved to after Alpha 2, see below
-- [x] Boot splash: Io-branded Plymouth theme (proof of concept), Plymouth in
-      the initramfs, handed over to the session by `io-autologin`.
-      `holo-plymouth-themes` turned out to be the controller-update splash,
-      not the boot splash, and was dropped
-- [x] Clean-up: `inputplumber`, `holo-plymouth-themes`, `docs/handler.sh.io`,
-      `link.sh`, `pkglist.sh`, `mksd.sh` removed; `build.sh` now copies
-      packages into `void-packages` and can publish in the same step;
-      unused files in `io-branding` removed
-- [x] English throughout: all on-device messages, desktop entries, comments
-- [x] `io-netcheck` moved into `io-session`: `mkimg.sh` had patched it into a
-      file owned by `io-session`, so it vanished on the first update
-- [x] `io-selftest.sh`: checks a running system against the Alpha 2 state
-      (60 checks; passes on the development card)
-- [x] Test without `seatd`: libseat uses elogind, game mode, session
-      switching and suspend work; seatd removed
-- [x] Session switching hung after the logging change: a PipeWire process
-      outliving the session kept the log pipe open. `io-start` now logs
-      through a FIFO and starts a fresh PipeWire per session
-- [x] SSH sessions are closed before the network goes down at shutdown
-- [x] SSH toggle in Steam's developer settings: `steamos-enable-sshd` is real
-      (links the runit service). The image keeps SSH enabled during the test
-      phase
-- [x] Documentation overhaul: README and wiki rewritten in English, new
-      [Deviations](Deviations) page
-
-### Release acceptance
-
-- [x] Fresh image built, written to a spare card, booted, storage grown,
-      `io-selftest.sh` passes. Found and fixed on the way: the first-boot
-      network prompt was invisible (`--retain-splash`), the image had grown
-      past 12 GB (now 16 GiB, 32 GB card needed)
-- [x] Final state written below
+      kernel to `linux-neptune-72`; then build and test a fresh image
+- [ ] udisks2 is now installed (pulled in by Plasma): check whether
+      `deck-hw-support`'s udev rules fire for the boot device during boot
+- [ ] Screen recording: check whether the gamescope portal is still found;
+      SteamOS sets `XDG_DESKTOP_PORTAL_DIR` for the game mode session
+- [ ] Boot splash: wire `holo-plymouth-themes` into dracut and GRUB
+- [ ] Clean-up: remove `inputplumber` (not buildable, disabled on the Deck
+      even on SteamOS), `docs/handler.sh.io` (acpid leftover), and the unused
+      files in `io-branding`
+- [ ] Test without `seatd` (elogind only)
+- [ ] Decide the Wi-Fi backend: SteamOS uses iwd, Io uses wpa_supplicant
+- [ ] Stub helpers worth implementing: SSH toggle, SD card formatting
+- [ ] Documentation overhaul (README and wiki, English throughout)
 
 ### Deferred to after Alpha 2
 
 - Regular review of boot logs for improvements and regressions
-- **First boot without a keyboard:** network setup usable with the Deck's
-  own controls; then reconsider `--retain-splash`. A live ISO with an
-  installer would solve this differently
-- **Broken first Steam start:** detect an interrupted bootstrap (empty
-  `steam.sh`) and redo it
-- **Screen recording** produces clips without video. Steam creates its audio
-  encoder but never a video encoder, and gamescope's PipeWire stream arrives
-  as shared memory (`dmabuf: 0`). VA-API works for Steam's 64-bit runtime
-  since `mesa-vaapi`. On SteamOS the same stream is also shared memory
-  (`dmabuf: 0`) and Steam's runtime VA-API check fails there as well, so
-  neither is the cause. The difference: SteamOS logs "Trying to create an
-  encoder for recording" right after the format negotiation, Io never does
-  — the frames apparently never arrive. SteamOS reference while recording:
-  `gamescope:capture_1 → steam:input_1` active, both nodes running, Steam's
-  stream with `target.object = gamescope`, `media.role = Camera`. Next step:
-  the same dump on Io during a recording (`rec-dump.sh`)
-- The session has no `LANG`; SteamOS sets it (Qt falls back to `C.UTF-8`)
-- Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if iwd,
-  implement `SetWifiBackend` for the developer menu switch
-- SD card formatting from Steam (`steamos-format-sdcard` stub); needs
-  automount first
 - `steamos-powerbuttond` 4.2 (Io ships 3.1)
 - `deck-firmware-cirrus`: check whether Void's `linux-firmware` ships these
   files by now
@@ -155,159 +102,13 @@ against documentation or memory.
 - Kernel package naming (`linux-neptune` meta package pointing to the
   current version)
 - Plasma polish
-- Branding: the proof-of-concept splash is a static logo; a designed splash,
-  and filling the black gap while Steam loads inside gamescope (6–10 s from
-  the SD card), are open. Also check Io packages for remaining Valve
-  graphics
-- SD/USB automount (needs `systemd-run` replaced by `setsid --fork` in the
-  rules and the boot device excluded); best done together with the move to
-  the internal NVMe
-- Kernel command line: compare with SteamOS's `amdgpu` options
-  (`lockup_timeout`, `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min`)
-- Live ISO: retry once void-mklive handles dracut 112's live-boot changes
-  (the reason Io ships as a disk image)
 
 ### Final state
 
-Released as [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2).
-
-- Boots into game mode with an Io splash; game mode session reproduces
-  Valve's `gamescope-session`; switching to Plasma and back works
-- `io-steamos-manager` with root and session half; TDP (3–15 W), GPU clock,
-  charge limit, fan control, Wi-Fi power management verified against sysfs
-- Audio: speakers, headphones, filtered microphone (visible in Steam),
-  Bluetooth audio; fresh PipeWire per session
-- Memory, logging, polkit, CAP_SYS_NICE, RTKit and portals as on SteamOS
-  (see [Deviations](Deviations) for what differs)
-- Image reproducible from the repository alone: `mkimg.sh` output passes
-  `io-selftest.sh` on a fresh card
-- Known limitations: screen recording without video; first-boot Wi-Fi setup
-  needs a keyboard; SSH enabled with the default password; see the list
-  above for everything moved to the next milestone
+*Written at release.*
 
 ---
 
-## Alpha 3 — Parity & Quality of Life (in progress)
+## Next milestone
 
-**Goal:** close the many small gaps to SteamOS that have piled up, and make
-everyday use smoother. A few larger items, mostly small ones — together
-they are about stability, consistency and user experience.
-
-Order: quick wins first, then a triage of the unported Valve packages (one
-decision per package), screen recording alongside since its path is clear,
-the larger items and the interface last.
-
-### Done
-
-- [x] Clean-up: dropped the 6.15.8 fallback kernel `linux-neptune`; removed
-      the unused `config-io` from `linux-neptune-72` (it was never merged,
-      `CONFIG_HID_HAPTIC` was not in the 7.2 build), the never-enabled runit
-      service in `steamos-powerbuttond`, a second unused `timedatectl` in
-      `deck-hw-support`, and `bootstrap` plus redundant dependencies in
-      `io-base`
-
-- [x] Correction to Alpha 2: *Restart Steam* in the power menu also needs
-      Steam's developer mode, on SteamOS too; `-gamepadui` alone is not
-      enough. A fresh Steam profile has developer mode off
-
-### Quick wins
-
-- [x] `LANG` in the session: no locale was ever generated (all of
-      `libc-locales` commented out), and the session started before
-      `profile.d/locale.sh` ran. `mkimg.sh` now enables the locales SteamOS
-      ships (`holo-glibc-locales`, every Steam language) and writes only
-      `LANG` to `locale.conf`; the session profile script is now
-      `zz-io-session.sh` and runs last
-- [x] Kernel command line as on SteamOS: `amdgpu` lockup timeouts,
-      `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min` instead of the
-      deprecated `amdgpu.gttsize` (whose GTT/TTM mismatch the kernel warned
-      about), `log_buf_len=4M`, `rd.*` skips. GTT now 8192M, as on SteamOS
-- [ ] Broken first Steam start: detect an interrupted bootstrap (empty
-      `steam.sh`) and redo it
-- [ ] Steam's own volume handler (`STEAM_ENABLE_VOLUME_HANDLER`): test; if it
-      works, `io-volumed` goes
-- [ ] `steamos-powerbuttond` 3.1 → 4.2, from Valve's mirror
-- [ ] Kernel metapackage `linux-neptune` pointing to the current kernel
-- [x] `deck-firmware-cirrus` dropped: Void's main `linux-firmware` package
-      (30 MB) ships the Deck's CS35L41 files, newer and including the
-      device-specific `vlv1776` firmware the amplifiers now load
-- [x] Found on the way: ALSA's default device was not routed through
-      PipeWire — Void leaves the `alsa-pipewire` links to the admin, so
-      ALSA-only programs could not play at all. `io-base` now ships them
-
-### Stub helpers: one decision each
-
-| Helper | Direction |
-|---|---|
-| `steamos-format-sdcard`, `steamos-format-device` | Port with automount (Alpha 4) |
-| `jupiter-biosupdate`, `jupiter-dock-updater` | Likely stay stubs: firmware updates are risky and SteamOS on the same device handles them |
-| `steamos-devkit-mode` | Only useful with Valve's devkit service; niche |
-| `jupiter-amp-control` | Target script exists in none of Valve's packages |
-| `steamos-update`, `-select-branch`, `-reboot-other`, `-factory-reset-config` | Tied to A/B updates; only with an own update mechanism |
-| `steamos-restart-sddm` | Only with SDDM |
-
-- [ ] Confirm each decision and record it on [Helper status](Helper-Status)
-
-### Unported Valve packages: triage
-
-Installed on SteamOS 3.8.4, missing on Io. Each gets a decision: port,
-integrate into an existing Io package, or drop with a reason.
-
-- [ ] `mangohud` (mangoapp) — Steam's performance overlay; **high**, visible
-      feature, several game mode environment variables depend on it
-- [ ] `gamemode` — requested by Steam or games? `@gamemode` nice limit
-- [ ] `steam-im-modules` — Steam's on-screen keyboard in Qt and GTK apps
-- [ ] `holo-upower-config` — battery reporting; UPower is installed now
-- [ ] `steamdeck-kde-presets` — Plasma defaults for the Deck
-- [ ] `holo-sudo` — sudo defaults
-- [ ] `steamos-networking-tools`
-- [ ] `steamos-systemreport` — system report for bug reports
-- [ ] `jupiter-firewall`
-- [ ] `holo-realtek-firmware-toggles`
-- [ ] `cecd`, `cec-audio-control` — HDMI-CEC through a dock; needs dock
-      hardware to test
-- [ ] `steamos-log-submitter`, `steamos-kdumpst-layer` — crash reports, only
-      without sending anything to Valve; would allow SteamOS's panic sysctls
-- [ ] `steamos-customizations-jupiter`, parts not yet reviewed: `swap/`,
-      `grub/`, `NetworkManager/`, `offload/` (`sleep.conf.d` belongs to the
-      hibernate work in Alpha 4)
-
-### Larger items
-
-- [ ] Screen recording without video — next step: `rec-dump.sh` on Io during
-      a recording, compare with the SteamOS reference (see Alpha 2)
-- [ ] Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if
-      iwd, implement `SetWifiBackend`
-- [ ] Audio as on SteamOS: a WirePlumber script rebuilding Valve's
-      `CreateLoopback` — localized device names, speaker and headphone
-      loopbacks
-- [ ] First boot without a keyboard: network setup usable with the Deck's
-      own controls; then reconsider `--retain-splash`
-
-### Interface and branding
-
-- [ ] Plasma polish: messages when switching, the notification service
-      requested in game mode
-- [ ] Designed boot splash; fill the black gap while Steam loads inside
-      gamescope; check Io packages for remaining Valve graphics
-
-### Not in Alpha 3
-
-- **Alpha 4 — Storage:** move to the internal NVMe, SD/USB automount,
-  formatting from Steam, suspend-then-hibernate
-- **Later:** SDDM, live ISO
-- **For 1.0:** SSH off in images, replace the default password
-
-## Candidates for later milestones
-
-- **For 1.0:** SSH off in images as on SteamOS (drop `sshd` from `SERVICES`
-  in `mkimg.sh`), and a way to replace the default password, e.g. a prompt on
-  first boot
-
-- **Switch to SDDM for login and session switching**, as SteamOS does.
-  Would replace the `agetty → io-session.sh → io-start` chain. A deliberate
-  decision for its own milestone, not a side task.
-  If it happens, the GPU reset rule goes back to Valve's behaviour with
-  `sv restart sddm`: revert the Alpha 2 commit that changed
-  `80-gpu-reset.rules` (`76ad031`) and replace `systemctl` with
-  `sv`.
+*Goals follow once Alpha 2 is released.*
