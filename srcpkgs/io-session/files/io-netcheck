@@ -1,11 +1,34 @@
 #!/bin/sh
-# io-netcheck - ensure a network connection exists before continuing.
+# io-netcheck - ensure a network connection exists before Steam's first
+# start.
 # Part of io-session; io-session.sh runs it before the first session on tty1.
 #
 # Runs on every tty1 login, and a crashed/restarted session produces a
 # fresh login each time - so this checks a per-boot flag first and skips
 # straight through once resolved for this boot, instead of re-prompting
 # on every single restart.
+
+# Only the very first start of Steam needs the network: it downloads itself.
+# An installed Steam starts offline and connects on its own later, as on
+# SteamOS, which does not wait for Wi-Fi at boot either. So once steam.sh
+# exists (and is not empty - an interrupted first download leaves it empty),
+# skip the check and do not hold up the boot waiting for Wi-Fi.
+STEAM_SH="$HOME/.local/share/Steam/steam.sh"
+
+# An interrupted first download leaves steam.sh empty but executable.
+# Steam's launcher (/usr/bin/steam) only checks that it is executable, runs
+# it, and fails with "Exec format error" on every start from then on. It
+# does set Steam up again when steam.sh is missing, keeping everything else
+# in the directory - so removing the empty file is all it takes. The
+# network check below then makes sure the new download can happen.
+if [ -e "$STEAM_SH" ] && [ ! -s "$STEAM_SH" ]; then
+    echo "io: Steam's first download was interrupted, setting Steam up again."
+    rm -f "$STEAM_SH"
+fi
+
+if [ -s "$STEAM_SH" ]; then
+    exit 0
+fi
 
 FLAG="$HOME/.cache/io-netcheck-boot"
 mkdir -p "$HOME/.cache"
