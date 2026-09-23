@@ -47,7 +47,8 @@ agetty --autologin  →  /etc/profile.d/io-session.sh  →  io-netcheck
   (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Steam
   directly as its child. Like Valve's session it limits the portals to the
   gamescope backend (`XDG_DESKTOP_PORTAL_DIR`). It also starts PipeWire, the power button daemon,
-  `io-volumed` and the session half of `io-steamos-manager`.
+  the session half of `io-steamos-manager`, and the filter chain's own
+  PipeWire instance.
 - **`io-plasma`** starts KDE Plasma. The session half of
   `io-steamos-manager` starts there through XDG autostart.
 - **`io-session.sh`** guards against boot loops: a session that dies within
@@ -117,9 +118,20 @@ services in parallel).
 ## Audio
 
 Hardware microphone → Valve's filter chain (RNNoise, Valve's microphone
-filter) → loopback source *Steam Deck Microphone*, which Steam and games
-use. Valve's WirePlumber access rules hide the raw hardware microphone from
-applications. Speaker tuning happens in the CS35L41 amplifiers' own DSP.
+filter) → loopback source, which Steam and games use. Valve's WirePlumber
+access rules hide the raw hardware microphone from applications. Speaker
+tuning happens in the CS35L41 amplifiers' own DSP.
+
+The loopback is created at runtime by `io-create-loopback.lua`, Io's port of
+Valve's `CreateLoopback()`: it copies the hardware node's channel layout,
+priority and card identity (`device.id`, `card.profile.device`). Steam uses
+that identity to recognize the built-in devices and shows its own localized
+names for them.
+
+The filter chain runs in a second PipeWire instance
+(`pipewire -c filter-chain.conf`), started per session, with Valve's own
+settings: fixed quantum, `mem.mlock-all` within a 100 MB memlock limit, and
+a single malloc arena. Volume keys are handled by Steam itself.
 Plain ALSA clients reach PipeWire through `alsa-pipewire`, linked in
 `/etc/alsa/conf.d/`.
 

@@ -13,7 +13,6 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, ALSA routed through PipeWire, `timedatectl` replacement, shutdown hook closing SSH sessions |
 | `io-session` | Login and sessions: `io-autologin` service, `io-start`, `io-gamemode`, `io-plasma`, `io-netcheck`, `steamos-session-select`, session logs (`io-devmode`), `io-grow-storage`, gamescope capability core service |
 | `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half |
-| `io-volumed` | Volume key handler |
 | `io-branding` | Logo, Plymouth boot splash theme, fastfetch configuration |
 
 ## Ported from Valve
@@ -24,7 +23,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `deck-hw-support` | `jupiter-hw-support` 20250728.1 | Polkit helpers, udev rules, hwsupport scripts |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
 | `steamos-powerbuttond` | `steamos-powerbuttond` 3.1 | Power button daemon |
-| `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, microphone loopback |
+| `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, the filter chain's own PipeWire instance, and Io's WirePlumber script for the ALSA loopbacks |
 | `xdg-desktop-portal-gamescope` | `xdg-desktop-portal-gamescope` | Portal backend for screenshots and recording in game mode |
 | `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
 | `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |

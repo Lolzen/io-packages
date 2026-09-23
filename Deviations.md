@@ -119,13 +119,16 @@ the session bus that Steam talks to.
 - **No hardware profile switching.** SteamOS picks an audio profile at boot
   through symlinks in `/run`, because `/usr` is read-only. Io installs the
   Jupiter configuration directly into the standard search paths.
-- **One merged `context.properties` file** instead of two overlapping ones.
-- **Microphone loopback** is declared as PipeWire configuration. On SteamOS it
-  is created by Valve's own patched WirePlumber (`CreateLoopback()`), which
-  Void's upstream WirePlumber does not have. The source is currently named
-  *Steam Deck Microphone*; SteamOS shows *Microphone*. SteamOS's matching
-  loopbacks for speakers and headphones are not reproduced yet.
-- **OLED (Galileo) parts removed.**
+- **ALSA loopbacks** are created by an Io WirePlumber script that rebuilds
+  Valve's `CreateLoopback()`, which only exists in Valve's patched
+  WirePlumber. The result matches SteamOS, including the card identity the
+  loopback carries — that is what makes Steam show its own localized device
+  names.
+- **Only sources get a loopback**, as in Valve's `steamdeck-dsp` 1.02.
+  SteamOS 3.8.4 still ships 0.91, which also marks sinks. Io follows the
+  newer upstream, so speakers and headphones have none.
+- **OLED (Galileo) firmware removed**, its UCM profile kept (two small files,
+  a head start for anyone porting Io to that model).
 
 ---
 
@@ -147,8 +150,9 @@ the session bus that Steam talks to.
   SteamOS inherits.
 - **`timedatectl`** is a small replacement script; Steam only uses
   `set-timezone`.
-- **Volume keys** are handled by `io-volumed`. SteamOS lets Steam handle them
-  (`STEAM_ENABLE_VOLUME_HANDLER`); switching over is still to be tested.
+- **ALSA's default device** is routed through PipeWire by links `io-base`
+  ships. Void leaves enabling `alsa-pipewire` to the admin; SteamOS has it
+  out of the box.
 
 ---
 

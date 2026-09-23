@@ -226,6 +226,27 @@ nothing.
 harmless.** They come from the generic mixer paths in `alsa-card-profile` and
 cannot be fixed from a device package.
 
+**Valve's two `context-properties` files are not alternatives.** The one in
+`pipewire.conf.d/` configures the main daemon, the one in
+`filter-chain.conf.d/` a second PipeWire instance that runs the filters
+(`pipewire -c filter-chain.conf`, enabled as `filter-chain.service` on
+SteamOS). Merging them applies the filter chain's fixed quantum and
+`mem.mlock-all` to everything else.
+
+**A PipeWire client started before the daemon's socket exists just exits**,
+it does not retry. systemd orders this through socket activation; a session
+script has to wait for `$XDG_RUNTIME_DIR/pipewire-0` itself.
+
+**Steam localizes audio device names itself**, from the card identity
+(`device.id`, `card.profile.device`) on the node. Without it Steam falls back
+to the raw `node.name` — which is also why it shows the node name and not the
+description for such sources.
+
+**The version of a Valve package on a running SteamOS is not the newest one.**
+`steamdeck-dsp` is 0.91 on SteamOS 3.8.4 but 1.02 on Valve's mirror, and they
+behave differently (1.02 no longer creates loopbacks for sinks). Check the
+source of the version you package, not only the installed files.
+
 **Separate Valve patches from upstream before chasing a difference.** Valve
 ships patched builds of some packages (WirePlumber's `CreateLoopback()` is
 one). Compare against the upstream release, not against SteamOS's installed
