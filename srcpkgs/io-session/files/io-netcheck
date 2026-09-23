@@ -3,7 +3,7 @@
 # Part of io-session; io-session.sh runs it before the first session on tty1.
 #
 # Runs on every tty1 login, and a crashed/restarted session produces a
-# fresh login each time - so this checks a /run flag first and skips
+# fresh login each time - so this checks a per-boot flag first and skips
 # straight through once resolved for this boot, instead of re-prompting
 # on every single restart.
 
@@ -15,14 +15,13 @@ if [ -n "$BOOT_ID" ] && [ -f "$FLAG" ] && [ "$(cat "$FLAG" 2>/dev/null)" = "$BOO
     exit 0
 fi
 
-# NetworkManager may still be starting up right after boot; wait briefly
-# for it to actually be running before trusting its answer, rather than
-# reading "not ready yet" as "no network".
-i=0
-while ! sv status NetworkManager 2>/dev/null | grep -q "^run:" && [ $i -lt 10 ]; do
-    sleep 1
-    i=$((i + 1))
-done
+# NetworkManager may still be starting up right after boot. nm-online -s
+# waits until it has finished starting, including its automatic connection
+# attempts, and returns as soon as that is done - so a known Wi-Fi is
+# connected by then, and an unknown one leads straight to the prompt.
+# (This used to poll `sv status`, which only root may run: it failed every
+# time and cost the full 10 s timeout on every boot.)
+nm-online -s -q -t 30 > /dev/null 2>&1 || true
 
 has_ethernet() {
     nmcli -t -f TYPE,STATE device 2>/dev/null | grep -q "^ethernet:connected"
