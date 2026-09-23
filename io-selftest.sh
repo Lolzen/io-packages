@@ -59,6 +59,8 @@ check "gamescope running" pgrep -x gamescope-wl
 check "gamescope file capability" sh -c 'getcap /usr/bin/gamescope | grep -q cap_sys_nice=ep'
 check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /proc/$(pgrep -x gamescope-wl)/status'
 check "steam started with -gamepadui" sh -c 'tr "\0" " " < /proc/$(pgrep -o -x steam)/cmdline | grep -q -- -gamepadui'
+check "mangoapp running (performance overlay)" pgrep -x mangoapp
+check "user in group gamemode" sh -c 'id -nG deck | grep -qw gamemode'
 check "STEAM_ENABLE_VOLUME_HANDLER set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_VOLUME_HANDLER=1'
 check "STEAM_ENABLE_DYNAMIC_BACKLIGHT set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_DYNAMIC_BACKLIGHT=1'
 check "rtkit-daemon running" pgrep -x rtkit-daemon

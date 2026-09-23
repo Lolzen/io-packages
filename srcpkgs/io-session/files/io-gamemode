@@ -11,7 +11,7 @@
 # Variables are split in two groups:
 #   A - set exactly like Valve does, Io has everything they depend on
 #   B - Valve sets them too, but they depend on something Io does not ship
-#       yet (mangoapp, cecd, steam-im-modules, udisks storage helpers,
+#       yet (cecd, steam-im-modules, udisks storage helpers,
 #       systemd scopes). Setting them now would show controls in Steam
 #       that silently do nothing. Enable one by one once the dependency
 #       exists.
@@ -46,8 +46,36 @@ start_filter_chain() {
     ) > /dev/null 2>&1 &
 }
 
+# mangoapp draws Steam's performance overlay. Valve runs it as its own
+# service with Restart=always and hands it the session environment; here a
+# loop tied to gamescope does the same. Steam itself sets the STEAM_*MANGOAPP*
+# variables; only the config file is ours to provide.
+#
+# It has to wait for gamescope to be up *and* for its X socket: the socket
+# file from the previous session survives in /tmp, so checking only for the
+# socket succeeds immediately - before gamescope even starts, since this
+# runs ahead of it.
+start_mangoapp() {
+    command -v mangoapp > /dev/null 2>&1 || return
+    (
+        i=0
+        while ! pgrep -x gamescope-wl > /dev/null || [ ! -S /tmp/.X11-unix/X0 ]; do
+            [ "$i" -ge 30 ] && exit 0
+            sleep 1
+            i=$((i + 1))
+        done
+        export DISPLAY=:0
+        export GAMESCOPE_WAYLAND_DISPLAY=gamescope-0
+        while pgrep -x gamescope-wl > /dev/null; do
+            mangoapp
+            sleep 1
+        done
+    ) > /dev/null 2>&1 &
+}
+
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
+start_mangoapp
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
 # user half only - the root half (io-steamos-manager -r) runs as a runit service
 pgrep -u "$(id -u)" -f io-steamos-manager > /dev/null || setsid /usr/bin/io-steamos-manager > /dev/null 2>&1 &
@@ -69,6 +97,13 @@ dbus-update-activation-environment XDG_DESKTOP_PORTAL_DIR
 export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
 export HOMETEST_DESKTOP=1
 export HOMETEST_DESKTOP_SESSION=plasma
+
+# Written as no_display first, like Valve does, so the overlay does not
+# appear while Steam is still starting. Steam rewrites the file when the
+# overlay level is changed.
+GS_TMPDIR=$(mktemp -p "$XDG_RUNTIME_DIR" -d gamescope.XXXXXXX)
+export MANGOHUD_CONFIGFILE="$GS_TMPDIR/mangohud.config"
+echo no_display > "$MANGOHUD_CONFIGFILE"
 
 export STEAM_USE_DYNAMIC_VRS=1
 export RADV_FORCE_VRS_CONFIG_FILE="$(mktemp /tmp/radv_vrs.XXXXXXXX)"
@@ -115,12 +150,6 @@ bg=/usr/share/plymouth/themes/io/io.png
 [ -r "$bg" ] && export STEAM_UPDATEUI_PNG_BACKGROUND="$bg"
 
 # ---------------------------------------- B: waiting for a dependency
-# mangoapp (performance overlay):
-#export STEAM_USE_MANGOAPP=1
-#export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
-#export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
-#export STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND=1
-#export MANGOHUD_CONFIGFILE=...
 # cecd (HDMI-CEC daemon):
 #export STEAM_ENABLE_CEC=1
 # Galileo status LED, not present on Jupiter:

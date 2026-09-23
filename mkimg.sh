@@ -174,7 +174,7 @@ echo "== creating users"
 # _seatd is required for libseat to grant socket access - without it
 # gamescope falls back to a permission error on /run/seatd.sock.
 chroot "$MNT" usermod -p "$ROOTHASH" root
-chroot "$MNT" useradd -m -G wheel,audio,video,input,storage,socklog -s /bin/bash "$USERNAME"
+chroot "$MNT" useradd -m -G wheel,audio,video,input,storage,socklog,gamemode -s /bin/bash "$USERNAME"
 chroot "$MNT" usermod -p "$USERHASH" "$USERNAME"
 
 # wheel gets sudo, as on any Void install.
