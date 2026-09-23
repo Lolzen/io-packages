@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=10
+revision=11
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -50,7 +50,9 @@ do_install() {
 
 	# Galileo/OLED-only SOF firmware - Jupiter/LCD doesn't have that
 	# soundcard. setup_sof_fw.sh has no guard of its own, so remove what
-	# it wrote instead of patching the Makefile.
+	# it wrote instead of patching the Makefile. The Galileo UCM profile
+	# (sof-nau8821-max) is two small files and stays in, as a head start
+	# for anyone porting Io to that model.
 	rm -rf ${DESTDIR}/usr/lib/firmware/amd
 
 	# Upstream's whole /run-symlink, boot-time-model-switch mechanism (the
@@ -80,14 +82,17 @@ do_install() {
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/pipewire.conf.d/module-access-args.conf 644 etc/pipewire/pipewire.conf.d
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/pipewire.conf.d 20-filter-chain.conf
 
-	# On SteamOS the mic loopback comes from Valve's own WirePlumber patch
-	# (CreateLoopback() in alsa.lua, triggered by node.create-loopback).
-	# That patch is not upstream - neither 0.5.14 nor 0.5.17 has it - so
-	# Void's WirePlumber ignores the property. The same loopback is
-	# declared as a plain libpipewire-module-loopback instead, with the
-	# same fixed format (2 channels, FL/FR) Valve's code sets; without it
-	# Steam drops the source from its microphone list.
-	vinstall ${FILESDIR}/30-mic-loopback.conf 644 etc/pipewire/pipewire.conf.d
+	# Valve's patched WirePlumber creates the ALSA loopbacks applications
+	# talk to (CreateLoopback() in its alsa.lua, triggered by
+	# node.create-loopback from alsa-loopback.conf). That patch is not
+	# upstream - neither 0.5.14 nor 0.5.17 has it - so Io ships the same
+	# logic as a plain WirePlumber script. Doing it at runtime is what the
+	# earlier static configuration could not: the loopback inherits the
+	# card's identity (device.id, card.profile.device), and only with that
+	# does Steam recognize the built-in microphone and show its own
+	# localized name for it.
+	vinstall ${FILESDIR}/io-create-loopback.lua 644 usr/share/wireplumber/scripts
+	vinstall ${FILESDIR}/90-io-loopback.conf 644 usr/share/wireplumber/wireplumber.conf.d
 
 	vmkdir etc/wireplumber/wireplumber.conf.d
 	for f in wireplumber/hardware-profiles/valve-jupiter/wireplumber.conf.d/*.conf; do
