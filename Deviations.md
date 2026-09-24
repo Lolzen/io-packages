@@ -138,24 +138,34 @@ the session bus that Steam talks to.
 
 ## Other ported packages
 
-- **`steam-jupiter`** is layered on top of Void's `steam` package instead of
-  replacing it, as Valve's `steam-jupiter-stable` replaces Arch's. Void's
-  package keeps providing the launcher's dependencies (mostly 32-bit
-  libraries) and the standard Steam udev rules; Io adds the preinstalled
-  client, Valve's wrapper and the Deck-specific udev rules.
+- **`steam-jupiter`** replaces Void's `steam` as Valve's package replaces
+  Arch's. Its dependency list is Void's plus Valve's additions, in Void's
+  names; the standard Steam udev rules keep coming from Void's
+  `steam-udev-rules`.
 - **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
   assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
   so that UPower actually honours it.
 
-- **`deck-hw-support`** is frozen at Valve's `jupiter-hw-support`
-  20250728.1: later versions rename the helpers to `holo-*`, but the Steam
-  client still calls the `steamos-*` names. Several helpers are stubs, see
+- **`deck-hw-support`** is Valve's `jupiter-hw-support` 20260807.1 with the
+  helpers under their `steamos-*` names: that version renames them to
+  `holo-*` (Valve's `steamos-alias` links them back); SteamOS 3.8.4 itself
+  still runs 20260327.1 with the old names. The cursor images come from
+  20260327.1, later versions moved them to another package. Several helpers are stubs, see
   [Helper status](Helper-Status). The automount udev rules are disabled.
 - **`steamos-priv-write`** checks the `wheel` group instead of `deck` (as
   Valve's own polkit rule does) and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
   journald to log to.
 - **`steamos-powerbuttond`** is version 3.1; SteamOS ships 4.2.
+- **`steamdeck-kde-presets`**: the Deck variant of the Vapor theme is written
+  into `kdeglobals` directly (Valve picks it with a systemd service);
+  *Return to Gaming Mode* calls `steamos-session-select` (Valve:
+  `steamosctl`); IBus uses Void's panel path under `/usr/libexec`. Left out:
+  the X11-only IBus environment, the nested desktop, Valve's menu overrides
+  in `/usr/local` and its Firefox desktop file.
+- **Steam's DPI scaling in the desktop** is switched off once per user by
+  `io-plasma` (`DPIScaling` 0). Plasma keeps its own 135 %.
+- **`steam-im-modules`**: the Qt part is Qt 5 only, as upstream.
 - **`jupiter-fan-control`** runs as a runit service; its `finish` script does
   what Valve's `ExecStopPost` does (hand the fan back to the embedded
   controller).

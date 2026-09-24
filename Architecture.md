@@ -51,7 +51,12 @@ agetty --autologin  →  /etc/profile.d/zz-io-session.sh  →  io-start
   the session half of `io-steamos-manager`, the filter chain's own PipeWire
   instance, and mangoapp for Steam's performance overlay.
 - **`io-plasma`** starts KDE Plasma. The session half of
-  `io-steamos-manager` starts there through XDG autostart.
+  `io-steamos-manager` starts there through XDG autostart, and so does Steam
+  (`steam -silent`, from `steamdeck-kde-presets`), as on SteamOS: it
+  provides the on-screen keyboard in the desktop (Steam + X) and keeps hold
+  of the controller. Before Plasma starts, `io-plasma` switches Steam's DPI
+  scaling off once per user, so Steam draws in real pixels next to Plasma's
+  135 %.
 - **`io-session.sh`** guards against boot loops: a session that dies within
   15 seconds drops to a shell on tty1 and shows the last 20 log lines. A
   session that ran longer is restarted with `io-start`.
@@ -61,7 +66,7 @@ agetty --autologin  →  /etc/profile.d/zz-io-session.sh  →  io-start
 - **Game mode → desktop:** Steam calls `SwitchToDesktopMode` on
   `io-steamos-manager`. It writes `desktop` to the state file and ends
   gamescope; `io-session.sh` restarts `io-start`, which now starts Plasma.
-- **Desktop → game mode:** the *Return to Game Mode* shortcut runs
+- **Desktop → game mode:** the *Return to Gaming Mode* shortcut runs
   `steamos-session-select gamescope`, which calls `SwitchToGameMode` on the
   manager over D-Bus, as on SteamOS. If the manager cannot be reached, it
   falls back to writing the state file and ending kwin itself.

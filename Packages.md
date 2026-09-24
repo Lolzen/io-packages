@@ -20,7 +20,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | Package | Upstream | Contents |
 |---|---|---|
 | `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: Void's base configuration plus Valve's `config-neptune` fragment, and one patch generated from Valve's tree against the kernel.org tarball |
-| `deck-hw-support` | `jupiter-hw-support` 20250728.1 | Polkit helpers, udev rules, hwsupport scripts |
+| `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers, udev rules, hwsupport scripts, Valve's cursor theme |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
 | `steamos-powerbuttond` | `steamos-powerbuttond` 3.1 | Power button daemon |
 | `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, the filter chain's own PipeWire instance, and Io's WirePlumber script for the ALSA loopbacks |
@@ -31,7 +31,9 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
 | `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |
-| `steam-jupiter` | `steam-jupiter-stable` 1.0.0.85 | Valve's Deck packaging of Steam on top of Void's `steam`: preinstalled client on the Deck branch, Valve's wrapper, udev rules for input, status LED and wakeup |
+| `steam-jupiter` | `steam-jupiter-stable` 1.0.0.85 | Valve's Deck packaging of Steam, replacing Void's `steam`: preinstalled client on the Deck branch, Valve's wrapper, udev rules for input, status LED and wakeup |
+| `steam-im-modules` | `steam-im-modules` 20240131 | Steam's on-screen keyboard as input method for GTK 3/4 and Qt 5 |
+| `steamdeck-kde-presets` | `steamdeck-kde-presets` 3.9.4 | Valve's Plasma defaults: Steam in the desktop, Vapor theme, power and locker settings, KWallet, IBus, *Return to Gaming Mode* |
 | `vpower` | `vpower` 1.6.3 | Valve's battery daemon: metrics for Steam, controlled shutdown at 0.5 %. Patched to find the charge limit file |
 | `holo-upower-config` | `holo-upower-config` 1.0 | Hands UPower's critical battery action to vpower (with a fix for Valve's `yes`/`true` bug) |
 

@@ -205,6 +205,23 @@ executable, and the launcher runs it every time (`Exec format error`).
 Removing the empty file makes the launcher set Steam up again. With
 `steam-jupiter`'s preinstalled client there is no first download.
 
+**Without Steam running, the desktop freezes whenever something reopens
+the controller.** Opening the Deck's controller (for example Plasma's game
+controller settings page, through SDL) makes `hid-steam` drop its mouse and
+keyboard emulation for a moment — the pointer and everything with it stops.
+With Steam running in the background, as on SteamOS, Steam holds the
+controller.
+
+**Steam's on-screen keyboard in the desktop grows past the screen** when
+Steam scales with the desktop's DPI (Plasma at 135 %: `Xft.dpi` 129). Steam
+sizes the keyboard for 1280 pixels and then enlarges it. Steam's own
+setting fixes it (`DPIScaling` 0 in `~/.steam/registry.vdf`);
+`STEAM_FORCE_DESKTOPUI_SCALING` does not.
+
+**`xbps-install -Su <package>` does not update that package's
+dependencies**, it only installs missing ones. Update with plain
+`xbps-install -Su`.
+
 **An empty `package/beta` means the desktop client's branch.** Steam on
 SteamOS runs on `steamdeck_stable`, set by Valve's wrapper before every
 start. Without it, a Deck gets the generic Linux client.

@@ -187,7 +187,7 @@ Released as [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2).
 
 ---
 
-## Alpha 3 — Parity & Quality of Life (in progress)
+## Alpha 3 — Parity & Quality of Life — released
 
 **Goal:** close the many small gaps to SteamOS that have piled up, and make
 everyday use smoother. A few larger items, mostly small ones — together
@@ -226,8 +226,8 @@ the larger items and the interface last.
       *Larger items*) — Steam no longer downloads itself on first start
 - [x] Steam's own volume handler works (5 % steps, OSD, also in games):
       `STEAM_ENABLE_VOLUME_HANDLER` is set, `io-volumed` dropped
-- [ ] `steamos-powerbuttond` 3.1 → 4.2, from Valve's mirror
-- [ ] Kernel metapackage `linux-neptune` pointing to the current kernel
+- [ ] `steamos-powerbuttond` 3.1 → 4.2, from Valve's mirror *(→ Alpha 4)*
+- [ ] Kernel metapackage `linux-neptune` pointing to the current kernel *(→ Alpha 4)*
 - [x] `deck-firmware-cirrus` dropped: Void's main `linux-firmware` package
       (30 MB) ships the Deck's CS35L41 files, newer and including the
       device-specific `vlv1776` firmware the amplifiers now load
@@ -246,7 +246,7 @@ the larger items and the interface last.
 | `steamos-update`, `-select-branch`, `-reboot-other`, `-factory-reset-config` | Tied to A/B updates; only with an own update mechanism |
 | `steamos-restart-sddm` | Only with SDDM |
 
-- [ ] Confirm each decision and record it on [Helper status](Helper-Status)
+- [ ] Confirm each decision and record it on [Helper status](Helper-Status) *(→ Alpha 4)*
 
 ### Unported Valve packages: triage
 
@@ -274,23 +274,36 @@ integrate into an existing Io package, or drop with a reason.
       now. `KillUserProcesses=True` has no effect on Io (session switches do
       not end the login). `steam-web-debug-portforward` (CEF debugging in
       developer mode) is a possible later addition
-- [ ] `steamos-alias` (found through `jupiter-legacy-support`): the symlinks
-      that map the renamed `holo-*` helpers back to `steamos-*`. With the same
-      links shipped in `deck-hw-support`, the update from 20250728.1 to
-      20260807.1 becomes possible (SteamOS 3.8.4 itself runs 20260327.1,
-      still with the old names)
-- [ ] `steam-im-modules` — Steam's on-screen keyboard in Qt and GTK apps
-- [ ] `steamdeck-kde-presets` — Plasma defaults for the Deck
-- [ ] `holo-sudo` — sudo defaults
-- [ ] `steamos-networking-tools`
-- [ ] `steamos-systemreport` — system report for bug reports
-- [ ] `jupiter-firewall`
-- [ ] `holo-realtek-firmware-toggles`
-- [ ] `cecd`, `cec-audio-control` — HDMI-CEC through a dock; needs dock
+- [x] `steamos-alias` (found through `jupiter-legacy-support`): not needed.
+      Valve's changes from 20250728.1 to 20260807.1 are almost all the
+      rename to `holo-*`; SteamOS 3.8.4 still runs the `steamos-*` names.
+      `deck-hw-support` is now 20260807.1 with Io keeping the old names and
+      taking the real changes: a sturdier `jupiter-check-support`,
+      restructured GPU reset rules, and Valve's cursor theme (new in Io)
+- [x] `steam-im-modules`: built from Valve's source; Steam's on-screen
+      keyboard as input method in GTK 3/4 and Qt 5 apps (not Qt 6, so not
+      in Plasma's own apps); `GTK_IM_MODULE`/`QT_IM_MODULE` set in game mode
+- [x] `steamdeck-kde-presets` 3.9.4: Valve's Plasma defaults. Most
+      important: Steam autostarts in the desktop. That brings Steam's
+      on-screen keyboard (Steam + X) to the desktop, and ends the periodic
+      desktop freezes — without Steam holding the controller, Plasma's game
+      controller page reopened it again and again, and each time the kernel
+      dropped the trackpad pointer. Also: Vapor look (Deck variant), power,
+      screen locker, Baloo, KWallet, language synced with Steam, IBus, Valve's
+      *Return to Gaming Mode* (replaces Io's own)
+- [x] Steam in the desktop draws in real pixels, as on SteamOS: `io-plasma`
+      sets `DPIScaling` to 0 once per user. Plasma keeps its 135 %; with DPI
+      scaling on, Steam's keyboard was wider than the screen
+- [ ] `holo-sudo` — sudo defaults *(→ Alpha 4)*
+- [ ] `steamos-networking-tools` *(→ Alpha 4)*
+- [ ] `steamos-systemreport` — system report for bug reports *(→ Alpha 4)*
+- [ ] `jupiter-firewall` *(→ Alpha 4)*
+- [ ] `holo-realtek-firmware-toggles` *(→ Alpha 4)*
+- [ ] `cecd`, `cec-audio-control` — HDMI-CEC through a dock; needs dock *(→ Alpha 4)*
       hardware to test
-- [ ] `steamos-log-submitter`, `steamos-kdumpst-layer` — crash reports, only
+- [ ] `steamos-log-submitter`, `steamos-kdumpst-layer` — crash reports, only *(→ Alpha 4)*
       without sending anything to Valve; would allow SteamOS's panic sysctls
-- [ ] `steamos-customizations-jupiter`, parts not yet reviewed: `swap/`,
+- [ ] `steamos-customizations-jupiter`, parts not yet reviewed: `swap/`, *(→ Alpha 4)*
       `grub/`, `NetworkManager/`, `offload/` (`sleep.conf.d` belongs to the
       hibernate work in Alpha 4)
 
@@ -310,10 +323,11 @@ integrate into an existing Io package, or drop with a reason.
         own controls
       - verified on a fresh image with no keyboard and no Ethernet: Steam
         starts directly, Wi-Fi setup and login work. `io-netcheck` is gone
-- [ ] Screen recording without video — next step: `rec-dump.sh` on Io during
+- [ ] Screen recording without video — next step: `rec-dump.sh` on Io during *(→ Alpha 4)*
       a recording, compare with the SteamOS reference (see Alpha 2). Ruled
-      out so far: `-pipewire`, the update branch
-- [ ] Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if
+      out so far: `-pipewire`, the update branch, the missing 32-bit
+      libraries (retested after `steam-jupiter` pulled in 48 of them)
+- [ ] Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if *(→ Alpha 4)*
       iwd, implement `SetWifiBackend`
 - [x] Audio as on SteamOS, in one block:
       - ALSA loopbacks are created at runtime by an Io WirePlumber script
@@ -337,15 +351,76 @@ integrate into an existing Io package, or drop with a reason.
 
 ### Interface and branding
 
-- [ ] Plasma polish: messages when switching, the notification service
-      requested in game mode
-- [ ] Designed boot splash; fill the black gap while Steam loads inside
+- [ ] Plasma polish: largely done by `steamdeck-kde-presets`; left: messages *(→ Alpha 4)*
+      when switching, the notification service requested in game mode,
+      Valve's nested desktop (Plasma inside game mode)
+- [ ] Designed boot splash; fill the black gap while Steam loads inside *(→ Alpha 4)*
       gamescope; check Io packages for remaining Valve graphics
 
-### Not in Alpha 3
+### Also done
 
-- **Alpha 4 — Storage:** move to the internal NVMe, SD/USB automount,
-  formatting from Steam, suspend-then-hibernate
+- [x] `steam-jupiter` replaces Void's `steam` completely, as Valve's package
+      replaces Arch's: Valve's layout, its own dependency list (Void's plus
+      Valve's 32-bit additions — 48 packages Io did not have before)
+- [x] `build.sh` pulls `void-packages` first, so build dependencies come as
+      binaries instead of being built from source
+
+### Final state
+
+Everything that was open went to Alpha 4, marked *(→ Alpha 4)* above.
+Reached: Steam as on SteamOS (`steam-jupiter`: Deck branch, preinstalled
+client, first boot without keyboard or network setup of Io's own), audio as
+on SteamOS (loopbacks, filter chain, localized device names, ALSA through
+PipeWire), vpower's controlled shutdown, mangoapp and gamemode, Valve's
+Plasma defaults with Steam's keyboard in the desktop, and a boot 12 s
+faster.
+
+## Alpha 4 — Storage (next)
+
+**Goal:** games on every drive the Deck can use, as on SteamOS — SD cards
+and USB drives mount on their own and can be formatted from Steam. Beside
+that, the loose ends carried over from Alpha 3.
+
+### Storage
+
+- [ ] Automount for SD cards and USB drives: Valve's `block-device-event.sh`
+      and `steamos-automount.sh` on runit instead of `systemd-run`
+      (`setsid --fork`), leaving out the boot device; Steam then offers the
+      drive as a library
+- [ ] Formatting from Steam: `steamos-format-sdcard` / `steamos-format-device`
+      become real (Valve's `format-device.sh`)
+- [ ] `steamos-trim-devices`
+- [ ] Suspend-then-hibernate: Valve's `sleep.conf.d`, a swap area large enough
+      for the RAM; check what that means on an SD card
+
+### Loose ends from Alpha 3
+
+- [ ] Screen recording without video (next: `rec-dump.sh` on Io during a
+      recording, compare with the SteamOS reference)
+- [ ] Wi-Fi backend: live test of iwd, then decide
+- [ ] `steamos-powerbuttond` 3.1 → 4.2; kernel metapackage `linux-neptune`
+- [ ] Stub helpers: confirm the decisions, record them on
+      [Helper status](Helper-Status)
+- [ ] Remaining Valve packages: `holo-sudo`, `steamos-networking-tools`,
+      `steamos-systemreport`, `jupiter-firewall`,
+      `holo-realtek-firmware-toggles`, `cecd`/`cec-audio-control`, crash
+      reports (`steamos-log-submitter`, `kdumpst`, without sending anything
+      to Valve), the rest of `steamos-customizations-jupiter`,
+      `steam-web-debug-portforward` (developer mode)
+- [ ] Boot: the 4 s gap in the initramfs before `amdgpu` loads; a designed
+      splash; the black gap while Steam loads inside gamescope
+- [ ] Plasma: messages when switching, the notification service in game mode,
+      Valve's nested desktop
+- [ ] Versioning of Io's own packages: content changes raise the version,
+      packaging-only changes the revision; caught up whenever a package is
+      touched anyway. 1.0 is reserved for the beta (`beta1.img`, `beta1.iso`)
+- [ ] `io-selftest` and `io-boottime` shipped in a package, for bug reports
+
+### Not in Alpha 4
+
+- **Installing to the internal NVMe:** waits until no more SteamOS
+  comparisons or captures are needed — the NVMe still holds SteamOS as the
+  reference
 - **Later:** SDDM, live ISO
 - **For 1.0:** SSH off in images, replace the default password
 
