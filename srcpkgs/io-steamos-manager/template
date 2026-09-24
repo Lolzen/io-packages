@@ -1,9 +1,10 @@
 # Template file for 'io-steamos-manager'
 pkgname=io-steamos-manager
-version=0.3.0
+version=0.4.0
 revision=1
 python_version=3
-depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void"
+depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void
+ steamos-networking-tools"
 short_desc="SteamOS Manager D-Bus service for Io (root and session half)"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"

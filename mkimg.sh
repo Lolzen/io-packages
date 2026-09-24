@@ -53,15 +53,16 @@ IO_LOCALES="bg_BG cs_CZ da_DK de_AT de_BE de_CH de_DE de_IT de_LI de_LU
 # systemd-, A/B- or SteamOS-specific (rd.systemd.gpt_auto, fsck.*,
 # steamos.efi) and with two Io differences: fbcon=rotate:1 instead of
 # fbcon=vc:4-6 (tty1 keeps a readable console for the fallback shell), and
-# no console=tty1. amdgpu.gttsize is gone: SteamOS sizes GTT through
+# no console=tty1. net.ifnames=0 keeps kernel interface names (wlan0) as on
+# SteamOS: iwd recreates the Wi-Fi interface under that name. amdgpu.gttsize is gone: SteamOS sizes GTT through
 # ttm.pages_min instead.
 KCMD_LOG="log_buf_len=4M loglevel=3 quiet splash plymouth.ignore-serial-consoles"
 KCMD_GPU1="amd_iommu=off amdgpu.lockup_timeout=5000,10000,10000,5000"
 KCMD_GPU2="ttm.pages_min=2097152 amdgpu.sched_hw_submission=4 amdgpu.dcdebugmask=0x20000"
-KCMD_MISC="audit=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.dm=0 fbcon=rotate:1"
+KCMD_MISC="audit=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.dm=0 fbcon=rotate:1 net.ifnames=0"
 KERNEL_CMDLINE="$KCMD_LOG $KCMD_GPU1 $KCMD_GPU2 $KCMD_MISC"
 
-SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
+SERVICES="NetworkManager iwd bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
 # Belongs logically in io-desktop's own depends (same reasoning as every
 # other package on this list), but installed explicitly here too so a

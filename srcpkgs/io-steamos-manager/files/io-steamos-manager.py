@@ -27,7 +27,7 @@ actually in effect afterwards, read back from sysfs, not the requested one.
 
 Not implemented (Io lacks the backing pieces): Storage1, Jobs, UdevEvents1,
 LowPowerMode1, HdmiCec1, Audio1, ScreenReader0/1, UpdateBios1, UpdateDock1,
-FactoryReset1, WifiDebug1. WifiBackend1 is read-only for now.
+FactoryReset1, WifiDebug1.
 """
 
 import asyncio
@@ -286,6 +286,17 @@ class RootManager(ServiceInterface):
     @method()
     def SetCpuBoostState(self, state: "u"):
         _write("/sys/devices/system/cpu/cpufreq/boost", 1 if state else 0)
+
+    @method()
+    def SetWifiBackend(self, backend: "s"):
+        # Valve's tool writes the override and restarts NetworkManager with
+        # the new backend (Io's copy uses runit).
+        if backend not in ("iwd", "wpa_supplicant"):
+            _fail(f"unknown Wi-Fi backend: {backend}")
+        result = subprocess.run(["/usr/bin/steamos-wifi-set-backend", backend],
+                                capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            _fail(f"steamos-wifi-set-backend failed: {result.stderr.strip()}")
 
     @method()
     def SetWifiPowerManagementState(self, state: "u"):
@@ -655,15 +666,20 @@ class WifiPowerManagement1(ServiceInterface):
 
 
 class WifiBackend1(ServiceInterface):
-    """Reports the backend NetworkManager is really configured for.
-    Switching is not implemented yet (open decision: iwd like SteamOS)."""
+    """The backend NetworkManager is really configured for (iwd by default,
+    as on SteamOS); setting it switches through steamos-wifi-set-backend."""
 
     def __init__(self, root):
         super().__init__(f"{IFACE}.WifiBackend1")
+        self.root = root
 
-    @dbus_property(access=PropertyAccess.READ)
+    @dbus_property()
     def WifiBackend(self) -> "s":
         return read_wifi_backend()
+
+    @WifiBackend.setter
+    def WifiBackend(self, value: "s"):
+        self.root.write("SetWifiBackend", "s", [value], self, ["WifiBackend"])
 
 
 class ObjectManager(ServiceInterface):
