@@ -1,5 +1,5 @@
 #!/bin/sh
-# build.sh - copy Io packages into void-packages and build them.
+# build.sh - update void-packages, copy Io packages into it and build them.
 #
 # Usage:
 #   ./build.sh io-session io-base      copy and build these packages
@@ -26,6 +26,15 @@ fi
 
 if [ $# -eq 0 ]; then
     echo "usage: build.sh [-p] <pkgname> [more...]" >&2
+    exit 1
+fi
+
+# Bring void-packages up to date first. Build dependencies come as binary
+# packages from Void's repository only while the local templates match its
+# versions; with a stale checkout xbps-src builds them from source instead,
+# which takes long (and would not match what the Deck installs).
+if ! git -C "$VP_DIR" pull --ff-only --quiet; then
+    echo "build: 'git pull' in $VP_DIR failed - resolve that first" >&2
     exit 1
 fi
 
