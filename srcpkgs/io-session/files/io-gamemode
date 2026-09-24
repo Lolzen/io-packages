@@ -11,7 +11,7 @@
 # Variables are split in two groups:
 #   A - set exactly like Valve does, Io has everything they depend on
 #   B - Valve sets them too, but they depend on something Io does not ship
-#       yet (cecd, steam-im-modules, udisks storage helpers,
+#       yet (cecd, udisks storage helpers, Valve's cursor theme,
 #       systemd scopes). Setting them now would show controls in Steam
 #       that silently do nothing. Enable one by one once the dependency
 #       exists.
@@ -160,9 +160,11 @@ export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
 #export STEAM_ALLOW_DRIVE_ADOPT=1
 # needs systemd scopes:
 #export STEAM_LAUNCH_WRAPPER_SCOPE=1
-# steam-im-modules + Valve's cursor theme:
-#export QT_IM_MODULE=steam
-#export GTK_IM_MODULE=Steam
+# Steam's on-screen keyboard as input method for GTK and Qt 5 apps
+# (steam-im-modules):
+export QT_IM_MODULE=steam
+export GTK_IM_MODULE=Steam
+# Valve's cursor theme, comes with jupiter-hw-support (not yet in Io's):
 #export XCURSOR_THEME=steam
 #export XCURSOR_SCALE=256
 

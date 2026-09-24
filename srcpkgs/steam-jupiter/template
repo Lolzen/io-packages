@@ -1,12 +1,20 @@
-
 # Template file for 'steam-jupiter'
 pkgname=steam-jupiter
 version=1.0.0.85
-revision=2
+revision=3
 _bootstrap=steam_jupiter_stable_bootstrapped_20251031.0.tar.xz
 wrksrc="steam-jupiter-stable"
 hostmakedepends="tar"
-depends="steam libnm-32bit"
+provides="steam-${version}_1"
+replaces="steam>=0"
+depends="zenity xz curl dbus freetype gdk-pixbuf hicolor-icon-theme
+ desktop-file-utils liberation-fonts-ttf file tar bash coreutils lsof
+ steam-udev-rules usbutils xrandr python3 xdg-user-dirs nss libxcrypt
+ glibc-32bit libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit
+ mesa-dri-32bit vulkan-loader-32bit libcurl-32bit libnm-32bit libva-32bit
+ fontconfig-32bit libX11-32bit libXinerama-32bit libXScrnSaver-32bit
+ alsa-plugins-32bit alsa-pipewire-32bit libgpg-error-32bit nss-32bit
+ libxcrypt-32bit libpipewire-32bit"
 short_desc="Valve's Steam Deck packaging of Steam: preinstalled client, Deck branch, udev rules"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
@@ -15,31 +23,35 @@ distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jup
 checksum=501192ec11ba049074d2883aa870c9e979082f7af8601934850f3f088a2aef27
 nostrip=yes
 
-# Valve's steam-jupiter-stable, layered on top of Void's steam package, which
-# keeps providing the launcher and the 32-bit dependencies.
+# Valve's steam-jupiter-stable: replaces the plain steam package, as Valve's
+# replaces Arch's. Dependencies are Void steam's own list plus what Valve's
+# PKGBUILD adds (32-bit libraries, libnm for the Wi-Fi page of first-run
+# setup), in Void's names; Controller udev rules keep coming from Void's
+# steam-udev-rules.
 #
-# - A fully bootstrapped Steam client on the Deck's stable branch. Steam does
-#   not need to download itself on first start. It lives next to a copy of
-#   Valve's launcher script in /usr/lib/steam-jupiter, because the launcher
-#   takes the bootstrap from its own directory first.
-# - steam-jupiter: Valve's wrapper. It sets the update branch to
-#   steamdeck_stable (an empty package/beta means the desktop client's
-#   branch) and adds -steamdeck -pipewire, as on SteamOS.
+# - Steam's launcher from Valve's source, moved to /usr/lib/steam/steam as
+#   Valve does, with a fully bootstrapped client on the Deck's stable branch
+#   next to it: Steam does not download itself on first start.
+# - steam-jupiter: Valve's wrapper (sets the update branch to
+#   steamdeck_stable, adds -steamdeck -pipewire). /usr/bin/steam points to
+#   it, so every way of starting Steam goes through it.
 # - udev rules for input devices, the status LED and wakeup by controllers.
-# - libnm-32bit, as Valve's lib32-libnm: the Steam client talks to
-#   NetworkManager through it, e.g. for the Wi-Fi setup in first-run setup.
 do_install() {
-	vmkdir usr/lib/steam-jupiter
-	tar -xzf steam_${version}.tar.gz steam-launcher/bin_steam.sh
-	vinstall steam-launcher/bin_steam.sh 755 usr/lib/steam-jupiter steam
-	vinstall ${_bootstrap} 644 usr/lib/steam-jupiter bootstraplinux_ubuntu12_32.tar.xz
+	tar -xzf steam_${version}.tar.gz
+	make -C steam-launcher DESTDIR=${DESTDIR} install
 
-	sed 's|/usr/lib/steam/steam|/usr/lib/steam-jupiter/steam|' steam-jupiter.sh > steam-jupiter
-	grep -q /usr/lib/steam-jupiter/steam steam-jupiter
-	vbin steam-jupiter
+	mv ${DESTDIR}/usr/bin/steam ${DESTDIR}/usr/lib/steam/steam
+	rm -f ${DESTDIR}/usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz
+	vinstall ${_bootstrap} 644 usr/lib/steam bootstraplinux_ubuntu12_32.tar.xz
+
+	vbin steam-jupiter.sh steam-jupiter
+	ln -sf steam-jupiter ${DESTDIR}/usr/bin/steam
+	ln -sf /usr/bin/true ${DESTDIR}/usr/bin/steamdeps
 
 	vmkdir usr/lib/udev/rules.d
 	vinstall 70-steam-jupiter-input.rules 644 usr/lib/udev/rules.d
 	vinstall 70-steam-jupiter-leds.rules 644 usr/lib/udev/rules.d
 	vinstall 99-power-wakeup.rules 644 usr/lib/udev/rules.d
+
+	vlicense steam-launcher/steam_subscriber_agreement.txt LICENSE
 }

@@ -1,10 +1,10 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.3.0
-revision=20
+revision=21
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
-depends="gamescope steam pipewire wireplumber dbus steamos-powerbuttond io-steamos-manager rtkit libcap-progs"
+depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond io-steamos-manager rtkit libcap-progs"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"

@@ -1,0 +1,24 @@
+# Template file for 'steam-im-modules'
+pkgname=steam-im-modules
+version=20240131
+revision=1
+wrksrc="steam-im-modules"
+build_style=cmake
+configure_args="-DQT_MAJOR_VERSION=5 -DKDE_INSTALL_LIBDIR=lib
+ -DKDE_INSTALL_QTPLUGINDIR=lib/qt5/plugins -DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+hostmakedepends="git tar pkg-config extra-cmake-modules qt5-host-tools"
+makedepends="qt5-devel gtk+3-devel gtk4-devel"
+short_desc="Steam's on-screen keyboard as input method for GTK 3/4 and Qt 5 apps"
+maintainer="Georg <funer@gmx.at>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/valve-project/steam-qt-keyboard-plugin"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-jupiter.${version}-4.src.tar.gz"
+checksum=81c683f3f287d4eab6250c703bbfab7e736a0c7c4edea813165c05f2c90cdc6c
+
+# Valve's archive carries the git repository; the tagged tree is checked out.
+# The Qt part is Qt 5 only (it predates KDE Frameworks 6), so Plasma's Qt 6
+# apps do not use it; GTK 3 and GTK 4 apps do. Io's game mode session sets
+# GTK_IM_MODULE / QT_IM_MODULE as Valve's does.
+post_extract() {
+	git --git-dir=steam-im-modules archive --format=tar jupiter-${version} | tar -x
+}
