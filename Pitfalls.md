@@ -32,7 +32,8 @@ start. A stale `~/.steam/steam.pipe` makes the next `steam.sh` exit silently
 with status 0; delete it if Steam launches and immediately exits without
 output.
 
-**Steam's bootstrapper needs a real network connection**, not only on first
+**Void's plain Steam bootstrapper needs a real network connection**
+(`steam-jupiter`'s preinstalled client does not), not only on first
 start but after every client update. Offline, it fails with a misleading
 "needs to be online" message.
 
@@ -198,10 +199,32 @@ prompt was waiting invisibly for input on every fresh image, and it only
 showed up there, because a development card already knows its Wi-Fi.
 Test first boot with a fresh image, not on a development card.
 
-**An interrupted first Steam start leaves Steam broken.** If the bootstrap
-is cut off while unpacking, `~/.local/share/Steam/steam.sh` stays empty and
-every later start fails with `Exec format error`. Steam does not repair
-itself; delete `~/.local/share/Steam` and `~/.steam`.
+**An interrupted first Steam download leaves Steam broken** — only relevant
+with a plain Steam bootstrap. `~/.local/share/Steam/steam.sh` stays empty but
+executable, and the launcher runs it every time (`Exec format error`).
+Removing the empty file makes the launcher set Steam up again. With
+`steam-jupiter`'s preinstalled client there is no first download.
+
+**An empty `package/beta` means the desktop client's branch.** Steam on
+SteamOS runs on `steamdeck_stable`, set by Valve's wrapper before every
+start. Without it, a Deck gets the generic Linux client.
+
+**`sv status` only works as root.** Run as a user it fails with
+`access denied` — a wait loop on it simply runs into its timeout, every
+time. `io-netcheck` lost 10 s per boot this way. Use a tool the user may run
+(`nm-online`, `pgrep`).
+
+**Valve's `holo-upower-config` has no effect as shipped.** It sets
+`AllowRiskyCriticalPowerAction=yes`; UPower accepts only `true`/`false` and
+falls back to HybridSleep with a warning.
+
+**vpower hardcodes `steamdeck-hwmon/hwmon/hwmon3`.** The hwmon index depends
+on the kernel (`hwmon6` on Io's 7.2); without a patch vpower assumes a 100 %
+charge limit.
+
+**dracut silently falls back to gzip** when `compress="zstd"` is set but the
+`zstd` program is missing. Check the first bytes after the early cpio
+(`/usr/lib/dracut/skipcpio`), not the configuration.
 
 **A fresh Steam profile has fan control off** and applies that at start,
 stopping `jupiter-fan-control` on purpose (`down … normally up`). Not a

@@ -29,14 +29,15 @@ behind each difference, see [Deviations](Deviations).
 ## Sessions
 
 ```
-agetty --autologin  →  /etc/profile.d/io-session.sh  →  io-netcheck
-                                                      →  io-start
-                                                           ├─ io-gamemode → gamescope → steam
-                                                           └─ io-plasma   → startplasma-wayland
+agetty --autologin  →  /etc/profile.d/zz-io-session.sh  →  io-start
+                                                            ├─ io-gamemode → gamescope → steam-jupiter
+                                                            └─ io-plasma   → startplasma-wayland
 ```
 
-- **`io-netcheck`** makes sure a network connection exists before the first
-  session of a boot; Steam cannot start without one.
+- **Steam** is started through `steam-jupiter`, Valve's Deck wrapper: it
+  keeps Steam on the `steamdeck_stable` branch, adds `-steamdeck -pipewire`,
+  and on first start sets Steam up from a preinstalled client. Network setup
+  on first start is Steam's own first-run Wi-Fi page.
 - **`io-start`** reads the requested session from
   `/run/user/1000/io-session-next` (game mode by default) and starts it under
   its own `dbus-run-session`. All output goes to a log, see *Logging*.

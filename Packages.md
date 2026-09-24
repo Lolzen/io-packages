@@ -11,7 +11,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 |---|---|
 | `io-desktop` | Metapackage: the whole system, including Void base, Steam, gamescope, PipeWire, KDE Plasma and all packages below |
 | `io-base` | Repository configuration, elogind drop-in, dracut configuration (amdgpu, Plymouth), polkit rules, ALSA routed through PipeWire, `timedatectl` replacement, shutdown hook closing SSH sessions |
-| `io-session` | Login and sessions: `io-autologin` service, `io-start`, `io-gamemode`, `io-plasma`, `io-netcheck`, `steamos-session-select`, session logs (`io-devmode`), `io-grow-storage`, gamescope capability core service |
+| `io-session` | Login and sessions: `io-autologin` service, `io-start`, `io-gamemode`, `io-plasma`, `steamos-session-select`, session logs (`io-devmode`), `io-grow-storage`, gamescope capability core service |
 | `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half |
 | `io-branding` | Logo, Plymouth boot splash theme, fastfetch configuration |
 
@@ -31,6 +31,9 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
 | `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |
+| `steam-jupiter` | `steam-jupiter-stable` 1.0.0.85 | Valve's Deck packaging of Steam on top of Void's `steam`: preinstalled client on the Deck branch, Valve's wrapper, udev rules for input, status LED and wakeup |
+| `vpower` | `vpower` 1.6.3 | Valve's battery daemon: metrics for Steam, controlled shutdown at 0.5 %. Patched to find the charge limit file |
+| `holo-upower-config` | `holo-upower-config` 1.0 | Hands UPower's critical battery action to vpower (with a fix for Valve's `yes`/`true` bug) |
 
 ## From elsewhere
 

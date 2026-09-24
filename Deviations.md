@@ -138,6 +138,15 @@ the session bus that Steam talks to.
 
 ## Other ported packages
 
+- **`steam-jupiter`** is layered on top of Void's `steam` package instead of
+  replacing it, as Valve's `steam-jupiter-stable` replaces Arch's. Void's
+  package keeps providing the launcher's dependencies (mostly 32-bit
+  libraries) and the standard Steam udev rules; Io adds the preinstalled
+  client, Valve's wrapper and the Deck-specific udev rules.
+- **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
+  assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
+  so that UPower actually honours it.
+
 - **`deck-hw-support`** is frozen at Valve's `jupiter-hw-support`
   20250728.1: later versions rename the helpers to `holo-*`, but the Steam
   client still calls the `steamos-*` names. Several helpers are stubs, see
@@ -162,6 +171,8 @@ the session bus that Steam talks to.
 
 ## Not present on Io
 
-System updates (`steamos-atomupd`), BIOS and dock firmware updates, factory
-reset, controller firmware updates, the crash log submitter, the HDMI-CEC
-daemon, Steam's input method modules, SDDM.
+System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
+dock firmware updates, factory reset (`steamos-reset`), controller firmware
+updates, the crash log submitter, the HDMI-CEC daemon, Steam's input method
+modules, SDDM. Not needed on Io at all: `holo-keyring` (pacman keys),
+`holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).

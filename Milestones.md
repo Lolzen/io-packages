@@ -222,8 +222,8 @@ the larger items and the interface last.
       `sched_hw_submission`, `dcdebugmask`, `ttm.pages_min` instead of the
       deprecated `amdgpu.gttsize` (whose GTT/TTM mismatch the kernel warned
       about), `log_buf_len=4M`, `rd.*` skips. GTT now 8192M, as on SteamOS
-- [ ] Broken first Steam start: detect an interrupted bootstrap (empty
-      `steam.sh`) and redo it
+- [x] Broken first Steam start: solved at the root by `steam-jupiter` (see
+      *Larger items*) — Steam no longer downloads itself on first start
 - [x] Steam's own volume handler works (5 % steps, OSD, also in games):
       `STEAM_ENABLE_VOLUME_HANDLER` is set, `io-volumed` dropped
 - [ ] `steamos-powerbuttond` 3.1 → 4.2, from Valve's mirror
@@ -260,8 +260,26 @@ integrate into an existing Io package, or drop with a reason.
 - [x] `gamemode`: Void's package ships everything (polkit rule and actions,
       limits file, D-Bus activation); `deck` joins the `gamemode` group. The
       daemon starts on demand through D-Bus instead of running always
+- [x] `steam-jupiter-stable`: ported as `steam-jupiter`, see *Larger items*
+- [x] `vpower` (found through `holo-upower-config`): Valve's battery daemon.
+      Writes battery metrics for Steam to `/run/vpower/` and asks Steam to
+      shut down at 0.5 %, forcing `poweroff` after 10 s. Io patches its
+      hardcoded `hwmon3` (the index differs with Io's kernel, so the charge
+      limit was not found)
+- [x] `holo-upower-config`: turns UPower's own critical action off, since
+      vpower handles it; ships only together with vpower. Valve's file says
+      `AllowRiskyCriticalPowerAction=yes`, which UPower rejects (booleans are
+      `true`/`false`) — Io fixes it, otherwise the file has no effect
+- [x] `jupiter-legacy-support`: a collection of leftovers; nothing needed
+      now. `KillUserProcesses=True` has no effect on Io (session switches do
+      not end the login). `steam-web-debug-portforward` (CEF debugging in
+      developer mode) is a possible later addition
+- [ ] `steamos-alias` (found through `jupiter-legacy-support`): the symlinks
+      that map the renamed `holo-*` helpers back to `steamos-*`. With the same
+      links shipped in `deck-hw-support`, the update from 20250728.1 to
+      20260807.1 becomes possible (SteamOS 3.8.4 itself runs 20260327.1,
+      still with the old names)
 - [ ] `steam-im-modules` — Steam's on-screen keyboard in Qt and GTK apps
-- [ ] `holo-upower-config` — battery reporting; UPower is installed now
 - [ ] `steamdeck-kde-presets` — Plasma defaults for the Deck
 - [ ] `holo-sudo` — sudo defaults
 - [ ] `steamos-networking-tools`
@@ -278,8 +296,23 @@ integrate into an existing Io package, or drop with a reason.
 
 ### Larger items
 
+- [x] **`steam-jupiter`: Valve's Deck packaging of Steam**, layered on Void's
+      `steam`. The biggest single step towards parity so far:
+      - a preinstalled Steam client on the Deck's stable branch: the first
+        start needs no download, cannot be interrupted halfway, and works
+        offline
+      - Valve's wrapper keeps Steam on `steamdeck_stable` (Io was on the
+        desktop client's branch until now: an empty `package/beta`) and adds
+        `-steamdeck -pipewire`; the command line now matches SteamOS exactly
+      - udev rules for input, the status LED (so
+        `STEAM_ENABLE_STATUS_LED_BRIGHTNESS` is set now) and wakeup
+      - `libnm-32bit`: Steam's first-run setup offers Wi-Fi with the Deck's
+        own controls
+      - verified on a fresh image with no keyboard and no Ethernet: Steam
+        starts directly, Wi-Fi setup and login work. `io-netcheck` is gone
 - [ ] Screen recording without video — next step: `rec-dump.sh` on Io during
-      a recording, compare with the SteamOS reference (see Alpha 2)
+      a recording, compare with the SteamOS reference (see Alpha 2). Ruled
+      out so far: `-pipewire`, the update branch
 - [ ] Wi-Fi backend: live test of iwd (SteamOS's default), then decide; if
       iwd, implement `SetWifiBackend`
 - [x] Audio as on SteamOS, in one block:
@@ -293,8 +326,14 @@ integrate into an existing Io package, or drop with a reason.
       - speakers and headphones get no loopback: Valve's own 1.02 no longer
         marks sinks (SteamOS 3.8.4 ships 0.91, which does)
       - the audio block did not change screen recording
-- [ ] First boot without a keyboard: network setup usable with the Deck's
-      own controls; then reconsider `--retain-splash`
+- [x] First boot without a keyboard: Steam's own first-run setup handles
+      Wi-Fi (see `steam-jupiter`). `--retain-splash` stays off for now: it
+      would hide the fallback shell on tty1
+- [x] Boot time: the Steam UI now appears after 42 s instead of 54 s.
+      `io-netcheck` polled `sv status`, which only root may run — it failed
+      every time and waited its full 10 s on every boot; it now no longer
+      runs at all. Open: a 4 s gap in the initramfs before `amdgpu` loads
+      (zstd instead of gzip was tested: no difference)
 
 ### Interface and branding
 
