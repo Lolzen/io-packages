@@ -9,8 +9,8 @@ system. The sulphur it throws into space forms a plasma ring around Jupiter,
 the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
-> **Status:** [Alpha 1](https://github.com/Lolzen/io-packages/releases/tag/alpha1)
-> released, Alpha 2 in progress — see
+> **Status:** [Alpha 3](https://github.com/Lolzen/io-packages/releases/tag/alpha3)
+> released, Alpha 4 (storage: SD cards and USB drives) in progress — see
 > [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones).
 > Io ships as a disk image, written straight to an SD card with `dd`. It
 > boots into Steam's game mode, plays games, and switches to the KDE Plasma
@@ -50,29 +50,44 @@ reason is documented in
 ## What works
 
 - Boots straight into Steam's game mode, with an Io boot splash
-- Graphics, audio (speakers, headphones, filtered microphone), Wi-Fi,
-  Ethernet through a dock, Bluetooth including audio
-- Controller, gyro, trackpads, volume keys, brightness, power button,
-  suspend and resume
-- Steam's performance menu: TDP limit, manual GPU clock; charge limit, fan
-  control, Wi-Fi power management, adaptive brightness toggle, *Restart
-  Steam* (with Steam's developer mode on) — served by `io-steamos-manager`, Io's own implementation of
-  Valve's SteamOS Manager D-Bus service
-- Proton games, screenshots
-- Switching to the KDE Plasma desktop and back
+- Steam as on SteamOS: Valve's Deck packaging, on the Deck's update branch,
+  preinstalled — the first start needs no download
+- Graphics, Wi-Fi, Ethernet through a dock, Bluetooth including audio
+- Audio as on SteamOS: speakers, headphones, filtered microphone, with
+  Steam's own translated device names
+- Controller, gyro, trackpads, volume keys (handled by Steam), brightness,
+  status LED, power button, suspend and resume
+- Steam's performance menu: TDP limit, manual GPU clock, charge limit, fan
+  control, Wi-Fi power management, adaptive brightness, performance overlay;
+  *Restart Steam* with Steam's developer mode on. Served by
+  `io-steamos-manager`, Io's own implementation of Valve's SteamOS Manager
+- Battery: controlled shutdown through Steam when the battery runs empty
+  (Valve's vpower)
+- Proton games, gamemode, screenshots
+- KDE Plasma desktop with Valve's Deck defaults: Steam runs in the
+  background, Steam's on-screen keyboard (Steam + X), *Return to Gaming
+  Mode*
 - Storage expansion to the full card, as an explicit user step
 - zram swap, earlyoom and kernel tuning as on SteamOS
+
+Not yet: automatic mounting of SD cards and USB drives (Alpha 4), video in
+screen recordings, installing to the internal SSD.
 
 Open items and plans are tracked on the
 [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) page.
 
 ## Installation
 
-Io needs an SD card of **at least 32 GB** (the image is 16 GiB). Download the
-image from the latest release and write it to the card (replace `sdX` with
+Io needs an SD card of **at least 32 GB** (the image is 16 GiB). Download all
+`io.img.xz.part*` files and `io.img.xz.sha256` from the
+[latest release](https://github.com/Lolzen/io-packages/releases/latest),
+join and check them, then write the image to the card (replace `sdX` with
 the card, all data on it is lost):
 
 ```
+cat io.img.xz.part* > io.img.xz
+sha256sum -c io.img.xz.sha256
+xz -d io.img.xz
 sudo dd if=io.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
@@ -101,8 +116,9 @@ Everything else lives in the [wiki](https://github.com/Lolzen/io-packages/wiki):
 - [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) — boot, sessions, SteamOS Manager, logging
 - [Packages](https://github.com/Lolzen/io-packages/wiki/Packages) — every package, its contents and source
 - [Helper status](https://github.com/Lolzen/io-packages/wiki/Helper-Status) — which of Valve's helper scripts are real
-- [Building](https://github.com/Lolzen/io-packages/wiki/Building) — building packages and images
+- [Building](https://github.com/Lolzen/io-packages/wiki/Building) — building packages and images, release workflow
 - [Pitfalls](https://github.com/Lolzen/io-packages/wiki/Pitfalls) — things that cost real time
+- [Valve package survey](https://github.com/Lolzen/io-packages/wiki/Valve-Package-Survey) — Valve's packages, triaged for Io
 
 ## License
 
