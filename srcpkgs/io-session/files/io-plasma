@@ -54,6 +54,12 @@ steam_dpi_scaling_off() {
     grep -q '"DPIScaling"[[:space:]]*"0"' "$reg" && touch "$mark"
 }
 
+# steamos-powerbuttond belongs to the game mode session (Valve ties it to
+# gamescope-session). Left running here, it would hand power button presses
+# to Steam in the background instead of Plasma. (-f: the process name is
+# cut to 15 characters, so -x would never match.)
+pkill -f /usr/lib/hwsupport/steamos-powerbuttond 2> /dev/null
+
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 steam_dpi_scaling_off

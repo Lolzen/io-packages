@@ -1,23 +1,41 @@
 # Template file for 'steamos-powerbuttond'
 pkgname=steamos-powerbuttond
-version=3.1
-revision=2
-hostmakedepends="pkg-config"
+version=4.2
+revision=1
+wrksrc="steamos-powerbuttond"
+build_wrksrc="src"
+hostmakedepends="pkg-config git tar"
 makedepends="libevdev-devel eudev-libudev-devel"
 depends="gamescope"
 short_desc="Power button daemon for SteamOS"
 maintainer="Georg <funer@gmx.at>"
 license="BSD-2-Clause"
-homepage="https://gitlab.com/evlaV/powerbuttond"
-distfiles="https://gitlab.com/evlaV/powerbuttond/-/archive/v${version}/powerbuttond-v${version}.tar.gz"
-checksum=85022db8c841518b9e0d99236b19e587933b6c1b16058d4320c4138123a01497
+homepage="https://gitlab.steamos.cloud/holo/powerbuttond"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-2.src.tar.gz"
+checksum=d8167f873657a12600a240105b07fcf96a17ac17c7d7520af0ef5477802cdce8
+
+# Since 4.0 the daemon finds the button through a udev hwdb tag
+# (STEAMOS_POWER_BUTTON), and on the Deck ignores the ACPI "Power Button"
+# device in favour of the keyboard's KEY_POWER. The rule and hwdb file come
+# with it. Valve's archive carries the git repository; the tag is checked out.
+post_extract() {
+	mkdir -p src
+   	git --git-dir=steamos-powerbuttond archive --format=tar v${version} | tar -x -C src
+}
+
+pre_build() {
+	# Libraries after the object file, or --as-needed drops them.
+	sed -i 's/\$(CC) \$(LIB_LDFLAGS) \$(LDFLAGS) \$< -o \$@/$(CC) $(LDFLAGS) $< $(LIB_LDFLAGS) -o $@/' Makefile
+	grep -q '$(LDFLAGS) $< $(LIB_LDFLAGS)' Makefile
+}
 
 do_build() {
-	make CC="$CC" CFLAGS="$CFLAGS $(pkg-config --cflags libevdev libudev)" LDFLAGS="$LDFLAGS $(pkg-config --libs libevdev libudev)"
+	make CC="$CC"
 }
 
 do_install() {
 	make install DESTDIR=${DESTDIR}
-	# SteamOS runs it as a user service; io-gamemode starts it per session.
+	# SteamOS runs it as a user service tied to gamescope-session; io-gamemode
+	# starts it with the game mode session.
 	rm -rf ${DESTDIR}/usr/lib/systemd
 }

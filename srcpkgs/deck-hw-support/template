@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=1
+revision=2
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -48,6 +48,9 @@ do_install() {
 	done
 
 	vbin ${FILESDIR}/bin/jupiter-check-support
+	# Steam asks it whether a "day one firmware update" screen is needed. Only
+	# Galileo units ever need one; on Jupiter Valve's script exits 0 at once.
+	vbin ${FILESDIR}/bin/jupiter-initial-firmware-update
 
 	# Valve's cursor theme "steam", built from its images as Valve's
 	# PKGBUILD does (XCURSOR_THEME=steam in the game mode session).
