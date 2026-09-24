@@ -1,12 +1,21 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
-version=20250728.1
-revision=11
+version=20260807.1
+revision=1
+hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://gitlab.com/evlaV/jupiter-hw-support"
+
+# Valve's changes from 20250728.1 to 20260807.1 are almost all renames
+# (steamos-* helpers became holo-*, with steamos-alias linking the old names
+# back). SteamOS 3.8.4 still runs 20260327.1 with the steamos-* names, and
+# Steam and io-steamos-manager call those, so Io keeps them and takes only
+# the actual changes: a sturdier jupiter-check-support and the restructured
+# GPU reset rules. Valve's cursor theme (the images come from 20260327.1:
+# later versions moved them to a holo package) is new in Io.
 
 do_build() {
 	:
@@ -39,4 +48,13 @@ do_install() {
 	done
 
 	vbin ${FILESDIR}/bin/jupiter-check-support
+
+	# Valve's cursor theme "steam", built from its images as Valve's
+	# PKGBUILD does (XCURSOR_THEME=steam in the game mode session).
+	vmkdir usr/share/steamos
+	cp -a ${FILESDIR}/cursor/steamos/. ${DESTDIR}/usr/share/steamos/
+	vmkdir usr/share/icons/steam/cursors
+	cp -a ${FILESDIR}/cursor/icons-steam/. ${DESTDIR}/usr/share/icons/steam/
+	cd ${DESTDIR}/usr/share/steamos
+	xcursorgen steamos-cursor-config ${DESTDIR}/usr/share/icons/steam/cursors/default
 }

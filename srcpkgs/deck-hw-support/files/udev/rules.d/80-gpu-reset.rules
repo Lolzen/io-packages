@@ -1,12 +1,19 @@
-# If a GPU crash is caused by a specific process, kill the PID
-ACTION=="change", ENV{DEVNAME}=="/dev/dri/card0", ENV{RESET}=="1", ENV{PID}!="0", RUN+="/sbin/kill -9 %E{PID}"
+# Only apply to GPU resets
+SUBSYSTEM!="drm", GOTO="gpu_reset_end"
+ENV{DEVTYPE}!="drm_minor", GOTO="gpu_reset_end"
+KERNEL!="card*", KERNEL!="render*", GOTO="gpu_reset_end"
+
+# If a GPU reset is caused by a specific process, kill the PID
+ACTION=="change", ENV{RESET}=="1", ENV{PID}!="0", RUN+="/sbin/kill -9 %E{PID}"
 
 # Valve restarts SDDM here, which restarts the whole game mode session.
 # Io has no display manager: ending gamescope ends the session, and
 # io-session.sh starts a fresh one, the same path as a session switch.
 
-# Kill the session if the GPU crashes and VRAM is lost
-ACTION=="change", ENV{DEVNAME}=="/dev/dri/card0", ENV{RESET}=="1", ENV{FLAGS}=="1", RUN+="/usr/bin/pkill -TERM -x gamescope-wl"
+# Kill the session if the GPU reset and VRAM is lost
+ACTION=="change", ENV{RESET}=="1", ENV{FLAGS}=="1", RUN+="/usr/bin/pkill -TERM -x gamescope-wl"
 
-# If a GPU crash isn't caused by a specific process, restart the session too
-ACTION=="change", ENV{DEVNAME}=="/dev/dri/card0", ENV{RESET}=="1", ENV{PID}=="0", ENV{FLAGS}!="1", RUN+="/usr/bin/pkill -TERM -x gamescope-wl"
+# If a GPU reset isn't caused by a specific process, restart the session too
+ACTION=="change", ENV{RESET}=="1", ENV{PID}=="0", ENV{FLAGS}!="1", RUN+="/usr/bin/pkill -TERM -x gamescope-wl"
+
+LABEL="gpu_reset_end"

@@ -11,7 +11,7 @@
 # Variables are split in two groups:
 #   A - set exactly like Valve does, Io has everything they depend on
 #   B - Valve sets them too, but they depend on something Io does not ship
-#       yet (cecd, udisks storage helpers, Valve's cursor theme,
+#       yet (cecd, udisks storage helpers,
 #       systemd scopes). Setting them now would show controls in Steam
 #       that silently do nothing. Enable one by one once the dependency
 #       exists.
@@ -164,9 +164,9 @@ export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
 # (steam-im-modules):
 export QT_IM_MODULE=steam
 export GTK_IM_MODULE=Steam
-# Valve's cursor theme, comes with jupiter-hw-support (not yet in Io's):
-#export XCURSOR_THEME=steam
-#export XCURSOR_SCALE=256
+# Valve's cursor theme (deck-hw-support):
+export XCURSOR_THEME=steam
+export XCURSOR_SCALE=256
 
 # Valve raises the fd limit for the whole session (esync, Steam itself)
 ulimit -n 524288 2>/dev/null || ulimit -n "$(ulimit -Hn)"
