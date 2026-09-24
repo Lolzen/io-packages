@@ -1,0 +1,55 @@
+# Template file for 'steamdeck-kde-presets'
+pkgname=steamdeck-kde-presets
+version=3.9.4
+revision=1
+wrksrc="steamdeck-kde-presets"
+hostmakedepends="git tar"
+depends="kdialog jq python3 steam-jupiter"
+short_desc="Valve's Plasma defaults for the Steam Deck"
+maintainer="Georg <funer@gmx.at>"
+license="GPL-2.0-only"
+homepage="https://gitlab.steamos.cloud/jupiter/steamdeck-kde-presets"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-2.src.tar.gz"
+checksum=bf6ec9404e96b6357b447a6b9722dbbd3ff0984cc3ff45b2bb5fe5770c9e954d
+
+# Valve's Plasma setup for the Deck, taken as is where it applies:
+# - Steam autostarts in the desktop (steam -silent). That is where the
+#   on-screen keyboard comes from (Steam + X), with a KWin rule keeping the
+#   "Steam Keyboard" window on top. Steam holding the controller also keeps
+#   other programs from reopening it, which otherwise drops the trackpad
+#   pointer for a moment each time.
+# - Vapor look and feel, fonts, power, screen locker, Baloo, pointer and kded
+#   defaults; a preset KWallet; desktop language synced with Steam's;
+#   "Return to Gaming Mode"; "Add to Steam" in Dolphin; Konsole profile,
+#   avatars, wallpapers.
+#
+# Left out or changed for Io:
+# - steamos-set-plasma-theme (a systemd service that picks the Deck variant
+#   of the theme on Jupiter/Galileo): Io runs on the Deck only, so the Deck
+#   variant is written into kdeglobals here.
+# - Return.desktop calls steamosctl; Io switches with steamos-session-select.
+#   It replaces io-session's own return-to-gamemode entry.
+# - IBus (autostart and X11 environment): not installed on Io.
+# - holo-nested-desktop (Plasma inside game mode): not set up on Io yet.
+# - /usr/local/share/applications (menu overrides) and Firefox's desktop
+#   file: would sit in /usr/local or clash with other packages' files.
+post_extract() {
+	git --git-dir=steamdeck-kde-presets archive --format=tar ${version} | tar -x
+}
+
+do_install() {
+	rm -f README.md
+	rm -rf usr/lib/systemd usr/lib/steamos usr/local
+	rm -f usr/share/applications/org.mozilla.firefox.desktop
+	rm -f etc/xdg/autostart/ibus.desktop etc/xdg/plasma-workspace/env/ibus.sh
+	rm -f usr/bin/holo-nested-desktop
+	rm -rf usr/share/applications/steam/holo-nested-desktop
+
+	sed -i 's/com\.valve\.vapor\.desktop/com.valve.vapor.deck.desktop/' etc/xdg/kdeglobals
+	grep -q 'LookAndFeelPackage=com.valve.vapor.deck.desktop' etc/xdg/kdeglobals
+
+	sed -i 's|^Exec=.*|Exec=/usr/bin/steamos-session-select gamescope|' etc/skel/Desktop/Return.desktop
+
+	cp -a etc usr ${DESTDIR}/
+	chmod 755 ${DESTDIR}/etc/skel/Desktop/Return.desktop
+}

@@ -1,7 +1,7 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.3.0
-revision=22
+revision=23
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
 depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond io-steamos-manager rtkit libcap-progs"
@@ -24,7 +24,6 @@ do_install() {
 	vbin ${FILESDIR}/io-plasma
 	vbin ${FILESDIR}/steamos-session-select
 	vmkdir etc/skel/Desktop
-	vinstall ${FILESDIR}/return-to-gamemode.desktop 755 etc/skel/Desktop
 	vbin ${FILESDIR}/io-grow-storage
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 etc/skel/Desktop
