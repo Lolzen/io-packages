@@ -4,21 +4,20 @@
 SteamOS-specific naming. Snapshot as of September 2026 — Valve adds and
 renames packages over time, worth re-running before acting on this list.
 
-## Worth a look
+## Done since this survey
 
-- `holo-upower-config` — battery reporting tuning; `upower` is installed
-  since Plasma is part of `io-desktop`, and Steam queries it
-- `steamdeck-kde-presets` — Plasma defaults for the desktop side
-
-Done since this survey: `steamdeck-dsp`, `holo-zram-swap`, `holo-earlyoom`
-(see [Packages](Packages)). `holo-grant-cap-sys-nice` is no longer needed:
+`steamdeck-dsp`, `holo-zram-swap`, `holo-earlyoom`, `holo-dmi-rules`,
+`steam-jupiter-stable` (as `steam-jupiter`), `vpower` with
+`holo-upower-config`, `steamdeck-kde-presets`, `steam-im-modules`, and
+Void's `mangohud` and `gamemode` set up as on SteamOS (see
+[Packages](Packages)). `holo-grant-cap-sys-nice` is no longer needed:
 the reference capture showed SteamOS gives gamescope `CAP_SYS_NICE` as a
 plain file capability, which Io now does too.
 
 ## Smaller, probably worth it
 
-`holo-dmi-rules`, `holo-realtek-firmware-toggles`, `jupiter-firewall`,
-`steamos-efi`, `steamos-systemreport`, `jupiter-validation-tools`
+`holo-realtek-firmware-toggles`, `jupiter-firewall`, `steamos-systemreport`,
+`jupiter-validation-tools` — on the Alpha 4 list
 
 ## Deliberate direction, not a straight port
 
@@ -29,7 +28,7 @@ plain file capability, which Io now does too.
 
 ## Not relevant right now
 
-- `steamos-atomupd-client`, `steamos-repair-backend`/`-tool-git`,
+- `steamos-atomupd-client`, `steamos-efi`, `steamos-repair-backend`/`-tool-git`,
   `steamos-media-creation-git` — all tied to the A/B update system Io
   doesn't have. Revisit if/when Io gets its own A/B update mechanism
   (GitHub Releases or similar free hosting) — a 1.0-level goal, not Beta
@@ -87,14 +86,17 @@ repeated here.
   config — Io has no display manager
 - `steamos-alias` — a pacman/libalpm hook mechanism (auto-creates
   `steamos-*` symlinks for `holo-*` files on install/remove). No xbps
-  equivalent, and the underlying problem it solves — a historical
-  `steamos`→`holo` rename needing back-compat symlinks — never happened on
-  Io in the first place
+  equivalent. The rename it covers arrived with `jupiter-hw-support`
+  20260807.1; Io keeps the `steamos-*` names instead, as SteamOS 3.8.4 and
+  Steam still use them
 - `jupiter-legacy-support` — upstream's own `PKGBUILD` header says it best:
   "Everything still in here should be either removed or re-homed to a
   proper package." A grab-bag of QA/devkit tooling, Valve's own workarounds
   for their broken `/var/boot` mechanics, and other cruft even Valve wants
-  gone
+  gone. Two pieces were looked at: `KillUserProcesses=True` would have no
+  effect on Io (session switches do not end the login);
+  `steam-web-debug-portforward` (CEF debugging in developer mode) is on the
+  Alpha 4 list
 - `jupiter-resolved-nomdns` — `systemd-resolved`-specific (Io uses
   NetworkManager directly), and exists only to stop mDNS colliding with
   `avahi`, which is only there for `steamos-devkit-service` — a chain of

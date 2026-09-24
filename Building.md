@@ -19,14 +19,20 @@ Requirements: a working `xbps-src` setup, `gh` authenticated for the
 ~/io-packages/build.sh -p io-session io-base    build and publish
 ```
 
-`build.sh` copies the named packages from `io-packages` into `void-packages`
-and runs `xbps-src pkg` for each. It copies rather than symlinks: `xbps-src`
+`build.sh` first pulls `void-packages` (a stale checkout makes `xbps-src`
+build dependencies from source instead of taking Void's binaries), then
+copies the named packages from `io-packages` into `void-packages` and runs
+`xbps-src pkg` for each. It copies rather than symlinks: `xbps-src`
 builds inside a chroot that only sees the `void-packages` tree, where a link
 into `io-packages` would point nowhere. Naming a subpackage
 (`linux-neptune-72-headers`) copies its main package too.
 
 **Bump `revision` in the template for every change**, or the build produces
 the same file name and `publish.sh` treats it as already published.
+
+Large sources can be put into `xbps-src`'s cache beforehand to avoid a second
+download, e.g. `steam-jupiter`'s 428 MB archive into
+`~/void-packages/hostdir/sources/steam-jupiter-<version>/`.
 
 `publish.sh` (also callable on its own, with package names or without):
 
@@ -44,8 +50,11 @@ the same file name and `publish.sh` treats it as already published.
 ## Updating a device
 
 ```
-sudo xbps-install -Syu <packages>
+sudo xbps-install -Syu
 ```
+
+Without package names: naming packages updates only those, not their
+dependencies.
 
 A cold boot afterwards is the reliable test: PipeWire keeps running across
 session switches, so audio configuration changes need one anyway.
@@ -75,13 +84,21 @@ sudo sh io-selftest.sh
 
 Run on the device in game mode. Checks kernel, packages, services, memory
 setup, the game mode session, SteamOS Manager, audio configuration, logging
-and the package database against the expected state; every line is PASS or
-FAIL.
+and the package database against the expected state; every line is PASS,
+FAIL or INFO.
+
+```
+sudo sh io-boottime.sh
+```
+
+Right after a cold boot, before switching sessions: the second after kernel
+start at which each boot stage began.
 
 ## Other tools
 
 | Script | Use |
 |---|---|
+| `io-boottime.sh` | Boot stage timing, see above |
 | `mountsd.sh /dev/sdX` | Mount an Io card on the build host and prepare a chroot for repairs |
 | `pkgcheck.sh` | Report new or changed packages on Valve's source mirror |
 | `mkiso.sh` | Live ISO build through void-mklive — currently blocked, kept for a later attempt |
@@ -93,12 +110,15 @@ FAIL.
 2. Fresh image built, written to a spare card, booted, storage grown,
    `io-selftest.sh` passes
 3. Final state written on the milestone page
-4. Compress the image and split it below GitHub's 2 GiB asset limit:
+4. Remove the previous release's `io.img.xz*` files first — a leftover part
+   would be joined into the new image. Then compress the image and split it
+   below GitHub's 2 GiB asset limit:
    ```
    xz -T0 -k io.img
    split -b 1900M -d io.img.xz io.img.xz.part
    sha256sum io.img.xz > io.img.xz.sha256
    ```
+   Check that `cat io.img.xz.part* | sha256sum` matches the checksum.
 5. Tag, create the release, attach the parts and the checksum
 
 Users rebuild the image with `cat io.img.xz.part* > io.img.xz`.

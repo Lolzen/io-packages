@@ -25,17 +25,14 @@ reports no channels while idle shows up through PipeWire's pulse layer as
 `source not ready: sample:0 map:0` and is left out of Steam's microphone
 list. Set `audio.channels` and `audio.position` on it.
 
-**Steam shows the node name of a loopback source, not its description.**
-
 **Never kill Steam with `pkill -9`.** It leaves state that cripples the next
 start. A stale `~/.steam/steam.pipe` makes the next `steam.sh` exit silently
 with status 0; delete it if Steam launches and immediately exits without
 output.
 
-**Void's plain Steam bootstrapper needs a real network connection**
-(`steam-jupiter`'s preinstalled client does not), not only on first
-start but after every client update. Offline, it fails with a misleading
-"needs to be online" message.
+**Steam's bootstrapper fails offline with a misleading "needs to be online"
+message** whenever it has to download the client — with a plain bootstrap,
+that is the first start. `steam-jupiter`'s preinstalled client avoids it.
 
 **Steam's 32-bit bootstrapper needs `libcurl-32bit`.** Without it every
 update check fails with a generic `http error 0` that reads like a network
@@ -43,9 +40,18 @@ problem.
 
 **gamescope's process name is `gamescope-wl`**, not `gamescope`.
 
+**An empty `package/beta` means the desktop client's branch.** Steam on
+SteamOS runs on `steamdeck_stable`, set by Valve's wrapper before every
+start. Without it, a Deck gets the generic Linux client.
+
+**Steam localizes audio device names itself**, from the card identity
+(`device.id`, `card.profile.device`) on the node. Without it Steam falls back
+to the raw `node.name` — which is also why it shows the node name and not the
+description for such sources.
+
 ---
 
-## runit, D-Bus and services
+## runit, D-Bus and sessions
 
 **A service must not be both a runit service and D-Bus-activated.** At boot
 they race; the loser restarts every second, forever. Seen with elogind
@@ -74,6 +80,16 @@ elogind ignores the button while acpid's `handler.sh` shuts the machine down.
 sources `core-services/*.sh` with `.`; a core service ending in
 `exec something` replaces runit's stage 1 process, and all remaining core
 services are silently skipped.
+
+**`sv status` only works as root.** Run as a user it fails with
+`access denied` — a wait loop on it simply runs into its timeout, every
+time. `io-netcheck` lost 10 s per boot this way. Use a tool the user may run
+(`nm-online`, `pgrep`).
+
+**X sockets in `/tmp/.X11-unix/` survive a session.** Waiting for `X0` to
+appear before starting an overlay or helper therefore succeeds immediately,
+with the socket of the session that just ended. Wait for the process
+(`pgrep -x gamescope-wl`) as well.
 
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
@@ -122,6 +138,10 @@ in the package that owns it.
 **Bump `revision` for every change.** Same version and revision means the
 same file name; the new build is treated as already published.
 
+**`xbps-install -Su <package>` does not update that package's
+dependencies**, it only installs missing ones. Update with plain
+`xbps-install -Su`.
+
 **`post_install()` is a build-time hook.** It runs during `xbps-src pkg`,
 never on the target at install time. Code for install time goes into
 `srcpkgs/<pkg>/INSTALL`, using `$ACTION`.
@@ -143,9 +163,13 @@ defaults in `/usr/lib/sysctl.d`.
 or the shebang rewrite aborts the build.
 
 **Rust packages do not need Arch's vendored crate lists.** `build_style=cargo`
-resolves crates itself. It does need `clang`, `llvm` and `clang21-devel`: the
-versioned `-devel` package is the only one shipping the unversioned
-`libclang.so` that `clang-sys` looks for.
+resolves crates itself. Crates that generate bindings (`clang-sys`) also need
+`clang`, `llvm` and `clang21-devel`: the versioned `-devel` package is the only
+one shipping the unversioned `libclang.so` that `clang-sys` looks for.
+
+**`tar` is not in the build chroot by default.** A `post_extract` that unpacks
+Valve's git archive (`git archive … | tar -x`) needs `hostmakedepends="git
+tar"`, or it fails with `tar: command not found`.
 
 **A heredoc write or append can silently do nothing or lose its last line.**
 Happened three times (PipeWire configuration, kernel configuration fragment).
@@ -155,13 +179,17 @@ Happened three times (PipeWire configuration, kernel configuration fragment).
 
 ## Kernel and hardware
 
-**`linux-neptune` deletes its bundled firmware** on purpose, expecting Void's
+**The kernel package deletes its bundled firmware** on purpose, expecting Void's
 `linux-firmware` packages; it needs an explicit
 `depends="linux-firmware-amd linux-firmware-network"`, or the Deck boots with
 a dead GPU and no Wi-Fi.
 
 **`force_drivers+=" amdgpu "` in the dracut configuration is mandatory.**
 Without the module in the initramfs the screen stays black through early KMS.
+
+**dracut silently falls back to gzip** when `compress="zstd"` is set but the
+`zstd` program is missing. Check the first bytes after the early cpio
+(`/usr/lib/dracut/skipcpio`), not the configuration.
 
 **Valve's kernel tree contains two configuration files.**
 `ci/kernel-config/neptune/config` is a full 12,500-line reference used for CI;
@@ -194,16 +222,25 @@ login prompt.
 ## First boot
 
 **`plymouth quit --retain-splash` leaves the console in graphics mode.**
-Text written to tty1 afterwards is not drawn at all — io-netcheck's network
-prompt was waiting invisibly for input on every fresh image, and it only
-showed up there, because a development card already knows its Wi-Fi.
-Test first boot with a fresh image, not on a development card.
+Text written to tty1 afterwards is not drawn at all — during Alpha 2 a
+first-boot network prompt waited invisibly for input on every fresh image,
+and only there, because a development card already knows its Wi-Fi. The
+fallback shell would be just as invisible. Test first boot with a fresh
+image, not on a development card.
 
 **An interrupted first Steam download leaves Steam broken** — only relevant
 with a plain Steam bootstrap. `~/.local/share/Steam/steam.sh` stays empty but
 executable, and the launcher runs it every time (`Exec format error`).
 Removing the empty file makes the launcher set Steam up again. With
 `steam-jupiter`'s preinstalled client there is no first download.
+
+**A fresh Steam profile has fan control off** and applies that at start,
+stopping `jupiter-fan-control` on purpose (`down … normally up`). Not a
+failure.
+
+---
+
+## Desktop
 
 **Without Steam running, the desktop freezes whenever something reopens
 the controller.** Opening the Deck's controller (for example Plasma's game
@@ -218,35 +255,6 @@ sizes the keyboard for 1280 pixels and then enlarges it. Steam's own
 setting fixes it (`DPIScaling` 0 in `~/.steam/registry.vdf`);
 `STEAM_FORCE_DESKTOPUI_SCALING` does not.
 
-**`xbps-install -Su <package>` does not update that package's
-dependencies**, it only installs missing ones. Update with plain
-`xbps-install -Su`.
-
-**An empty `package/beta` means the desktop client's branch.** Steam on
-SteamOS runs on `steamdeck_stable`, set by Valve's wrapper before every
-start. Without it, a Deck gets the generic Linux client.
-
-**`sv status` only works as root.** Run as a user it fails with
-`access denied` — a wait loop on it simply runs into its timeout, every
-time. `io-netcheck` lost 10 s per boot this way. Use a tool the user may run
-(`nm-online`, `pgrep`).
-
-**Valve's `holo-upower-config` has no effect as shipped.** It sets
-`AllowRiskyCriticalPowerAction=yes`; UPower accepts only `true`/`false` and
-falls back to HybridSleep with a warning.
-
-**vpower hardcodes `steamdeck-hwmon/hwmon/hwmon3`.** The hwmon index depends
-on the kernel (`hwmon6` on Io's 7.2); without a patch vpower assumes a 100 %
-charge limit.
-
-**dracut silently falls back to gzip** when `compress="zstd"` is set but the
-`zstd` program is missing. Check the first bytes after the early cpio
-(`/usr/lib/dracut/skipcpio`), not the configuration.
-
-**A fresh Steam profile has fan control off** and applies that at start,
-stopping `jupiter-fan-control` on purpose (`down … normally up`). Not a
-failure.
-
 ---
 
 ## Audio
@@ -256,36 +264,20 @@ never retry**, if its target node does not exist yet. It looks complete,
 suspended and correct in `wpctl` and `pw-dump`. Set `target.delay.sec`, and
 verify with an actual recording (`pw-record`), not with the node list.
 
-**Install PipeWire module fragments into `pipewire.conf.d/`**, never into a
-directory named after one of PipeWire's own top-level configurations.
-Valve's source has a `filter-chain.conf.d/`; loaded as if it were PipeWire's
-standalone `filter-chain.conf`, it starts a separate server that connects to
-nothing.
+**Valve's `filter-chain.conf.d/` belongs to a second PipeWire instance.** It
+only takes effect when that instance runs (`pipewire -c filter-chain.conf`,
+`filter-chain.service` on SteamOS). Valve's two `context-properties` files are
+therefore not alternatives: the one in `pipewire.conf.d/` configures the main
+daemon, the one in `filter-chain.conf.d/` the filter instance. Merging them
+applies the filter chain's fixed quantum and `mem.mlock-all` to everything.
 
 **`probe_volumes: Path X is not a volume or mute control` warnings are
 harmless.** They come from the generic mixer paths in `alsa-card-profile` and
 cannot be fixed from a device package.
 
-**Valve's two `context-properties` files are not alternatives.** The one in
-`pipewire.conf.d/` configures the main daemon, the one in
-`filter-chain.conf.d/` a second PipeWire instance that runs the filters
-(`pipewire -c filter-chain.conf`, enabled as `filter-chain.service` on
-SteamOS). Merging them applies the filter chain's fixed quantum and
-`mem.mlock-all` to everything else.
-
 **A PipeWire client started before the daemon's socket exists just exits**,
 it does not retry. systemd orders this through socket activation; a session
 script has to wait for `$XDG_RUNTIME_DIR/pipewire-0` itself.
-
-**X sockets in `/tmp/.X11-unix/` survive a session.** Waiting for `X0` to
-appear before starting an overlay or helper therefore succeeds immediately,
-with the socket of the session that just ended. Wait for the process
-(`pgrep -x gamescope-wl`) as well.
-
-**Steam localizes audio device names itself**, from the card identity
-(`device.id`, `card.profile.device`) on the node. Without it Steam falls back
-to the raw `node.name` — which is also why it shows the node name and not the
-description for such sources.
 
 **The version of a Valve package on a running SteamOS is not the newest one.**
 `steamdeck-dsp` is 0.91 on SteamOS 3.8.4 but 1.02 on Valve's mirror, and they
@@ -301,9 +293,18 @@ files.
 
 ## Valve packages
 
-**`deck-hw-support` is frozen at 20250728.1.** From 20260807.1 Valve moved the
-general helpers into `holo-polkit-helpers` and renamed them `holo-*`; the
-Steam client still calls the `steamos-*` names.
+**`jupiter-hw-support` 20260807.1 renames the helpers to `holo-*`**, with
+`steamos-alias` (a pacman hook) linking the old names back. Steam and
+SteamOS 3.8.4 still use `steamos-*`. Io keeps the old names and takes only
+the real changes; there is no xbps equivalent of the hook.
+
+**Valve's `holo-upower-config` has no effect as shipped.** It sets
+`AllowRiskyCriticalPowerAction=yes`; UPower accepts only `true`/`false` and
+falls back to HybridSleep with a warning.
+
+**vpower hardcodes `steamdeck-hwmon/hwmon/hwmon3`.** The hwmon index depends
+on the kernel (`hwmon6` on Io's 7.2); without a patch vpower assumes a 100 %
+charge limit.
 
 **`deck-hw-support`'s udev rules call `/bin/systemd-run`**, which does not
 exist under runit, and the automount rule calls `busctl` against udisks2 —

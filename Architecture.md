@@ -10,19 +10,20 @@ behind each difference, see [Deviations](Deviations).
 1. **GRUB** from the card's EFI partition. It is installed in removable mode
    without an NVRAM entry, because the card's partition GUIDs change with
    every image build.
-2. **Initramfs** (dracut) with `amdgpu` built in for early display, and
+2. **Initramfs** (dracut) with the `amdgpu` module included for early display, and
    Plymouth, which shows the Io splash from here on.
 3. **runit stage 1** runs Void's core services, plus Io's own:
    - `20-dmi-serial-perms.sh` — DMI serial numbers readable by `wheel` only
    - `20-fstab-repair.sh` — comments out invalid SD card lines in fstab
    - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
 4. **runit stage 2** starts the services linked in `/var/service`, among them
-   `io-steamos-manager` (root half), `holo-zram-swap`, `earlyoom`,
+   `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
    `jupiter-fan-control`, `socklog-unix` and `nanoklogd`, and `io-autologin`.
 5. **`io-autologin`** waits for the system bus, ends the splash with
-   `plymouth quit` and runs `agetty --autologin deck` on tty1. (Not
-   `--retain-splash`: that leaves the console in graphics mode, and the
-   first-boot network prompt would be invisible.)
+   `plymouth quit` and runs `agetty --autologin deck` on tty1, with the
+   memlock hard limit raised to 100 MB for the filter chain (see *Audio*).
+   (Not `--retain-splash`: that leaves the console in graphics mode, and the
+   fallback shell on tty1 would be invisible.)
 
 ---
 

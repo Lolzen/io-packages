@@ -26,19 +26,19 @@ is a bug.
 ## Login and sessions
 
 - **No display manager.** `agetty` logs `deck` in automatically on tty1,
-  `/etc/profile.d/io-session.sh` runs `io-start`, which starts either game
+  `/etc/profile.d/zz-io-session.sh` runs `io-start`, which starts either game
   mode or Plasma under its own D-Bus session bus. SteamOS uses SDDM and
   systemd user units. Switching to SDDM is a candidate for a later
   milestone.
 - **gamescope starts Steam as its child.** SteamOS runs gamescope and Steam
   as two systemd units and passes the display names through a startup socket
-  (`-R`); Io does not need it. The statistics pipe (`-T`) is left out too,
-  it only feeds mangoapp.
+  (`-R`); Io does not need it. The statistics pipe (`-T`,
+  `GAMESCOPE_STATS`) is left out too; mangoapp works without it, whether it
+  misses frame statistics from it is still to be checked.
 - **Steam launch flags, gamescope arguments and environment match
   SteamOS**, except variables whose counterpart Io does not have yet
-  (HDMI-CEC daemon, status LED, storage helpers, systemd scopes, Steam input
-  method modules). Setting them would show controls in Steam that do
-  nothing.
+  (HDMI-CEC daemon, drive adoption and unmounting through Steam, systemd
+  scopes). Setting them would show controls in Steam that do nothing.
 - **mangoapp and gamemode** are started differently: mangoapp by the session
   script in a loop tied to gamescope (Valve: a user service with
   `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
@@ -145,13 +145,13 @@ the session bus that Steam talks to.
 - **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
   assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
   so that UPower actually honours it.
-
 - **`deck-hw-support`** is Valve's `jupiter-hw-support` 20260807.1 with the
   helpers under their `steamos-*` names: that version renames them to
   `holo-*` (Valve's `steamos-alias` links them back); SteamOS 3.8.4 itself
   still runs 20260327.1 with the old names. The cursor images come from
-  20260327.1, later versions moved them to another package. Several helpers are stubs, see
-  [Helper status](Helper-Status). The automount udev rules are disabled.
+  20260327.1, later versions moved them to another package. Several helpers
+  are stubs, see [Helper status](Helper-Status). The automount udev rules
+  are disabled.
 - **`steamos-priv-write`** checks the `wheel` group instead of `deck` (as
   Valve's own polkit rule does) and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
@@ -183,6 +183,7 @@ the session bus that Steam talks to.
 
 System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
-updates, the crash log submitter, the HDMI-CEC daemon, Steam's input method
-modules, SDDM. Not needed on Io at all: `holo-keyring` (pacman keys),
+updates, the crash log submitter, the HDMI-CEC daemon, SDDM, Valve's nested
+desktop (Plasma inside game mode), automount of SD cards and USB drives
+(Alpha 4). Not needed on Io at all: `holo-keyring` (pacman keys),
 `holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).

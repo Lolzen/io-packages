@@ -389,7 +389,8 @@ that, the loose ends carried over from Alpha 3.
       drive as a library
 - [ ] Formatting from Steam: `steamos-format-sdcard` / `steamos-format-device`
       become real (Valve's `format-device.sh`)
-- [ ] `steamos-trim-devices`
+- [ ] `steamos-trim-devices`: implemented (Valve's `trim-devices.sh`), never
+      tried from Steam — test it
 - [ ] Suspend-then-hibernate: Valve's `sleep.conf.d`, a swap area large enough
       for the RAM; check what that means on an SD card
 
@@ -415,6 +416,8 @@ that, the loose ends carried over from Alpha 3.
       packaging-only changes the revision; caught up whenever a package is
       touched anyway. 1.0 is reserved for the beta (`beta1.img`, `beta1.iso`)
 - [ ] `io-selftest` and `io-boottime` shipped in a package, for bug reports
+- [ ] gamescope's statistics pipe (`-T`, `GAMESCOPE_STATS`) for mangoapp:
+      check whether the overlay misses frame statistics without it
 
 ### Not in Alpha 4
 
