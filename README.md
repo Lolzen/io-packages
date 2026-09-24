@@ -80,14 +80,10 @@ Boot the Deck from the card (hold Volume Down, press Power, pick the card).
 
 **The first boot:**
 
-- needs a network connection. Io asks for one on screen before Steam
-  starts — Wi-Fi setup there needs a keyboard (USB or Bluetooth); an
-  Ethernet cable through a dock, plugged in before powering on, needs none
-- takes long: Steam downloads and installs itself before its start
-  animation appears, 10–20 minutes depending on card and connection.
-  **Do not power off during this** — an interrupted first Steam download
-  leaves a broken Steam behind (fix: delete `~/.local/share/Steam` and
-  `~/.steam`, then restart)
+- goes straight into Steam: the client comes preinstalled, as on SteamOS
+- Steam's own first-run setup connects to Wi-Fi, using the Deck's controls
+  — no keyboard, no Ethernet needed
+- takes a little longer than later boots while Steam unpacks itself
 
 Then run *Expand storage* from the desktop menu, or `io-grow-storage` in a
 terminal, to use the whole card.

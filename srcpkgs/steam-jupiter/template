@@ -2,11 +2,11 @@
 # Template file for 'steam-jupiter'
 pkgname=steam-jupiter
 version=1.0.0.85
-revision=1
+revision=2
 _bootstrap=steam_jupiter_stable_bootstrapped_20251031.0.tar.xz
 wrksrc="steam-jupiter-stable"
 hostmakedepends="tar"
-depends="steam"
+depends="steam libnm-32bit"
 short_desc="Valve's Steam Deck packaging of Steam: preinstalled client, Deck branch, udev rules"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
@@ -26,6 +26,8 @@ nostrip=yes
 #   steamdeck_stable (an empty package/beta means the desktop client's
 #   branch) and adds -steamdeck -pipewire, as on SteamOS.
 # - udev rules for input devices, the status LED and wakeup by controllers.
+# - libnm-32bit, as Valve's lib32-libnm: the Steam client talks to
+#   NetworkManager through it, e.g. for the Wi-Fi setup in first-run setup.
 do_install() {
 	vmkdir usr/lib/steam-jupiter
 	tar -xzf steam_${version}.tar.gz steam-launcher/bin_steam.sh

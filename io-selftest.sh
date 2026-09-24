@@ -82,8 +82,9 @@ else
 fi
 
 echo "== audio"
-check "mic loopback config installed" test -r /etc/pipewire/pipewire.conf.d/30-mic-loopback.conf
-check "mic loopback has fixed format" grep -q 'audio.channels' /etc/pipewire/pipewire.conf.d/30-mic-loopback.conf
+check "loopback script installed" test -r /usr/share/wireplumber/scripts/io-create-loopback.lua
+check "filter chain in its own PipeWire instance" pgrep -f "pipewire -c filter-chain.conf"
+check "Steam on the Deck branch" sh -c 'grep -qx steamdeck_stable /home/deck/.local/share/Steam/package/beta'
 check "ALSA default device goes through PipeWire" test -e /etc/alsa/conf.d/99-pipewire-default.conf
 check "locale en_US.UTF-8 generated" sh -c 'locale -a | grep -qi "^en_US.utf8$"'
 

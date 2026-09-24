@@ -1,6 +1,5 @@
 # Io: start game mode on tty1
 if [ "$(tty)" = "/dev/tty1" ]; then
-    io-netcheck
     START=$(date +%s)
     io-start
     END=$(date +%s)

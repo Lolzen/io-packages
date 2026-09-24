@@ -152,8 +152,9 @@ bg=/usr/share/plymouth/themes/io/io.png
 # ---------------------------------------- B: waiting for a dependency
 # cecd (HDMI-CEC daemon):
 #export STEAM_ENABLE_CEC=1
-# Galileo status LED, not present on Jupiter:
-#export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
+# Status LED brightness control (Jupiter has one too, status:white); the LED
+# is writable for deck through steam-jupiter's udev rule.
+export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
 # Storage1 (format/unmount helpers + udisks2):
 #export STEAM_ALLOW_DRIVE_UNMOUNT=1
 #export STEAM_ALLOW_DRIVE_ADOPT=1
