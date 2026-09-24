@@ -1,7 +1,7 @@
 # Template file for 'io-session'
 pkgname=io-session
 version=0.3.0
-revision=23
+revision=25
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 conf_files="/etc/sv/io-autologin/conf"
 depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond io-steamos-manager rtkit libcap-progs"
@@ -27,6 +27,7 @@ do_install() {
 	vbin ${FILESDIR}/io-grow-storage
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 etc/skel/Desktop
+
 	vmkdir etc/profile.d
 	# zz-: /etc/profile sources profile.d in name order, and this one starts
 	# the session, so every other profile script (locale.sh sets LANG) must

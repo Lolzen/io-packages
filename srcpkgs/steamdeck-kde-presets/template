@@ -1,10 +1,10 @@
 # Template file for 'steamdeck-kde-presets'
 pkgname=steamdeck-kde-presets
 version=3.9.4
-revision=1
+revision=2
 wrksrc="steamdeck-kde-presets"
 hostmakedepends="git tar"
-depends="kdialog jq python3 steam-jupiter"
+depends="kdialog jq python3 ibus steam-jupiter"
 short_desc="Valve's Plasma defaults for the Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="GPL-2.0-only"
@@ -29,7 +29,9 @@ checksum=bf6ec9404e96b6357b447a6b9722dbbd3ff0984cc3ff45b2bb5fe5770c9e954d
 #   variant is written into kdeglobals here.
 # - Return.desktop calls steamosctl; Io switches with steamos-session-select.
 #   It replaces io-session's own return-to-gamemode entry.
-# - IBus (autostart and X11 environment): not installed on Io.
+# - IBus: the autostart stays, with Void's path to Plasma's IBus panel
+#   (/usr/libexec instead of /usr/lib). The X11-only environment is left
+#   out, Io's desktop is Wayland.
 # - holo-nested-desktop (Plasma inside game mode): not set up on Io yet.
 # - /usr/local/share/applications (menu overrides) and Firefox's desktop
 #   file: would sit in /usr/local or clash with other packages' files.
@@ -41,7 +43,9 @@ do_install() {
 	rm -f README.md
 	rm -rf usr/lib/systemd usr/lib/steamos usr/local
 	rm -f usr/share/applications/org.mozilla.firefox.desktop
-	rm -f etc/xdg/autostart/ibus.desktop etc/xdg/plasma-workspace/env/ibus.sh
+	rm -f etc/xdg/plasma-workspace/env/ibus.sh
+	sed -i 's|/usr/lib/kimpanel-ibus-panel|/usr/libexec/kimpanel-ibus-panel|' etc/xdg/autostart/ibus.desktop
+	grep -q /usr/libexec/kimpanel-ibus-panel etc/xdg/autostart/ibus.desktop
 	rm -f usr/bin/holo-nested-desktop
 	rm -rf usr/share/applications/steam/holo-nested-desktop
 

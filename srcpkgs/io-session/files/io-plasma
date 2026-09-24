@@ -25,6 +25,36 @@ start_filter_chain() {
     ) > /dev/null 2>&1 &
 }
 
+# Steam in the desktop draws in real pixels, as on SteamOS: with Steam's
+# "scale text and icons to match monitor settings" on, it follows the DPI
+# Plasma derives from its 135 % scale and its on-screen keyboard grows wider
+# than the screen. The setting is DPIScaling in ~/.steam/registry.vdf
+# (HKCU/Software/Valve/Steam); set to 0 once per user, here, while Steam is
+# not running (it rewrites the file when it exits). A value the user picks
+# later is kept.
+steam_dpi_scaling_off() {
+    reg="$HOME/.steam/registry.vdf"
+    mark="${XDG_CONFIG_HOME:-$HOME/.config}/io-steam-dpi-done"
+    [ -e "$mark" ] && return
+    [ -f "$reg" ] || return
+    if grep -q '"DPIScaling"' "$reg"; then
+        sed -i 's/\("DPIScaling"[[:space:]]*\)"1"/\1"0"/' "$reg"
+    else
+        awk '
+            /^\t"HKCU"$/ { hkcu = 1 }
+            /^\t"HKLM"$/ { hkcu = 0 }
+            { print }
+            hkcu && !done && prev ~ /^\t\t\t\t"Steam"$/ && /^\t\t\t\t\{$/ {
+                print "\t\t\t\t\t\"DPIScaling\"\t\t\"0\""
+                done = 1
+            }
+            { prev = $0 }
+        ' "$reg" > "$reg.io" && mv "$reg.io" "$reg"
+    fi
+    grep -q '"DPIScaling"[[:space:]]*"0"' "$reg" && touch "$mark"
+}
+
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
+steam_dpi_scaling_off
 exec startplasma-wayland
