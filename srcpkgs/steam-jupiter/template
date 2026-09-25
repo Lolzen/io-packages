@@ -1,12 +1,17 @@
 # Template file for 'steam-jupiter'
 pkgname=steam-jupiter
 version=1.0.0.85
-revision=3
+revision=4
 _bootstrap=steam_jupiter_stable_bootstrapped_20251031.0.tar.xz
 wrksrc="steam-jupiter-stable"
 hostmakedepends="tar"
 provides="steam-${version}_1"
 replaces="steam>=0"
+# PipeWire for the 32-bit client as Arch's lib32-pipewire provides it on
+# SteamOS: the library alone (libpipewire-32bit) is not enough. Game
+# recording needs the SPA support plugins (pipewire-32bit) to create its
+# main loop, and the converter plugins to connect the capture stream; Void
+# splits them into libspa-*-32bit.
 depends="zenity xz curl dbus freetype gdk-pixbuf hicolor-icon-theme
  desktop-file-utils liberation-fonts-ttf file tar bash coreutils lsof
  steam-udev-rules usbutils xrandr python3 xdg-user-dirs nss libxcrypt
@@ -14,7 +19,10 @@ depends="zenity xz curl dbus freetype gdk-pixbuf hicolor-icon-theme
  mesa-dri-32bit vulkan-loader-32bit libcurl-32bit libnm-32bit libva-32bit
  fontconfig-32bit libX11-32bit libXinerama-32bit libXScrnSaver-32bit
  alsa-plugins-32bit alsa-pipewire-32bit libgpg-error-32bit nss-32bit
- libxcrypt-32bit libpipewire-32bit"
+ libxcrypt-32bit libpipewire-32bit pipewire-32bit libspa-alsa-32bit
+ libspa-audioconvert-32bit libspa-audiomixer-32bit libspa-bluetooth-32bit
+ libspa-control-32bit libspa-jack-32bit libspa-v4l2-32bit
+ libspa-videoconvert-32bit libspa-vulkan-32bit"
 short_desc="Valve's Steam Deck packaging of Steam: preinstalled client, Deck branch, udev rules"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
