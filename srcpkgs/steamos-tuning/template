@@ -1,13 +1,24 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
-version=1.0
-revision=5
-short_desc="Valve's SteamOS sysctl tuning for gaming workloads (net timeout, MTU probing, scheduler, split-lock, vm.max_map_count, pid_max)"
+version=1.1
+revision=1
+short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, X11 screen size"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/holo"
 
 # Values match /usr/lib/sysctl.d on SteamOS 3.8.4 (captured on hardware).
+#
+# From steamos-customizations-jupiter, also on SteamOS 3.8.4:
+#   hid-preload.conf - hid_nintendo and hid_playstation load early, so they
+#     claim their controllers before Steam falls back to evdev.
+#   holo-cfs-debugfs-settings - scheduler tunings through debugfs, run by
+#     the core service 70-io-cfs-tunings.sh (mounts debugfs, which systemd
+#     does on its own).
+#   10-holo-virtualdisplaysize.conf - screen size for an X server started
+#     without a display. Neither Xwayland nor gamescope read it; it is kept
+#     for a later X11 session (VNC, other flavours).
+# Left out: ntsync.conf - NTSync is built into Io's kernel, nothing to load.
 # Not included on purpose:
 #   20-panic-sysctls.conf, 21-steamos-panic-sysctls.conf - reboot on kernel
 #     panic; Valve pairs this with its crash log submitter, Io has none yet,
@@ -22,4 +33,11 @@ do_install() {
 	vinstall ${FILESDIR}/30-splitlock.conf 644 usr/lib/sysctl.d
 	vinstall ${FILESDIR}/30-vm.conf 644 usr/lib/sysctl.d
 	vinstall ${FILESDIR}/50-pid-max.conf 644 usr/lib/sysctl.d
+	vmkdir usr/lib/modules-load.d
+	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
+	vinstall ${FILESDIR}/holo-cfs-debugfs-settings 755 usr/libexec
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/70-io-cfs-tunings.sh 644 etc/runit/core-services
+	vmkdir usr/share/X11/xorg.conf.d
+	vinstall ${FILESDIR}/10-holo-virtualdisplaysize.conf 644 usr/share/X11/xorg.conf.d
 }
