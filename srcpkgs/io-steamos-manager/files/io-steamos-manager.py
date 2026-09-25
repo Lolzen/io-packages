@@ -185,6 +185,41 @@ def read_wifi_powersave():
     return 1 if "on" in out.stdout.lower() else 0
 
 
+# Valve keeps wifi.powersave in 99-valve-wifi-backend.conf, which
+# steamos-wifi-set-backend rewrites when switching (dropping the setting).
+# Io keeps it in a file of its own.
+WIFI_POWERSAVE_CONF = "/etc/NetworkManager/conf.d/99-io-wifi-powersave.conf"
+# NetworkManager only applies wifi.powersave through wpa_supplicant; iwd
+# takes it from its own configuration and has no config fragments.
+IWD_MAIN_CONF = "/etc/iwd/main.conf"
+
+
+def _write_iwd_powersave(enabled):
+    """Power save off for iwd: [DriverQuirks] PowerSaveDisable=* in
+    main.conf; on: the key removed (iwd then keeps the kernel's default,
+    which is on). Other settings in the file are kept."""
+    import configparser
+    conf = configparser.ConfigParser(interpolation=None)
+    conf.optionxform = str
+    conf.read(IWD_MAIN_CONF)
+    if enabled:
+        if conf.has_option("DriverQuirks", "PowerSaveDisable"):
+            conf.remove_option("DriverQuirks", "PowerSaveDisable")
+        if conf.has_section("DriverQuirks") and not conf.options("DriverQuirks"):
+            conf.remove_section("DriverQuirks")
+    else:
+        if not conf.has_section("DriverQuirks"):
+            conf.add_section("DriverQuirks")
+        conf.set("DriverQuirks", "PowerSaveDisable", "*")
+    if not conf.sections():
+        if os.path.exists(IWD_MAIN_CONF):
+            os.remove(IWD_MAIN_CONF)
+        return
+    os.makedirs(os.path.dirname(IWD_MAIN_CONF), exist_ok=True)
+    with open(IWD_MAIN_CONF, "w") as f:
+        conf.write(f, space_around_delimiters=False)
+
+
 def read_wifi_backend():
     """Last wifi.backend= setting in NetworkManager's config, like NM itself
     resolves it (conf.d files in name order override NetworkManager.conf)."""
@@ -304,6 +339,22 @@ class RootManager(ServiceInterface):
         if not ifname:
             _fail("no wireless interface")
         mode = "on" if state else "off"
+        # As on SteamOS, the setting goes into NetworkManager's configuration
+        # (wifi.powersave: 3 on, 2 off), so it survives reconnects and backend
+        # switches; iw applies it to the running connection right away.
+        try:
+            os.makedirs(os.path.dirname(WIFI_POWERSAVE_CONF), exist_ok=True)
+            with open(WIFI_POWERSAVE_CONF, "w") as f:
+                f.write(f"[connection]\nwifi.powersave={3 if state else 2}\n")
+            subprocess.run(["nmcli", "general", "reload", "conf"], check=False)
+        except OSError as err:
+            log(f"could not write {WIFI_POWERSAVE_CONF}: {err}")
+        # Also for iwd, whichever backend runs now: the setting is then
+        # already in place after a switch. iwd reads it when it starts.
+        try:
+            _write_iwd_powersave(bool(state))
+        except (OSError, ValueError) as err:
+            log(f"could not write {IWD_MAIN_CONF}: {err}")
         try:
             subprocess.run(["iw", "dev", ifname, "set", "power_save", mode], check=False)
         except OSError as err:

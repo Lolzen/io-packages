@@ -1,7 +1,7 @@
 # Template file for 'steamos-networking-tools'
 pkgname=steamos-networking-tools
 version=1.2
-revision=3
+revision=5
 depends="bash iw iwd NetworkManager polkit runit-void"
 short_desc="SteamOS networking tools: switch the Wi-Fi backend (iwd/wpa_supplicant)"
 maintainer="Georg <funer@gmx.at>"
@@ -9,7 +9,9 @@ license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/steamos-networking-tools"
 
 # Valve's steamos-wifi-set-backend, plus the NetworkManager defaults from
-# steamos-customizations-jupiter that make iwd the backend, as on SteamOS.
+# steamos-customizations-jupiter (wpa_supplicant as backend since Valve's
+# change of 2026-08-27, iwd selectable; IPv6 privacy extensions) and
+# a connectivity check (GNOME's endpoint, SteamOS uses Arch's).
 # Io's changes: runit instead of systemd in the privileged helper (iwd is a
 # runit service linked while it is the backend; wpa_supplicant is started by
 # NetworkManager through D-Bus). Switching away from iwd waits until iwd has
@@ -30,4 +32,5 @@ do_install() {
 	vinstall ${FILESDIR}/steamos-wifi-set-backend.bash-completion 644 usr/share/bash-completion/completions steamos-wifi-set-backend
 	vinstall ${FILESDIR}/com.steampowered.SteamOS.WifiSetBackend.policy 644 usr/share/polkit-1/actions
 	vinstall ${FILESDIR}/10-steamos-defaults.conf 644 usr/lib/NetworkManager/conf.d
+	vinstall ${FILESDIR}/20-connectivity.conf 644 usr/lib/NetworkManager/conf.d
 }
