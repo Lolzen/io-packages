@@ -9,9 +9,10 @@ system. The sulphur it throws into space forms a plasma ring around Jupiter,
 the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
-> **Status:** [Alpha 3](https://github.com/Lolzen/io-packages/releases/tag/alpha3)
-> released, Alpha 4 (storage: SD cards and USB drives) in progress — see
-> [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones).
+> **Status:** [Alpha 4](https://github.com/Lolzen/io-packages/releases/tag/alpha4)
+> released, Alpha 5 (storage: SD cards and USB drives) next — see
+> [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) and the
+> [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog).
 > Io ships as a disk image, written straight to an SD card with `dd`. It
 > boots into Steam's game mode, plays games, and switches to the KDE Plasma
 > desktop and back.
@@ -49,10 +50,12 @@ reason is documented in
 
 ## What works
 
-- Boots straight into Steam's game mode, with an Io boot splash
+- Boots straight into Steam's game mode, with an Io boot splash; login and
+  switching to the desktop and back through SDDM, as on SteamOS
 - Steam as on SteamOS: Valve's Deck packaging, on the Deck's update branch,
   preinstalled — the first start needs no download
-- Graphics, Wi-Fi, Ethernet through a dock, Bluetooth including audio
+- Graphics, Wi-Fi (backend switchable from Steam, as on SteamOS), Ethernet
+  through a dock, Bluetooth including audio
 - Audio as on SteamOS: speakers, headphones, filtered microphone, with
   Steam's own translated device names
 - Controller, gyro, trackpads, volume keys (handled by Steam), brightness,
@@ -63,15 +66,19 @@ reason is documented in
   `io-steamos-manager`, Io's own implementation of Valve's SteamOS Manager
 - Battery: controlled shutdown through Steam when the battery runs empty
   (Valve's vpower)
-- Proton games, gamemode, screenshots
+- Proton games, gamemode, screenshots, screen recording (with gamescope
+  3.16.22 or later, see below)
 - KDE Plasma desktop with Valve's Deck defaults: Steam runs in the
   background, Steam's on-screen keyboard (Steam + X), *Return to Gaming
   Mode*
 - Storage expansion to the full card, as an explicit user step
-- zram swap, earlyoom and kernel tuning as on SteamOS
+- zram swap, swap file, earlyoom, kernel and scheduler tuning as on
+  SteamOS; the LAVD CPU scheduler for tools that switch it
+- Steam's system report, saved from Steam's own UI
 
-Not yet: automatic mounting of SD cards and USB drives (Alpha 4), video in
-screen recordings, installing to the internal SSD.
+Not yet: automatic mounting of SD cards and USB drives (Alpha 5),
+installing to the internal SSD. Screen recording needs gamescope 3.16.22 or
+later; Void still ships 3.16.20 (an update is submitted).
 
 Open items and plans are tracked on the
 [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) page.
@@ -111,7 +118,8 @@ Io on a network you do not trust.
 
 Everything else lives in the [wiki](https://github.com/Lolzen/io-packages/wiki):
 
-- [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) — goals, work lists and final state of each milestone
+- [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) — what is open, and where it is headed
+- [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog) — what each release brought
 - [Deviations from SteamOS](https://github.com/Lolzen/io-packages/wiki/Deviations) — where Io differs from SteamOS, and why
 - [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) — boot, sessions, SteamOS Manager, logging
 - [Packages](https://github.com/Lolzen/io-packages/wiki/Packages) — every package, its contents and source
