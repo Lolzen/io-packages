@@ -90,9 +90,8 @@ sudo sh io-selftest.sh
 Run on the device in game mode. Checks kernel, packages, services, memory
 setup, the game mode session, SteamOS Manager, audio configuration, logging
 and the package database against the expected state; every line is PASS,
-FAIL or INFO. Like `io-boottime.sh` it is a developer script, not packaged,
-and adapted when it is next needed — it still expects the login of Alpha 3
-(`io-autologin`).
+FAIL or INFO. Like `io-boottime.sh` it is a developer script, not packaged;
+it is brought up to date for each release.
 
 ```
 sudo sh io-boottime.sh
