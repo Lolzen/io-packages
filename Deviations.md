@@ -72,8 +72,15 @@ the session bus that Steam talks to.
   `UpdateBios1`, `UpdateDock1`, `FactoryReset1`, `WifiDebug1`.
 - **`CpuScheduler1`** offers only `none`; SteamOS also offers `lavd`, which
   needs `scx_scheds`.
-- **Wi-Fi backend:** Io uses wpa_supplicant and reports it; switching is not
-  implemented. SteamOS defaults to iwd. Decision pending.
+- **Wi-Fi backend:** wpa_supplicant by default, as in Valve's current
+  configuration; SteamOS 3.8.4 still defaults to iwd. Switching works in
+  both directions. iwd runs as a runit service linked only while it is the
+  backend.
+- **Wi-Fi power save** goes into a file of Io's own
+  (`99-io-wifi-powersave.conf`) and into iwd's `main.conf`. Valve keeps it
+  in `99-valve-wifi-backend.conf`, which Valve's own backend switch
+  rewrites, losing it; and NetworkManager does not pass it on to iwd.
+- **Connectivity check** against GNOME's endpoint; SteamOS uses Arch's.
 
 ---
 
@@ -107,7 +114,8 @@ the session bus that Steam talks to.
 - **Kernel command line** matches SteamOS except `fbcon=rotate:1` instead of
   `fbcon=vc:4-6` (see *Login and sessions*), no `console=tty1`, and none of
   the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
-  `steamos.efi`).
+  `steamos.efi`). Io adds `net.ifnames=0`: SteamOS's Wi-Fi interface is
+  `wlan0` as well, while Void's udev would rename it (see *Pitfalls*).
 - **No reboot on kernel panic.** SteamOS's panic sysctls are left out during
   the alpha phase: Valve pairs them with a crash log submitter, and without
   one a frozen device is more useful for debugging.
@@ -156,7 +164,6 @@ the session bus that Steam talks to.
   Valve's own polkit rule does) and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
   journald to log to.
-- **`steamos-powerbuttond`** is version 3.1; SteamOS ships 4.2.
 - **`steamdeck-kde-presets`**: the Deck variant of the Vapor theme is written
   into `kdeglobals` directly (Valve picks it with a systemd service);
   *Return to Gaming Mode* calls `steamos-session-select` (Valve:

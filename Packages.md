@@ -22,12 +22,13 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: Void's base configuration plus Valve's `config-neptune` fragment, and one patch generated from Valve's tree against the kernel.org tarball |
 | `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers, udev rules, hwsupport scripts, Valve's cursor theme |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
-| `steamos-powerbuttond` | `steamos-powerbuttond` 3.1 | Power button daemon |
+| `steamos-powerbuttond` | `steamos-powerbuttond` 4.2 | Power button daemon |
+| `steamos-networking-tools` | `steamos-networking-tools` 1.2 | Wi-Fi backend switch (runit port), Valve's NetworkManager defaults, connectivity check |
 | `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, the filter chain's own PipeWire instance, and Io's WirePlumber script for the ALSA loopbacks |
 | `xdg-desktop-portal-gamescope` | `xdg-desktop-portal-gamescope` | Portal backend for screenshots and recording in game mode |
 | `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
 | `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |
-| `steamos-tuning` | `steamos-customizations-jupiter` | sysctl tuning: TCP, scheduler, split lock, `vm.max_map_count`, `pid_max` |
+| `steamos-tuning` | `steamos-customizations-jupiter` | Sysctls, early HID drivers, Valve's scheduler tunings (debugfs), X11 virtual display size |
 | `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
 | `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |

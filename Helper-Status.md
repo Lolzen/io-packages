@@ -17,6 +17,10 @@ stubs.
 | `steamos-trim-devices` | |
 | `jupiter-check-support`, `jupiter-get-als-gain` | |
 | `steamos-enable-sshd` | Links the `sshd` runit service, the equivalent of Valve's `systemctl enable --now sshd` |
+| `steamos-wifi-set-backend-privileged` | From `steamos-networking-tools`; switches between wpa_supplicant and iwd with runit |
+
+Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
+(Valve's script; exits at once on Jupiter).
 
 ## Stubs worth implementing
 
@@ -28,12 +32,12 @@ stubs.
 
 | Helper | Why |
 |---|---|
-| `jupiter-amp-control` | Target script is in none of Valve's published packages; audio works without it |
+| `jupiter-amp-control` | Target script is in none of Valve's published packages and missing on SteamOS 3.8.4 too; audio works without it |
 | `steamos-reboot-other` | A/B slot switching |
-| `steamos-update`, `steamos-select-branch` | SteamOS system updates; `steamos-select-branch` reports `stable` |
-| `jupiter-biosupdate`, `jupiter-dock-updater` | Firmware updates; left to SteamOS |
-| `steamos-factory-reset-config` | Factory reset of the A/B system |
-| `steamos-devkit-mode` | Steamworks devkit workflow |
+| `steamos-update`, `steamos-select-branch` | SteamOS system updates; `steamos-select-branch` reports `stable`. Steam is moving to a D-Bus API for updates, which Io could serve with xbps (candidate) |
+| `jupiter-biosupdate`, `jupiter-dock-updater` | Firmware updates, so far left to SteamOS. Valve's scripts need no systemd; a check-only mode is planned for the end of Alpha 4 |
+| `steamos-factory-reset-config` | Records Valve's A/B partitions for a reset; an Io reset would be its own design |
+| `steamos-devkit-mode` | Steamworks devkit workflow; `steamos-devkit-service` could be ported with Avahi |
 | `steamos-restart-sddm` | Io has no display manager |
 
 Steam also looks for `steamos-update` and `steamos-select-branch` in

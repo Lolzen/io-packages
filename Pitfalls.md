@@ -91,6 +91,9 @@ appear before starting an overlay or helper therefore succeeds immediately,
 with the socket of the session that just ended. Wait for the process
 (`pgrep -x gamescope-wl`) as well.
 
+**Process names are cut to 15 characters.** `pgrep -x`/`pkill -x
+steamos-powerbuttond` never match; use `-f` with the path.
+
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
 `auto_null` sink and a gamescope without a window, with no useful error.
@@ -167,6 +170,18 @@ resolves crates itself. Crates that generate bindings (`clang-sys`) also need
 `clang`, `llvm` and `clang21-devel`: the versioned `-devel` package is the only
 one shipping the unversioned `libclang.so` that `clang-sys` looks for.
 
+**A git repository in Valve's archive can be named like the program being
+built** (`steamos-powerbuttond`): `ld` then fails with "Is a directory".
+Unpack the tree into a subdirectory and set `build_wrksrc`.
+
+**After a failed build `post_extract` does not run again** — `xbps-src`
+remembers the extraction. `./xbps-src clean <package>` first.
+
+**Check which git tag you unpack from Valve's archive.** The newest tag in
+`git tag | tail -1` sorts alphabetically, not by date; use the tag that
+matches the package version (`jupiter-20260827.2`), or you review an old
+tree.
+
 **`tar` is not in the build chroot by default.** A `post_extract` that unpacks
 Valve's git archive (`git archive … | tar -x`) needs `hostmakedepends="git
 tar"`, or it fails with `tar: command not found`.
@@ -178,6 +193,21 @@ Happened three times (PipeWire configuration, kernel configuration fragment).
 ---
 
 ## Kernel and hardware
+
+**iwd recreates the Wi-Fi interface under the kernel name (`wlan0`).** With
+predictable interface names udev renames it right away (`wlo1`), and
+NetworkManager then looks for an interface that no longer exists — Wi-Fi
+"unavailable" after any iwd restart. SteamOS keeps kernel names; Io sets
+`net.ifnames=0`.
+
+**iwd removes the interface it created when it exits — with a delay.**
+Switching from iwd to wpa_supplicant has to wait until iwd is gone before
+checking for (and recreating) `wlan0`, or the interface vanishes after
+NetworkManager has already picked it up.
+
+**NetworkManager passes `wifi.powersave` only to wpa_supplicant.** With iwd
+as backend it is ignored; iwd takes `[DriverQuirks] PowerSaveDisable` from
+its own `main.conf`.
 
 **The kernel package deletes its bundled firmware** on purpose, expecting Void's
 `linux-firmware` packages; it needs an explicit

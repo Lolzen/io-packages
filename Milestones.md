@@ -398,16 +398,40 @@ that, the loose ends carried over from Alpha 3.
 
 - [ ] Screen recording without video (next: `rec-dump.sh` on Io during a
       recording, compare with the SteamOS reference)
-- [ ] Wi-Fi backend: live test of iwd, then decide
-- [ ] `steamos-powerbuttond` 3.1 → 4.2; kernel metapackage `linux-neptune`
-- [ ] Stub helpers: confirm the decisions, record them on
+- [x] Wi-Fi backend, as in Valve's current configuration: wpa_supplicant
+      by default (Valve switched back from iwd on 2026-08-27; SteamOS 3.8.4
+      still runs iwd), iwd selectable through Steam's *Force WPA Supplicant
+      Wi-Fi backend*. `steamos-networking-tools` ported to runit;
+      `WifiBackend` writable in `io-steamos-manager` 0.4.0. The interface is
+      called `wlan0` as on SteamOS (`net.ifnames=0`): iwd recreates it under
+      that name. Also taken over: IPv6 privacy extensions, a connectivity
+      check (GNOME's endpoint), `wifi.iwd.autoconnect=yes`. Wi-Fi power save
+      now survives reconnects and backend switches, for both backends
+      (`io-steamos-manager` 0.4.2)
+- [ ] Roaming between router and repeater with the same network name:
+      observed with iwd, the Deck held on to the weak connection. Compare
+      with wpa_supplicant
+- [x] `steamos-powerbuttond` 4.2, from Valve's own source (the button is
+      found through a udev hwdb tag now); it ends when the desktop starts,
+      so power button presses reach Plasma there
+- [x] `jupiter-initial-firmware-update`: Valve's script (exits at once on
+      Jupiter); Steam's call no longer runs into nothing
+- [x] Stub helpers reviewed with Valve's sources, decisions recorded on
       [Helper status](Helper-Status)
-- [ ] Remaining Valve packages: `holo-sudo`, `steamos-networking-tools`,
-      `steamos-systemreport`, `jupiter-firewall`,
-      `holo-realtek-firmware-toggles`, `cecd`/`cec-audio-control`, crash
-      reports (`steamos-log-submitter`, `kdumpst`, without sending anything
-      to Valve), the rest of `steamos-customizations-jupiter`,
-      `steam-web-debug-portforward` (developer mode)
+- [x] `steamos-customizations-jupiter` 20260827.2 reviewed (an earlier look
+      had used an old tag): `hid-preload` (controllers claimed before Steam
+      falls back to evdev), Valve's scheduler tunings (only `nr_migrate` and
+      `migration_cost_ns` exist under EEVDF), X11 virtual display size (kept
+      for a later X11 session), Valve's wake-on-Bluetooth rule. NTSync is
+      built into Io's kernel already; `proton-nice` stays out (on SteamOS it
+      lies in `/etc/limits.d/`, which nothing reads)
+- [ ] Remaining Valve packages: `steamos-systemreport` (rewrite for socklog
+      and runit), `steamos-devkit-service` (DNS-SD through Avahi instead of
+      systemd-resolved), `jupiter-firewall` (decision: Io has no firewall),
+      `cecd`/`cec-audio-control` (needs a dock), `steam-web-debug-portforward`
+      (developer mode). Dropped: `steamos-log-submitter` and `kdumpst`
+      (uploading to Valve is their purpose; kdumpst is bound to systemd)
+- [ ] Kernel metapackage `linux-neptune`
 - [ ] Boot: the 4 s gap in the initramfs before `amdgpu` loads; a designed
       splash; the black gap while Steam loads inside gamescope
 - [ ] Plasma: messages when switching, the notification service in game mode,
@@ -419,11 +443,32 @@ that, the loose ends carried over from Alpha 3.
 - [ ] gamescope's statistics pipe (`-T`, `GAMESCOPE_STATS`) for mangoapp:
       check whether the overlay misses frame statistics without it
 
+### At the end of Alpha 4 (risky)
+
+- [ ] Automount and formatting (see *Storage*)
+- [ ] Firmware updaters, check mode first so Steam can show whether an update
+      is due: `jupiter-biosupdate` (bash and `h2offt`, no systemd),
+      `jupiter-controller-update` (Python: `hid`, `crcmod`, `click`,
+      `progressbar`), `jupiter-dock-updater` (needs a dock). Flashing itself
+      last, if at all — SteamOS on the same Deck does it anyway
+
+### Small items, later
+
+- `holo-sudo`: Valve's sudoers files, above all `no-fqdn` (sudo does not
+  hang resolving the host name without a network)
+- `holo-realtek-firmware-toggles`: only for Realtek USB Wi-Fi sticks
+  (`rtw89`)
+
 ### Not in Alpha 4
 
 - **Installing to the internal NVMe:** waits until no more SteamOS
   comparisons or captures are needed — the NVMe still holds SteamOS as the
   reference
+- **System updates from Steam:** Steam moves from `steamos-update` to a D-Bus
+  API (`atomupd-manager`). Io could serve it from `io-steamos-manager`
+  with `xbps-install -Su` behind it
+- **A factory reset of Io's own** (fresh home directory): Valve's resets the
+  A/B partitions; a design decision, and destructive
 - **Later:** SDDM, live ISO
 - **For 1.0:** SSH off in images, replace the default password
 
