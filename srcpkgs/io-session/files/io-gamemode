@@ -49,7 +49,11 @@ start_filter_chain() {
 # mangoapp draws Steam's performance overlay. Valve runs it as its own
 # service with Restart=always and hands it the session environment; here a
 # loop tied to gamescope does the same. Steam itself sets the STEAM_*MANGOAPP*
-# variables; only the config file is ours to provide.
+# variables; the config file and the stats pipe are ours to provide.
+#
+# It is started right before gamescope, after the whole environment is set:
+# started earlier, it missed MANGOHUD_CONFIGFILE, never saw the overlay level
+# Steam writes there, and showed its default overlay in every game.
 #
 # It has to wait for gamescope to be up *and* for its X socket: the socket
 # file from the previous session survives in /tmp, so checking only for the
@@ -75,7 +79,6 @@ start_mangoapp() {
 
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
-start_mangoapp
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
 # user half only - the root half (io-steamos-manager -r) runs as a runit service
 pgrep -u "$(id -u)" -f io-steamos-manager > /dev/null || setsid /usr/bin/io-steamos-manager > /dev/null 2>&1 &
@@ -104,6 +107,19 @@ export HOMETEST_DESKTOP_SESSION=plasma
 GS_TMPDIR=$(mktemp -p "$XDG_RUNTIME_DIR" -d gamescope.XXXXXXX)
 export MANGOHUD_CONFIGFILE="$GS_TMPDIR/mangohud.config"
 echo no_display > "$MANGOHUD_CONFIGFILE"
+
+# gamescope's statistics pipe (-T), as in Valve's session: frame timing that
+# mangoapp reads. The session also claims $XDG_RUNTIME_DIR/gamescope-stats
+# for other tools, under a lock held on fd 9 for as long as gamescope runs.
+export GAMESCOPE_STATS="$GS_TMPDIR/stats.pipe"
+mkfifo -- "$GAMESCOPE_STATS"
+gs_statslink="$XDG_RUNTIME_DIR/gamescope-stats"
+exec 9> "$gs_statslink.lck"
+if flock -n 9 && rm -f "$gs_statslink" && ln -sf "$GS_TMPDIR" "$gs_statslink"; then
+    echo >&2 "io: claimed global gamescope stats session at $gs_statslink"
+else
+    echo >&2 "io: failed to claim global gamescope stats session"
+fi
 
 export STEAM_USE_DYNAMIC_VRS=1
 export RADV_FORCE_VRS_CONFIG_FILE="$(mktemp /tmp/radv_vrs.XXXXXXXX)"
@@ -180,10 +196,11 @@ set -- "$@" --hide-cursor-delay 3000
 set -- "$@" --max-scale 2
 set -- "$@" --fade-out-duration 200
 set -- "$@" --cursor-scale-height 720
-set -- "$@" -e
+set -- "$@" -e -T "$GAMESCOPE_STATS"
 set -- "$@" -O '*',eDP-1
 
 # steam-jupiter is Valve's Deck wrapper: it keeps Steam on the Deck's
 # branch and adds -steamdeck -pipewire, so the full command line matches
 # SteamOS (including -steamdeck twice).
+start_mangoapp
 exec gamescope "$@" -- steam-jupiter -steamos3 -steampal -steamdeck -gamepadui
