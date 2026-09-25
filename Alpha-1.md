@@ -1,8 +1,15 @@
-# Alpha 1
+# Alpha 1 — First bootable image
 
-Released as [alpha1](https://github.com/Lolzen/io-packages/releases/tag/alpha1).
-This page records the state at release time and is not updated afterwards;
-see [Milestones](Milestones) for everything since.
+**Released:** [alpha1](https://github.com/Lolzen/io-packages/releases/tag/alpha1)
+
+**Goal:** a bootable Void Linux image for the Steam Deck LCD that lands in
+Steam's game mode, plays games, and can switch to the desktop and back.
+
+## Highlights
+
+- Boots from an SD card straight into Steam's game mode
+- Games run, including Proton
+- Switching to a desktop session and back
 
 ## Known limitations at release
 
@@ -12,5 +19,3 @@ see [Milestones](Milestones) for everything since.
 - udisks2 automount disabled (package not installed)
 - Root partition grown silently in the background on first boot
 - Desktop session (Plasma) untested
-
-Where each of these stands now is tracked on [Milestones](Milestones).

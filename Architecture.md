@@ -22,39 +22,45 @@ behind each difference, see [Deviations](Deviations).
    - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
 4. **runit stage 2** starts the services linked in `/var/service`, among them
    `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
-   `jupiter-fan-control`, `socklog-unix` and `nanoklogd`, and `io-autologin`.
-5. **`io-autologin`** waits for the system bus, ends the splash with
-   `plymouth quit` and runs `agetty --autologin deck` on tty1, with the
-   memlock hard limit raised to 100 MB for the filter chain (see *Audio*).
-   (Not `--retain-splash`: that leaves the console in graphics mode, and the
-   fallback shell on tty1 would be invisible.)
+   `jupiter-fan-control`, `socklog-unix` and `nanoklogd`, and `io-sddm`.
+5. **`io-sddm`** removes a leftover one-shot login file, ends the splash with
+   `plymouth quit --retain-splash` (the screen goes from splash to black to
+   game mode, as on SteamOS) and starts SDDM. SDDM logs `deck` in on tty7;
+   tty1–6 are plain login consoles.
 
 ---
 
 ## Sessions
 
 ```
-agetty --autologin  →  /etc/profile.d/zz-io-session.sh  →  io-start
-                                                            ├─ io-gamemode → gamescope → steam-jupiter
-                                                            └─ io-plasma   → startplasma-wayland
+SDDM (autologin, Relogin)  →  gamescope-wayland.desktop  →  io-start gamemode  →  io-gamemode → gamescope → steam-jupiter
+                           →  io-desktop.desktop         →  io-start desktop   →  io-plasma   → startplasma-wayland
 ```
+
+SDDM's settings are in `/usr/lib/sddm/sddm.conf.d/10-io.conf`: autologin
+for `deck` into game mode, and a fresh login whenever a session ends
+(`Relogin=true`), as on SteamOS. The login runs through PAM and elogind, so
+each session is a real session on `seat0`; the memlock limit for the filter
+chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
 
 - **Steam** is started through `steam-jupiter`, Valve's Deck wrapper: it
   keeps Steam on the `steamdeck_stable` branch, adds `-steamdeck -pipewire`,
   and on first start sets Steam up from a preinstalled client. Network setup
   on first start is Steam's own first-run Wi-Fi page.
-- **`io-start`** reads the requested session from
-  `/run/user/1000/io-session-next` (game mode by default) and starts it under
-  its own `dbus-run-session`. All output goes to a log, see *Logging*.
+- **`io-start`** gets the session from the session file's `Exec` line and
+  starts it under its own `dbus-run-session`. All output goes to a log, see
+  *Logging*.
   When the session ends, it also ends PipeWire, so the next session starts
   a fresh PipeWire on its own session bus.
 - **`io-gamemode`** reproduces Valve's `gamescope-session`: the same
   environment, gamescope arguments and Steam flags
   (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Steam
   directly as its child. Like Valve's session it limits the portals to the
-  gamescope backend (`XDG_DESKTOP_PORTAL_DIR`). It also starts PipeWire, the power button daemon,
-  the session half of `io-steamos-manager`, the filter chain's own PipeWire
-  instance, and mangoapp for Steam's performance overlay.
+  gamescope backend (`XDG_DESKTOP_PORTAL_DIR`), and passes gamescope's
+  statistics pipe (`-T`, `GAMESCOPE_STATS`). It also starts PipeWire, the
+  power button daemon, the session half of `io-steamos-manager`, the filter
+  chain's own PipeWire instance, and — right before gamescope, once the
+  environment is complete — mangoapp for Steam's performance overlay.
 - **`io-plasma`** starts KDE Plasma. The session half of
   `io-steamos-manager` starts there through XDG autostart, and so does Steam
   (`steam -silent`, from `steamdeck-kde-presets`), as on SteamOS: it
@@ -62,19 +68,26 @@ agetty --autologin  →  /etc/profile.d/zz-io-session.sh  →  io-start
   of the controller. Before Plasma starts, `io-plasma` switches Steam's DPI
   scaling off once per user, so Steam draws in real pixels next to Plasma's
   135 %.
-- **`io-session.sh`** guards against boot loops: a session that dies within
-  15 seconds drops to a shell on tty1 and shows the last 20 log lines. A
-  session that ran longer is restarted with `io-start`.
-
 ### Switching
 
-- **Game mode → desktop:** Steam calls `SwitchToDesktopMode` on
-  `io-steamos-manager`. It writes `desktop` to the state file and ends
-  gamescope; `io-session.sh` restarts `io-start`, which now starts Plasma.
-- **Desktop → game mode:** the *Return to Gaming Mode* shortcut runs
-  `steamos-session-select gamescope`, which calls `SwitchToGameMode` on the
-  manager over D-Bus, as on SteamOS. If the manager cannot be reached, it
-  falls back to writing the state file and ending kwin itself.
+As on SteamOS, `SessionManagement1` of `io-steamos-manager` tells SDDM which
+session to log in next and ends the running one:
+
+- **Game mode → desktop:** Steam calls `SwitchToDesktopMode`. The root half
+  writes the one-shot file `/etc/sddm.conf.d/zzt-steamos-temp-login.conf`,
+  gamescope ends, and SDDM logs in with that file: Plasma. The session half
+  in the new session removes the file again.
+- **Desktop → game mode:** *Return to Gaming Mode* runs
+  `steamos-session-select gamescope`, which calls `SwitchToGameMode` over
+  D-Bus. Plasma is logged out through its own session manager
+  (`org.kde.Shutdown.logout`), which closes every program in order — ending
+  kwin alone would not end the session, `kwin_wayland_wrapper` restarts it.
+- **Default login mode:** `DefaultLoginMode` writes
+  `/etc/sddm.conf.d/zz-steamos-autologin.conf` for a desktop default
+  (`steamos-session-select plasma-wayland-persistent`) and removes it for
+  game mode.
+- **GPU reset:** the udev rule restarts `io-sddm`, as Valve's restarts SDDM:
+  any session ends, and SDDM logs in fresh.
 
 ---
 
@@ -87,7 +100,7 @@ halves, like Valve's daemon:
 |---|---|---|
 | Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `FanControlState`, ...) | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, ...) |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, ...) | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, ...) |
 | Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
 
 Access to the root half is limited to root and `wheel`

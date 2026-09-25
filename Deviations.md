@@ -25,16 +25,20 @@ is a bug.
 
 ## Login and sessions
 
-- **No display manager.** `agetty` logs `deck` in automatically on tty1,
-  `/etc/profile.d/zz-io-session.sh` runs `io-start`, which starts either game
-  mode or Plasma under its own D-Bus session bus. SteamOS uses SDDM and
-  systemd user units. Switching to SDDM is a candidate for a later
-  milestone.
+- **SDDM as on SteamOS**, with the same autologin and `Relogin`, run as
+  the runit service `io-sddm`. Its settings are Io's own
+  (`/usr/lib/sddm/sddm.conf.d/10-io.conf`), with the Wayland greeter on
+  kwin. Each session runs `io-start` under its own `dbus-run-session`;
+  SteamOS uses systemd user units instead.
+- **The desktop session is `io-desktop.desktop`**, not Plasma's own
+  `plasma.desktop`: it runs Io's session setup (PipeWire, the filter chain,
+  Steam's DPI setting) before Plasma, which SteamOS does through user
+  services. `SessionManagement1` accepts Plasma's session names and maps
+  them to it.
 - **gamescope starts Steam as its child.** SteamOS runs gamescope and Steam
   as two systemd units and passes the display names through a startup socket
-  (`-R`); Io does not need it. The statistics pipe (`-T`,
-  `GAMESCOPE_STATS`) is left out too; mangoapp works without it, whether it
-  misses frame statistics from it is still to be checked.
+  (`-R`); Io does not need it. The statistics pipe (`-T`) is set as on
+  SteamOS.
 - **Steam launch flags, gamescope arguments and environment match
   SteamOS**, except variables whose counterpart Io does not have yet
   (HDMI-CEC daemon, drive adoption and unmounting through Steam, systemd
@@ -43,15 +47,11 @@ is a bug.
   script in a loop tied to gamescope (Valve: a user service with
   `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
   always runs).
-- **tty1 keeps its text console.** SteamOS moves the console to tty4–6
-  (`fbcon=vc:4-6`). Io keeps it on tty1 because that is where the fallback
-  shell and the last log lines appear when a session dies.
+- **The text console stays on tty1** with a login prompt. SteamOS moves it
+  to tty4–6 (`fbcon=vc:4-6`). The sessions run on tty7 either way.
 - **Session output goes to a rotating log** (`/run/user/1000/io-log-<session>/`,
   or `~/.local/state/io/` while Steam's developer mode is on) instead of
   the systemd journal.
-- **GPU reset handling:** where Valve's udev rule restarts SDDM after a GPU
-  crash, Io ends gamescope and the session restarts through
-  `io-session.sh`.
 
 ---
 
@@ -66,7 +66,11 @@ the session bus that Steam talks to.
 - **Access to the root half** is limited to root and the `wheel` group.
   Valve allows any local user.
 - **Values match SteamOS** (TDP 3–15 W, GPU power profiles `CAPPED` and
-  `UNCAPPED`, desktop session `plasma.desktop`).
+  `UNCAPPED`), except the desktop session name (`io-desktop.desktop`, see
+  *Login and sessions*).
+- **`SessionManagement1`** writes the same SDDM files as steamos-manager
+  (`zz-steamos-autologin.conf`, `zzt-steamos-temp-login.conf`) through the
+  root half, and logs Plasma out through `org.kde.Shutdown`.
 - **Not implemented**, for lack of a counterpart on Io: `Storage1`, `Jobs`,
   `UdevEvents1`, `LowPowerMode1`, `HdmiCec1`, `Audio1`, `ScreenReader0/1`,
   `UpdateBios1`, `UpdateDock1`, `FactoryReset1`, `WifiDebug1`.
@@ -104,9 +108,12 @@ the session bus that Steam talks to.
 - **`CAP_SYS_NICE` for gamescope** is set as a file capability, exactly as
   on SteamOS, but by a boot-time core service, because gamescope comes from
   Void's package and an update would drop it.
-- **Boot splash** is ended by `io-autologin` right before login. There is no
+- **Boot splash** is ended by `io-sddm` right before SDDM starts. There is no
   controller firmware update splash (`plymouth-wrap`), since Io has no
   controller update service.
+- **Initramfs:** dracut loads the SD card modules before `amdgpu` on
+  purpose, so card detection overlaps `amdgpu`'s load (about 3.7 s on its
+  own).
 
 ---
 
@@ -153,7 +160,12 @@ the session bus that Steam talks to.
 - **`steam-jupiter`** replaces Void's `steam` as Valve's package replaces
   Arch's. Its dependency list is Void's plus Valve's additions, in Void's
   names; the standard Steam udev rules keep coming from Void's
-  `steam-udev-rules`.
+  `steam-udev-rules`. Arch's `lib32-pipewire` becomes `pipewire-32bit` plus
+  every `libspa-*-32bit`, which Void ships separately.
+- **gamescope** is Void's 3.16.20, built from Valve's source. It lacks the
+  PipeWire fix of 3.16.22, so screen recording needs a newer gamescope until
+  Void's update (submitted, to 3.16.30) is merged. SteamOS 3.8.4 runs
+  3.16.23.
 - **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
   assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
   so that UPower actually honours it.
@@ -182,6 +194,8 @@ the session bus that Steam talks to.
   controller).
 - **`steamos-tuning`** adds `kernel.pid_max = 4194304`, systemd's default that
   SteamOS inherits.
+- **`steamos-systemreport`** reads socklog and Io's session logs instead of
+  the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
   `set-timezone`.
 - **ALSA's default device** is routed through PipeWire by links `io-base`
@@ -194,7 +208,7 @@ the session bus that Steam talks to.
 
 System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
-updates, the crash log submitter, the HDMI-CEC daemon, SDDM, Valve's nested
+updates, the crash log submitter, the HDMI-CEC daemon, Valve's nested
 desktop (Plasma inside game mode), automount of SD cards and USB drives
-(Alpha 4). Not needed on Io at all: `holo-keyring` (pacman keys),
+(Alpha 5), `KillUserProcesses` on logout. Not needed on Io at all: `holo-keyring` (pacman keys),
 `holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).

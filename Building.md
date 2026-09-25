@@ -30,6 +30,11 @@ into `io-packages` would point nowhere. Naming a subpackage
 **Bump `revision` in the template for every change**, or the build produces
 the same file name and `publish.sh` treats it as already published.
 
+**Versions of Io's own packages:** a change of content (a new feature, a
+changed behaviour) raises the version and resets the revision to 1;
+packaging-only changes raise the revision. Ported packages keep their
+upstream version. 1.0 is reserved for the beta.
+
 Large sources can be put into `xbps-src`'s cache beforehand to avoid a second
 download, e.g. `steam-jupiter`'s 428 MB archive into
 `~/void-packages/hostdir/sources/steam-jupiter-<version>/`.
@@ -85,7 +90,9 @@ sudo sh io-selftest.sh
 Run on the device in game mode. Checks kernel, packages, services, memory
 setup, the game mode session, SteamOS Manager, audio configuration, logging
 and the package database against the expected state; every line is PASS,
-FAIL or INFO.
+FAIL or INFO. Like `io-boottime.sh` it is a developer script, not packaged,
+and adapted when it is next needed — it still expects the login of Alpha 3
+(`io-autologin`).
 
 ```
 sudo sh io-boottime.sh
@@ -106,10 +113,12 @@ start at which each boot stage began.
 
 ## Release workflow
 
-1. All open items of the milestone done or moved (see [Milestones](Milestones))
+1. The milestone's items done, or left open on [Milestones](Milestones)
 2. Fresh image built, written to a spare card, booted, storage grown,
    `io-selftest.sh` passes
-3. Final state written on the milestone page
+3. The release page written (see [Changelog](Changelog)): goal,
+   highlights, changes by area, known limitations; done items removed from
+   [Milestones](Milestones)
 4. Remove the previous release's `io.img.xz*` files first — a leftover part
    would be joined into the new image. Then compress the image and split it
    below GitHub's 2 GiB asset limit:

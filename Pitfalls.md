@@ -51,6 +51,23 @@ description for such sources.
 
 ---
 
+**Steam's 32-bit client needs PipeWire's 32-bit plugins, not only the
+library.** Arch's `lib32-pipewire` ships both; Void splits them into
+`libpipewire-32bit`, `pipewire-32bit` and `libspa-*-32bit`. With the library
+alone, screen recording fails with *Failed to create PipeWire main loop*
+(no support plugins) or *Could not connect receiving stream* (no
+converters) in `streaming_log.txt`.
+
+**gamescope before 3.16.22 never finishes PipeWire negotiation with
+PipeWire 1.6.** It iterated its PipeWire loop without `pw_loop_enter`. The
+link to gamescope's capture node stays `negotiating`, the consumer's stream
+`paused`, and Steam never creates a video encoder: recordings have sound
+but no picture. Upstream fix: *pipewire: Fix pipewire loop locking*.
+
+**Steam creates its video encoder only when the first frame arrives.** No
+*Trying to create an encoder* line in `streaming_log.txt` means no frame
+ever came — look at PipeWire, not at VA-API.
+
 ## runit, D-Bus and sessions
 
 **A service must not be both a runit service and D-Bus-activated.** At boot
@@ -94,6 +111,14 @@ with the socket of the session that just ended. Wait for the process
 **Process names are cut to 15 characters.** `pgrep -x`/`pkill -x
 steamos-powerbuttond` never match; use `-f` with the path.
 
+**Ending kwin does not end a Plasma 6 session.** `kwin_wayland_wrapper`
+restarts kwin at once, without the shell, and Plasma locks the screen — a
+black screen with a cursor, which looks like SDDM's greeter once the mouse
+moves. Log out through `org.kde.Shutdown` (`busctl --user call
+org.kde.Shutdown /Shutdown org.kde.Shutdown logout`), as SteamOS does.
+
+**`busctl` is there without systemd** — elogind ships it.
+
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
 `auto_null` sink and a gamescope without a window, with no useful error.
@@ -130,6 +155,16 @@ audio configuration changes by hand, a cold boot is still the reliable way.
 ---
 
 ## Packaging (xbps-src)
+
+**A new upstream version can add configure-time dependencies for its tests.**
+gamescope 3.16.30 builds unit tests by default and requires catch2; without
+it meson stops, no package is built, and the old version stays installed.
+Such libraries go into `makedepends` or `checkdepends`, never
+`hostmakedepends` (that breaks cross builds) or `depends`.
+
+**An update replaces the file, not the running program.** Restart the
+program (or reboot) before testing it; a test right after `xbps-install`
+still runs the old version.
 
 **Never ship or patch files that belong to another package.** A file owned by
 two packages is silently overwritten or removed by the other's updates; a
@@ -213,6 +248,17 @@ its own `main.conf`.
 `linux-firmware` packages; it needs an explicit
 `depends="linux-firmware-amd linux-firmware-network"`, or the Deck boots with
 a dead GPU and no Wi-Fi.
+
+**`/dev/kmsg` is rate-limited:** `rd.debug` output disappears exactly where
+it matters (*N output lines suppressed due to ratelimiting*). Add
+`printk.devkmsg=on` for the analysis boot.
+
+**dracut loads `force_drivers` one after another, in the listed order.**
+`amdgpu` alone takes about 3.7 s to load; anything listed after it waits.
+
+**Without `wireless-regdb` the kernel uses the world regulatory domain**
+(`country 00`), which limits 5 GHz channels and transmit power. With it, the
+country comes from the access point (`iw reg get`).
 
 **`force_drivers+=" amdgpu "` in the dracut configuration is mandatory.**
 Without the module in the initramfs the screen stays black through early KMS.
@@ -351,6 +397,9 @@ relaxed upstream.
 ---
 
 ## Shell and tools
+
+**Over SSH, `loginctl` and other paged tools fail on an unknown terminal
+type** (`rxvt-unicode-256color`). Use `--no-pager`.
 
 **`sudo` resets the environment.** A terminal type the Deck does not know
 (`rxvt-unicode-256color`) breaks `sudo nano`; use

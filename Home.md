@@ -5,7 +5,8 @@ runit instead of systemd.
 
 ## Pages
 
-- [Milestones](Milestones) — goals, work lists and final state of each milestone
+- [Milestones](Milestones) — what is open, and where it is headed
+- [Changelog](Changelog) — what each release brought
 - [Deviations from SteamOS](Deviations) — where Io differs from SteamOS, and why
 - [Architecture](Architecture) — boot, sessions, SteamOS Manager, logging
 - [Packages](Packages) — every package, its contents and source
@@ -13,7 +14,6 @@ runit instead of systemd.
 - [Building](Building) — building packages and images, release workflow
 - [Pitfalls](Pitfalls) — things that cost real time and are documented nowhere else
 - [Valve package survey](Valve-Package-Survey) — Valve's package catalogue, triaged for Io
-- [Alpha 1](Alpha-1) — state at the first release
 
 ## Principle
 

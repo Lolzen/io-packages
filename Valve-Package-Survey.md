@@ -16,8 +16,10 @@ plain file capability, which Io now does too.
 
 ## Smaller, probably worth it
 
-`holo-realtek-firmware-toggles`, `jupiter-firewall`, `steamos-systemreport`,
-`jupiter-validation-tools` — on the Alpha 4 list
+`steamos-systemreport` and `steamos-networking-tools` are ported (Alpha 4).
+`holo-realtek-firmware-toggles`, `jupiter-firewall` and
+`jupiter-validation-tools` are small items for later (see
+[Milestones](Milestones))
 
 ## Deliberate direction, not a straight port
 
@@ -82,8 +84,9 @@ repeated here.
 - `holo-session-selection` — the actual session-switch script
   (`holo-session-select`) is itself marked deprecated upstream in favour of
   `steamosctl`, which is exactly what Io's own `io-steamos-manager` already
-  implements. The other half of the package (`holo.conf`) is pure SDDM
-  config — Io has no display manager
+  implements. The other half of the package (`holo.conf`) is SDDM
+  configuration; Io runs SDDM since Alpha 4 with its own
+  (`io-session`)
 - `steamos-alias` — a pacman/libalpm hook mechanism (auto-creates
   `steamos-*` symlinks for `holo-*` files on install/remove). No xbps
   equivalent. The rename it covers arrived with `jupiter-hw-support`
@@ -93,10 +96,10 @@ repeated here.
   "Everything still in here should be either removed or re-homed to a
   proper package." A grab-bag of QA/devkit tooling, Valve's own workarounds
   for their broken `/var/boot` mechanics, and other cruft even Valve wants
-  gone. Two pieces were looked at: `KillUserProcesses=True` would have no
-  effect on Io (session switches do not end the login);
-  `steam-web-debug-portforward` (CEF debugging in developer mode) is on the
-  Alpha 4 list
+  gone. Two pieces were looked at: `KillUserProcesses=True` — with SDDM,
+  session switches are real logouts now, so it is worth another look (see
+  [Milestones](Milestones)); `steam-web-debug-portforward` (CEF debugging
+  in developer mode) is a small item for later
 - `jupiter-resolved-nomdns` — `systemd-resolved`-specific (Io uses
   NetworkManager directly), and exists only to stop mDNS colliding with
   `avahi`, which is only there for `steamos-devkit-service` — a chain of
