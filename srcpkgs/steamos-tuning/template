@@ -1,8 +1,9 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
-version=1.1
+version=1.2
 revision=1
-short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, X11 screen size"
+depends="util-linux"
+short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, swap file, X11 screen size"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/holo"
@@ -18,7 +19,13 @@ homepage="https://gitlab.steamos.cloud/holo/holo"
 #   10-holo-virtualdisplaysize.conf - screen size for an X server started
 #     without a display. Neither Xwayland nor gamescope read it; it is kept
 #     for a later X11 session (VNC, other flavours).
+#   holo-create-swapfile - Valve's 1 GiB swap file in /home next to zram,
+#     created and switched on by the core service 60-io-swapfile.sh.
 # Left out: ntsync.conf - NTSync is built into Io's kernel, nothing to load.
+#
+# 61-io-hibernate-guard.sh is Io's own: hibernation is allowed only when / is
+# on the internal NVMe (see the file). Valve's suspend-then-hibernate itself
+# follows with installing to the NVMe, where it can be tested.
 # Not included on purpose:
 #   20-panic-sysctls.conf, 21-steamos-panic-sysctls.conf - reboot on kernel
 #     panic; Valve pairs this with its crash log submitter, Io has none yet,
@@ -37,6 +44,9 @@ do_install() {
 	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
 	vinstall ${FILESDIR}/holo-cfs-debugfs-settings 755 usr/libexec
 	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/holo-create-swapfile 755 usr/libexec
+	vinstall ${FILESDIR}/60-io-swapfile.sh 644 etc/runit/core-services
+	vinstall ${FILESDIR}/61-io-hibernate-guard.sh 644 etc/runit/core-services
 	vinstall ${FILESDIR}/70-io-cfs-tunings.sh 644 etc/runit/core-services
 	vmkdir usr/share/X11/xorg.conf.d
 	vinstall ${FILESDIR}/10-holo-virtualdisplaysize.conf 644 usr/share/X11/xorg.conf.d

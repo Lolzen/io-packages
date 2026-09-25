@@ -1,0 +1,51 @@
+#!/bin/bash
+# -*- mode: sh; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
+# vim: et sts=4 sw=4
+
+#  SPDX-License-Identifier: LGPL-2.1+
+#
+#  Copyright © 2026 Valve Corporation.
+#
+#  This file is part of steamos-customizations.
+#
+#  steamos-customizations is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU Lesser General Public License as
+#  published by the Free Software Foundation; either version 2.1 of the License,
+#  or (at your option) any later version.
+
+# Create the swap file if it doesn't exist.
+# Prior to repair image 20260618.10-3.8.10, there was a service ordering
+# problem where the swap file might have been created before the home
+# partition was resized, resulting in a broken swap file
+# ("swapon: /home/swapfile: skipping - it appears to have holes").
+# Check for a faulty swap file and forcefully re-create it.
+
+if [[ "$#" -ne 2 ]]; then
+    echo "Usage: $0 /path/to/swapfile size" >&2
+    exit 2
+fi
+
+SWAPFILE="$1"
+SIZE="$2"
+
+create_swap_file() {
+    mkswap --file "${SWAPFILE}" --size "${SIZE}"
+}
+
+if ! stat -t "${SWAPFILE}" &> /dev/null; then
+    # the file doesn't exist, it needs to be created
+    echo "${SWAPFILE} doesn't exist, creating it" >&2
+    create_swap_file
+    exit $?
+fi
+
+# replicate the test in swapon (https://github.com/util-linux/util-linux/blob/f9baae0/sys-utils/swapon.c#L564-L572):
+# if the number of blocks multiplied by the block size is less than the total
+# size of the file, then it is sparse ("the file appears to have holes") 
+if [[ $(( $(stat -c '%b * %B - %s' "${SWAPFILE}") )) -lt 0 ]]; then
+    # the file is sparse, it needs to be deleted and re-created
+    echo "${SWAPFILE} has holes, re-creating" >&2
+    rm -f "${SWAPFILE}"
+    create_swap_file
+    exit $?
+fi
