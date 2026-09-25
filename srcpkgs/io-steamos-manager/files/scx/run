@@ -1,0 +1,8 @@
+#!/bin/sh
+# Io: counterpart of SteamOS's scx.service. Starts the sched_ext scheduler
+# named in /etc/default/scx (Valve's file: scx_lavd). io-steamos-manager
+# links this service while Steam's CPU scheduler is set to lavd.
+exec 2>&1
+[ -r /etc/default/scx ] && . /etc/default/scx
+: "${SCX_SCHEDULER:=scx_lavd}"
+exec "/usr/bin/${SCX_SCHEDULER}" ${SCX_FLAGS:-}

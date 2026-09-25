@@ -1,0 +1,33 @@
+# Template file for 'steamos-systemreport'
+pkgname=steamos-systemreport
+version=1.23
+revision=1
+depends="bash bluez coreutils drm_info upower wireplumber pipewire iputils
+ iproute2 iw pciutils usbutils procps-ng util-linux parted smartmontools
+ polkit zstd jq alsa-utils pulseaudio-utils xbps"
+short_desc="SteamOS system report: collects system state for bug reports"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://gitlab.steamos.cloud/holo/steamos-systemreport"
+
+# Valve's two scripts as they are, with three changes where the report would
+# otherwise miss what it exists for:
+# - journalctl: the system log comes from socklog, and the session output
+#   that SteamOS keeps in the journal from Io's session logs
+# - pacman -Q / pacman -Qkk: xbps-query and xbps-pkgdb
+# - systemctl status jupiter-fan-control: pgrep (sv status needs root, and
+#   this part runs as the user)
+# Everything else is unchanged. Where a tool does not exist on Io
+# (coredumpctl, rauc, steamos-readonly, A/B partition sets, the EC log),
+# Valve's own error handling reports "Unable to run command!" and moves on.
+
+do_build() {
+	:
+}
+
+do_install() {
+	vbin ${FILESDIR}/steamos-systemreport
+	vmkdir usr/bin/steamos-polkit-helpers
+	vinstall ${FILESDIR}/steamos-systemreport-privileged 755 usr/bin/steamos-polkit-helpers
+	vinstall ${FILESDIR}/com.steampowered.SteamOS.systemreport.policy 644 usr/share/polkit-1/actions
+}

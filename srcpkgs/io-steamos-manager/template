@@ -1,10 +1,11 @@
 # Template file for 'io-steamos-manager'
 pkgname=io-steamos-manager
-version=0.4.2
+version=0.5.0
 revision=1
 python_version=3
 depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void
- steamos-networking-tools"
+ steamos-networking-tools scx"
+conf_files="/etc/default/scx"
 short_desc="SteamOS Manager D-Bus service for Io (root and session half)"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -17,6 +18,10 @@ do_build() {
 do_install() {
 	vbin ${FILESDIR}/io-steamos-manager.py io-steamos-manager
 	vsv io-steamos-manager
+	# sched_ext scheduler service (SteamOS: scx.service, disabled by default);
+	# linked only while Steam's CPU scheduler is set to lavd
+	vsv scx
+	vinstall ${FILESDIR}/scx.default 644 etc/default scx
 	vinstall ${FILESDIR}/com.steampowered.SteamOSManager1.conf 644 usr/share/dbus-1/system.d
 	vinstall ${FILESDIR}/io-steamos-manager.desktop 644 etc/xdg/autostart
 }

@@ -242,6 +242,18 @@ def _write(path, value):
         f.write(str(value))
 
 
+# sched_ext: SteamOS offers none and lavd (scx_lavd from scx-scheds, started
+# by scx.service with /etc/default/scx). Io's runit service does the same.
+SCX_SERVICE_DIR = "/etc/sv/scx"
+SCX_SERVICE_LINK = "/var/service/scx"
+
+
+def available_cpu_schedulers():
+    if os.access("/usr/bin/scx_lavd", os.X_OK):
+        return ["none", "lavd"]
+    return ["none"]
+
+
 def _fail(msg):
     log(msg)
     raise DBusError(ERR, msg)
@@ -321,6 +333,20 @@ class RootManager(ServiceInterface):
     @method()
     def SetCpuBoostState(self, state: "u"):
         _write("/sys/devices/system/cpu/cpufreq/boost", 1 if state else 0)
+
+    @method()
+    def SetCpuScheduler(self, scheduler: "s"):
+        # As SteamOS enables and disables scx.service: the runit service is
+        # linked while lavd is chosen, and removed for "none".
+        if scheduler not in available_cpu_schedulers():
+            _fail(f"unknown CPU scheduler: {scheduler}")
+        if scheduler == "lavd":
+            if not os.path.islink(SCX_SERVICE_LINK):
+                os.symlink(SCX_SERVICE_DIR, SCX_SERVICE_LINK)
+        else:
+            if os.path.islink(SCX_SERVICE_LINK):
+                subprocess.run(["sv", "-w", "5", "down", SCX_SERVICE_DIR], check=False)
+                os.remove(SCX_SERVICE_LINK)
 
     @method()
     def SetWifiBackend(self, backend: "s"):
@@ -657,22 +683,24 @@ class CpuBoost1(ServiceInterface):
 
 
 class CpuScheduler1(ServiceInterface):
-    """SteamOS offers none/lavd; lavd needs scx_scheds, which Io lacks."""
+    """none or lavd, as on SteamOS; lavd runs Void's scx_lavd through the
+    runit service scx, linked by the root half."""
 
     def __init__(self, root):
         super().__init__(f"{IFACE}.CpuScheduler1")
+        self.root = root
 
     @dbus_property(access=PropertyAccess.READ)
     def AvailableCpuSchedulers(self) -> "as":
-        return ["none"]
+        return available_cpu_schedulers()
 
     @dbus_property()
     def CpuScheduler(self) -> "s":
-        return "none"
+        return "lavd" if os.path.islink(SCX_SERVICE_LINK) else "none"
 
     @CpuScheduler.setter
     def CpuScheduler(self, value: "s"):
-        pass
+        self.root.write("SetCpuScheduler", "s", [value], self, ["CpuScheduler"])
 
 
 class RemoteInterface1(ServiceInterface):
