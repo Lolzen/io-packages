@@ -15,6 +15,10 @@ behind each difference, see [Deviations](Deviations).
 3. **runit stage 1** runs Void's core services, plus Io's own:
    - `20-dmi-serial-perms.sh` — DMI serial numbers readable by `wheel` only
    - `20-fstab-repair.sh` — comments out invalid SD card lines in fstab
+   - `60-io-swapfile.sh` — Valve's 1 GiB swap file in `/home`
+   - `61-io-hibernate-guard.sh` — hibernation allowed only with `/` on the
+     internal NVMe
+   - `70-io-cfs-tunings.sh` — mounts debugfs, applies Valve's scheduler tunings
    - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
 4. **runit stage 2** starts the services linked in `/var/service`, among them
    `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
@@ -116,7 +120,8 @@ VRR and tearing switches), and some are helper scripts Steam runs directly
 ## Memory
 
 `holo-zram-swap` sets up a zram swap device with half of RAM, zstd and
-priority 100, and turns zswap off. `earlyoom` waits for that swap to exist
+priority 100, and turns zswap off. Below it, Valve's 1 GiB swap file in
+`/home` takes over once zram is full. `earlyoom` waits for that swap to exist
 before it starts (its swap threshold would fail otherwise; runit starts
 services in parallel).
 

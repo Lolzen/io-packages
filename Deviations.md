@@ -70,8 +70,8 @@ the session bus that Steam talks to.
 - **Not implemented**, for lack of a counterpart on Io: `Storage1`, `Jobs`,
   `UdevEvents1`, `LowPowerMode1`, `HdmiCec1`, `Audio1`, `ScreenReader0/1`,
   `UpdateBios1`, `UpdateDock1`, `FactoryReset1`, `WifiDebug1`.
-- **`CpuScheduler1`** offers only `none`; SteamOS also offers `lavd`, which
-  needs `scx_scheds`.
+- **`CpuScheduler1`** switches `scx_lavd` through a runit service `scx` in
+  place of SteamOS's `scx.service`, with Valve's `/etc/default/scx`.
 - **Wi-Fi backend:** wpa_supplicant by default, as in Valve's current
   configuration; SteamOS 3.8.4 still defaults to iwd. Switching works in
   both directions. iwd runs as a runit service linked only while it is the
@@ -92,7 +92,11 @@ the session bus that Steam talks to.
   under `/var/log/socklog/`, kernel messages in `kernel/`.
 - **zram swap** is set up by Io's own runit service (`holo-zram-swap`)
   instead of systemd's `zram-generator`, with Valve's values: half of RAM,
-  zstd, priority 100, zswap off.
+  zstd, priority 100, zswap off. Valve's 1 GiB swap file is switched on by
+  a core service instead of `swapfile.service` and `home-swapfile.swap`.
+- **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
+  core service writes elogind's `sleep.conf.d`). Suspend-then-hibernate is
+  not set up yet.
 - **earlyoom** runs with Valve's full argument set; its `--avoid` list names
   runit's processes instead of systemd.
 - **`tmpfiles.d` rules** from Valve's packages are boot-time core services

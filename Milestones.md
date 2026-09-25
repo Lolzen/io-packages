@@ -391,8 +391,15 @@ that, the loose ends carried over from Alpha 3.
       become real (Valve's `format-device.sh`)
 - [ ] `steamos-trim-devices`: implemented (Valve's `trim-devices.sh`), never
       tried from Steam — test it
-- [ ] Suspend-then-hibernate: Valve's `sleep.conf.d`, a swap area large enough
-      for the RAM; check what that means on an SD card
+- [x] Valve's 1 GiB swap file in `/home` next to zram (`holo-create-swapfile`,
+      switched on at boot by a core service; priority below zram)
+- [x] Hibernation only from the internal NVMe: a core service tells elogind
+      at every boot whether `/` lies on `/dev/nvme*`. Anywhere else nothing
+      offers hibernation (writing ~17 GB to an SD card or USB stick takes
+      minutes and wears it)
+- Suspend-then-hibernate itself moves to the NVMe milestone: Valve's resume
+  path relies on systemd (the swap file's position in an EFI variable),
+  and it can only be tested there
 
 ### Loose ends from Alpha 3
 
@@ -425,12 +432,22 @@ that, the loose ends carried over from Alpha 3.
       for a later X11 session), Valve's wake-on-Bluetooth rule. NTSync is
       built into Io's kernel already; `proton-nice` stays out (on SteamOS it
       lies in `/etc/limits.d/`, which nothing reads)
-- [ ] Remaining Valve packages: `steamos-systemreport` (rewrite for socklog
-      and runit), `steamos-devkit-service` (DNS-SD through Avahi instead of
-      systemd-resolved), `jupiter-firewall` (decision: Io has no firewall),
-      `cecd`/`cec-audio-control` (needs a dock), `steam-web-debug-portforward`
-      (developer mode). Dropped: `steamos-log-submitter` and `kdumpst`
-      (uploading to Valve is their purpose; kdumpst is bound to systemd)
+- [x] `steamos-systemreport`: Valve's report, changed only where it would
+      miss its purpose — socklog and Io's session logs instead of the
+      journal, xbps instead of pacman, pgrep instead of systemctl. Tools Io
+      does not have (coredumpctl, rauc, A/B partition sets) report "Unable to
+      run command!" through Valve's own error handling
+- [x] LAVD CPU scheduler as on SteamOS: `io-steamos-manager` 0.5.0 offers
+      `none` and `lavd`, a runit service `scx` reads Valve's
+      `/etc/default/scx`. Tested over D-Bus: `scx_lavd` takes about 6 s to
+      attach. Steam itself shows no switch for it — on SteamOS neither; the
+      interface is there for tools such as Decky plugins
+- Dropped: `steamos-log-submitter` and `kdumpst` (uploading to Valve is
+  their purpose; kdumpst is bound to systemd)
+- [ ] Steam's developer setting *Use Legacy X11* is missing on Io. Most
+      likely it needs a newer gamescope: Void's is 3.16.20 (built from
+      Valve's source), SteamOS 3.8.4 has 3.16.23. Check again after each
+      gamescope update
 - [ ] Kernel metapackage `linux-neptune`
 - [ ] Boot: the 4 s gap in the initramfs before `amdgpu` loads; a designed
       splash; the black gap while Steam loads inside gamescope
@@ -458,12 +475,17 @@ that, the loose ends carried over from Alpha 3.
   hang resolving the host name without a network)
 - `holo-realtek-firmware-toggles`: only for Realtek USB Wi-Fi sticks
   (`rtw89`)
+- `steamos-devkit-service`: DNS-SD through Avahi instead of
+  systemd-resolved
+- `jupiter-firewall`: a decision first — Io has no firewall
+- `cecd`/`cec-audio-control`: needs a dock to test
+- `steam-web-debug-portforward`: CEF debugging in developer mode
 
 ### Not in Alpha 4
 
 - **Installing to the internal NVMe:** waits until no more SteamOS
   comparisons or captures are needed — the NVMe still holds SteamOS as the
-  reference
+  reference. Suspend-then-hibernate comes with it
 - **System updates from Steam:** Steam moves from `steamos-update` to a D-Bus
   API (`atomupd-manager`). Io could serve it from `io-steamos-manager`
   with `xbps-install -Su` behind it
