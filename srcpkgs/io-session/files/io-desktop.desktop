@@ -1,0 +1,7 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Io Desktop (Plasma)
+Comment=Plasma with Io's session setup (PipeWire, filter chain, Steam)
+Exec=/usr/bin/io-start desktop
+Type=Application
+DesktopNames=KDE

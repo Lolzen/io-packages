@@ -1,10 +1,10 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.4.0
-revision=1
+version=0.5.0
+revision=2
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
-conf_files="/etc/sv/io-autologin/conf"
-depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond io-steamos-manager rtkit libcap-progs"
+depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
+ io-steamos-manager rtkit libcap-progs sddm"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -17,9 +17,17 @@ do_build() {
 do_install() {
 	vbin ${FILESDIR}/io-gamemode
 	vbin ${FILESDIR}/io-start
-	vmkdir etc/sv/io-autologin
-	vinstall ${FILESDIR}/sv-autologin/run 755 etc/sv/io-autologin run
-	vinstall ${FILESDIR}/sv-autologin/conf 644 etc/sv/io-autologin conf
+
+	# Login through SDDM, as on SteamOS: autologin into game mode, and again
+	# whenever a session ends. SDDM starts io-start from the session files.
+	vsv io-sddm
+	vmkdir usr/lib/sddm/sddm.conf.d
+	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d 10-io.conf
+	vmkdir usr/share/wayland-sessions
+	vinstall ${FILESDIR}/gamescope-wayland.desktop 644 usr/share/wayland-sessions
+	vinstall ${FILESDIR}/io-desktop.desktop 644 usr/share/wayland-sessions
+	vmkdir etc/security/limits.d
+	vinstall ${FILESDIR}/90-io-memlock.conf 644 etc/security/limits.d
 	vmkdir etc/skel
 	vbin ${FILESDIR}/io-plasma
 	vbin ${FILESDIR}/steamos-session-select
@@ -27,12 +35,6 @@ do_install() {
 	vbin ${FILESDIR}/io-grow-storage
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 etc/skel/Desktop
-
-	vmkdir etc/profile.d
-	# zz-: /etc/profile sources profile.d in name order, and this one starts
-	# the session, so every other profile script (locale.sh sets LANG) must
-	# have run before it.
-	vinstall ${FILESDIR}/io-session.sh 755 etc/profile.d zz-io-session.sh
 
 	vmkdir etc/pipewire/pipewire.conf.d
 	ln -sf /usr/share/examples/wireplumber/10-wireplumber.conf "${DESTDIR}/etc/pipewire/pipewire.conf.d/10-wireplumber.conf"

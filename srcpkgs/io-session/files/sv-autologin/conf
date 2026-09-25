@@ -1,3 +1,0 @@
-# User logged in automatically for game mode.
-# Leave empty to use the first regular user.
-IO_USER=deck

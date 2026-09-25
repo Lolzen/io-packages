@@ -62,7 +62,7 @@ KCMD_GPU2="ttm.pages_min=2097152 amdgpu.sched_hw_submission=4 amdgpu.dcdebugmask
 KCMD_MISC="audit=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.dm=0 fbcon=rotate:1 net.ifnames=0"
 KERNEL_CMDLINE="$KCMD_LOG $KCMD_GPU1 $KCMD_GPU2 $KCMD_MISC"
 
-SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower io-autologin agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
+SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower io-sddm agetty-tty1 agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
 # Belongs logically in io-desktop's own depends (same reasoning as every
 # other package on this list), but installed explicitly here too so a
@@ -185,8 +185,8 @@ chmod 440 "$MNT/etc/sudoers.d/10-wheel"
 echo "== verifying passwords"
 # chpasswd has failed silently before (image booted, but nobody could log
 # in through anything that actually checks the password, like tty2's
-# plain login - only io-autologin's --autologin worked, because that
-# skips authentication entirely). Catch that here instead of at the
+# plain login - only the autologin worked, because that skips
+# authentication entirely). Catch that here instead of at the
 # console.
 for u in root "$USERNAME"; do
     HASH=$(chroot "$MNT" awk -F: -v u="$u" '$1 == u { print $2 }' /etc/shadow)
@@ -214,10 +214,7 @@ for svc in $SERVICES; do
     fi
 done
 
-# Void's base-system post-install trigger enables agetty-tty1 by default,
-# regardless of what is in SERVICES above. io-autologin owns tty1 instead,
-# and the two fight over it if both are linked.
-rm -f "$MNT/etc/runit/runsvdir/default/agetty-tty1"
+# tty1 is a plain login console again: SDDM runs the sessions on tty7.
 
 # elogind ships both the runit service above and a dbus activation file.
 # Whichever loses the boot race retries every second forever. Removing the

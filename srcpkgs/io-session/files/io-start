@@ -1,12 +1,12 @@
 #!/bin/sh
-# io-start - start the session recorded in io-session-next (game mode by
-# default) under its own D-Bus session bus.
+# io-start <gamemode|desktop> - start a session under its own D-Bus session
+# bus. SDDM runs it from the session files (gamescope-wayland.desktop,
+# io-desktop.desktop); which one it picks, io-steamos-manager decides.
 #
 # All output of the session (gamescope, Steam, Plasma, PipeWire, ...) goes
 # to a size-limited log instead of tty1:
 #   /run/user/<uid>/io-log-<session>/current   (RAM, gone after reboot)
 # svlogd from runit rotates it: at most 5 files of 2 MB per session.
-# io-session.sh shows the last lines when a session dies right away.
 #
 # Developer mode (see io-devmode) additionally keeps the logs across
 # reboots under ~/.local/state/io/log-<session>.
@@ -23,9 +23,7 @@ if [ ! -d "$RUNDIR" ]; then
     exit 1
 fi
 
-STATE="$RUNDIR/io-session-next"
-SESSION=gamemode
-[ -r "$STATE" ] && SESSION=$(cat "$STATE")
+SESSION="${1:-gamemode}"
 case "$SESSION" in
     desktop) PROG=/usr/bin/io-plasma ;;
     *) SESSION=gamemode; PROG=/usr/bin/io-gamemode ;;

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Io: SDDM, as on SteamOS the display manager that logs deck in - into game
+# mode by default, and again whenever a session ends (Relogin=true).
+exec 2>&1
+# A one-shot login left over from a switch that never completed would
+# otherwise decide the first session (SteamOS: reset-oneshot-boot.conf).
+rm -f /etc/sddm.conf.d/zzt-steamos-temp-login.conf
+# plymouthd holds the display until it quits. --retain-splash keeps the
+# last frame instead of dropping to the text console: the screen goes from
+# splash to black to game mode, as on SteamOS.
+plymouth quit --retain-splash 2> /dev/null
+exec sddm

@@ -4,12 +4,11 @@ if pgrep -x kwin_wayland > /dev/null; then
     exit 1
 fi
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
-echo desktop > "$XDG_RUNTIME_DIR/io-session-next"
 # Valve runs the filter chain as its own PipeWire instance
 # (filter-chain.service), with a fixed quantum, locked memory and a single
 # malloc arena - settings that would be wrong for the main daemon. prlimit
-# raises this process's memlock soft limit to the hard limit io-autologin
-# set; MALLOC_ARENA_MAX matches Valve's drop-in.
+# raises this process's memlock soft limit to the hard limit set at login
+# (/etc/security/limits.d/90-io-memlock.conf); MALLOC_ARENA_MAX matches Valve's drop-in.
 start_filter_chain() {
     pgrep -f "pipewire -c filter-chain.conf" > /dev/null && return
     # Wait for the main daemon's socket in the background: a PipeWire client

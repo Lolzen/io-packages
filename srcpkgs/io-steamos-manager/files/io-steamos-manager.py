@@ -48,13 +48,21 @@ ROOT_IFACE = f"{IFACE}.RootManager"
 ERR = f"{IFACE}.Error.Failed"
 
 STATE_DIR = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
-SESSION_STATE = os.path.join(STATE_DIR, "io-session-next")
 
 # From Valve's /usr/share/steamos-manager/devices/steam-deck.toml
 TDP_MIN = 3
 TDP_MAX = 15
 GPU_POWER_PROFILES = ("CAPPED", "UNCAPPED")
-DESKTOP_SESSION = "plasma.desktop"
+# Sessions SDDM logs into (io-session). Steam and Valve's
+# steamos-session-select name Plasma's session files; Io has one desktop
+# session, which stands for all of them.
+GAME_SESSION = "gamescope-wayland.desktop"
+DESKTOP_SESSION = "io-desktop.desktop"
+DESKTOP_ALIASES = (DESKTOP_SESSION, "plasma.desktop", "plasmax11.desktop")
+# As steamos-manager: the default login mode, and a one-shot session for
+# the next login only.
+SDDM_DEFAULT = "/etc/sddm.conf.d/zz-steamos-autologin.conf"
+SDDM_TEMP = "/etc/sddm.conf.d/zzt-steamos-temp-login.conf"
 
 
 def log(msg):
@@ -335,6 +343,26 @@ class RootManager(ServiceInterface):
         _write("/sys/devices/system/cpu/cpufreq/boost", 1 if state else 0)
 
     @method()
+    def SetLoginSession(self, which: "s", session: "s"):
+        # which: "default" or "temp"; an empty session removes the file, so
+        # SDDM falls back to the next one (temp -> default -> io-session's
+        # game mode).
+        path = {"default": SDDM_DEFAULT, "temp": SDDM_TEMP}.get(which)
+        if path is None:
+            _fail(f"unknown login file: {which}")
+        if not session:
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+            return
+        if session not in (GAME_SESSION, DESKTOP_SESSION):
+            _fail(f"unknown session: {session}")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"[Autologin]\nSession={session}\n")
+
+    @method()
     def SetCpuScheduler(self, scheduler: "s"):
         # As SteamOS enables and disables scx.service: the runit service is
         # linked while lavd is chosen, and removed for "none".
@@ -533,43 +561,72 @@ class AmbientLightSensor1(ServiceInterface):
 
 
 class SessionManagement1(ServiceInterface):
-    """Io writes the next session into a state file that io-start reads,
-    then ends the running compositor; runit respawns the login."""
+    """As steamos-manager: switching tells SDDM which session to log in next
+    (through the root half, which writes /etc/sddm.conf.d) and ends the
+    running one; SDDM logs deck in again (Relogin=true)."""
 
     def __init__(self, root):
         super().__init__(f"{IFACE}.SessionManagement1")
+        self.root = root
 
-    def _switch(self, target):
+    def _default_mode(self):
         try:
-            with open(SESSION_STATE, "w", encoding="utf-8") as f:
-                f.write(target)
-        except OSError as err:
-            log(f"cannot write session state: {err}")
-            return
-        victim = "gamescope-wl" if target == "desktop" else "kwin_wayland"
-        subprocess.Popen(["setsid", "sh", "-c", f"sleep 1; pkill -TERM {victim}"],
-                         start_new_session=True,
+            with open(SDDM_DEFAULT, encoding="utf-8") as f:
+                return "desktop" if DESKTOP_SESSION in f.read() else "game"
+        except OSError:
+            return "game"
+
+    @staticmethod
+    def _end_session():
+        # Detached and delayed, so the caller (Steam, the desktop shortcut)
+        # gets its reply before its session goes.
+        # Game mode ends with gamescope. Plasma is logged out through its own
+        # session manager: ending kwin alone does not end it -
+        # kwin_wayland_wrapper restarts kwin (without the shell), and the
+        # session stays on a black screen. Only if Plasma does not answer,
+        # the wrapper and kwin go directly.
+        uid = os.getuid()
+        if subprocess.run(["pgrep", "-u", str(uid), "-x", "gamescope-wl"],
+                          stdout=subprocess.DEVNULL).returncode == 0:
+            cmd = f"sleep 1; pkill -TERM -u {uid} -x gamescope-wl"
+        else:
+            cmd = ("sleep 1; busctl --user call org.kde.Shutdown /Shutdown "
+                   "org.kde.Shutdown logout || "
+                   f"pkill -TERM -u {uid} -x 'kwin_wayland_wrapper|kwin_wayland'")
+        subprocess.Popen(["setsid", "sh", "-c", cmd], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    @method()
-    def SwitchToDesktopMode(self):
-        self._switch("desktop")
+    async def _switch(self, mode):
+        if mode == "desktop":
+            temp = DESKTOP_SESSION
+        else:
+            # Game mode is SDDM's own default; only a desktop default needs
+            # a one-shot override.
+            temp = GAME_SESSION if self._default_mode() == "desktop" else ""
+        await self.root._call("SetLoginSession", "ss", ["temp", temp])
+        self._end_session()
 
     @method()
-    def SwitchToGameMode(self):
-        self._switch("gamemode")
+    async def SwitchToDesktopMode(self):
+        await self._switch("desktop")
 
     @method()
-    def SwitchToLoginMode(self, login_mode: "s"):
-        self._switch("desktop" if login_mode == "desktop" else "gamemode")
+    async def SwitchToGameMode(self):
+        await self._switch("game")
+
+    @method()
+    async def SwitchToLoginMode(self, login_mode: "s"):
+        if login_mode not in ("game", "desktop"):
+            raise DBusError(ERR, f"unknown login mode: {login_mode}")
+        await self._switch(login_mode)
 
     @method()
     def ValidDesktopSessions(self) -> "as":
         return [DESKTOP_SESSION]
 
     @method()
-    def CleanTemporarySessions(self):
-        pass
+    async def CleanTemporarySessions(self):
+        await self.root._call("SetLoginSession", "ss", ["temp", ""])
 
     @dbus_property()
     def DefaultDesktopSession(self) -> "s":
@@ -577,15 +634,19 @@ class SessionManagement1(ServiceInterface):
 
     @DefaultDesktopSession.setter
     def DefaultDesktopSession(self, value: "s"):
-        pass
+        if value not in DESKTOP_ALIASES:
+            raise DBusError(ERR, f"unknown desktop session: {value}")
 
     @dbus_property()
     def DefaultLoginMode(self) -> "s":
-        return "game"
+        return self._default_mode()
 
     @DefaultLoginMode.setter
     def DefaultLoginMode(self, value: "s"):
-        pass
+        if value not in ("game", "desktop"):
+            raise DBusError(ERR, f"unknown login mode: {value}")
+        session = DESKTOP_SESSION if value == "desktop" else ""
+        self.root.write("SetLoginSession", "ss", ["default", session], self, ["DefaultLoginMode"])
 
 
 class GpuPerformanceLevel1(ServiceInterface):
@@ -823,6 +884,9 @@ async def run_user():
 
     session.export("/", ObjectManager(instances))
     await session.request_name(BUSNAME)
+    # A new session has started: a one-shot login from a switch has done
+    # its job (steamos-manager does the same at session start).
+    await root._call("SetLoginSession", "ss", ["temp", ""])
     log("user daemon ready")
     await session.wait_for_disconnect()
 

@@ -1,48 +1,36 @@
 #!/bin/sh
-# steamos-session-select <plasma|gamescope>
-#
-# Legacy entry point, kept for Steam client compatibility. Like Valve's
-# version (a wrapper around steamosctl) it asks the session's
-# io-steamos-manager to switch via SessionManagement1 over D-Bus. This is
-# also what the "Return to Game Mode" desktop shortcut uses; on SteamOS
-# that shortcut calls SwitchToGameMode the same way.
-#
-# Fallback when the manager is unreachable: record the target in the state
-# file io-start reads on the next login, and end kwin directly if visible.
-# (Inside Steam's pressure-vessel container pgrep/pkill cannot see host
-# processes, so there only the state file is written.)
-
-STATE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/io-session-next"
+# steamos-session-select - kept for Steam client compatibility, as on
+# SteamOS, where it is a thin wrapper around steamosctl. Same mapping as
+# Valve's; Io has one desktop session, which every plasma variant selects.
+# io-steamos-manager (SessionManagement1) does the switch: it tells SDDM
+# which session to log in next and ends the running one.
+set -e
 SVC=com.steampowered.SteamOSManager1
 OBJ=/com/steampowered/SteamOSManager1
+SM=$SVC.SessionManagement1
 
-case "$1" in
-    plasma|plasma-x11|desktop)
-        echo desktop > "$STATE" || exit 1
+call() {
+    busctl --user call $SVC $OBJ $SM "$1" > /dev/null
+}
+set_mode() {
+    busctl --user set-property $SVC $OBJ $SM DefaultLoginMode s "$1"
+}
+
+session="${1:-gamescope}"
+case "$session" in
+    plasma-wayland-persistent|plasma-x11-persistent)
+        set_mode desktop
+        call SwitchToDesktopMode
         ;;
-    gamescope|steamos|steam)
-        echo gamemode > "$STATE" || exit 1
+    plasma|plasma-wayland|desktop)
+        call SwitchToDesktopMode
+        ;;
+    gamescope)
+        set_mode game
+        call SwitchToGameMode
         ;;
     *)
-        echo "steamos-session-select: unknown target '$1'" >&2
-        echo "usage: steamos-session-select <plasma|gamescope>" >&2
+        echo >&2 "!! Unrecognized session '$session'"
         exit 1
         ;;
 esac
-
-if [ "$(cat "$STATE")" = desktop ]; then
-    METHOD=SwitchToDesktopMode
-else
-    METHOD=SwitchToGameMode
-fi
-if command -v busctl > /dev/null 2>&1; then
-    busctl --user call $SVC $OBJ $SVC.SessionManagement1 $METHOD > /dev/null 2>&1 && exit 0
-fi
-
-# Fallback: end the desktop session if visible. Detached, so this script
-# can return before its parent process dies with the session.
-if pgrep -x kwin_wayland > /dev/null 2>&1; then
-    setsid sh -c 'sleep 1; pkill -TERM kwin_wayland' > /dev/null 2>&1 &
-fi
-
-exit 0
