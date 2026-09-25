@@ -1,2 +1,11 @@
-#!/bin/sh
-exit 0
+#!/bin/bash
+
+set -eu
+
+if [[ $EUID -ne 0 ]];
+then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+# Io: SDDM runs as the runit service io-sddm (SteamOS: systemctl restart sddm)
+exec sv restart io-sddm
