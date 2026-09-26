@@ -1,0 +1,19 @@
+# Template file for 'holo-realtek-firmware-toggles'
+pkgname=holo-realtek-firmware-toggles
+version=1.3
+revision=1
+depends="bash iw polkit"
+short_desc="Valve's tool to toggle Realtek rtw89 driver bits (low-latency mode)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+
+# Valve's script as it is. It only acts on Realtek rtw89 USB Wi-Fi sticks
+# (the Deck's own Wi-Fi is not one) and works through debugfs, which Io
+# mounts at boot (steamos-tuning).
+
+do_install() {
+	vmkdir usr/bin/holo-polkit-helpers
+	vinstall ${FILESDIR}/holo-realtek-firmware-toggles 755 usr/bin/holo-polkit-helpers
+	vinstall ${FILESDIR}/org.valve.holo-realtek-firmware-toggles.policy 644 usr/share/polkit-1/actions
+}

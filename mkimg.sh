@@ -62,7 +62,7 @@ KCMD_GPU2="ttm.pages_min=2097152 amdgpu.sched_hw_submission=4 amdgpu.dcdebugmask
 KCMD_MISC="audit=0 rd.luks=0 rd.lvm=0 rd.md=0 rd.dm=0 fbcon=rotate:1 net.ifnames=0"
 KERNEL_CMDLINE="$KCMD_LOG $KCMD_GPU1 $KCMD_GPU2 $KCMD_MISC"
 
-SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower io-sddm agetty-tty1 agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
+SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower steam-web-debug-portforward io-sddm agetty-tty1 agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
 # Belongs logically in io-desktop's own depends (same reasoning as every
 # other package on this list), but installed explicitly here too so a
@@ -178,9 +178,7 @@ chroot "$MNT" usermod -p "$ROOTHASH" root
 chroot "$MNT" useradd -m -G wheel,audio,video,input,storage,socklog,gamemode -s /bin/bash "$USERNAME"
 chroot "$MNT" usermod -p "$USERHASH" "$USERNAME"
 
-# wheel gets sudo, as on any Void install.
-echo "%wheel ALL=(ALL:ALL) ALL" > "$MNT/etc/sudoers.d/10-wheel"
-chmod 440 "$MNT/etc/sudoers.d/10-wheel"
+# wheel gets sudo through holo-sudo, as on SteamOS.
 
 echo "== verifying passwords"
 # chpasswd has failed silently before (image booted, but nobody could log

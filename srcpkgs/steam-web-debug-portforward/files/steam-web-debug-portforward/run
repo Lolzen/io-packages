@@ -1,0 +1,7 @@
+#!/bin/sh
+# Io: counterpart of SteamOS's steam-web-debug-portforward.socket/.service
+# (jupiter-legacy-support): port 8081 on the network forwards to Steam's CEF
+# remote debugging port 8080, which Steam only opens on localhost, and only
+# with CEF remote debugging switched on in its developer settings.
+exec 2>&1
+exec chpst -u nobody socat TCP-LISTEN:8081,reuseaddr,fork TCP:127.0.0.1:8080

@@ -1,10 +1,11 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.5.0
-revision=2
+version=0.5.2
+revision=1
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
  io-steamos-manager rtkit libcap-progs sddm"
+conf_files="/etc/elogind/logind.conf.d/10-io-kill-user-processes.conf"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -26,6 +27,8 @@ do_install() {
 	vmkdir usr/share/wayland-sessions
 	vinstall ${FILESDIR}/gamescope-wayland.desktop 644 usr/share/wayland-sessions
 	vinstall ${FILESDIR}/io-desktop.desktop 644 usr/share/wayland-sessions
+	vmkdir etc/elogind/logind.conf.d
+	vinstall ${FILESDIR}/10-io-kill-user-processes.conf 644 etc/elogind/logind.conf.d
 	vmkdir etc/security/limits.d
 	vinstall ${FILESDIR}/90-io-memlock.conf 644 etc/security/limits.d
 	vmkdir etc/skel

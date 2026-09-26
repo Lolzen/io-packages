@@ -1,0 +1,17 @@
+# Template file for 'steam-web-debug-portforward'
+pkgname=steam-web-debug-portforward
+version=1.0
+revision=1
+depends="socat runit-void"
+short_desc="Forward Steam's CEF remote debugging port to the network, as on SteamOS"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+
+# SteamOS does this with a socket unit and systemd-socket-proxyd
+# (jupiter-legacy-support); here a runit service with socat. Enabled in the
+# image like SteamOS enables the socket.
+
+do_install() {
+	vsv steam-web-debug-portforward
+}

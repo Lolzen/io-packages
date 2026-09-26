@@ -26,7 +26,7 @@ TdpLimit 3..15 W, GPU power profiles CAPPED/UNCAPPED only, desktop session
 actually in effect afterwards, read back from sysfs, not the requested one.
 
 Not implemented (Io lacks the backing pieces): Storage1, Jobs, UdevEvents1,
-LowPowerMode1, HdmiCec1, Audio1, ScreenReader0/1, UpdateBios1, UpdateDock1,
+HdmiCec1, Audio1, ScreenReader0/1, UpdateBios1, UpdateDock1,
 FactoryReset1, WifiDebug1.
 """
 
@@ -505,6 +505,68 @@ class Manager2(ServiceInterface):
         return ["unknown", "unknown"]
 
 
+# Download mode, as steamos-manager: while Steam holds at least one handle,
+# the TDP limit is lowered to the Deck's download_mode_limit (Valve's
+# jupiter.toml: 6 W) and restored when the last handle is closed.
+DOWNLOAD_MODE_TDP = 6
+
+
+class LowPowerMode1(ServiceInterface):
+    """EnterDownloadMode hands out the write end of a pipe; the mode lasts
+    until every handed-out end is closed (or its holder exits)."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.LowPowerMode1")
+        self.root = root
+        self.handles = {}
+        self.previous_tdp = None
+
+    async def _update(self):
+        if self.handles:
+            if self.previous_tdp is None:
+                self.previous_tdp = read_tdp()
+                log(f"download mode: TDP {self.previous_tdp} -> {DOWNLOAD_MODE_TDP} W")
+            if read_tdp() != DOWNLOAD_MODE_TDP:
+                await self.root._call("SetTdpLimit", "u", [DOWNLOAD_MODE_TDP])
+        elif self.previous_tdp is not None:
+            log(f"download mode ends: TDP back to {self.previous_tdp} W")
+            await self.root._call("SetTdpLimit", "u", [self.previous_tdp])
+            self.previous_tdp = None
+
+    def _closed(self, fd, identifier):
+        loop = asyncio.get_running_loop()
+        try:
+            data = os.read(fd, 1024)
+        except OSError:
+            data = b""
+        if data:
+            return
+        loop.remove_reader(fd)
+        os.close(fd)
+        count = self.handles.get(identifier, 0) - 1
+        if count > 0:
+            self.handles[identifier] = count
+        else:
+            self.handles.pop(identifier, None)
+        loop.create_task(self._update())
+
+    @method()
+    async def EnterDownloadMode(self, identifier: "s") -> "h":
+        read_end, write_end = os.pipe()
+        loop = asyncio.get_running_loop()
+        self.handles[identifier] = self.handles.get(identifier, 0) + 1
+        loop.add_reader(read_end, self._closed, read_end, identifier)
+        await self._update()
+        # Our copy of the write end must go once the reply carries it, or the
+        # pipe never reports the holder's close.
+        loop.call_later(2, os.close, write_end)
+        return write_end
+
+    @method()
+    def ListDownloadModeHandles(self) -> "a{su}":
+        return dict(self.handles)
+
+
 class TdpLimit1(ServiceInterface):
     def __init__(self, root):
         super().__init__(f"{IFACE}.TdpLimit1")
@@ -860,12 +922,14 @@ USER_INTERFACES = (
     FanControl1,
     WifiPowerManagement1,
     WifiBackend1,
+    LowPowerMode1,
 )
 
 
 async def run_user():
     system = await MessageBus(bus_type=BusType.SYSTEM).connect()
-    session = await MessageBus(bus_type=BusType.SESSION).connect()
+    # Unix fds: LowPowerMode1.EnterDownloadMode returns one.
+    session = await MessageBus(bus_type=BusType.SESSION, negotiate_unix_fd=True).connect()
     root = Root(system)
 
     instances = []
