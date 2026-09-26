@@ -40,6 +40,7 @@ P1="$P1 steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-deskt
 P2="socklog-void kde-plasma steam-jupiter steam-im-modules steamdeck-kde-presets vpower holo-upower-config"
 P2="$P2 steamos-networking-tools steamos-systemreport sddm scx wireless-regdb gstreamer1-pipewire"
 P2="$P2 pipewire-32bit libspa-videoconvert-32bit libspa-audioconvert-32bit"
+P2="$P2 holo-sudo jupiter-firewall cecd cec-audio-control steamos-devkit-service steam-web-debug-portforward"
 for p in $P1 $P2; do
     check "installed: $p" xbps-query "$p"
 done
@@ -48,7 +49,7 @@ for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptun
 done
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd; do
+for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent
@@ -57,6 +58,9 @@ check "no runit polkitd service (D-Bus activated only)" sh -c '[ ! -e /var/servi
 check "exactly one polkitd" sh -c '[ "$(pgrep -c polkitd)" = 1 ]'
 check "no resize core service" sh -c '! ls /etc/runit/core-services/ | grep -q resize'
 check "no io-autologin (SDDM logs in)" sh -c '[ ! -e /var/service/io-autologin ]'
+check "/ has mode 755 (not world-writable)" sh -c '[ "$(stat -c %a /)" = 755 ]'
+check "firewall active (ufw)" sh -c 'ufw status | grep -q "Status: active"'
+check "logout ends the session (KillUserProcesses)" grep -q "KillUserProcesses=yes" /etc/elogind/logind.conf.d/10-io-kill-user-processes.conf
 check "no iwd service (wpa_supplicant is the default backend)" sh -c '[ ! -e /var/service/iwd ] || grep -q iwd /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf'
 
 echo "== memory"
@@ -75,6 +79,8 @@ echo "== game mode session"
 check "SDDM session on seat0" sh -c 'loginctl --no-pager list-sessions | grep -q seat0'
 check "gamescope running" pgrep -x gamescope-wl
 check "gamescope with stats pipe (-T)" sh -c 'tr "\0" " " < /proc/$(pgrep -x gamescope-wl)/cmdline | grep -q -- " -T "'
+check "one io-steamos-manager user half" sh -c '[ "$(pgrep -c -u deck -f "^/usr/bin/python3 /usr/bin/io-steamos-manager$")" = 1 ]'
+check "one cecd" sh -c '[ "$(pgrep -c -u deck -x cecd)" = 1 ]'
 check "mangoapp has Steam's config file" sh -c 'tr "\0" "\n" < /proc/$(pgrep -x mangoapp)/environ | grep -q ^MANGOHUD_CONFIGFILE='
 check "gamescope file capability" sh -c 'getcap /usr/bin/gamescope | grep -q cap_sys_nice=ep'
 check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /proc/$(pgrep -x gamescope-wl)/status'

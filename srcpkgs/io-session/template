@@ -1,6 +1,6 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.6.1
+version=0.6.2
 revision=1
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond

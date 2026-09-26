@@ -66,8 +66,7 @@ reason is documented in
   `io-steamos-manager`, Io's own implementation of Valve's SteamOS Manager
 - Battery: controlled shutdown through Steam when the battery runs empty
   (Valve's vpower)
-- Proton games, gamemode, screenshots, screen recording (with gamescope
-  3.16.22 or later, see below)
+- Proton games, gamemode, screenshots, screen recording
 - KDE Plasma desktop with Valve's Deck defaults: Steam runs in the
   background, Steam's on-screen keyboard (Steam + X), *Return to Gaming
   Mode*
@@ -75,10 +74,13 @@ reason is documented in
 - zram swap, swap file, earlyoom, kernel and scheduler tuning as on
   SteamOS; the LAVD CPU scheduler for tools that switch it
 - Steam's system report, saved from Steam's own UI
+- Accessibility: Steam's screen reader and mono audio
+- HDMI-CEC, a firewall with Valve's rules (and Plasma's firewall page), and
+  the SteamOS Devkit Client
 
 Not yet: automatic mounting of SD cards and USB drives (Alpha 5),
-installing to the internal SSD. Screen recording needs gamescope 3.16.22 or
-later; Void still ships 3.16.20 (an update is submitted).
+installing to the internal SSD. Built for the Steam Deck LCD; the OLED model
+and Valve's own dock need someone with the hardware to test.
 
 Open items and plans are tracked on the
 [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) page.

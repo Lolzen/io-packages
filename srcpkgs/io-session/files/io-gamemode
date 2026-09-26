@@ -11,8 +11,7 @@
 # Variables are split in two groups:
 #   A - set exactly like Valve does, Io has everything they depend on
 #   B - Valve sets them too, but they depend on something Io does not ship
-#       yet (cecd, udisks storage helpers,
-#       systemd scopes). Setting them now would show controls in Steam
+#       yet (udisks storage helpers, systemd scopes). Setting them now would show controls in Steam
 #       that silently do nothing. Enable one by one once the dependency
 #       exists.
 
@@ -175,9 +174,10 @@ fi
 bg=/usr/share/plymouth/themes/io/io.png
 [ -r "$bg" ] && export STEAM_UPDATEUI_PNG_BACKGROUND="$bg"
 
+# HDMI-CEC: cecd and cec-audio-control run with every session (see above)
+export STEAM_ENABLE_CEC=1
+
 # ---------------------------------------- B: waiting for a dependency
-# cecd (HDMI-CEC daemon):
-#export STEAM_ENABLE_CEC=1
 # Status LED brightness control (Jupiter has one too, status:white); the LED
 # is writable for deck through steam-jupiter's udev rule.
 export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
