@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=6
+revision=7
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -16,10 +16,6 @@ homepage="https://gitlab.com/evlaV/jupiter-hw-support"
 # the actual changes: a sturdier jupiter-check-support and the restructured
 # GPU reset rules. Valve's cursor theme (the images come from 20260327.1:
 # later versions moved them to a holo package) is new in Io.
-
-do_build() {
-	:
-}
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers
