@@ -70,6 +70,30 @@ ever came — look at PipeWire, not at VA-API.
 
 ## runit, D-Bus and sessions
 
+**With SDDM, the previous session is still on its way out when the next one
+starts.** A session script that starts a per-session daemon only "if none
+is running" finds the old session's and skips its own; the old one then
+exits, and the new session has none. Start per-session daemons
+unconditionally — each session has its own bus.
+
+**A session ended by SDDM leaves its D-Bus bus behind.** `dbus-run-session`
+removes its bus only when its own child exits normally; killed with the
+session, it leaves the bus and everything started with `setsid` running.
+`KillUserProcesses=yes` in elogind ends the session's processes, as on
+SteamOS.
+
+**A daemon that is D-Bus activatable must not also be started by hand.**
+If a client asks for its name before the hand-started one has claimed it,
+the bus starts a second instance. Start it through the bus
+(`StartServiceByName`), so there is one way it comes up.
+
+**A child started with `Popen` and never waited for stays a zombie.**
+Start detached helpers with `setsid -f`, so the system reaps them.
+
+**`busctl --user` over SSH has no session bus.** Each Io session has its own
+bus; borrow its address from a process in it
+(`DBUS_SESSION_BUS_ADDRESS` from `/proc/$(pgrep -o -x steam)/environ`).
+
 **A service must not be both a runit service and D-Bus-activated.** At boot
 they race; the loser restarts every second, forever. Seen with elogind
 (runit service kept, activation file removed) and polkitd (runit service
@@ -155,6 +179,20 @@ audio configuration changes by hand, a cold boot is still the reliable way.
 ---
 
 ## Packaging (xbps-src)
+
+**Never rebuild a package with the same version and revision.** xbps
+packages are not byte-identical between builds. `publish.sh` skips a file
+that is already uploaded but re-indexes from the new build, so the index
+and the uploaded file disagree, and xbps reports a checksum mismatch on
+install.
+
+**Packages with Python scripts need `python_version=3`** in the template.
+The shebang-rewriting hook converts the first script it can guess and stops
+at the next one otherwise.
+
+**Void has no firewalld.** ufw is the alternative that `plasma-firewall`
+also drives. ufw keeps rules added while it is inactive, and applies them
+at boot only with `ENABLED=yes` in `/etc/ufw/ufw.conf`.
 
 **A new upstream version can add configure-time dependencies for its tests.**
 gamescope 3.16.30 builds unit tests by default and requires catch2; without
@@ -335,6 +373,15 @@ setting fixes it (`DPIScaling` 0 in `~/.steam/registry.vdf`);
 
 ## Audio
 
+**A stream on the bare speaker sees the speaker rebuilt.** WirePlumber's
+`node.features.audio.mono` turns the speaker into one channel and back;
+Steam's own interface sound (its embedded Chromium) closes its output on
+the way back to two and does not reopen it until Steam restarts. A loopback
+sink in front of the speaker, as on SteamOS 3.8.4, keeps two channels for
+applications. On SteamOS the first switch after boot trips the loopback
+once (`cannot set PortConfig param: node already started`), later ones
+work.
+
 **A loopback bound with `target.object` at startup can bind to nothing and
 never retry**, if its target node does not exist yet. It looks complete,
 suspended and correct in `wpctl` and `pw-dump`. Set `target.delay.sec`, and
@@ -369,6 +416,25 @@ files.
 
 ## Valve packages
 
+**Orca stops at start when its settings file lacks a section**
+(`KeyError: 'pronunciations'`). Orca writes all of them itself when it
+creates the file; steamos-manager writes only what it changes, which on
+SteamOS is fine because Orca ran first. Io's manager adds the missing
+sections.
+
+**`jupiter-dock-updater --check`: 0 means "update available", 7 "up to
+date"** (Valve's mock script). A stub that simply exits 0 makes Steam
+announce a dock update at every start.
+
+**Valve's `steamos-automount.sh` makes the mount point world-writable**
+(`chmod 777`) when `deck` cannot write to it. Run on a device that is
+already mounted — Io boots from an SD card — it would change the mode of
+that mount point, `/` included. Exclude the boot device before enabling
+automount (Alpha 5).
+
+**SteamOS 3.8.4 does not offer `WifiDebug1`** on the Deck, although Valve's
+interface file describes it.
+
 **`jupiter-hw-support` 20260807.1 renames the helpers to `holo-*`**, with
 `steamos-alias` (a pacman hook) linking the old names back. Steam and
 SteamOS 3.8.4 still use `steamos-*`. Io keeps the old names and takes only
@@ -397,6 +463,8 @@ relaxed upstream.
 ---
 
 ## Shell and tools
+
+**`avahi-browse` is in `avahi-utils`**, not in `avahi`.
 
 **Over SSH, `loginctl` and other paged tools fail on an unknown terminal
 type** (`rxvt-unicode-256color`). Use `--no-pager`.

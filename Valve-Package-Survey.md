@@ -16,10 +16,10 @@ plain file capability, which Io now does too.
 
 ## Smaller, probably worth it
 
-`steamos-systemreport` and `steamos-networking-tools` are ported (Alpha 4).
-`holo-realtek-firmware-toggles`, `jupiter-firewall` and
-`jupiter-validation-tools` are small items for later (see
-[Milestones](Milestones))
+`steamos-systemreport` and `steamos-networking-tools` are ported (Alpha 4);
+`holo-sudo`, `holo-realtek-firmware-toggles`, `jupiter-firewall` (with ufw),
+`cecd`, `cec-audio-control` and `steamos-devkit-service` (with Avahi) since
+(see [Alpha 5](Alpha-5)). `jupiter-validation-tools` is left for later
 
 ## Deliberate direction, not a straight port
 
@@ -96,14 +96,13 @@ repeated here.
   "Everything still in here should be either removed or re-homed to a
   proper package." A grab-bag of QA/devkit tooling, Valve's own workarounds
   for their broken `/var/boot` mechanics, and other cruft even Valve wants
-  gone. Two pieces were looked at: `KillUserProcesses=True` — with SDDM,
-  session switches are real logouts now, so it is worth another look (see
-  [Milestones](Milestones)); `steam-web-debug-portforward` (CEF debugging
-  in developer mode) is a small item for later
+  gone. Two pieces were taken over: `KillUserProcesses=True` (with SDDM,
+  session switches are logouts, and without it every old session kept
+  running) and `steam-web-debug-portforward` (CEF debugging in developer
+  mode, as a runit service)
 - `jupiter-resolved-nomdns` — `systemd-resolved`-specific (Io uses
-  NetworkManager directly), and exists only to stop mDNS colliding with
-  `avahi`, which is only there for `steamos-devkit-service` — a chain of
-  two things Io doesn't have
+  NetworkManager directly), and exists only to stop resolved's mDNS
+  colliding with `avahi`; Io runs Avahi alone, for `steamos-devkit-service`
 - `steamos-customizations-git` — a stale, unmaintained snapshot of the same
   repo as `steamos-customizations-jupiter` (frozen since 2023-09, confirmed
   by comparing tag histories); superseded by `-jupiter`, nothing to look at
@@ -131,8 +130,6 @@ something Io doesn't have yet. Revisit if the underlying gap closes
 (e.g. NVMe migration, desktop-mode maturity) or on request:
 
 - `jupiter-dock-updater-bin` — needs Valve's own official dock hardware
-- `steamos-devkit-service` — only relevant for the Steamworks devkit
-  developer workflow
 - `steamos-kdumpst-layer` — kernel crash-dump tooling, developer-facing
 - `NetworkManager/conf.d/10-steamos-defaults.conf` — parked deliberately; tied
   to the open Wi-Fi backend decision (SteamOS defaults to iwd, Io uses

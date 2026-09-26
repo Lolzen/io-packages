@@ -22,7 +22,9 @@ behind each difference, see [Deviations](Deviations).
    - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
 4. **runit stage 2** starts the services linked in `/var/service`, among them
    `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
-   `jupiter-fan-control`, `socklog-unix` and `nanoklogd`, and `io-sddm`.
+   `jupiter-fan-control`, `socklog-unix` and `nanoklogd`,
+   `jupiter-firewall`, `steam-web-debug-portforward`, and `io-sddm`. Steam's
+   developer mode adds `avahi-daemon` and `steamos-devkit-service`.
 5. **`io-sddm`** removes a leftover one-shot login file, ends the splash with
    `plymouth quit --retain-splash` (the screen goes from splash to black to
    game mode, as on SteamOS) and starts SDDM. SDDM logs `deck` in on tty7;
@@ -58,9 +60,18 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
   directly as its child. Like Valve's session it limits the portals to the
   gamescope backend (`XDG_DESKTOP_PORTAL_DIR`), and passes gamescope's
   statistics pipe (`-T`, `GAMESCOPE_STATS`). It also starts PipeWire, the
-  power button daemon, the session half of `io-steamos-manager`, the filter
-  chain's own PipeWire instance, and — right before gamescope, once the
-  environment is complete — mangoapp for Steam's performance overlay.
+  power button daemon, the session half of `io-steamos-manager` (always, one
+  per session and bus), the HDMI-CEC daemons, the filter chain's own
+  PipeWire instance, and — right before gamescope, once the environment is
+  complete — mangoapp for Steam's performance overlay.
+- **HDMI-CEC:** `cecd` is started through D-Bus activation
+  (`StartServiceByName`), so there is only one way it comes up and the bus
+  keeps it to one instance; `cec-audio-control` is started directly and
+  creates its socket in `$XDG_RUNTIME_DIR` itself. Both in game mode and in
+  Plasma, as SteamOS's user services of the graphical session.
+- **Logging out ends the session's processes** (`KillUserProcesses=yes` in
+  elogind, as on SteamOS): with SDDM a switch is a logout, and the session's
+  bus, its daemons and anything started with `setsid` end with it.
 - **`io-plasma`** starts KDE Plasma. The session half of
   `io-steamos-manager` starts there through XDG autostart, and so does Steam
   (`steam -silent`, from `steamdeck-kde-presets`), as on SteamOS: it
@@ -100,11 +111,24 @@ halves, like Valve's daemon:
 |---|---|---|
 | Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, ...) | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, ...) |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, ...) | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `Audio1`, `HdmiCec1`, `ScreenReader0/1`, ...) |
 | Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
 
 Access to the root half is limited to root and `wheel`
 (`/usr/share/dbus-1/system.d/com.steampowered.SteamOSManager1.conf`).
+
+Some session-half interfaces drive other programs, as steamos-manager does:
+
+- **`ScreenReader0/1`:** starts and stops Orca (detached, with the running
+  Steam's display settings), writes Orca's `user-settings.conf` and has
+  Orca reload it (`SIGUSR1`), lists voices from speech-dispatcher, and
+  presses Orca's shortcuts on a virtual keyboard named `steamos-manager`
+  (`/dev/uinput`, group `input`)
+- **`HdmiCec1`:** writes `~/.config/cecd/config.d/00-` and
+  `99-steamos-manager.toml`, then sends cecd `SIGHUP`
+- **`Audio1`:** WirePlumber's `node.features.audio.mono`, saved
+- **`LowPowerMode1`:** hands out the write end of a pipe; while any is
+  open, the TDP is 6 W
 
 Steam does not use D-Bus for everything. Some features are enabled by
 environment variables alone (the adaptive brightness toggle, fan control,
@@ -147,7 +171,12 @@ filter) → loopback source, which Steam and games use. Valve's WirePlumber
 access rules hide the raw hardware microphone from applications. Speaker
 tuning happens in the CS35L41 amplifiers' own DSP.
 
-The loopback is created at runtime by `io-create-loopback.lua`, Io's port of
+The speaker gets a loopback too, as on SteamOS 3.8.4: applications play into
+a loopback sink in front of it. The loopback keeps its two channels when the
+speaker itself is rebuilt (Steam's *Mono audio* turns it into one channel),
+so no application sees the channel count change.
+
+The loopbacks are created at runtime by `io-create-loopback.lua`, Io's port of
 Valve's `CreateLoopback()`: it copies the hardware node's channel layout,
 priority and card identity (`device.id`, `card.profile.device`). Steam uses
 that identity to recognize the built-in devices and shows its own localized

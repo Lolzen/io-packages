@@ -41,8 +41,14 @@ is a bug.
   SteamOS.
 - **Steam launch flags, gamescope arguments and environment match
   SteamOS**, except variables whose counterpart Io does not have yet
-  (HDMI-CEC daemon, drive adoption and unmounting through Steam, systemd
-  scopes). Setting them would show controls in Steam that do nothing.
+  (drive adoption and unmounting through Steam, systemd scopes). Setting them would show controls in Steam that do nothing.
+- **HDMI-CEC:** `cecd` starts through D-Bus activation and
+  `cec-audio-control` directly from the session scripts (SteamOS: user
+  services of the graphical session, `cec-audio-control` socket-activated).
+  Access to `/dev/cec*` and `/dev/uinput` comes from group rules (`video`,
+  `input`) instead of systemd's `uaccess`.
+- **Logging out ends every process of the session**, as on SteamOS
+  (`KillUserProcesses`), set in elogind.
 - **mangoapp and gamemode** are started differently: mangoapp by the session
   script in a loop tied to gamescope (Valve: a user service with
   `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
@@ -72,8 +78,13 @@ the session bus that Steam talks to.
   (`zz-steamos-autologin.conf`, `zzt-steamos-temp-login.conf`) through the
   root half, and logs Plasma out through `org.kde.Shutdown`.
 - **Not implemented**, for lack of a counterpart on Io: `Storage1`, `Jobs`,
-  `UdevEvents1`, `LowPowerMode1`, `HdmiCec1`, `Audio1`, `ScreenReader0/1`,
-  `UpdateBios1`, `UpdateDock1`, `FactoryReset1`, `WifiDebug1`.
+  `UdevEvents1`, `UpdateBios1`, `UpdateDock1`, `FactoryReset1`.
+  `WifiDebug1` is not needed: SteamOS 3.8.4 does not offer it on the Deck.
+- **`ScreenReader0/1`** starts Orca itself (SteamOS: `orca.service` with
+  gamescope's environment file), with the running Steam's display settings.
+  When it writes Orca's settings file before Orca ever ran, it adds the
+  sections Orca needs (Orca would otherwise stop at start).
+- **`Audio1`** sets WirePlumber's `node.features.audio.mono` with `wpctl`.
 - **`CpuScheduler1`** switches `scx_lavd` through a runit service `scx` in
   place of SteamOS's `scx.service`, with Valve's `/etc/default/scx`.
 - **Wi-Fi backend:** wpa_supplicant by default, as in Valve's current
@@ -147,9 +158,11 @@ the session bus that Steam talks to.
   WirePlumber. The result matches SteamOS, including the card identity the
   loopback carries — that is what makes Steam show its own localized device
   names.
-- **Only sources get a loopback**, as in Valve's `steamdeck-dsp` 1.02.
-  SteamOS 3.8.4 still ships 0.91, which also marks sinks. Io follows the
-  newer upstream, so speakers and headphones have none.
+- **Sources and sinks get a loopback**, as on SteamOS 3.8.4
+  (`steamdeck-dsp` 0.91); Valve's 1.02 marks only sources. The sink
+  loopback keeps applications from seeing the speaker rebuilt: with Steam's
+  *Mono audio*, a stream on the bare speaker saw the channel count change,
+  and Steam's interface sound closed for good when switching back.
 - **OLED (Galileo) firmware removed**, its UCM profile kept (two small files,
   a head start for anyone porting Io to that model).
 
@@ -162,10 +175,21 @@ the session bus that Steam talks to.
   names; the standard Steam udev rules keep coming from Void's
   `steam-udev-rules`. Arch's `lib32-pipewire` becomes `pipewire-32bit` plus
   every `libspa-*-32bit`, which Void ships separately.
-- **gamescope** is Void's 3.16.20, built from Valve's source. It lacks the
-  PipeWire fix of 3.16.22, so screen recording needs a newer gamescope until
-  Void's update (submitted, to 3.16.30) is merged. SteamOS 3.8.4 runs
-  3.16.23.
+- **gamescope** is Void's, 3.16.30 (Io's update to Void), built from
+  Valve's source. SteamOS 3.8.4 runs 3.16.23.
+- **`jupiter-firewall`:** Valve's rules with ufw instead of firewalld, which
+  Void does not have: SSH, DHCPv6 and every port from 1024 up come in, the
+  privileged ports below are rejected. The package sets them up once in ufw,
+  so changes made on Plasma's firewall page (`plasma-firewall`, which drives
+  ufw here and firewalld on SteamOS) stay. A runit service loads them at
+  boot.
+- **`steamos-devkit-service`** publishes the Deck on mDNS through Avahi
+  instead of systemd-resolved (patch). Avahi runs only while Steam's
+  developer mode keeps the devkit service on.
+- **`steam-web-debug-portforward`** is a runit service with `socat` instead
+  of a socket unit with `systemd-socket-proxyd`.
+- **`cecd`** is 0.2.0 and **`cec-audio-control`** 0.1.0, the versions of
+  SteamOS 3.8.4, built from Valve's newer source archives.
 - **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
   assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
   so that UPower actually honours it.
@@ -208,7 +232,7 @@ the session bus that Steam talks to.
 
 System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
-updates, the crash log submitter, the HDMI-CEC daemon, Valve's nested
-desktop (Plasma inside game mode), automount of SD cards and USB drives
-(Alpha 5), `KillUserProcesses` on logout. Not needed on Io at all: `holo-keyring` (pacman keys),
+updates, the crash log submitter, Valve's nested desktop (Plasma inside game
+mode), automount of SD cards and USB drives (Alpha 5). The dock updater is a
+stub that tells Steam the dock is up to date. Not needed on Io at all: `holo-keyring` (pacman keys),
 `holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).

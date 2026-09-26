@@ -1,7 +1,8 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog).
+the [Changelog](Changelog); what is done since the last release is on the
+page of the release in progress ([Alpha 5](Alpha-5)).
 
 ---
 
@@ -29,10 +30,6 @@ steps (anything that writes to drives or firmware) come last.
 
 ## Open observations
 
-- **Relogin after a crashed session takes 20–30 s.** Valve sets
-  `KillUserProcesses=True` (`jupiter-legacy-support`), so logging out ends
-  every process of the user; Io does not. Now that session switches are
-  real logouts, check whether leftover processes are the delay
 - **Roaming** between router and repeater with the same network name: the
   Deck held on to the weak connection (seen with iwd, before
   `wireless-regdb`). Compare with wpa_supplicant
@@ -45,7 +42,41 @@ steps (anything that writes to drives or firmware) come last.
 - **vpower's shutdown at 0.5 %:** never tested on a real empty battery
 - **`Previous system reset reason`** in the kernel log once: watch whether it
   comes back
+- **Wi-Fi next to the dock's Ethernet showed "can't reach network"** once,
+  during a day of heavy testing; plugging and unplugging the dock later
+  behaved correctly. If it comes back, record before reconnecting:
+  `nmcli -f DEVICE,STATE,IP4-CONNECTIVITY device; nmcli -f CONNECTIVITY
+  general; ip route`
+- **`/` was world-writable** (mode 777, changed on 2026-09-25 during the
+  boot analysis; no package and no automount run explains it). Fixed by
+  hand; `io-selftest.sh` checks it now. Check a fresh image before release
+- **The first dock hot-plug after many session restarts showed no picture**
+  on the TV; after a reboot, plugging and unplugging worked every time
 
+---
+
+## Tests pending
+
+- **Headphones** with the speaker loopback (plugging in and out switches
+  the sound)
+- **SteamOS Devkit Client:** pairing and deploying (the service answers and
+  is visible on mDNS)
+
+---
+
+## Needs hardware to test
+
+Parts that can be built, but not tested without hardware Georg does not
+have. They are to become issues and draft pull requests, marked as needing
+someone with the hardware.
+
+- **Valve's Docking Station:** its firmware updater (`hub_update`, today a
+  stub that reports "up to date"), and HDMI-CEC with a dock that passes it
+  through (`/dev/cec*`); cecd and the switches in Steam work, the TV side is
+  untested
+- **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
+  Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
+  and the display quirks
 ---
 
 ## Polish
@@ -53,21 +84,6 @@ steps (anything that writes to drives or firmware) come last.
 - Designed boot splash; the black gap while Steam loads inside gamescope
 - Plasma: messages when switching modes, the notification service requested
   in game mode, Valve's nested desktop (Plasma inside game mode)
-
----
-
-## Small items
-
-- `holo-sudo`: Valve's sudoers files, above all `no-fqdn` (sudo does not
-  hang resolving the host name without a network)
-- `holo-realtek-firmware-toggles`: only for Realtek USB Wi-Fi sticks
-- `steamos-devkit-service`: DNS-SD through Avahi instead of
-  systemd-resolved
-- `jupiter-firewall`: a decision first — Io has no firewall
-- `cecd`/`cec-audio-control`: needs a dock to test
-- `steam-web-debug-portforward`: CEF debugging in developer mode
-- `io-steamos-manager` interfaces without a counterpart yet:
-  `ScreenReader`, `LowPowerMode1`, `Audio1`, `WifiDebug1`
 
 ---
 
@@ -99,5 +115,3 @@ steps (anything that writes to drives or firmware) come last.
 - Boot logs, for regressions and new warnings
 - After each gamescope update: *Use Legacy X11* in Steam's developer
   settings
-- When Void's gamescope reaches 3.16.22: screen recording works on a stock
-  image
