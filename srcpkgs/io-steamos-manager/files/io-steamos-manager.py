@@ -26,13 +26,16 @@ TdpLimit 3..15 W, GPU power profiles CAPPED/UNCAPPED only, desktop session
 actually in effect afterwards, read back from sysfs, not the requested one.
 
 Not implemented (Io lacks the backing pieces): Storage1, Jobs, UdevEvents1,
-ScreenReader0/1, UpdateBios1, UpdateDock1,
+UpdateBios1, UpdateDock1,
 FactoryReset1, WifiDebug1.
 """
 
 import asyncio
 import glob
+import signal
+import json
 import os
+import re
 import subprocess
 import sys
 
@@ -503,6 +506,418 @@ class Manager2(ServiceInterface):
         if board in ("Jupiter", "Galileo"):
             return ["steam_deck", board]
         return ["unknown", "unknown"]
+
+
+# Screen reader, as steamos-manager (screenreader.rs): Orca speaks through
+# speech-dispatcher; settings live in Orca's user-settings.conf and Orca
+# reloads them on SIGUSR1; SIGUSR2 stops it talking; a virtual keyboard named
+# "steamos-manager" presses Orca's shortcuts for modes and navigation.
+# SteamOS runs Orca as a user service with gamescope's environment; here the
+# user half starts it with the display settings of the running Steam.
+ORCA_SETTINGS = os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
+                             "orca", "user-settings.conf")
+A11Y_SCHEMA = "org.gnome.desktop.a11y.applications"
+SR_LIMITS = {"average-pitch": (0.0, 10.0), "rate": (0.0, 100.0), "gain": (0.0, 10.0)}
+SR_DEFAULTS = {"average-pitch": 5.0, "rate": 50.0, "gain": 10.0}
+SR_ACTIONS = ["stop_talking", "read_next_word", "read_previous_word", "read_next_item",
+              "read_previous_item", "move_to_next_landmark", "move_to_previous_landmark",
+              "move_to_next_heading", "move_to_previous_heading", "toggle_mode"]
+SR_MODES = ["browse", "focus"]
+
+
+class OrcaManager:
+    def __init__(self):
+        self.mode = "browse"      # Valve: always browse at start, nothing stores it
+        self.voice_locale = ""
+        self.voices = {}          # name -> (language, variant)
+        self.by_language = {}     # language -> [names]
+        self.values = dict(SR_DEFAULTS)
+        self.voice = ""
+        self.enabled = self._gsettings_enabled()
+        self._complete()
+        self._load_values()
+        self._load_voices()
+        self.keyboard = None
+        try:
+            from evdev import UInput, ecodes as e
+            self.e = e
+            keys = [e.KEY_A, e.KEY_H, e.KEY_M, e.KEY_INSERT, e.KEY_LEFTCTRL, e.KEY_LEFTSHIFT,
+                    e.KEY_DOWN, e.KEY_LEFT, e.KEY_RIGHT, e.KEY_UP]
+            self.keyboard = UInput({e.EV_KEY: keys}, name="steamos-manager")
+        except Exception as err:  # noqa: BLE001 - no keyboard, no shortcuts
+            log(f"screen reader: no virtual keyboard: {err}")
+
+    # --- settings file -------------------------------------------------
+    def _read(self):
+        try:
+            with open(ORCA_SETTINGS, encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return {}
+
+    def _write(self, data):
+        os.makedirs(os.path.dirname(ORCA_SETTINGS), exist_ok=True)
+        with open(ORCA_SETTINGS, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    def _complete(self):
+        # Orca reads general, pronunciations, keybindings and profiles and
+        # fails on a missing one. It writes all of them itself when it creates
+        # the file; when this manager wrote first (Steam setting a voice before
+        # Orca ever ran), they are added here. Existing values stay.
+        if not os.path.exists(ORCA_SETTINGS):
+            return
+        data = self._read()
+        before = json.dumps(data, sort_keys=True)
+        for key in ("general", "pronunciations", "keybindings", "profiles"):
+            if not isinstance(data.get(key), dict):
+                data[key] = {}
+        default = data["profiles"].setdefault("default", {})
+        default.setdefault("profile", ["Default", "default"])
+        if json.dumps(data, sort_keys=True) != before:
+            self._write(data)
+            log("screen reader: completed Orca's user-settings.conf")
+
+    def _default_voice(self, data):
+        return (data.setdefault("profiles", {}).setdefault("default", {})
+                .setdefault("voices", {}).setdefault("default", {}))
+
+    def _load_values(self):
+        voice = self._read().get("profiles", {}).get("default", {}).get("voices", {}).get("default", {})
+        for key in SR_DEFAULTS:
+            try:
+                self.values[key] = float(voice.get(key, SR_DEFAULTS[key]))
+            except (TypeError, ValueError):
+                self.values[key] = SR_DEFAULTS[key]
+        self.voice = str(voice.get("family", {}).get("name", "") or "")
+
+    def _load_voices(self):
+        voices = []
+        try:
+            import speechd
+            client = speechd.SSIPClient("steamos-manager")
+            voices = list(client.list_synthesis_voices())
+            client.close()
+        except Exception as err:  # noqa: BLE001
+            log(f"screen reader: speechd module: {err}; asking spd-say")
+            # spd-say -L: a header, then NAME LANGUAGE VARIANT in columns
+            # separated by two or more spaces (names can contain single ones)
+            out = subprocess.run(["spd-say", "-L"], capture_output=True, text=True,
+                                 timeout=10, check=False).stdout
+            for line in out.splitlines()[1:]:
+                cols = [c for c in re.split(r"\s{2,}", line.strip()) if c]
+                if len(cols) >= 2:
+                    voices.append((cols[0], cols[1], cols[2] if len(cols) > 2 else "none"))
+        for name, language, variant in voices:
+            self.voices[name] = (language, variant)
+            self.by_language.setdefault(language, []).append(name)
+
+    # --- orca ------------------------------------------------------------
+    @staticmethod
+    def _gsettings_enabled():
+        out = subprocess.run(["gsettings", "get", A11Y_SCHEMA, "screen-reader-enabled"],
+                             capture_output=True, text=True, check=False).stdout.strip()
+        return out == "true"
+
+    @staticmethod
+    def _orca_pid():
+        out = subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", "orca"],
+                             capture_output=True, text=True, check=False).stdout.split()
+        return int(out[0]) if out else None
+
+    @staticmethod
+    def _display_env():
+        env = dict(os.environ)
+        steam = subprocess.run(["pgrep", "-o", "-u", str(os.getuid()), "-x", "steam"],
+                               capture_output=True, text=True, check=False).stdout.split()
+        if steam:
+            try:
+                with open(f"/proc/{steam[0]}/environ", "rb") as f:
+                    for item in f.read().split(b"\0"):
+                        key, _, value = item.decode(errors="replace").partition("=")
+                        if key in ("DISPLAY", "WAYLAND_DISPLAY", "GAMESCOPE_WAYLAND_DISPLAY",
+                                   "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE"):
+                            env[key] = value
+            except OSError:
+                pass
+        return env
+
+    def _stop_orca(self):
+        subprocess.run(["pkill", "-u", str(os.getuid()), "-x", "orca"], check=False)
+
+    def _restart_orca(self):
+        self._stop_orca()
+        self._complete()
+        # setsid -f: Orca runs detached, so its end is reaped by the system
+        # instead of lingering as a zombie of this process.
+        subprocess.run(["setsid", "-f", "orca"], env=self._display_env(), check=False)
+
+    def _signal_orca(self, sig):
+        pid = self._orca_pid()
+        if pid:
+            os.kill(pid, sig)
+
+    # --- operations --------------------------------------------------------
+    def set_enabled(self, enable):
+        if enable != self.enabled:
+            subprocess.run(["gsettings", "set", A11Y_SCHEMA, "screen-reader-enabled",
+                            "true" if enable else "false"], check=False)
+            data = self._read()
+            data.setdefault("general", {})["enableSpeech"] = bool(enable)
+            self._write(data)
+        if enable:
+            self._restart_orca()
+        else:
+            self._stop_orca()
+        self.enabled = enable
+
+    def set_value(self, key, value):
+        low, high = SR_LIMITS[key]
+        if not low <= value <= high:
+            raise DBusError(ERR, f"{key} {value} out of range {low}-{high}")
+        data = self._read()
+        self._default_voice(data)[key] = value
+        self._write(data)
+        self.values[key] = value
+        self._signal_orca(signal.SIGUSR1)
+
+    def set_voice(self, name):
+        if name not in self.voices:
+            raise DBusError(ERR, f"unknown voice: {name}")
+        language, variant = self.voices[name]
+        lang, _, dialect = language.partition("-")
+        data = self._read()
+        voice = self._default_voice(data)
+        voice["family"] = dict(voice.get("family", {}), name=name, lang=lang,
+                               variant=variant, dialect=dialect)
+        voice["established"] = True
+        self._write(data)
+        self.voice = name
+        self._signal_orca(signal.SIGUSR1)
+
+    def _press(self, *keys):
+        # keys: all but the last are held, the last is pressed (Orca shortcuts)
+        if not self.keyboard:
+            raise DBusError(ERR, "no virtual keyboard")
+        ui, e = self.keyboard, self.e
+        for k in keys[:-1]:
+            ui.write(e.EV_KEY, k, 1)
+        ui.write(e.EV_KEY, keys[-1], 1)
+        ui.syn()
+        ui.write(e.EV_KEY, keys[-1], 0)
+        for k in reversed(keys[:-1]):
+            ui.write(e.EV_KEY, k, 0)
+        ui.syn()
+
+    def _insert_a(self, count):
+        if not self.keyboard:
+            raise DBusError(ERR, "no virtual keyboard")
+        ui, e = self.keyboard, self.e
+        ui.write(e.EV_KEY, e.KEY_INSERT, 1)
+        for _ in range(count):
+            ui.write(e.EV_KEY, e.KEY_A, 1)
+            ui.syn()
+            ui.write(e.EV_KEY, e.KEY_A, 0)
+            ui.syn()
+        ui.write(e.EV_KEY, e.KEY_INSERT, 0)
+        ui.syn()
+
+    def set_mode(self, mode):
+        if mode == self.mode:
+            return
+        # Insert+A twice: focus mode sticky; three times: browse mode sticky
+        self._insert_a(2 if mode == "focus" else 3)
+        self.mode = mode
+
+    def trigger(self, action):
+        e = self.keyboard and self.e
+        if action == "stop_talking":
+            self._signal_orca(signal.SIGUSR2)
+        elif action == "toggle_mode":
+            self._insert_a(1)
+            self.mode = "focus" if self.mode == "browse" else "browse"
+        elif not e:
+            raise DBusError(ERR, "no virtual keyboard")
+        else:
+            keys = {
+                "read_next_word": (e.KEY_LEFTCTRL, e.KEY_RIGHT),
+                "read_previous_word": (e.KEY_LEFTCTRL, e.KEY_LEFT),
+                "read_next_item": (e.KEY_DOWN,),
+                "read_previous_item": (e.KEY_UP,),
+                "move_to_next_landmark": (e.KEY_M,),
+                "move_to_previous_landmark": (e.KEY_LEFTSHIFT, e.KEY_M),
+                "move_to_next_heading": (e.KEY_H,),
+                "move_to_previous_heading": (e.KEY_LEFTSHIFT, e.KEY_H),
+            }
+            self._press(*keys[action])
+
+
+ORCA = None
+
+
+def orca():
+    global ORCA
+    if ORCA is None:
+        ORCA = OrcaManager()
+    return ORCA
+
+
+class ScreenReader0(ServiceInterface):
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.ScreenReader0")
+        self.o = orca()
+
+    @dbus_property()
+    def Enabled(self) -> "b":
+        return self.o.enabled
+
+    @Enabled.setter
+    def Enabled(self, value: "b"):
+        self.o.set_enabled(value)
+
+    @dbus_property()
+    def Rate(self) -> "d":
+        return self.o.values["rate"]
+
+    @Rate.setter
+    def Rate(self, value: "d"):
+        self.o.set_value("rate", value)
+
+    @dbus_property()
+    def Pitch(self) -> "d":
+        return self.o.values["average-pitch"]
+
+    @Pitch.setter
+    def Pitch(self, value: "d"):
+        self.o.set_value("average-pitch", value)
+
+    @dbus_property()
+    def Volume(self) -> "d":
+        return self.o.values["gain"]
+
+    @Volume.setter
+    def Volume(self, value: "d"):
+        self.o.set_value("gain", value)
+
+    @dbus_property()
+    def Mode(self) -> "u":
+        return SR_MODES.index(self.o.mode)
+
+    @Mode.setter
+    def Mode(self, value: "u"):
+        if value >= len(SR_MODES):
+            raise DBusError(ERR, f"unknown mode: {value}")
+        self.o.set_mode(SR_MODES[value])
+        self.emit_properties_changed({"Mode": value})
+
+    @dbus_property()
+    def Voice(self) -> "s":
+        return self.o.voice
+
+    @Voice.setter
+    def Voice(self, value: "s"):
+        self.o.set_voice(value)
+        self.emit_properties_changed({"Voice": value})
+
+    @dbus_property(access=PropertyAccess.READ)
+    def VoiceLocales(self) -> "as":
+        return sorted(self.o.by_language)
+
+    @dbus_property(access=PropertyAccess.READ)
+    def VoicesForLocale(self) -> "a{sas}":
+        return self.o.by_language
+
+    @method()
+    def TriggerAction(self, action: "u", timestamp: "t"):
+        if action >= len(SR_ACTIONS):
+            raise DBusError(ERR, f"unknown action: {action}")
+        self.o.trigger(SR_ACTIONS[action])
+
+
+class ScreenReader1(ServiceInterface):
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.ScreenReader1")
+        self.o = orca()
+
+    @dbus_property()
+    def Enabled(self) -> "b":
+        return self.o.enabled
+
+    @Enabled.setter
+    def Enabled(self, value: "b"):
+        self.o.set_enabled(value)
+
+    @dbus_property()
+    def Rate(self) -> "d":
+        return self.o.values["rate"]
+
+    @Rate.setter
+    def Rate(self, value: "d"):
+        self.o.set_value("rate", value)
+
+    @dbus_property()
+    def Pitch(self) -> "d":
+        return self.o.values["average-pitch"]
+
+    @Pitch.setter
+    def Pitch(self, value: "d"):
+        self.o.set_value("average-pitch", value)
+
+    @dbus_property()
+    def Volume(self) -> "d":
+        return self.o.values["gain"]
+
+    @Volume.setter
+    def Volume(self, value: "d"):
+        self.o.set_value("gain", value)
+
+    @dbus_property()
+    def Mode(self) -> "s":
+        return self.o.mode
+
+    @Mode.setter
+    def Mode(self, value: "s"):
+        if value not in SR_MODES:
+            raise DBusError(ERR, f"unknown mode: {value}")
+        self.o.set_mode(value)
+        self.emit_properties_changed({"Mode": value})
+
+    @dbus_property(access=PropertyAccess.READ)
+    def VoiceLocales(self) -> "as":
+        return sorted(self.o.by_language)
+
+    @dbus_property()
+    def VoiceLocale(self) -> "s":
+        return self.o.voice_locale
+
+    @VoiceLocale.setter
+    def VoiceLocale(self, value: "s"):
+        if value and value not in self.o.by_language:
+            raise DBusError(ERR, f"unknown voice locale: {value}")
+        self.o.voice_locale = value
+
+    @dbus_property()
+    def Voice(self) -> "s":
+        return self.o.voice
+
+    @Voice.setter
+    def Voice(self, value: "s"):
+        self.o.set_voice(value)
+        self.emit_properties_changed({"Voice": value})
+
+    @method()
+    def GetVoices(self) -> "as":
+        return self.o.by_language.get(self.o.voice_locale, [])
+
+    @method()
+    def GetVoicesForLocale(self, locale: "s") -> "as":
+        return self.o.by_language.get(locale, [])
+
+    @method()
+    def TriggerAction(self, action: "s", timestamp: "t"):
+        if action not in SR_ACTIONS:
+            raise DBusError(ERR, f"unknown action: {action}")
+        self.o.trigger(action)
 
 
 # HDMI-CEC, as steamos-manager: two files in cecd's configuration, the same
@@ -1023,6 +1438,8 @@ USER_INTERFACES = (
     LowPowerMode1,
     Audio1,
     HdmiCec1,
+    ScreenReader0,
+    ScreenReader1,
 )
 
 

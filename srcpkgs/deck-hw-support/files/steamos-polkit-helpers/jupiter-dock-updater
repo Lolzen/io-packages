@@ -1,2 +1,8 @@
 #!/bin/sh
-exit 0
+# Io: Valve's dock updater (hub_update for the Steam Deck Docking Station) is
+# not ported. Valve's --check answers 0 = update available, 7 = up to date;
+# answering 0 here made Steam announce a dock update at every start. So the
+# check says "up to date", and an actual update is refused.
+[ "$1" = "--check" ] && exit 7
+echo "Dock firmware updates are not available on Io" >&2
+exit 1
