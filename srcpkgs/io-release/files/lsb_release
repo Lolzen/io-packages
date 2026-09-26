@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# Io: lsb_release reading /usr/lib/os-release. Void's own script has
+# "Void Linux" written into it, and programs such as Steam take the system's
+# name from here (Steam's Settings > System > OS Name).
+
+. /usr/lib/os-release
+
+version="1.0"
+distributor_id="${NAME:-Io}"
+description="${PRETTY_NAME:-$NAME}"
+release="${VERSION_ID:-n/a}"
+codename="${VERSION_CODENAME:-n/a}"
+options=""
+short=0
+
+# Split combined short options (-sr, -is) into single ones.
+args=""
+for a in "$@"; do
+	case "$a" in
+	--*) args="$args $a" ;;
+	-??*) rest="${a#-}"
+		while [ -n "$rest" ]; do
+			args="$args -${rest%"${rest#?}"}"
+			rest="${rest#?}"
+		done ;;
+	*) args="$args $a" ;;
+	esac
+done
+set -- $args
+
+while [ $# -gt 0 ]; do
+	case "$1" in
+	-v|--version) options="${options} version" ;;
+	-i|--id) options="${options} distributor_id" ;;
+	-d|--description) options="${options} description" ;;
+	-r|--release) options="${options} release" ;;
+	-c|--codename) options="${options} codename" ;;
+	-a|--all) options="version distributor_id description release codename" ;;
+	-s|--short) short=1 ;;
+	-h|--help)
+		echo "Usage: lsb_release [-v] [-i] [-d] [-r] [-c] [-a] [-s] [-h]"
+		exit 0 ;;
+	*) echo "lsb_release: unknown option $1" >&2; exit 1 ;;
+	esac
+	shift
+done
+
+[ -z "$options" ] && options="version"
+
+for o in $options; do
+	case "$o" in
+	version) label="LSB Version"; value="$version" ;;
+	distributor_id) label="Distributor ID"; value="$distributor_id" ;;
+	description) label="Description"; value="$description" ;;
+	release) label="Release"; value="$release" ;;
+	codename) label="Codename"; value="$codename" ;;
+	esac
+	if [ "$short" = 1 ]; then
+		printf '%s\n' "$value"
+	else
+		printf '%s:\t%s\n' "$label" "$value"
+	fi
+done

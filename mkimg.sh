@@ -27,7 +27,6 @@ set -eu
 OUT="${OUT:-/home/gee/io.img}"
 SIZE="${SIZE:-16G}"
 MNT="${MNT:-/mnt/ioimg}"
-INCLUDE="${INCLUDE:-/home/gee/io-packages/iso-include}"
 
 IO_REPO="${IO_REPO:-https://github.com/Lolzen/io-repo/releases/download/current}"
 VOID="${VOID:-https://repo-default.voidlinux.org/current}"
@@ -123,11 +122,6 @@ mount "${LOOP}p1" "$MNT/boot/efi"
 
 echo "== installing packages"
 XBPS_ARCH=x86_64 xbps-install -S -y -R "$IO_REPO" -R "$VOID" -R "$VOID/nonfree" -R "$VOID/multilib" -R "$VOID/multilib/nonfree" -r "$MNT" io-desktop $EXTRA_PACKAGES
-
-echo "== branding"
-# mkimg does not go through mklive's -I option, so this has to be copied by
-# hand. Without it the image boots with Void's stock os-release.
-cp "$INCLUDE/etc/os-release" "$MNT/etc/os-release"
 
 echo "== configuring system"
 

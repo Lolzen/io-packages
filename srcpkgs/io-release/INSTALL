@@ -1,0 +1,9 @@
+# Put Io's os-release and lsb_release in place of base-files' versions; the
+# core service does the same at boot, after a base-files update.
+case "${ACTION}" in
+post)
+	cp -f usr/share/io/os-release usr/lib/os-release
+	cp -f usr/share/io/lsb_release usr/bin/lsb_release
+	chmod 755 usr/bin/lsb_release
+	;;
+esac

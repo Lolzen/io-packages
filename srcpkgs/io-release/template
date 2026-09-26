@@ -1,0 +1,45 @@
+# Template file for 'io-release'
+pkgname=io-release
+version=0.5
+revision=1
+_codename=loki
+_name="Alpha 5"
+_build=20260926.1
+short_desc="Io's release information: os-release and lsb_release"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+
+# What Steam shows under Settings > System (OS Name, Codename, Variant,
+# Version, Build) comes from os-release and lsb_release. Both belong to Void's
+# base-files, so they are kept under /usr/share/io and put in place by
+# INSTALL and, after a base-files update, by a core service at boot.
+#
+# At each release: version (VERSION_ID), _name (VERSION) and _build (like
+# SteamOS's BUILD_ID: date and a counter), with a revision bump. _codename:
+# Loki Patera is the largest volcano on Jupiter's moon Io.
+
+do_install() {
+	vmkdir usr/share/io
+	cat > ${DESTDIR}/usr/share/io/os-release <<-_EOF
+	NAME="Io"
+	ID="io"
+	ID_LIKE="void"
+	PRETTY_NAME="Io"
+	VERSION="${_name}"
+	VERSION_ID="${version}"
+	VERSION_CODENAME="${_codename}"
+	VARIANT="Steam Deck"
+	VARIANT_ID="steamdeck"
+	BUILD_ID="${_build}"
+	HOME_URL="https://github.com/Lolzen/io-packages"
+	DOCUMENTATION_URL="https://github.com/Lolzen/io-packages/wiki"
+	BUG_REPORT_URL="https://github.com/Lolzen/io-packages/issues"
+	LOGO="io-logo"
+	ANSI_COLOR="0;38;2;242;177;52"
+	DISTRIB_ID="io"
+	_EOF
+	vinstall ${FILESDIR}/lsb_release 755 usr/share/io
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/10-io-release.sh 644 etc/runit/core-services
+}
