@@ -26,7 +26,7 @@ TdpLimit 3..15 W, GPU power profiles CAPPED/UNCAPPED only, desktop session
 actually in effect afterwards, read back from sysfs, not the requested one.
 
 Not implemented (Io lacks the backing pieces): Storage1, Jobs, UdevEvents1,
-HdmiCec1, ScreenReader0/1, UpdateBios1, UpdateDock1,
+ScreenReader0/1, UpdateBios1, UpdateDock1,
 FactoryReset1, WifiDebug1.
 """
 
@@ -505,6 +505,68 @@ class Manager2(ServiceInterface):
         return ["unknown", "unknown"]
 
 
+# HDMI-CEC, as steamos-manager: two files in cecd's configuration, the same
+# as on SteamOS 3.8.4 (captured): 00 names the device, 99 follows Steam's
+# switches. cecd keeps running in every state and reloads on SIGHUP.
+#   0 = off: wake_tv false, uinput false
+#   1 = CEC on: wake_tv false, uinput true (the TV remote drives Steam)
+#   2 = CEC on and "wake TV on resume": wake_tv true, uinput true (default)
+CECD_CONF = os.path.expanduser("~/.config/cecd/config.d")
+CECD_IDENTITY = 'osd_name = "Steam Deck"\nvendor_id = "e0-31-9e"\n'
+
+
+def _cecd_write(name, text):
+    os.makedirs(CECD_CONF, exist_ok=True)
+    path = os.path.join(CECD_CONF, name)
+    try:
+        with open(path, encoding="utf-8") as f:
+            if f.read() == text:
+                return False
+    except OSError:
+        pass
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    return True
+
+
+def read_cec_state():
+    try:
+        with open(os.path.join(CECD_CONF, "99-steamos-manager.toml"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return 2
+    uinput = "uinput = true" in text
+    wake = "wake_tv = true" in text
+    return 2 if (uinput and wake) else (1 if uinput else 0)
+
+
+def write_cec_state(state):
+    wake = "true" if state == 2 else "false"
+    uinput = "true" if state >= 1 else "false"
+    changed = _cecd_write("00-steamos-manager.toml", CECD_IDENTITY)
+    changed |= _cecd_write("99-steamos-manager.toml", f"wake_tv = {wake}\nuinput = {uinput}\n")
+    if changed:
+        subprocess.run(["pkill", "-HUP", "-u", str(os.getuid()), "-x", "cecd"], check=False)
+
+
+class HdmiCec1(ServiceInterface):
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.HdmiCec1")
+        # Make sure cecd has both files, as steamos-manager does at session start.
+        write_cec_state(read_cec_state())
+
+    @dbus_property()
+    def HdmiCecState(self) -> "u":
+        return read_cec_state()
+
+    @HdmiCecState.setter
+    def HdmiCecState(self, value: "u"):
+        if value not in (0, 1, 2):
+            raise DBusError(ERR, f"unknown HDMI-CEC state: {value}")
+        write_cec_state(value)
+        self.emit_properties_changed({"HdmiCecState": read_cec_state()})
+
+
 # Audio mode (Steam's developer setting "Mono audio"): WirePlumber's own
 # setting, which downmixes every sink to mono; --save keeps it across
 # sessions and reboots.
@@ -960,6 +1022,7 @@ USER_INTERFACES = (
     WifiBackend1,
     LowPowerMode1,
     Audio1,
+    HdmiCec1,
 )
 
 

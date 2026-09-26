@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.steampowered.CecDaemon1
+Exec=/usr/bin/env RUST_LOG=info /usr/bin/cecd -e

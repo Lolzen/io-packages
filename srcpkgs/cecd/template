@@ -1,0 +1,39 @@
+# Template file for 'cecd'
+pkgname=cecd
+version=0.2.0
+revision=2
+wrksrc="cecd"
+build_wrksrc="src"
+build_style=cargo
+hostmakedepends="pkg-config git tar"
+makedepends="eudev-libudev-devel"
+short_desc="Valve's CEC userspace daemon (HDMI-CEC for Steam)"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://gitlab.steamos.cloud/holo/linux-cec"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/cecd-0.3.0-2.src.tar.gz"
+checksum=17cbf7826e1596a5b68f7b6112cd08325455c91f5c81cea67d7c139f9f09d00f
+
+# cecd 0.2.0, the version of SteamOS 3.8.4, built from Valve's archive of
+# 0.3.0 (its git repository carries the 0.2.0 tag). On SteamOS it is a
+# systemd user service of the graphical session; Io's session scripts start
+# it through D-Bus activation (io-session), so there is one way it is
+# started and the bus keeps it to one instance; the service file runs it
+# instead of naming a systemd unit. Valve's uaccess rules become group rules (eudev).
+# Configuration: /usr/share/cecd, /etc/cecd, ~/.config/cecd, where
+# io-steamos-manager (HdmiCec1) writes what steamos-manager writes.
+post_extract() {
+	mkdir -p src
+	git --git-dir=cecd-0.3.0 archive --format=tar cecd-0.2.0 | tar -x -C src
+}
+
+do_install() {
+	vbin target/${RUST_TARGET}/release/cecd
+	vbin target/${RUST_TARGET}/release/cectool
+	vinstall ${FILESDIR}/com.steampowered.CecDaemon1.service 644 usr/share/dbus-1/services
+	for i in CecDevice1 Config1 Daemon1 MessageHandler1; do
+		vinstall cecd/data/dbus-interfaces/com.steampowered.CecDaemon1.${i}.xml 644 usr/share/dbus-1/interfaces
+	done
+	vinstall ${FILESDIR}/60-io-cec.rules 644 usr/lib/udev/rules.d
+	vlicense cecd/LICENSE
+}

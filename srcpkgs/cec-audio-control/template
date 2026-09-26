@@ -1,0 +1,30 @@
+# Template file for 'cec-audio-control'
+pkgname=cec-audio-control
+version=0.1.0
+revision=1
+_commit=37f1f520c78790f3e9406b908e452c217c37788
+wrksrc="cec-audio-control"
+build_wrksrc="src"
+build_style=cargo
+hostmakedepends="pkg-config git tar"
+depends="cecd"
+short_desc="HDMI-CEC volume and mute control for PipeWire (Valve)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/cec-audio-control"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/cec-audio-control-0.1.0-7.src.tar.gz"
+checksum=d4cce1c98dfeb5c542038d5c7236f6a8e5faa41597b962d99e931cbd40a58330
+
+# Lets PipeWire drive the TV's volume and mute over CEC (org.pipewire.
+# ExternalVolume). On SteamOS a socket-activated user service; without
+# systemd it creates the same socket itself in $XDG_RUNTIME_DIR, started
+# by Io's session scripts (io-session).
+post_extract() {
+	mkdir -p src
+	git --git-dir=cec-audio-control-0.1.0 archive --format=tar ${_commit} | tar -x -C src
+}
+
+do_install() {
+	vbin target/${RUST_TARGET}/release/cec-audio-control
+	vlicense LICENSE
+}

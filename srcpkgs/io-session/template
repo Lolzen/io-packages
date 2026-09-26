@@ -1,10 +1,11 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.5.2
+version=0.6.1
 revision=1
 optdepends="kde-plasma: desktop session via steamos-session-select plasma"
 depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
- io-steamos-manager rtkit libcap-progs sddm"
+ io-steamos-manager rtkit libcap-progs sddm cecd
+ cec-audio-control"
 conf_files="/etc/elogind/logind.conf.d/10-io-kill-user-processes.conf"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"

@@ -85,6 +85,14 @@ pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-p
 # session was left without one.) Its output goes to the session log.
 setsid /usr/bin/io-steamos-manager &
 
+# HDMI-CEC (SteamOS: cecd.service and cec-audio-control, user services of
+# the graphical session). cecd starts through D-Bus activation: anyone asking
+# for com.steampowered.CecDaemon1 early (Steam, io-steamos-manager) would
+# otherwise have the bus start a second one next to ours. It waits for a CEC
+# device to appear (-e); its settings come from io-steamos-manager (HdmiCec1).
+busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus StartServiceByName su com.steampowered.CecDaemon1 0 > /dev/null 2>&1 &
+RUST_LOG=info setsid /usr/bin/cec-audio-control -d "" &
+
 # ----------------------------------------------------- session identity
 export XDG_CURRENT_DESKTOP=gamescope
 export XDG_SESSION_DESKTOP=gamescope

@@ -1,0 +1,6 @@
+# Io: access for cecd, which runs in the user's session. Valve's rules tag
+# /dev/cec* and /dev/uinput with uaccess (systemd grants the active session);
+# eudev has no uaccess, so group membership does it: deck is in video and
+# input.
+SUBSYSTEM=="cec", GROUP="video", MODE="0660"
+SUBSYSTEM=="misc", KERNEL=="uinput", GROUP="input", MODE="0660"
