@@ -1,2 +1,19 @@
-#!/bin/sh
-exit 0
+#!/bin/bash
+
+set -eu
+
+if [[ $EUID -ne 0 ]];
+then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+# Io: runit instead of systemctl enable/disable. The devkit service publishes
+# itself through Avahi, which runs only while the devkit service does.
+case "$1" in
+    --enable)
+        ln -sfn /etc/sv/avahi-daemon /var/service/avahi-daemon
+        ln -sfn /etc/sv/steamos-devkit-service /var/service/steamos-devkit-service ;;
+    --disable)
+        rm -f /var/service/steamos-devkit-service /var/service/avahi-daemon ;;
+    *) echo "Unknown option $1"; exit 22;;
+esac

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Io: counterpart of steamos-devkit-service.service (User=deck). Publishes the
+# device on mDNS through Avahi, so avahi-daemon must be up first;
+# steamos-devkit-mode links both services.
+exec 2>&1
+sv check avahi-daemon > /dev/null 2>&1 || exit 1
+export HOME=/home/deck USER=deck LOGNAME=deck
+exec chpst -u deck:deck python3 /usr/share/steamos-devkit/steamos-devkit-service.py

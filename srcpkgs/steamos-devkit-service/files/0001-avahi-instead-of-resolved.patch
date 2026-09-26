@@ -1,0 +1,89 @@
+--- a/src/steamos-devkit-service.py	2025-09-16 18:00:19.000000000 +0000
++++ b/src/steamos-devkit-service.py	2026-09-26 12:50:50.307350007 +0000
+@@ -398,23 +398,18 @@
+             ('devkit1', ENTRY_POINT)
+         ]:
+             py_dict[key] = dbus.Array([ord(c) for c in value], signature='y')
+-        self.txt_records = dbus.Array( [dbus.Dictionary(py_dict, signature='say' )], signature='a{say}' )
++        # Io: Avahi instead of systemd-resolved. Avahi takes TXT records as
++        # an array of "key=value" byte arrays.
++        self.txt_records = dbus.Array(
++            [dbus.Array([dbus.Byte(b) for b in f'{key}={bytes(value).decode()}'.encode()], signature='y')
++             for key, value in py_dict.items()],
++            signature='ay')
+ 
+         self.dbus_bus = dbus.SystemBus()
+-        self.resolve1_register = self.dbus_bus.get_object(
+-            'org.freedesktop.resolve1',
+-            '/org/freedesktop/resolve1'
+-        ).get_dbus_method(
+-            'RegisterService',
+-            'org.freedesktop.resolve1.Manager'
+-        )
+-        self.resolve1_unregister = self.dbus_bus.get_object(
+-            'org.freedesktop.resolve1',
+-            '/org/freedesktop/resolve1'
+-        ).get_dbus_method(
+-            'UnregisterService',
+-            'org.freedesktop.resolve1.Manager'
+-        )
++        self.avahi = dbus.Interface(
++            self.dbus_bus.get_object('org.freedesktop.Avahi', '/'),
++            'org.freedesktop.Avahi.Server')
++        self.avahi_group = None
+ 
+         self.httpd = socketserver.TCPServer(("", self.port), DevkitHandler, bind_and_activate=False)
+         print(f"serving at port: {self.port}")
+@@ -432,31 +427,17 @@
+             print(f'RegisterService {self.name} {self.stype} {self.port}')
+         self.unpublish(silent)
+ 
+-        try:
+-            self.service_path = self.resolve1_register(
+-                # Passing '%H' should amount to the same thing
+-                # (is expanded based on specifiers, see https://www.man7.org/linux/man-pages/man5/systemd.dnssd.5.html)
+-                self.name,
+-                # 'name_template' .. what is this?
+-                # also referred to as 'service instance name' in the implementation
+-                # can't be an empty string, gets expanded with the same specifier rules as name,
+-                # gets random numbers appended to it for a new instance name in case of service collisions?
+-                self.name,
+-                self.stype,
+-                dbus.UInt16(int(self.port)),
+-                dbus.UInt16(10),    # priority (see https://en.wikipedia.org/wiki/SRV_record)
+-                dbus.UInt16(0),     # weight
+-                self.txt_records,
+-            )
+-        except dbus.exceptions.DBusException as e:
+-            # services will persist, it's bad if we didn't properly unregister, but we can recover this
+-            if not recursed and e.get_dbus_name() == 'org.freedesktop.resolve1.DnssdServiceExists':
+-                print('Service is already registered! Trying to recover')
+-                self.service_path = f'/org/freedesktop/resolve1/dnssd/{self.name}'
+-                self.unpublish()
+-                self.publish(True)
+-            else:
+-                raise e
++        # Io: an Avahi entry group; Avahi drops it when this process's
++        # D-Bus connection goes away, so a crash leaves nothing behind.
++        path = self.avahi.EntryGroupNew()
++        group = dbus.Interface(self.dbus_bus.get_object('org.freedesktop.Avahi', path),
++                               'org.freedesktop.Avahi.EntryGroup')
++        group.AddService(dbus.Int32(-1), dbus.Int32(-1), dbus.UInt32(0),
++                         self.name, self.stype, '', '',
++                         dbus.UInt16(int(self.port)), self.txt_records)
++        group.Commit()
++        self.avahi_group = group
++        self.service_path = path
+ 
+     def unpublish(self, silent=False):
+         """ Remove publishing of ourselves as devkit device since we are quitting.
+@@ -464,7 +445,8 @@
+         if self.service_path:
+             if not silent:
+                 print(f'UnregisterService {self.service_path}')
+-            self.resolve1_unregister(self.service_path)
++            self.avahi_group.Free()
++            self.avahi_group = None
+             self.service_path = None
+ 
+     def force_publish(self, exit_event):

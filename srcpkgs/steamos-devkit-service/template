@@ -1,0 +1,35 @@
+# Template file for 'steamos-devkit-service'
+pkgname=steamos-devkit-service
+version=0.20250916.0
+revision=1
+wrksrc="steamos-devkit-service"
+build_wrksrc="src"
+python_version=3
+hostmakedepends="git tar patch"
+depends="python3 python3-dbus avahi runit-void"
+short_desc="SteamOS Devkit Service: lets the SteamOS Devkit Client deploy to the Deck"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/devkit/steamos-devkit-service"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=535095a6259a69b3def22123e69dc6b52b3791c34b4539883d01b72b31aca09d
+
+# Valve's service, the version of SteamOS 3.8.4, with one change: it publishes
+# itself on mDNS through Avahi instead of systemd-resolved (patch). A runit
+# service replaces the systemd unit; Steam's developer setting switches it
+# through steamos-devkit-mode (deck-hw-support). Valve's polkit rule, which
+# lets deck register services with resolved, has no use here: Avahi lets any
+# user publish.
+post_extract() {
+	mkdir -p src
+	git --git-dir=steamos-devkit-service archive --format=tar v${version} | tar -x -C src
+	patch -d src -p1 < ${FILESDIR}/0001-avahi-instead-of-resolved.patch
+}
+
+do_install() {
+	vmkdir usr/share/steamos-devkit
+	vinstall src/steamos-devkit-service.py 755 usr/share/steamos-devkit
+	vcopy hooks usr/share/steamos-devkit
+	vsv steamos-devkit-service
+	vlicense LICENSE
+}
