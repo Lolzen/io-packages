@@ -1,0 +1,17 @@
+#!/bin/sh
+# Io: /usr/share/i18n/SUPPORTED, glibc's list of supported locales. Arch (and
+# so SteamOS) installs it; Steam's runtime diagnostics and pressure-vessel
+# look for it. Void ships the same list only inside /etc/default/libc-locales
+# ("de_DE.UTF-8 UTF-8", commented out unless enabled), built from SUPPORTED;
+# this turns it back into glibc's own format. Rewritten only when missing or
+# older than libc-locales.
+src=/etc/default/libc-locales
+dst=/usr/share/i18n/SUPPORTED
+[ -f "$src" ] && [ -d /usr/share/i18n ] || exit 0
+[ -f "$dst" ] && [ ! "$src" -nt "$dst" ] && exit 0
+{
+	echo "# This file names the currently supported and somewhat tested locales."
+	echo "# If you have any additions please file a glibc bug report."
+	echo "SUPPORTED-LOCALES=\\"
+	sed -n 's/^#\{0,1\}\([A-Za-z][^ #]* [^ ]\{1,\}\)[ \t]*$/\1/p' "$src" | sed 's| |/|; s|$| \\|'
+} > "$dst.tmp" && mv -f "$dst.tmp" "$dst"

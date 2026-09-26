@@ -1,0 +1,5 @@
+case "${ACTION}" in
+post)
+	usr/libexec/io/io-i18n-supported 2>/dev/null || true
+	;;
+esac

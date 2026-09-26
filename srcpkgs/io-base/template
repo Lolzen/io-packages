@@ -1,7 +1,7 @@
 # Template file for 'io-base'
 pkgname=io-base
 version=0.4.0
-revision=13
+revision=14
 depends="xbps>=0.45 polkit socklog-void plymouth alsa-pipewire"
 conf_files="/etc/elogind/logind.conf.d/10-io.conf"
 short_desc="Io base configuration for Steam Deck"
@@ -28,4 +28,9 @@ do_install() {
 	ln -s /usr/share/alsa/alsa.conf.d/99-pipewire-default.conf ${DESTDIR}/etc/alsa/conf.d/
 	vmkdir etc/runit/shutdown.d
 	vinstall ${FILESDIR}/05-io-ssh-sessions.sh 644 etc/runit/shutdown.d
+	# /usr/share/i18n/SUPPORTED, regenerated from libc-locales (as on Arch)
+	vmkdir usr/libexec/io
+	vinstall ${FILESDIR}/io-i18n-supported 755 usr/libexec/io
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/12-io-i18n-supported.sh 644 etc/runit/core-services
 }

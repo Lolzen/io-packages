@@ -1,7 +1,7 @@
 # Template file for 'steam-jupiter'
 pkgname=steam-jupiter
 version=1.0.0.85
-revision=4
+revision=5
 _bootstrap=steam_jupiter_stable_bootstrapped_20251031.0.tar.xz
 wrksrc="steam-jupiter-stable"
 hostmakedepends="tar"
@@ -12,6 +12,8 @@ replaces="steam>=0"
 # recording needs the SPA support plugins (pipewire-32bit) to create its
 # main loop, and the converter plugins to connect the capture stream; Void
 # splits them into libspa-*-32bit.
+# json-glib-32bit, libvdpau-32bit: the 32-bit Vulkan and VDPAU checks of
+# Steam's runtime diagnostics (System > Steam Runtime System Information).
 depends="zenity xz curl dbus freetype gdk-pixbuf hicolor-icon-theme
  desktop-file-utils liberation-fonts-ttf file tar bash coreutils lsof
  steam-udev-rules usbutils xrandr python3 xdg-user-dirs nss libxcrypt
@@ -22,7 +24,8 @@ depends="zenity xz curl dbus freetype gdk-pixbuf hicolor-icon-theme
  libxcrypt-32bit libpipewire-32bit pipewire-32bit libspa-alsa-32bit
  libspa-audioconvert-32bit libspa-audiomixer-32bit libspa-bluetooth-32bit
  libspa-control-32bit libspa-jack-32bit libspa-v4l2-32bit
- libspa-videoconvert-32bit libspa-vulkan-32bit"
+ libspa-videoconvert-32bit libspa-vulkan-32bit
+ json-glib-32bit libvdpau-32bit"
 short_desc="Valve's Steam Deck packaging of Steam: preinstalled client, Deck branch, udev rules"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
