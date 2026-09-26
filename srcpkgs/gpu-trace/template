@@ -1,0 +1,25 @@
+# Template file for 'gpu-trace'
+pkgname=gpu-trace
+version=2.14
+revision=2
+python_version=3
+depends="python3 trace-cmd perf runit-void"
+short_desc="GPU trace capture tool for gpuvis (Steam's system tracing)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/lostgoat/gpu-trace"
+distfiles="https://github.com/lostgoat/gpu-trace/archive/v${version}.tar.gz"
+checksum=334d3ea168a23530fc5e4c3abea3021876f5a3a3232f97a3868414bed861f97b
+
+# The version of SteamOS 3.8.4, from the same source as Valve's package.
+# Valve installs it with its systemd unit enabled; Steam's developer setting
+# "Enable system tracing" talks to the daemon over XML-RPC on
+# localhost:47317 and stays greyed out without it. Here a runit service,
+# enabled in the image; stopping it asks the daemon to exit (ExecStop).
+
+do_install() {
+	vbin bin/gpu-trace.py gpu-trace
+	vsv gpu-trace
+	vlicense LICENSE
+	vdoc README.md
+}

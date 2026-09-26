@@ -1,0 +1,4 @@
+#!/bin/sh
+# sv stop/restart: ask the daemon to end its capture and exit, as
+# gpu-trace.service's ExecStop does; if that fails, runit sends TERM.
+exec gpu-trace --exit > /dev/null 2>&1

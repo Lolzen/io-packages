@@ -1,0 +1,10 @@
+#!/bin/sh
+# Io: counterpart of gpu-trace.service, enabled as on SteamOS. Idle until
+# Steam's "Enable system tracing" (or its StartupCapture setting) starts a
+# capture through the XML-RPC interface on localhost:47317.
+exec 2>&1
+# systemd starts services in /, runit in the service directory; the daemon
+# writes captures without -o relative to it (gpu-trace.zip).
+cd /
+export HOME=/root
+exec gpu-trace --daemon
