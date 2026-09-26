@@ -1,0 +1,5 @@
+#!/bin/sh
+for init in /usr/libexec/ufw/ufw-init /usr/lib/ufw/ufw-init; do
+	[ -x "$init" ] && exec "$init" stop
+done
+exit 0

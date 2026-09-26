@@ -1,0 +1,18 @@
+# Valve's firewall rules (jupiter-firewall's "public" zone for firewalld), set
+# up once in ufw: SSH and every port from 1024 up come in, the privileged
+# ports below are rejected, outgoing traffic is not restricted. ufw's own
+# rules already let DHCPv6 answers in. A marker keeps later updates from
+# touching the rules again, so changes made on Plasma's firewall page stay.
+case "${ACTION}" in
+post)
+	if [ ! -e etc/ufw/.jupiter-firewall ]; then
+		ufw default reject incoming > /dev/null
+		ufw default allow outgoing > /dev/null
+		ufw allow 22/tcp > /dev/null
+		ufw allow 1024:65535/tcp > /dev/null
+		ufw allow 1024:65535/udp > /dev/null
+		sed -i 's/^ENABLED=.*/ENABLED=yes/' etc/ufw/ufw.conf
+		touch etc/ufw/.jupiter-firewall
+	fi
+	;;
+esac

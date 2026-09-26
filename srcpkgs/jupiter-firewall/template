@@ -1,0 +1,21 @@
+# Template file for 'jupiter-firewall'
+pkgname=jupiter-firewall
+version=0.1
+revision=2
+depends="ufw plasma-firewall polkit runit-void"
+short_desc="Valve's firewall rules for the Steam Deck, with ufw and Plasma's firewall page"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo"
+
+# SteamOS runs firewalld with Valve's "public" zone and plasma-firewall on
+# top. Void has no firewalld, so Io uses ufw, which plasma-firewall drives as
+# well: the same rules (set up once by INSTALL), loaded at boot by a runit
+# service, and wheel manages them without a password (polkit), as Valve's
+# rule allows for firewalld.
+
+do_install() {
+	vmkdir usr/share/polkit-1/rules.d
+	vinstall ${FILESDIR}/10-io-ufw-wheel.rules 644 usr/share/polkit-1/rules.d
+	vsv jupiter-firewall
+}

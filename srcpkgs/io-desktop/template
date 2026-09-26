@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=21
+revision=23
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -26,7 +26,7 @@ depends="
 
  gamescope steam-jupiter steam-im-modules steamdeck-kde-presets gamemode
  steamos-systemreport gstreamer1-pipewire wireless-regdb
- holo-sudo holo-realtek-firmware-toggles steam-web-debug-portforward
+ holo-sudo holo-realtek-firmware-toggles steam-web-debug-portforward jupiter-firewall
  MangoHud MangoHud-32bit MangoHud-mangoapp
  mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit libcurl-32bit
  mesa-vaapi mesa-vaapi-32bit

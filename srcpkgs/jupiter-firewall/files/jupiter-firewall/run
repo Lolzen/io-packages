@@ -1,0 +1,13 @@
+#!/bin/sh
+# Io: loads ufw's rules at boot (SteamOS: firewalld.service). ufw applies them
+# only while /etc/ufw/ufw.conf says ENABLED=yes, which the package sets on
+# first install; Plasma's firewall page switches it on and off from there.
+exec 2>&1
+for init in /usr/libexec/ufw/ufw-init /usr/lib/ufw/ufw-init; do
+	[ -x "$init" ] && break
+done
+"$init" start || exit 1
+if command -v pause > /dev/null; then
+	exec pause
+fi
+exec sleep infinity

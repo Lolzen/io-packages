@@ -1,0 +1,8 @@
+// Io: members of wheel manage the firewall without a password prompt, as
+// Valve's org.fedoraproject.FirewallD1.rules allows for firewalld on SteamOS.
+// Here for ufw, driven by Plasma's firewall page (plasma-firewall).
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.kde.ufw.") == 0 && subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});

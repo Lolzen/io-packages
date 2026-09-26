@@ -26,7 +26,7 @@ TdpLimit 3..15 W, GPU power profiles CAPPED/UNCAPPED only, desktop session
 actually in effect afterwards, read back from sysfs, not the requested one.
 
 Not implemented (Io lacks the backing pieces): Storage1, Jobs, UdevEvents1,
-HdmiCec1, Audio1, ScreenReader0/1, UpdateBios1, UpdateDock1,
+HdmiCec1, ScreenReader0/1, UpdateBios1, UpdateDock1,
 FactoryReset1, WifiDebug1.
 """
 
@@ -505,6 +505,42 @@ class Manager2(ServiceInterface):
         return ["unknown", "unknown"]
 
 
+# Audio mode (Steam's developer setting "Mono audio"): WirePlumber's own
+# setting, which downmixes every sink to mono; --save keeps it across
+# sessions and reboots.
+MONO_SETTING = "node.features.audio.mono"
+
+
+def read_audio_mode():
+    try:
+        out = subprocess.run(["wpctl", "settings", MONO_SETTING], capture_output=True,
+                             text=True, timeout=5, check=False).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return "stereo"
+    for line in out.splitlines():
+        if "Value:" in line:
+            return "mono" if line.split("Value:", 1)[1].strip().startswith("true") else "stereo"
+    return "stereo"
+
+
+class Audio1(ServiceInterface):
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.Audio1")
+
+    @dbus_property()
+    def Mode(self) -> "s":
+        return read_audio_mode()
+
+    @Mode.setter
+    def Mode(self, value: "s"):
+        if value not in ("mono", "stereo"):
+            raise DBusError(ERR, f"unknown audio mode: {value}")
+        subprocess.run(["wpctl", "settings", "--save", MONO_SETTING,
+                        "true" if value == "mono" else "false"],
+                       capture_output=True, timeout=5, check=False)
+        self.emit_properties_changed({"Mode": read_audio_mode()})
+
+
 # Download mode, as steamos-manager: while Steam holds at least one handle,
 # the TDP limit is lowered to the Deck's download_mode_limit (Valve's
 # jupiter.toml: 6 W) and restored when the last handle is closed.
@@ -923,6 +959,7 @@ USER_INTERFACES = (
     WifiPowerManagement1,
     WifiBackend1,
     LowPowerMode1,
+    Audio1,
 )
 
 
