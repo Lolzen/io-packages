@@ -22,8 +22,6 @@ if pgrep -x gamescope-wl > /dev/null; then
     exit 1
 fi
 
-export XDG_RUNTIME_DIR=/run/user/$(id -u)
-
 # ------------------------------------------------------------ helpers
 # Valve runs the filter chain as its own PipeWire instance
 # (filter-chain.service), with a fixed quantum, locked memory and a single

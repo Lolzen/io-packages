@@ -11,15 +11,11 @@
 # Developer mode (see io-devmode) additionally keeps the logs across
 # reboots under ~/.local/state/io/log-<session>.
 
-RUNDIR="/run/user/$(id -u)"
-i=0
-while [ ! -d "$RUNDIR" ] && [ $i -lt 15 ]; do
-    sleep 1
-    i=$((i + 1))
-done
-
-if [ ! -d "$RUNDIR" ]; then
-    echo "io: $RUNDIR was not created, check elogind." >&2
+# SDDM opens the login through PAM; pam_elogind creates the runtime
+# directory and sets XDG_RUNTIME_DIR before SDDM starts this script.
+RUNDIR="${XDG_RUNTIME_DIR:-}"
+if [ -z "$RUNDIR" ] || [ ! -d "$RUNDIR" ]; then
+    echo "io: XDG_RUNTIME_DIR is missing, check elogind and SDDM's PAM setup." >&2
     exit 1
 fi
 
@@ -54,9 +50,8 @@ mkfifo "$FIFO"
 svlogd -tt "$LOGDIR" < "$FIFO" &
 dbus-run-session -- "$PROG" > "$FIFO" 2>&1
 
-# PipeWire and its helpers were started inside the session and stay
-# attached to its D-Bus session bus, which is gone now. End them, so the
-# next session starts a fresh PipeWire on its own bus. (On SteamOS PipeWire
-# is a user service on a bus that lives as long as the user.)
-pkill -u "$(id -u)" -x 'pipewire|pipewire-pulse|wireplumber' 2> /dev/null
+# Whatever the session started and left running (PipeWire on the bus that
+# is gone now, steamos-powerbuttond) ends with the login when this script
+# returns: KillUserProcesses=yes (10-io-kill-user-processes.conf). The next
+# session starts a fresh PipeWire on its own bus.
 exit 0
