@@ -1,0 +1,8 @@
+# Remove the Valve-Jupiter-1.conf link alsa-ucm-conf already installed; the
+# noextract rule in /usr/share/xbps.d/30-steamdeck-dsp.conf keeps later
+# alsa-ucm-conf updates from bringing it back.
+case "${ACTION}" in
+post)
+	rm -f usr/share/alsa/ucm2/conf.d/acp5x/Valve-Jupiter-1.conf
+	;;
+esac

@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=13
+revision=14
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -96,6 +96,10 @@ do_install() {
 	vinstall ${FILESDIR}/io-create-loopback.lua 644 usr/share/wireplumber/scripts
 	vinstall ${FILESDIR}/90-io-loopback.conf 644 usr/share/wireplumber/wireplumber.conf.d
 	vinstall ${FILESDIR}/91-io-sink-loopback.conf 644 usr/share/wireplumber/wireplumber.conf.d
+
+	# Keep Void's upstream UCM link for this card out, see the file.
+	vmkdir usr/share/xbps.d
+	vinstall ${FILESDIR}/30-steamdeck-dsp.conf 644 usr/share/xbps.d
 
 	vmkdir etc/wireplumber/wireplumber.conf.d
 	for f in wireplumber/hardware-profiles/valve-jupiter/wireplumber.conf.d/*.conf; do
