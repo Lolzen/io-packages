@@ -1,0 +1,39 @@
+# Template file for 'xdg-desktop-portal-holo'
+pkgname=xdg-desktop-portal-holo
+version=0.1.18
+revision=1
+_commit=5ad92bfab460cd8ea536831789c43590b3a7a71c
+wrksrc="${pkgname}"
+build_style=meson
+configure_args="-Dsystemd_user_unit_dir=/usr/lib/systemd/user"
+hostmakedepends="pkg-config git tar glib-devel xdg-desktop-portal"
+makedepends="libglib-devel fontconfig-devel"
+depends="xdg-desktop-portal"
+conf_files="/etc/xdg/SteamOS/portal/lockdown.conf
+ /etc/xdg/SteamOS/portal/settings.conf"
+short_desc="XDG desktop portal backend for SteamOS-specific interfaces"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://gitlab.steamos.cloud/holo/xdg-desktop-portal-holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}.${_commit:0:7}-2.src.tar.gz"
+checksum=9df248224d9a39d8e27d1d8e4030b7312b39b7de5640ec172701e9f3a6a42bf2
+
+# Valve's portal backend (holo-main 0.1.18.5ad92bf-2) as it is: Settings
+# (color scheme, contrast, accent color), AppChooser, Email and Lockdown for
+# game mode, where gamescope-portals.conf (xdg-desktop-portal-gamescope)
+# puts it first. Its defaults are in /etc/xdg/SteamOS/portal.
+# Io has no systemd: the user unit is not installed, and the D-Bus service
+# file loses its SystemdService line, so the bus starts the backend itself.
+# (The unit directory is passed only so meson does not ask for systemd.)
+
+post_extract() {
+	git --git-dir=${pkgname} archive --format=tar ${_commit} | tar -x
+	rm -rf ${pkgname}
+}
+
+post_install() {
+	rm -r ${DESTDIR}/usr/lib/systemd
+	rmdir --ignore-fail-on-non-empty ${DESTDIR}/usr/lib
+	sed -i '/^SystemdService=/d' ${DESTDIR}/usr/share/dbus-1/services/org.freedesktop.impl.portal.desktop.holo.service
+	vlicense LICENSES/BSD-3-Clause.txt
+}
