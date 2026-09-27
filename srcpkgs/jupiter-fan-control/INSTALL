@@ -1,16 +1,31 @@
 # Until revision 3 the service was installed without vsv, so runsv created a
 # plain supervise directory where vsv now installs the supervise link, and
-# xbps cannot replace a directory with a link. Stop the running service
-# (its finish script hands the fan back to the embedded controller) and its
-# runsv, then remove the directory. runsvdir starts runsv again within a few
-# seconds, now through the new link.
+# xbps cannot replace a directory with a link. The service is unlinked first,
+# so runsvdir stops it (the finish script hands the fan back to the embedded
+# controller) and does not start it again while the directory is replaced;
+# a running runsv would recreate the directory at once. It is linked again
+# after the new files are in place.
 case "${ACTION}" in
 pre)
 	d=etc/sv/jupiter-fan-control/supervise
 	if [ -d "$d" ] && [ ! -L "$d" ]; then
-		sv force-stop ./etc/sv/jupiter-fan-control > /dev/null 2>&1
-		sv exit ./etc/sv/jupiter-fan-control > /dev/null 2>&1
+		if [ -L var/service/jupiter-fan-control ]; then
+			rm -f var/service/jupiter-fan-control
+			mkdir -p run
+			: > run/jupiter-fan-control.relink
+			i=0
+			while pgrep -f "runsv jupiter-fan-control" > /dev/null 2>&1 && [ "$i" -lt 15 ]; do
+				sleep 1
+				i=$((i + 1))
+			done
+		fi
 		rm -rf "$d"
+	fi
+	;;
+post)
+	if [ -e run/jupiter-fan-control.relink ]; then
+		ln -sf /etc/sv/jupiter-fan-control var/service/
+		rm -f run/jupiter-fan-control.relink
 	fi
 	;;
 esac
