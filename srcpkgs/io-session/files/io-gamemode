@@ -5,8 +5,10 @@
 #
 # Valve runs gamescope and Steam as two systemd user units and passes the
 # X/Wayland display names through a startup socket. Io has no user units,
-# so gamescope launches Steam directly as its child, which makes the
-# startup socket (-R) unnecessary.
+# so gamescope launches Valve's steam-launcher directly as its child, which
+# makes the startup socket (-R) unnecessary. What steam-launcher.service
+# runs before and after Steam (the short-session tracker) runs here before
+# and after gamescope, which lives exactly as long as Steam.
 #
 # Variables are split in two groups:
 #   A - set exactly like Valve does, Io has everything they depend on
@@ -45,8 +47,8 @@ start_filter_chain() {
 
 # mangoapp draws Steam's performance overlay. Valve runs it as its own
 # service with Restart=always and hands it the session environment; here a
-# loop tied to gamescope does the same. Steam itself sets the STEAM_*MANGOAPP*
-# variables; the config file and the stats pipe are ours to provide.
+# loop tied to gamescope does the same. The STEAM_*MANGOAPP* variables that
+# switch Steam over to it are set below, as Valve's gamescope-session does.
 #
 # It is started right before gamescope, after the whole environment is set:
 # started earlier, it missed MANGOHUD_CONFIGFILE, never saw the overlay level
@@ -177,15 +179,16 @@ bg=/usr/share/plymouth/themes/io/io.png
 # HDMI-CEC: cecd and cec-audio-control run with every session (see above)
 export STEAM_ENABLE_CEC=1
 
-# ---------------------------------------- B: waiting for a dependency
+# Steam's performance overlay through mangoapp (Valve's gamescope-session;
+# all four are in Steam's environment on SteamOS 3.8.4)
+export STEAM_USE_MANGOAPP=1
+export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
+export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
+export STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND=1
+
 # Status LED brightness control (Jupiter has one too, status:white); the LED
 # is writable for deck through steam-jupiter's udev rule.
 export STEAM_ENABLE_STATUS_LED_BRIGHTNESS=1
-# Storage1 (format/unmount helpers + udisks2):
-#export STEAM_ALLOW_DRIVE_UNMOUNT=1
-#export STEAM_ALLOW_DRIVE_ADOPT=1
-# needs systemd scopes:
-#export STEAM_LAUNCH_WRAPPER_SCOPE=1
 # Steam's on-screen keyboard as input method for GTK and Qt 5 apps
 # (steam-im-modules):
 export QT_IM_MODULE=steam
@@ -193,6 +196,15 @@ export GTK_IM_MODULE=Steam
 # Valve's cursor theme (deck-hw-support):
 export XCURSOR_THEME=steam
 export XCURSOR_SCALE=256
+# Chromium, and so Steam, ignores XCursor and takes the GTK setting (Valve)
+command -v kwriteconfig6 > /dev/null 2>&1 && kwriteconfig6 --file gtk-3.0/settings.ini --group Settings --key gtk-cursor-theme-name steam
+
+# ---------------------------------------- B: waiting for a dependency
+# Storage1 (format/unmount helpers + udisks2):
+#export STEAM_ALLOW_DRIVE_UNMOUNT=1
+#export STEAM_ALLOW_DRIVE_ADOPT=1
+# needs systemd scopes:
+#export STEAM_LAUNCH_WRAPPER_SCOPE=1
 
 # Valve raises the fd limit for the whole session (esync, Steam itself)
 ulimit -n 524288 2>/dev/null || ulimit -n "$(ulimit -Hn)"
@@ -209,8 +221,13 @@ set -- "$@" --cursor-scale-height 720
 set -- "$@" -e -T "$GAMESCOPE_STATS"
 set -- "$@" -O '*',eDP-1
 
-# steam-jupiter is Valve's Deck wrapper: it keeps Steam on the Deck's
-# branch and adds -steamdeck -pipewire, so the full command line matches
-# SteamOS (including -steamdeck twice).
+# Steam starts through Valve's steam-launcher: steam (Valve's steam-jupiter
+# wrapper), or a devkit client if one is deployed. The short-session tracker
+# restores Steam from the OS copy after three runs under a minute in a row.
+tracker=/usr/lib/steamos/steam-short-session-tracker
+"$tracker" --track-started
 start_mangoapp
-exec gamescope "$@" -- steam-jupiter -steamos3 -steampal -steamdeck -gamepadui
+gamescope "$@" -- /usr/lib/steamos/steam-launcher
+rc=$?
+"$tracker" --track-stopped
+exit "$rc"

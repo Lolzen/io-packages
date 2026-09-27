@@ -1,0 +1,25 @@
+#!/bin/bash
+# io-steam-launcher - what Valve's steam-launcher.service does around
+# /usr/lib/steamos/steam-launcher, for gamescope to start instead of Steam:
+# the short-session tracker before and after (after three Steam runs under
+# a minute in a row it restores Steam from the OS copy), and TERM, INT and
+# HUP handed on to Steam, which this script otherwise would not forward.
+
+tracker=/usr/lib/steamos/steam-short-session-tracker
+
+"$tracker" --track-started
+
+/usr/lib/steamos/steam-launcher &
+pid=$!
+trap 'kill -TERM "$pid" 2> /dev/null' TERM INT HUP
+
+# wait returns early when a trapped signal arrives; keep waiting until
+# Steam is really gone.
+rc=0
+while kill -0 "$pid" 2> /dev/null; do
+    wait "$pid"
+    rc=$?
+done
+
+"$tracker" --track-stopped
+exit "$rc"

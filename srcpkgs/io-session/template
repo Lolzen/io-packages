@@ -1,9 +1,10 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.6.2
+version=0.6.3
 revision=1
-optdepends="kde-plasma: desktop session via steamos-session-select plasma"
-depends="gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
+# The desktop session (steamos-session-select plasma) needs kde-plasma,
+# which io-desktop pulls in.
+depends="bash gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
  io-steamos-manager rtkit libcap-progs sddm cecd
  cec-audio-control"
 conf_files="/etc/elogind/logind.conf.d/10-io-kill-user-processes.conf"
@@ -11,10 +12,6 @@ short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://github.com/Lolzen/io-packages"
-
-do_build() {
-	:
-}
 
 do_install() {
 	vbin ${FILESDIR}/io-gamemode
@@ -32,13 +29,14 @@ do_install() {
 	vinstall ${FILESDIR}/10-io-kill-user-processes.conf 644 etc/elogind/logind.conf.d
 	vmkdir etc/security/limits.d
 	vinstall ${FILESDIR}/90-io-memlock.conf 644 etc/security/limits.d
-	vmkdir etc/skel
 	vbin ${FILESDIR}/io-plasma
 	vbin ${FILESDIR}/steamos-session-select
 	vmkdir etc/skel/Desktop
 	vbin ${FILESDIR}/io-grow-storage
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
-	vinstall ${FILESDIR}/io-grow-storage.desktop 644 etc/skel/Desktop
+	# Executable, as Valve's Return.desktop: Plasma asks before starting a
+	# desktop-file launcher that is not.
+	vinstall ${FILESDIR}/io-grow-storage.desktop 755 etc/skel/Desktop
 
 	vmkdir etc/pipewire/pipewire.conf.d
 	ln -sf /usr/share/examples/wireplumber/10-wireplumber.conf "${DESTDIR}/etc/pipewire/pipewire.conf.d/10-wireplumber.conf"
@@ -48,4 +46,10 @@ do_install() {
 	vinstall ${FILESDIR}/90-io-gamescope-caps.sh 644 etc/runit/core-services
 
 	vbin ${FILESDIR}/io-devmode
+
+	# Valve's steam-launcher and steam-short-session-tracker as on SteamOS
+	# 3.8.4; io-gamemode runs them the way steam-launcher.service does.
+	vmkdir usr/lib/steamos
+	vinstall ${FILESDIR}/steam-launcher 755 usr/lib/steamos
+	vinstall ${FILESDIR}/steam-short-session-tracker 755 usr/lib/steamos
 }

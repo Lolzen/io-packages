@@ -31,7 +31,7 @@ pause() {
 
 fail() {
     echo
-    echo "FEHLER: $*" >&2
+    echo "ERROR: $*" >&2
     pause
     exit 1
 }
@@ -61,7 +61,19 @@ SYSPART=/sys/class/block/$ROOT_NAME
 disk_sectors() { cat "/sys/block/$DISK/size"; }
 part_start() { cat "$SYSPART/start"; }
 part_sectors() { cat "$SYSPART/size"; }
-fs_bytes() { df -B1 --output=size / | tail -1 | tr -d ' '; }
+# The filesystem's own size. df cannot be used for ext*: it leaves out the
+# space ext4 keeps for its metadata (well over 100 MB on a 16 GiB card), so
+# a fully grown filesystem would look smaller than its partition.
+fs_bytes() {
+    case "$ROOT_FS" in
+        ext2|ext3|ext4)
+            dumpe2fs -h "$ROOT_SRC" 2> /dev/null | awk -F: '/^Block count:/ { c = $2 } /^Block size:/ { s = $2 } END { printf "%.0f\n", c * s }'
+            ;;
+        *)
+            df -B1 --output=size / | tail -1 | tr -d ' '
+            ;;
+    esac
+}
 
 # Root must be the last partition, otherwise there is nothing behind it.
 for p in /sys/block/"$DISK"/"$DISK"*; do
