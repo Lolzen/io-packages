@@ -222,12 +222,11 @@ dependencies**, it only installs missing ones. Update with plain
 never on the target at install time. Code for install time goes into
 `srcpkgs/<pkg>/INSTALL`, using `$ACTION`.
 
-**`post_extract` is not run in templates without a `build_style`.** Put the
-checkout step at the start of `do_install`.
-
-**`xbps-install -r` before `/proc`, `/dev` and `/sys` are bind-mounted defers
-every `INSTALL` script silently.** Follow up with `xbps-reconfigure -a` once
-the mounts are in place.
+**`xbps-install -r` runs the packages' `INSTALL` scripts chrooted, but
+without `/proc`, `/dev` and `/sys`** unless they are bind-mounted first.
+`mkimg.sh` runs `xbps-reconfigure -a` after the mounts (configures whatever
+was left unconfigured, as void-mklive does); a script that needs the
+pseudo file systems has to be forced with `xbps-reconfigure -f`.
 
 **`/etc/sysctl.d` is rejected by Void's package linter.** Packages ship
 defaults in `/usr/lib/sysctl.d`.
@@ -259,9 +258,9 @@ tree.
 Valve's git archive (`git archive … | tar -x`) needs `hostmakedepends="git
 tar"`, or it fails with `tar: command not found`.
 
-**A heredoc write or append can silently do nothing or lose its last line.**
-Happened three times (PipeWire configuration, kernel configuration fragment).
-`cat` the file after writing it.
+**A pasted heredoc write or append can arrive incomplete.** Happened three
+times (PipeWire configuration, kernel configuration fragment); long pasted
+lines get cut at about 120 characters. `cat` the file after writing it.
 
 ---
 
@@ -382,11 +381,6 @@ applications. On SteamOS the first switch after boot trips the loopback
 once (`cannot set PortConfig param: node already started`), later ones
 work.
 
-**A loopback bound with `target.object` at startup can bind to nothing and
-never retry**, if its target node does not exist yet. It looks complete,
-suspended and correct in `wpctl` and `pw-dump`. Set `target.delay.sec`, and
-verify with an actual recording (`pw-record`), not with the node list.
-
 **Valve's `filter-chain.conf.d/` belongs to a second PipeWire instance.** It
 only takes effect when that instance runs (`pipewire -c filter-chain.conf`,
 `filter-chain.service` on SteamOS). Valve's two `context-properties` files are
@@ -394,9 +388,11 @@ therefore not alternatives: the one in `pipewire.conf.d/` configures the main
 daemon, the one in `filter-chain.conf.d/` the filter instance. Merging them
 applies the filter chain's fixed quantum and `mem.mlock-all` to everything.
 
-**`probe_volumes: Path X is not a volume or mute control` warnings are
-harmless.** They come from the generic mixer paths in `alsa-card-profile` and
-cannot be fixed from a device package.
+**`probe_volumes: Path X is not a volume or mute control` warnings** appear
+on Io but not in SteamOS 3.8.4's journal. Likely cause: Void's
+`alsa-ucm-conf` ships `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM finds
+before Valve's `acp5x.conf` from `steamdeck-dsp` (the card's long name is
+probed first). Not yet checked on the Deck.
 
 **A PipeWire client started before the daemon's socket exists just exits**,
 it does not retry. systemd orders this through socket activation; a session
@@ -440,7 +436,8 @@ interface file describes it.
 SteamOS 3.8.4 still use `steamos-*`. Io keeps the old names and takes only
 the real changes; there is no xbps equivalent of the hook.
 
-**Valve's `holo-upower-config` has no effect as shipped.** It sets
+**Valve's `holo-upower-config` has no effect as shipped** (it is newer than
+SteamOS 3.8.4, which does not carry it). It sets
 `AllowRiskyCriticalPowerAction=yes`; UPower accepts only `true`/`false` and
 falls back to HybridSleep with a warning.
 
@@ -449,13 +446,13 @@ on the kernel (`hwmon6` on Io's 7.2); without a patch vpower assumes a 100 %
 charge limit.
 
 **`deck-hw-support`'s udev rules call `/bin/systemd-run`**, which does not
-exist under runit, and the automount rule calls `busctl` against udisks2 —
-including for the boot device during coldplug, before D-Bus exists. Replace
+exist under runit, and the automount script needs udisks2. Replace
 `systemd-run` with `setsid --fork` and exclude the boot device before
 enabling automount.
 
 **`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
-(matching Valve's polkit rule), and `systemd-cat` becomes `logger`.
+(the user name is chosen when the image is built), and `systemd-cat` becomes
+`logger`.
 
 **Valve's `python<3.14` constraints were too conservative** and have been
 relaxed upstream.

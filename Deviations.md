@@ -112,6 +112,10 @@ the session bus that Steam talks to.
 - **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
   core service writes elogind's `sleep.conf.d`). Suspend-then-hibernate is
   not set up yet.
+- **Time sync through chrony**: Void has no `systemd-timesyncd`.
+- **Hostname `io`** (SteamOS: `steamdeck`), set by `mkimg.sh`.
+- **`iio-sensor-proxy`** is installed and running; SteamOS 3.8.4 does not
+  ship it.
 - **earlyoom** runs with Valve's full argument set; its `--avoid` list names
   runit's processes instead of systemd.
 - **`tmpfiles.d` rules** from Valve's packages are boot-time core services
@@ -150,16 +154,21 @@ the session bus that Steam talks to.
   plugin (label `nt-filter`). Io builds werman/noise-suppression-for-voice as
   `rnnoise-ladspa` (label `noise_suppressor_mono`), because Void's NoiseTorch
   package ships no system-wide plugin.
-- **No hardware profile switching.** SteamOS picks an audio profile at boot
-  through symlinks in `/run`, because `/usr` is read-only. Io installs the
-  Jupiter configuration directly into the standard search paths.
+- **Version:** Io builds Valve's `steamdeck-dsp` 1.02; SteamOS 3.8.4 runs
+  0.91. Differences that matter are listed here; 0.91's
+  `session.suspend-timeout-seconds = 0` on the microphone filter's node is
+  not in 1.02 and not in Io.
+- **No hardware profile switching.** SteamOS picks the audio profile for the
+  Deck model at boot through symlinks in `/run`. Io only supports Jupiter and
+  installs its configuration directly into the standard search paths.
 - **ALSA loopbacks** are created by an Io WirePlumber script that rebuilds
   Valve's `CreateLoopback()`, which only exists in Valve's patched
   WirePlumber. The result matches SteamOS, including the card identity the
   loopback carries — that is what makes Steam show its own localized device
   names.
 - **Sources and sinks get a loopback**, as on SteamOS 3.8.4
-  (`steamdeck-dsp` 0.91); Valve's 1.02 marks only sources. The sink
+  (`steamdeck-dsp` 0.91); Valve's 1.02 marks only sources, Io adds the sink
+  rule back (`91-io-sink-loopback.conf`). The sink
   loopback keeps applications from seeing the speaker rebuilt: with Steam's
   *Mono audio*, a stream on the bare speaker saw the channel count change,
   and Steam's interface sound closed for good when switching back.
@@ -200,8 +209,9 @@ the session bus that Steam talks to.
   20260327.1, later versions moved them to another package. Several helpers
   are stubs, see [Helper status](Helper-Status). The automount udev rules
   are disabled.
-- **`steamos-priv-write`** checks the `wheel` group instead of `deck` (as
-  Valve's own polkit rule does) and logs through `logger`.
+- **`steamos-priv-write`** gives the written files to the `wheel` group
+  instead of `deck`, because the user name is chosen when the image is built
+  (`USERNAME` in `mkimg.sh`), and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
   journald to log to.
 - **`steamdeck-kde-presets`**: the Deck variant of the Vapor theme is written
@@ -216,8 +226,21 @@ the session bus that Steam talks to.
 - **`jupiter-fan-control`** runs as a runit service; its `finish` script does
   what Valve's `ExecStopPost` does (hand the fan back to the embedded
   controller).
-- **`steamos-tuning`** adds `kernel.pid_max = 4194304`, systemd's default that
-  SteamOS inherits.
+- **`steamos-tuning`** adds what SteamOS inherits from systemd and Arch
+  instead of setting it itself: `kernel.pid_max`, `kernel.sysrq`, the
+  inotify limits, `fs.protected_regular`/`fifos`, `net.core.default_qdisc`,
+  `rp_filter` and `promote_secondaries` (values as captured on SteamOS
+  3.8.4).
+- **`holo-fstab-repair`** runs Valve's script on every boot; SteamOS runs it
+  only when the user changed `fstab` in its `/etc` overlay, which Io does
+  not have.
+- **Newer than SteamOS 3.8.4:** several Valve packages are built from newer
+  source archives than SteamOS 3.8.4 carries — `steamdeck-dsp` 1.02 (0.91),
+  `vpower` 1.6.3 (1.5.7), `steamdeck-kde-presets` 3.9.4 (3.8.5),
+  `xdg-desktop-portal-gamescope` 0.1.38 (0.1.33), `jupiter-fan-control`
+  20260902.1 (20260422.2), `holo-fstab-repair` 0.2 (0.1),
+  `steam-jupiter-stable` -12 (-8; adds `-pipewire` to Steam's command line)
+  and `holo-upower-config` (not on SteamOS 3.8.4).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
@@ -233,6 +256,13 @@ the session bus that Steam talks to.
 System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
 updates, the crash log submitter, Valve's nested desktop (Plasma inside game
-mode), automount of SD cards and USB drives (Alpha 5). The dock updater is a
+mode), automount of SD cards and USB drives (Alpha 5), the holo portal
+(`xdg-desktop-portal-holo`: Settings and app chooser in game mode; Io's
+`gamescope-portals.conf` says `default=gamescope` instead of
+`default=holo;gamescope`), `steam_notif_daemon` (Steam's notifications in
+game mode), `drm_janitor`, `dmemcg-booster` (needs `CONFIG_CGROUP_DMEM`,
+which Io's kernel lacks) and the low-disk cleanup at the start of Valve's
+`gamescope-session` (deletes the oldest game when less than 500 MB are
+free). The dock updater is a
 stub that tells Steam the dock is up to date. Not needed on Io at all: `holo-keyring` (pacman keys),
 `holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).

@@ -56,8 +56,9 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
   a fresh PipeWire on its own session bus.
 - **`io-gamemode`** reproduces Valve's `gamescope-session`: the same
   environment, gamescope arguments and Steam flags
-  (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Steam
-  directly as its child. Like Valve's session it limits the portals to the
+  (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Valve's
+  `steam-launcher` directly as its child; Valve's short-session tracker runs
+  before and after it, as `steam-launcher.service` does. Like Valve's session it limits the portals to the
   gamescope backend (`XDG_DESKTOP_PORTAL_DIR`), and passes gamescope's
   statistics pipe (`-T`, `GAMESCOPE_STATS`). It also starts PipeWire, the
   power button daemon, the session half of `io-steamos-manager` (always, one

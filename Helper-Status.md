@@ -13,7 +13,7 @@ stubs.
 | `jupiter-fan-control` | Asks `io-steamos-manager` to stop or start the fan daemon |
 | `steamos-disable-wireless-power-management` | Asks `io-steamos-manager`; the interface is found automatically |
 | `steamos-poweroff-now`, `steamos-reboot-now` | |
-| `steamos-set-hostname`, `steamos-set-timezone` | Timezone through Io's `timedatectl` replacement |
+| `steamos-set-hostname`, `steamos-set-timezone` | Hostname written to `/etc/hostname` and the running kernel (no `hostnamectl`); timezone through Io's `timedatectl` replacement |
 | `steamos-trim-devices` | |
 | `jupiter-check-support`, `jupiter-get-als-gain` | |
 | `steamos-enable-sshd` | Links the `sshd` runit service, the equivalent of Valve's `systemctl enable --now sshd` |

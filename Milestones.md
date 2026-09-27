@@ -98,8 +98,8 @@ someone with the hardware.
   `xbps-install -Su` behind it
 - **A factory reset of Io's own** (fresh home directory): a design decision,
   and destructive
-- **Live ISO with an installer**, once void-mklive handles dracut 112's
-  live-boot changes; after it, **flavours**: *Plasma* (today's image),
+- **Live ISO with an installer**, once self-built void-mklive ISOs boot
+  (they drop to dracut's emergency shell, cause not found yet); after it, **flavours**: *Plasma* (today's image),
   *Base* (game mode only), *Slim* (a light desktop). The split is prepared:
   `io-base` is the core, `io-desktop` adds the desktop
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
