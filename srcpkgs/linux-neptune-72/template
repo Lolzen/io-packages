@@ -1,7 +1,7 @@
 # Template file for 'linux-neptune-72'
 pkgname=linux-neptune-72
 version=7.2.4
-revision=3
+revision=4
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.2 series)"
 depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
@@ -76,13 +76,17 @@ post_patch() {
 
 do_configure() {
 	local arch=x86_64
-	# Void's own linux7.2 base config (x86_64-dotconfig), with Valve's
-	# config-neptune fragment from linux-integration merged on top. Io adds
-	# no options of its own.
-	msg_normal "Using Void base config plus neptune fragment.\n"
+	# Layered config: Void's linux7.2 base (x86_64-dotconfig), then Valve's
+	# full neptune config as SteamOS builds it (ci/kernel-config/neptune/
+	# config, shipped in the linux-integration patch), then Valve's
+	# config-neptune fragment, then Io's own overrides (config-io, each with
+	# its reason). Options Valve's config does not know keep Void's value.
+	msg_normal "Using Void base, Valve's neptune config, config-neptune, config-io.\n"
 	cp -f ${FILESDIR}/${arch}-dotconfig .config
 	chmod +x scripts/kconfig/merge_config.sh
+	scripts/kconfig/merge_config.sh -m .config ci/kernel-config/neptune/config
 	scripts/kconfig/merge_config.sh -m .config ${FILESDIR}/config-neptune
+	scripts/kconfig/merge_config.sh -m .config ${FILESDIR}/config-io
 	make ${makejobs} ARCH=$arch ${_cross} olddefconfig
 	# Always use our revision to CONFIG_LOCALVERSION to match our pkg version.
 	sed -i -e "s|^\(CONFIG_LOCALVERSION=\).*|\1\"_${revision}\"|" .config

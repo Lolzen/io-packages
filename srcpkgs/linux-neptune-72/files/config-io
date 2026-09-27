@@ -1,0 +1,19 @@
+# Io's own settings on top of Void's base config, Valve's full neptune
+# config (ci/kernel-config/neptune/config from the linux-integration patch)
+# and config-neptune. Each line says why it differs from Valve's.
+# Review on every kernel bump: compare Void, Valve and SteamOS and decide
+# per option (towards SteamOS, towards Void, or a deliberate Io choice).
+
+# Packaging (Void): xbps-src sets LOCALVERSION to the package revision.
+# CONFIG_LOCALVERSION_AUTO is not set
+# Packaging (Void): mv-debug splits off the debug info, then signs and
+# compresses each module itself; signing or compressing already in
+# modules_install would be undone by the strip.
+# CONFIG_MODULE_SIG_ALL is not set
+# CONFIG_MODULE_COMPRESS_ALL is not set
+# Arch-specific default; the real hostname comes from /etc/hostname.
+CONFIG_DEFAULT_HOSTNAME="(none)"
+# Towards SteamOS 3.8.4 (and Void): Binder for Android containers
+# (Waydroid). Valve's 7.2 CI config dropped it, SteamOS 3.8.4 has it.
+CONFIG_ANDROID_BINDER_IPC=y
+CONFIG_ANDROID_BINDERFS=y
