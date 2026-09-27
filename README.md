@@ -61,7 +61,7 @@ reason is documented in
 - Controller, gyro, trackpads, volume keys (handled by Steam), brightness,
   status LED, power button, suspend and resume
 - Steam's performance menu: TDP limit, manual GPU clock, charge limit, fan
-  control, Wi-Fi power management, performance overlay;
+  control, Wi-Fi power management, adaptive brightness, performance overlay;
   *Restart Steam* with Steam's developer mode on. Served by
   `io-steamos-manager`, Io's own implementation of Valve's SteamOS Manager
 - Battery: controlled shutdown through Steam when the battery runs empty
@@ -79,8 +79,7 @@ reason is documented in
   the SteamOS Devkit Client
 
 Not yet: automatic mounting of SD cards and USB drives (Alpha 5),
-installing to the internal SSD, adaptive brightness (the toggle is there,
-the brightness does not follow the light yet). Built for the Steam Deck LCD; the OLED model
+installing to the internal SSD. Built for the Steam Deck LCD; the OLED model
 and Valve's own dock need someone with the hardware to test.
 
 Open items and plans are tracked on the
