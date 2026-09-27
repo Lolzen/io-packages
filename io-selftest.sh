@@ -42,6 +42,7 @@ P2="$P2 steamos-networking-tools steamos-systemreport sddm scx wireless-regdb gs
 P2="$P2 pipewire-32bit libspa-videoconvert-32bit libspa-audioconvert-32bit"
 P2="$P2 holo-sudo jupiter-firewall cecd cec-audio-control steamos-devkit-service steam-web-debug-portforward"
 P2="$P2 gpu-trace holo-realtek-firmware-toggles io-release"
+P2="$P2 drm_janitor steam_notif_daemon xdg-desktop-portal-holo"
 for p in $P1 $P2; do
     check "installed: $p" xbps-query "$p"
 done
@@ -82,6 +83,8 @@ check "gamescope running" pgrep -x gamescope-wl
 check "gamescope with stats pipe (-T)" sh -c 'tr "\0" " " < /proc/$(pgrep -x gamescope-wl)/cmdline | grep -q -- " -T "'
 check "one io-steamos-manager user half" sh -c '[ "$(pgrep -c -u deck -f "^/usr/bin/python3 /usr/bin/io-steamos-manager$")" = 1 ]'
 check "one cecd" sh -c '[ "$(pgrep -c -u deck -x cecd)" = 1 ]'
+check "one steam_notif_daemon (notifications to Steam)" sh -c '[ "$(pgrep -c -u deck -f ^/usr/bin/steam_notif_daemon)" = 1 ]'
+check "holo portal first in game mode" grep -q "default=holo;gamescope" /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
 check "mangoapp has Steam's config file" sh -c 'tr "\0" "\n" < /proc/$(pgrep -x mangoapp)/environ | grep -q ^MANGOHUD_CONFIGFILE='
 check "gamescope file capability" sh -c 'getcap /usr/bin/gamescope | grep -q cap_sys_nice=ep'
 check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /proc/$(pgrep -x gamescope-wl)/status'

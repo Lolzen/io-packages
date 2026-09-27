@@ -1,12 +1,12 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.6.5
+version=0.6.6
 revision=1
 # The desktop session (steamos-session-select plasma) needs kde-plasma,
 # which io-desktop pulls in.
 depends="bash gamescope steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
  io-steamos-manager rtkit libcap-progs sddm cecd
- cec-audio-control"
+ cec-audio-control steam_notif_daemon drm_janitor"
 conf_files="/etc/elogind/logind.conf.d/10-io-kill-user-processes.conf"
 short_desc="Io game mode session scripts and session switching"
 maintainer="Georg <funer@gmx.at>"

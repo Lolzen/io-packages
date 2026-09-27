@@ -226,10 +226,21 @@ set -- "$@" -O '*',eDP-1
 # Steam starts through Valve's steam-launcher: steam (Valve's steam-jupiter
 # wrapper), or a devkit client if one is deployed. The short-session tracker
 # restores Steam from the OS copy after three runs under a minute in a row.
+# Steam's notification daemon (SteamOS: steam-notif-daemon.service, a user
+# service of the game mode session, started with the session's environment).
+# It owns org.freedesktop.Notifications and passes each notification on to
+# Steam (steam -ifrunning steam://open_xdg_notification/...). Plasma has its
+# own for the desktop session.
+setsid /usr/bin/steam_notif_daemon &
+
 tracker=/usr/lib/steamos/steam-short-session-tracker
 "$tracker" --track-started
 start_mangoapp
 gamescope "$@" -- /usr/lib/steamos/steam-launcher
 rc=$?
 "$tracker" --track-stopped
+# As Valve's drop-in for gamescope-session.service (ExecStopPost): reset the
+# display state gamescope leaves behind (modes, color and HDR properties)
+# before the next session takes the screen. A failure is ignored there too.
+/usr/bin/drm_janitor
 exit "$rc"
