@@ -1,9 +1,9 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=8
+revision=9
 hostmakedepends="xcursorgen"
-depends="polkit jq alsa-utils dmidecode elogind"
+depends="polkit jq alsa-utils dmidecode elogind udisks2"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -16,6 +16,12 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # the actual changes: a sturdier jupiter-check-support and the restructured
 # GPU reset rules. Valve's cursor theme (the images come from 20260327.1:
 # later versions moved them to a holo package) is new in Io.
+#
+# Automount of SD cards and USB drives as on SteamOS: Valve's udev rule and
+# scripts (udisks mounts ext4 under /run/media/deck/<label>), started through
+# io-detach instead of systemd-run, and leaving out the disk Io runs from.
+# trim-devices.sh does not fall back to trimming /var and /home on a card
+# that is unsafe to trim: on Io they may be on that card.
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers

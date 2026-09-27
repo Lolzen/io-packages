@@ -1,0 +1,15 @@
+#!/bin/sh
+# io-detach <program> [arguments] - Io's stand-in for "systemd-run --no-block
+# --collect" in Valve's udev rules. udev must not wait for these scripts
+# (block-device-event.sh itself waits for udev to settle), so the program
+# runs in a session of its own, detached from udev, and its output goes to
+# the syslog under the program's name (socklog: /var/log/socklog/) and to
+# /run/io-detach.log.
+if [ "$1" = "--child" ]; then
+	shift
+	# Also into /run: during boot, before socklog runs, logger has no
+	# /dev/log and drops the lines.
+	"$@" 2>&1 | tee -a /run/io-detach.log | logger -t "$(basename "$1")"
+	exit 0
+fi
+exec setsid --fork "$0" --child "$@" < /dev/null > /dev/null 2>&1

@@ -44,12 +44,29 @@ is_os_partition ()
     return 1
 }
 
+# Io: udisks is started by D-Bus, and the system bus is a runit service.
+# Devices present at boot arrive while runit is still in stage 1, before
+# the bus exists; that is also how this script tells a boot-time device
+# from one inserted later (SteamOS asks systemd whether boot is done).
+DBUS_SOCKET=/run/dbus/system_bus_socket
+wait_for_dbus ()
+{
+    local i=0
+    while [ ! -S "$DBUS_SOCKET" ] && [ $i -lt 600 ]; do
+        sleep 1
+        i=$((i + 1))
+    done
+    [ -S "$DBUS_SOCKET" ]
+}
+
 if [[ $# -ne 2 ]]; then
     usage
 fi
 
 ACTION=$1
 DEVBASE=$2
+BOOTING=no
+[ -S "$DBUS_SOCKET" ] || BOOTING=yes
 
 # Shared between this and format-device.sh to ensure we're not
 # double-triggering nor automounting while formatting or vice-versa.
@@ -78,7 +95,16 @@ do_add()
     # events during system boot because they can actually arrive late
     # if the boot process is slow. Therefore we check the arrival time
     # of the event only if we have already reached multi-user.target.
-    if systemctl -q check multi-user.target; then
+    if ! wait_for_dbus; then
+        echo "No system bus after 600 s, not mounting /dev/${DEVBASE}" >&2
+        exit 1
+    fi
+    # Again now: waiting for the bus can take long enough for fstab to have
+    # been mounted meanwhile.
+    if io_system_disk "${DEVBASE}"; then
+        exit 0
+    fi
+    if [ "$BOOTING" = no ]; then
         drive=$(make_dbus_udisks_call get-property data o "block_devices/${DEVBASE}" Block Drive)
         detected_us=$(make_dbus_udisks_call get-property data t "${drive}" Drive TimeMediaDetected)
         # The 5 seconds window is taken from the original GNOME fix that inspired this one
@@ -99,7 +125,7 @@ do_remove()
 
 case "${ACTION}" in
     add)
-        if ! is_os_partition
+        if ! is_os_partition && ! io_system_disk "${DEVBASE}"
         then
             do_add;
         fi

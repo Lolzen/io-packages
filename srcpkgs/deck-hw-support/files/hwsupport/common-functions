@@ -52,3 +52,39 @@ create_lock_file()
         return 1
     fi
 }
+
+# Io: SteamOS keeps its own partitions out through its A/B partition list,
+# which Io does not have. Io runs from a card or drive that is in use, so
+# every partition on the disk / is on is left out, and anything mounted.
+# Without this, the card Io boots from would be checked with fsck while
+# mounted, and steamos-automount.sh would make the mount point
+# world-writable (it did make / mode 777 once). When the disk behind / cannot
+# be worked out, nothing is mounted: this fails closed.
+# Returns 0 (true) when /dev/$1 must be left alone.
+io_disk_of()
+{
+    lsblk -nsrpo NAME,TYPE -- "$1" 2>/dev/null | awk '$2 == "disk" { print $1; exit }'
+}
+
+io_system_disk()
+{
+    local -r dev="/dev/$1"
+    local root_src root_disk disk
+
+    if findmnt -rn -S "$dev" > /dev/null; then
+        echo "Ignoring $dev: already mounted" >&2
+        return 0
+    fi
+    root_src=$(findmnt -nvo SOURCE / || :)
+    root_disk=$(io_disk_of "$root_src")
+    if [ -z "$root_disk" ]; then
+        echo "Ignoring $dev: cannot tell which disk Io runs from ($root_src)" >&2
+        return 0
+    fi
+    disk=$(io_disk_of "$dev")
+    if [ -z "$disk" ] || [ "$disk" = "$root_disk" ]; then
+        echo "Ignoring $dev: on ${disk:-an unknown disk}, Io runs from $root_disk" >&2
+        return 0
+    fi
+    return 1
+}

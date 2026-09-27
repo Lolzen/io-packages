@@ -78,12 +78,26 @@ function is_known_bad_device()
     return;
 }
 
+# Io: SteamOS keeps /var and /home on the internal drive; Io may run from
+# the card itself, so /var and /home can be on the card that must not be
+# trimmed. Trim what is mounted anywhere but on mmcblk0 instead.
+function fstrim_all_but_sdcard()
+{
+    local _mountpt
+    for _src in $(findmnt --noheadings -t ext4,btrfs -O rw --list --output source -v | sort -u); do
+        case "$_src" in
+            /dev/mmcblk0*) echo "Skipping $_src: on the sdcard" ; continue ;;
+        esac
+        _mountpt="$(findmnt --noheadings --output target "$_src" | head -n1)"
+        _fstrim "$_mountpt"
+    done
+}
+
 # In some cases it is unsafe to trim an sdcard. When we detect this case
 # lets just trim the partitions on the internal drive which we know are
 # safe to trim/discard
 if is_known_bad_device; then
-    _fstrim /var
-    _fstrim /home
+    fstrim_all_but_sdcard
     exit
 fi
 

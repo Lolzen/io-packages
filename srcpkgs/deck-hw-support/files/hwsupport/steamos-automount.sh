@@ -33,7 +33,17 @@ send_steam_url()
   if pgrep -x "steam" > /dev/null; then
       # TODO use -ifrunning and check return value - if there was a steam process and it returns -1, the message wasn't sent
       # need to retry until either steam process is gone or -ifrunning returns 0, or timeout i guess
-      systemd-run -M ${DECK_UID}@ --user --collect --wait sh -c "./.steam/root/ubuntu12_32/steam steam://${command}/${encoded@Q}"
+      # Io: as deck in deck's home, like systemd-run -M deck@ --user (no
+      # systemd); steam hands the URL to the running client.
+      # A failing steam call must not stop the mount (read-only after an fsck
+      # error); Valve's systemd-run --wait would, which its TODO notes.
+      local home
+      home=$(getent passwd "${DECK_UID}" | cut -d: -f6)
+      if [ -z "$home" ] || [ ! -d "$home" ]; then
+          echo "Could not send steam URL: no home directory for uid ${DECK_UID}"
+          return 0
+      fi
+      (cd "$home" && setpriv --reuid "${DECK_UID}" --regid "${DECK_GID}" --init-groups env -i HOME="$home" USER=deck PATH=/usr/bin:/bin ./.steam/root/ubuntu12_32/steam "steam://${command}/${encoded}") || echo "steam returned $?"
       echo "Sent URL to steam: steam://${command}/${arg} (steam://${command}/${encoded})"
   else
       echo "Could not send steam URL steam://${command}/${arg} (steam://${command}/${encoded}) -- steam not running"
@@ -49,6 +59,11 @@ urlencode()
 do_mount()
 {
     declare -i ret
+
+    # Io: also when called directly (format-device.sh does)
+    if io_system_disk "${DEVBASE}"; then
+        exit 0
+    fi
     # NOTE: these values are ABI, since they are sent to the Steam client
     readonly FSCK_ERROR=1
     readonly MOUNT_ERROR=2
