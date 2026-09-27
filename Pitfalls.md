@@ -49,7 +49,11 @@ start. Without it, a Deck gets the generic Linux client.
 to the raw `node.name` — which is also why it shows the node name and not the
 description for such sources.
 
----
+**Adaptive brightness looks dead with the slider low or in a dark room.**
+The slider sets the level Steam adjusts around; near the bottom, or at a few
+lux, there is nothing visible left to change. Test with bright light on the
+sensor (top edge of the screen) and the slider in the upper half, and watch
+`/sys/class/backlight/*/brightness`.
 
 **Steam's 32-bit client needs PipeWire's 32-bit plugins, not only the
 library.** Arch's `lib32-pipewire` ships both; Void splits them into
@@ -172,9 +176,11 @@ Steam's runtime diagnostics (`steam-runtime-system-info-*.txt` in Steam's
 `logs/`) are only rewritten when Steam's system information page is opened,
 so an old file can show an already fixed error.
 
-**PipeWire outlives the session that started it**, still attached to that
-session's D-Bus bus. `io-start` ends it when the session ends. When testing
-audio configuration changes by hand, a cold boot is still the reliable way.
+**PipeWire outlives the session that started it** unless the login ends it:
+it stays attached to that session's D-Bus bus. `KillUserProcesses=yes` ends
+it with the login, so each session starts its own. When testing audio
+configuration changes by hand, start a new session; a cold boot is the
+reliable way.
 
 ---
 
@@ -214,6 +220,13 @@ in the package that owns it.
 **Bump `revision` for every change.** Same version and revision means the
 same file name; the new build is treated as already published.
 
+**Moving a service to `vsv` needs it unlinked during the update.** `vsv`
+turns `supervise/` into a link to `/run/runit/`. While the service is
+linked, runsvdir restarts `runsv` within seconds and `runsv` recreates the
+old directory, so xbps cannot replace it (*Directory not empty*).
+`jupiter-fan-control`'s `INSTALL` unlinks the service, waits for its `runsv`
+to exit, removes the directory, and links the service again afterwards.
+
 **`xbps-install -Su <package>` does not update that package's
 dependencies**, it only installs missing ones. Update with plain
 `xbps-install -Su`.
@@ -233,9 +246,6 @@ defaults in `/usr/lib/sysctl.d`.
 
 **`vcopy` does not create its destination directory**, unlike `vinstall` and
 `vbin`. Add a `vmkdir` first.
-
-**`python_version=3` is required** in any template shipping a Python script,
-or the shebang rewrite aborts the build.
 
 **Rust packages do not need Arch's vendored crate lists.** `build_style=cargo`
 resolves crates itself. Crates that generate bindings (`clang-sys`) also need
@@ -304,10 +314,17 @@ Without the module in the initramfs the screen stays black through early KMS.
 `zstd` program is missing. Check the first bytes after the early cpio
 (`/usr/lib/dracut/skipcpio`), not the configuration.
 
-**Valve's kernel tree contains two configuration files.**
-`ci/kernel-config/neptune/config` is a full 12,500-line reference used for CI;
-`ci/kernel-config/neptune/config-neptune` is the fragment that is actually
-merged. An option only in the first one never applies.
+**`config-neptune` is not Valve's whole kernel configuration.**
+`ci/kernel-config/neptune/config` is the full configuration (about 12,500
+lines) Valve's CI builds the tree with; `config-neptune` is a 150-line
+fragment on top. Void's base plus the fragment alone differed from Valve's
+configuration in about 1,220 options. Merge the full file first, see [Kernel](Kernel).
+
+**A module needs a `modules-load.d` entry to be there at boot.** With
+Valve's configuration NTSync is a module (`=m`), and nothing loads it on
+demand: `/dev/ntsync` only appears after `modprobe ntsync`. Valve ships
+`modules-load.d/ntsync.conf`; Void's `modules-load` reads
+`/usr/lib/modules-load.d` as systemd does.
 
 **The CS35L41 amplifier firmware is in Void's main `linux-firmware`
 package**, not in the split ones (`-amd`, `-network`) the kernel pulls in.
@@ -396,6 +413,10 @@ upstream profile), so it wins over Valve's `acp5x.conf` from
 the link out with `noextract`. The `probe_volumes` warnings in the boot log
 probably came from the upstream profile as well.
 
+**Void splits WirePlumber's logind module off** into `wireplumber-elogind`.
+Without it WirePlumber logs *module-logind failed* at every start and does
+not follow the active session on the seat.
+
 **A PipeWire client started before the daemon's socket exists just exits**,
 it does not retry. systemd orders this through socket activation; a session
 script has to wait for `$XDG_RUNTIME_DIR/pipewire-0` itself.
@@ -419,6 +440,11 @@ files.
 creates the file; steamos-manager writes only what it changes, which on
 SteamOS is fine because Orca ran first. Io's manager adds the missing
 sections.
+
+**Orca's shortcuts are key presses on a virtual keyboard.** Steam sets the
+screen reader mode at every start; steamos-manager presses Orca's key for it
+(Insert+A). With Orca not running, the presses land in the focused window —
+`aa` in Plasma's search field. Press them only while Orca runs.
 
 **`jupiter-dock-updater --check`: 0 means "update available", 7 "up to
 date"** (Valve's mock script). A stub that simply exits 0 makes Steam

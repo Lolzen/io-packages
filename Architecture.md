@@ -35,7 +35,7 @@ behind each difference, see [Deviations](Deviations).
 ## Sessions
 
 ```
-SDDM (autologin, Relogin)  →  gamescope-wayland.desktop  →  io-start gamemode  →  io-gamemode → gamescope → steam-jupiter
+SDDM (autologin, Relogin)  →  gamescope-wayland.desktop  →  io-start gamemode  →  io-gamemode → gamescope → steam-launcher → steam-jupiter
                            →  io-desktop.desktop         →  io-start desktop   →  io-plasma   → startplasma-wayland
 ```
 
@@ -51,20 +51,27 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
   on first start is Steam's own first-run Wi-Fi page.
 - **`io-start`** gets the session from the session file's `Exec` line and
   starts it under its own `dbus-run-session`. All output goes to a log, see
-  *Logging*.
-  When the session ends, it also ends PipeWire, so the next session starts
-  a fresh PipeWire on its own session bus.
+  *Logging*. The runtime directory and `XDG_RUNTIME_DIR` come from
+  `pam_elogind` before SDDM starts it.
 - **`io-gamemode`** reproduces Valve's `gamescope-session`: the same
   environment, gamescope arguments and Steam flags
-  (`-steamos3 -steampal -steamdeck -gamepadui`). gamescope starts Valve's
+  (`-steamos3 -steampal -steamdeck -gamepadui`), and the same low-disk check
+  before start (under 500 MB free in the home directory, installed games are
+  deleted, least recently changed first, until there is room; their
+  `compatdata` stays). gamescope starts Valve's
   `steam-launcher` directly as its child; Valve's short-session tracker runs
-  before and after it, as `steam-launcher.service` does. Like Valve's session it limits the portals to the
-  gamescope backend (`XDG_DESKTOP_PORTAL_DIR`), and passes gamescope's
-  statistics pipe (`-T`, `GAMESCOPE_STATS`). It also starts PipeWire, the
-  power button daemon, the session half of `io-steamos-manager` (always, one
-  per session and bus), the HDMI-CEC daemons, the filter chain's own
-  PipeWire instance, and — right before gamescope, once the environment is
-  complete — mangoapp for Steam's performance overlay.
+  before and after it, as `steam-launcher.service` does. Like Valve's session
+  it limits the portals to the game mode backends (`XDG_DESKTOP_PORTAL_DIR`:
+  holo first, then gamescope), and passes gamescope's statistics pipe (`-T`,
+  `GAMESCOPE_STATS`). It also starts PipeWire, the power button daemon, the
+  session half of `io-steamos-manager` (always, one per session and bus), the
+  HDMI-CEC daemons, the filter chain's own PipeWire instance, Steam's
+  notification daemon (`steam_notif_daemon`, which owns
+  `org.freedesktop.Notifications` and hands each notification to Steam as a
+  `steam://` link), and — right before gamescope, once the environment is
+  complete — mangoapp for Steam's performance overlay. When gamescope exits,
+  `drm_janitor` resets the display state before the next session takes the
+  screen, as Valve's `ExecStopPost` does.
 - **HDMI-CEC:** `cecd` is started through D-Bus activation
   (`StartServiceByName`), so there is only one way it comes up and the bus
   keeps it to one instance; `cec-audio-control` is started directly and
@@ -72,7 +79,8 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
   Plasma, as SteamOS's user services of the graphical session.
 - **Logging out ends the session's processes** (`KillUserProcesses=yes` in
   elogind, as on SteamOS): with SDDM a switch is a logout, and the session's
-  bus, its daemons and anything started with `setsid` end with it.
+  bus, its daemons, PipeWire and anything started with `setsid` end with it.
+  The next session starts its own PipeWire on its own bus.
 - **`io-plasma`** starts KDE Plasma. The session half of
   `io-steamos-manager` starts there through XDG autostart, and so does Steam
   (`steam -silent`, from `steamdeck-kde-presets`), as on SteamOS: it
@@ -80,6 +88,7 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
   of the controller. Before Plasma starts, `io-plasma` switches Steam's DPI
   scaling off once per user, so Steam draws in real pixels next to Plasma's
   135 %.
+
 ### Switching
 
 As on SteamOS, `SessionManagement1` of `io-steamos-manager` tells SDDM which
@@ -137,6 +146,15 @@ VRR and tearing switches), and some are helper scripts Steam runs directly
 (`jupiter-fan-control`, `steamos-priv-write`); see
 [Helper status](Helper-Status).
 
+**Adaptive brightness** is an example: Steam reads the light sensor itself
+(`in_illuminance_raw` of the `ltrf216a` under `/sys/bus/iio/devices/`),
+gets the calibration gain from `AmbientLightSensor1` (going by the names in
+Steam's binaries), and writes the backlight
+directly (`steamos-priv-write` hands the file to `wheel` once). No sensor
+daemon is involved. The brightness slider stays active: it sets the level
+the automatic adjustment works around, so with the slider near the bottom
+there is little left to adjust.
+
 ---
 
 ## Logging
@@ -152,6 +170,13 @@ VRR and tearing switches), and some are helper scripts Steam runs directly
 - **Kernel:** `nanoklogd` feeds the kernel log into
   `/var/log/socklog/kernel/`.
 - `deck` is in the `socklog` group and can read all of it without `sudo`.
+
+---
+
+## Kernel
+
+See [Kernel](Kernel): source, configuration layers, Io's overrides, and
+what to do on a kernel update.
 
 ---
 

@@ -61,8 +61,36 @@ sudo xbps-install -Syu
 Without package names: naming packages updates only those, not their
 dependencies.
 
-A cold boot afterwards is the reliable test: PipeWire keeps running across
-session switches, so audio configuration changes need one anyway.
+Changes to the session scripts and to audio configuration take effect with
+the next session (a switch to the desktop and back); a cold boot is the
+reliable test.
+
+## Testing a build before publishing
+
+A build that needs the Deck before it goes public is copied there and
+installed from a local repository. On the build host, without `-p`:
+
+```
+~/io-packages/build.sh io-session io-desktop
+cd ~/void-packages/hostdir/binpkgs
+scp io-session-<version>_<revision>.* io-desktop-<version>_<revision>.* deck@<deck>:/tmp/trepo/
+```
+
+On the Deck (create `/tmp/trepo` first, and empty it between tests):
+
+```
+xbps-rindex -a /tmp/trepo/*.xbps
+sudo xbps-install -R /tmp/trepo -Su io-session io-desktop
+```
+
+Naming the packages is right here, unlike a normal update: only the tested
+ones should come from the local repository. Once the test passes,
+`build.sh -p` with the same package names publishes them.
+
+## Kernel updates
+
+See [Kernel](Kernel): the configuration is reviewed on every update before
+the kernel is built.
 
 ## Building an image
 

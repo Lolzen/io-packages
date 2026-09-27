@@ -26,7 +26,7 @@ its reason.
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
 | Steam Deck LCD (Jupiter) only | LCD and OLED (Galileo) | No OLED hardware to test with |
-| Disk image written with `dd` | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The live ISO route is blocked by a dracut/void-mklive incompatibility |
+| Disk image written with `dd` | Recovery image with installer | Fixed hardware, nothing for an installer to ask. Self-built live ISOs do not boot yet (they stop in dracut's emergency shell; cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
 | SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the test phase. Images for 1.0 will follow SteamOS |
@@ -59,6 +59,11 @@ its reason.
   `input`) instead of systemd's `uaccess`.
 - **Logging out ends every process of the session**, as on SteamOS
   (`KillUserProcesses`), set in elogind.
+- **Steam's notification daemon and `drm_janitor`** are started by
+  `io-gamemode`: the daemon with the session, `drm_janitor` when gamescope
+  exits. SteamOS runs the first as a user service of the game mode session
+  and the second from a drop-in for `gamescope-session.service`
+  (`ExecStopPost`).
 - **mangoapp and gamemode** are started differently: mangoapp by the session
   script in a loop tied to gamescope (Valve: a user service with
   `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
@@ -142,9 +147,10 @@ the session bus that Steam talks to.
 
 ## Kernel
 
-- **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration` tree
-  on top of Void's base configuration with Valve's `config-neptune` fragment
-  merged in. SteamOS 3.8.4 runs 6.16.
+- **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration`
+  tree; SteamOS 3.8.4 runs 6.16. The configuration is Void's as the base,
+  Valve's full configuration and `config-neptune` on top, then a few Io
+  overrides, each with its reason — see [Kernel](Kernel).
 - **Kernel command line** matches SteamOS except `fbcon=rotate:1` instead of
   `fbcon=vc:4-6` (see *Login and sessions*), no `console=tty1`, and none of
   the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
@@ -163,7 +169,7 @@ the session bus that Steam talks to.
   `rnnoise-ladspa` (label `noise_suppressor_mono`), because Void's NoiseTorch
   package ships no system-wide plugin.
 - **Version:** Io builds Valve's `steamdeck-dsp` 1.02; SteamOS 3.8.4 runs
-  0.91. Io follows the newer state (see *Versions* below). 0.91 kept the
+  0.91. Io follows the newer state (see *Versions* above). 0.91 kept the
   microphone filter from suspending (`session.suspend-timeout-seconds = 0`);
   1.02 drops that, so the filter may suspend while nothing records. No
   Arch- or systemd-specific reason behind it, so Io takes 1.02's behaviour.
@@ -227,6 +233,11 @@ the session bus that Steam talks to.
   (`USERNAME` in `mkimg.sh`), and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
   journald to log to.
+- **`xdg-desktop-portal-holo`** comes without its systemd user unit; its
+  D-Bus service file loses the `SystemdService=` line, so the bus starts
+  the backend itself.
+- **`steam_notif_daemon`** takes its D-Bus library (sd-bus) from libelogind
+  instead of libsystemd; the upstream build offers both.
 - **`steamdeck-kde-presets`**: the Deck variant of the Vapor theme is written
   into `kdeglobals` directly (Valve picks it with a systemd service);
   *Return to Gaming Mode* calls `steamos-session-select` (Valve:
@@ -252,8 +263,9 @@ the session bus that Steam talks to.
   `vpower` 1.6.3 (1.5.7), `steamdeck-kde-presets` 3.9.4 (3.8.5),
   `xdg-desktop-portal-gamescope` 0.1.38 (0.1.33), `jupiter-fan-control`
   20260902.1 (20260422.2), `holo-fstab-repair` 0.2 (0.1),
-  `steam-jupiter-stable` -12 (-8; adds `-pipewire` to Steam's command line)
-  and `holo-upower-config` (not on SteamOS 3.8.4).
+  `steamos-systemreport` 1.23 (0.16), `steam-jupiter-stable` -12 (-8; adds
+  `-pipewire` to Steam's command line), and `holo-upower-config` and
+  `holo-realtek-firmware-toggles` (not on SteamOS 3.8.4).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
@@ -269,10 +281,8 @@ the session bus that Steam talks to.
 System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
 updates, the crash log submitter, Valve's nested desktop (Plasma inside game
-mode), automount of SD cards and USB drives (Alpha 5), the holo portal
-(`xdg-desktop-portal-holo`: Settings and app chooser in game mode; Io's
-`gamescope-portals.conf` says `default=gamescope` instead of
-`default=holo;gamescope`), `steam_notif_daemon` (Steam's notifications in
-game mode), `drm_janitor` and `dmemcg-booster`. The dock updater is a
-stub that tells Steam the dock is up to date. Not needed on Io at all: `holo-keyring` (pacman keys),
-`holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).
+mode), automount of SD cards and USB drives (Alpha 5), and the VRAM
+priority for the foreground game (`dmemcg-booster`, `kcgroups`,
+`plasma-foreground-booster`: driven by systemd's units and slices). The dock
+updater is a stub that tells Steam the dock is up to date. The full list,
+package by package, is on [SteamOS packages](Valve-Package-Survey).

@@ -9,27 +9,32 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 
 | Package | Contents |
 |---|---|
-| `io-desktop` | Metapackage: the whole system, including Void base, Steam, gamescope, PipeWire, KDE Plasma, `wireless-regdb`, `gstreamer1-pipewire` and all packages below |
-| `io-base` | Repository configuration, elogind drop-in, dracut configuration (SD card modules and amdgpu, Plymouth), polkit rules, ALSA routed through PipeWire, `timedatectl` replacement, shutdown hook closing SSH sessions |
-| `io-session` | Login and sessions: SDDM service `io-sddm` and its settings, session files, `io-start`, `io-gamemode`, `io-plasma`, `steamos-session-select`, memlock limit, session logs (`io-devmode`), `io-grow-storage` and its desktop entry, gamescope capability core service, `KillUserProcesses` for elogind, start of the HDMI-CEC daemons |
+| `io-desktop` | Metapackage: the whole system. It stands in for Void's `base-system`, which would pull in Void's own kernel next to `linux-neptune-72` (that kernel does not boot the Deck), and lists base-system's other packages itself. Plus Steam, gamescope, PipeWire with `wireplumber-elogind`, KDE Plasma, vim and nano, `wireless-regdb`, `gstreamer1-pipewire` and all packages below |
+| `io-base` | Repository configuration (and keeping elogind's D-Bus activation file out on updates), elogind drop-in (the power key is left to `steamos-powerbuttond`), dracut configuration (SD card modules and amdgpu, Plymouth), ALSA routed through PipeWire, `timedatectl` replacement, `/usr/share/i18n/SUPPORTED`, shutdown hook closing SSH sessions |
+| `io-session` | Login and sessions: SDDM service `io-sddm` and its settings, session files, `io-start`, `io-gamemode`, `io-plasma`, `steamos-session-select`, memlock limit, session logs (`io-devmode`), `io-grow-storage` and its desktop entry, gamescope capability core service, `KillUserProcesses` for elogind. Game mode as Valve's session: Valve's `steam-launcher` and short-session tracker, the low-disk check before start, the HDMI-CEC daemons, Steam's notification daemon, `drm_janitor` when gamescope exits |
 | `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half, including the screen reader (Orca), HDMI-CEC settings, mono audio and download mode; runit service `scx` for the LAVD scheduler |
-| `io-branding` | Logo, Plymouth boot splash theme, fastfetch configuration |
+| `io-branding` | Logo, Plymouth boot splash theme, the picture for Steam's update screen, fastfetch configuration |
+| `io-release` | `os-release` and `lsb_release`, which Steam shows under Settings → System; kept in place after `base-files` updates |
 
 ## Ported from Valve
 
 | Package | Upstream | Contents |
 |---|---|---|
-| `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: Void's base configuration plus Valve's `config-neptune` fragment, and one patch generated from Valve's tree against the kernel.org tarball |
+| `linux-neptune-72` | `linux-integration` (7.2.4) | Steam Deck kernel: the kernel.org tarball with one patch generated from Valve's tree; configuration in layers (Void, Valve's full configuration, `config-neptune`, Io's overrides), see [Kernel](Kernel) |
 | `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers, udev rules, hwsupport scripts, Valve's cursor theme |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
 | `steamos-powerbuttond` | `steamos-powerbuttond` 4.2 | Power button daemon |
 | `steamos-systemreport` | `steamos-systemreport` 1.23 | System report for bug reports (socklog, session logs, xbps) |
 | `steamos-networking-tools` | `steamos-networking-tools` 1.2 | Wi-Fi backend switch (runit port), Valve's NetworkManager defaults, connectivity check |
 | `steamdeck-dsp` | `steamdeck-dsp` 1.02 | Speaker and microphone DSP (Faust LV2 plugins), UCM, PipeWire/WirePlumber configuration, the filter chain's own PipeWire instance, and Io's WirePlumber script for the ALSA loopbacks (sources and sinks, as on SteamOS 3.8.4) |
-| `xdg-desktop-portal-gamescope` | `xdg-desktop-portal-gamescope` | Portal backend for screenshots and recording in game mode |
+| `xdg-desktop-portal-gamescope` | `xdg-desktop-portal-gamescope` 0.1.38 | Portal backend for screenshots and recording in game mode; its `gamescope-portals.conf` puts the holo portal first, as on SteamOS |
+| `xdg-desktop-portal-holo` | `xdg-desktop-portal-holo` 0.1.18 | Portal backend for game mode: Settings (color scheme, contrast, accent color), app chooser, e-mail, lockdown; started by D-Bus |
+| `steam_notif_daemon` | `steam_notif_daemon` 1.0.1 | Takes desktop notifications in game mode and passes them to Steam |
+| `drm_janitor` | `drm_janitor` 0.0.4 ([zzag/drm_janitor](https://github.com/zzag/drm_janitor)) | Resets the display state gamescope leaves behind when game mode ends |
+| `gpu-trace` | `gpu-trace` 2.14 ([lostgoat/gpu-trace](https://github.com/lostgoat/gpu-trace)) | Steam's system tracing (developer settings), runit service |
 | `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
 | `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |
-| `steamos-tuning` | `steamos-customizations-jupiter` | Sysctls, early HID drivers, Valve's scheduler tunings (debugfs), 1 GiB swap file, hibernation guard, X11 virtual display size |
+| `steamos-tuning` | `steamos-customizations-jupiter` | Sysctls, early HID drivers, NTSync loaded at boot, Valve's scheduler tunings (debugfs), 1 GiB swap file, X11 virtual display size; Io's own hibernation guard |
 | `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
 | `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |
@@ -65,5 +70,8 @@ but new versions should come from Valve's own mirror.
 in `docs/`, and reports what changed since the last run.
 
 The kernel is not maintained as a fork: Valve's delta is a single patch
-against the official tarball plus Valve's configuration fragment. A version
-bump means a new patch and a new fragment.
+against the official tarball. How the patch and the configuration come
+about, and what to do on a kernel update, is on [Kernel](Kernel).
+
+What SteamOS 3.8.4 runs of Valve's packages, and what Io has in their place,
+is on [SteamOS packages](Valve-Package-Survey).

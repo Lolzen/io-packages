@@ -10,10 +10,11 @@ runit instead of systemd.
 - [Deviations from SteamOS](Deviations) — where Io differs from SteamOS, and why
 - [Architecture](Architecture) — boot, sessions, SteamOS Manager, logging
 - [Packages](Packages) — every package, its contents and source
+- [Kernel](Kernel) — source, configuration layers, what to do on a kernel update
 - [Helper status](Helper-Status) — which of Valve's helper scripts are real
 - [Building](Building) — building packages and images, release workflow
 - [Pitfalls](Pitfalls) — things that cost real time and are documented nowhere else
-- [Valve package survey](Valve-Package-Survey) — Valve's package catalogue, triaged for Io
+- [SteamOS packages](Valve-Package-Survey) — every SteamOS-specific package, and what Io has in its place
 
 ## Principle
 

@@ -57,10 +57,13 @@ steps (anything that writes to drives or firmware) come last.
 
 ## Tests pending
 
-- **Headphones** with the speaker loopback (plugging in and out switches
-  the sound)
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
+- **Notifications in game mode from a game:** `steam_notif_daemon` hands
+  them to Steam (Steam logs `ExecuteSteamURL … open_xdg_notification`), but
+  Steam showed nothing for a test sent with `busctl`. Steam probably only
+  shows notifications of processes it knows; check with a game that sends
+  one
 
 ---
 
@@ -77,19 +80,25 @@ someone with the hardware.
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
   and the display quirks
+
 ---
 
 ## Polish
 
 - Designed boot splash; the black gap while Steam loads inside gamescope
-- Plasma: messages when switching modes, the notification service requested
-  in game mode, Valve's nested desktop (Plasma inside game mode)
+- Plasma: messages when switching modes, Valve's nested desktop (Plasma
+  inside game mode)
+- **Theming:** whether `void-artwork` still belongs in `io-desktop`
 
 ---
 
 ## Later milestones
 
 - **Kernel metapackage** `linux-neptune`, with the next kernel update
+- **VRAM priority for the foreground game**, what Valve's `dmemcg-booster`
+  does on SteamOS: the kernel side (`CGROUP_DMEM`) is there, Valve's daemon
+  depends on systemd's units and slices. Needs a design of Io's own, for
+  example gamescope and Steam in a cgroup of their own
 - **Installing to the internal NVMe**, once SteamOS on it is no longer needed
   as the reference; suspend-then-hibernate comes with it (Valve's resume path
   keeps the swap file's position in an EFI variable through systemd)
@@ -99,7 +108,8 @@ someone with the hardware.
 - **A factory reset of Io's own** (fresh home directory): a design decision,
   and destructive
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
-  (they drop to dracut's emergency shell, cause not found yet); after it, **flavours**: *Plasma* (today's image),
+  (they drop to dracut's emergency shell, cause not found yet); after it,
+  **flavours**: *Plasma* (today's image),
   *Base* (game mode only), *Slim* (a light desktop). The split is prepared:
   `io-base` is the core, `io-desktop` adds the desktop
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
@@ -111,7 +121,8 @@ someone with the hardware.
 ## Recurring
 
 - `pkgcheck.sh`: Valve's package versions against Io's
-- Valve's kernel updates
+- Valve's kernel updates, with the configuration review described on
+  [Kernel](Kernel)
 - Boot logs, for regressions and new warnings
 - After each gamescope update: *Use Legacy X11* in Steam's developer
   settings
