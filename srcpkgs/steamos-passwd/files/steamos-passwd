@@ -19,6 +19,7 @@ print_help() {
     echo "    (echo '<old>'; echo '<new>') | $0 --current-password" >&2
 }
 
+# Return 0 if the current user has a password
 if [[ "${1:-}" == "--has-password" ]]; then
     passwd </dev/null 2>&1 | grep -i -q "current password:"
     exit "$?"
@@ -29,6 +30,7 @@ if [[ "${1:-}" == "--help" ]] || [[ -t 0 ]]; then
     exit 1
 fi
 
+# Read all lines on `stdin`
 INPUT_LINES=()
 while IFS= read -r line; do
     INPUT_LINES+=( "$line" )
@@ -39,6 +41,7 @@ if [[ -z "${INPUT_LINES[*]}" ]]; then
     exit 1
 fi
 
+# If `--current-password` is provided, the current password is the first input line.
 PASSWD_LINES=()
 if [[ "${1:-}" == "--current-password" ]]; then
     if [[ "${#INPUT_LINES[@]}" != 2 ]]; then
@@ -49,6 +52,7 @@ if [[ "${1:-}" == "--current-password" ]]; then
     INPUT_LINES=( "${INPUT_LINES[@]:1}" )
 fi
 
+# Print new password out twice for `passwd`
 if [[ "${#INPUT_LINES[@]}" != 1 ]]; then
     echo "ERROR: Expected 1 line (new password), got ${#INPUT_LINES[@]} instead!" >&2
     exit 1
@@ -56,4 +60,5 @@ fi
 PASSWD_LINES+=( "${INPUT_LINES[0]}" "${INPUT_LINES[0]}" )
 PASSWD_COMMAND="$(printf "%s\n" "${PASSWD_LINES[@]}" )"
 
+# Spit it out to `passwd`:
 passwd <<<"${PASSWD_COMMAND}"
