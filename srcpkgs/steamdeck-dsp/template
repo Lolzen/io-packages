@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=12
+revision=13
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -59,11 +59,10 @@ do_install() {
 	# hwconfig scripts, the hardware-profiles trees, the /etc/wireplumber
 	# symlink, the systemd units) exists so a read-only /usr on real
 	# SteamOS can still pick an audio profile at boot without writing
-	# there. Io's /etc is always writable and only ever supports Jupiter -
-	# confirmed pipewire/wireplumber never actually read the /run copies
-	# anyway. Install the Jupiter fragments straight into the real,
-	# standard search paths instead, drop everything upstream installed
-	# for the mechanism we're not using.
+	# there. Io's /etc is always writable and only ever supports Jupiter, so
+	# there is nothing to pick. Install the Jupiter fragments straight into
+	# the real, standard search paths instead, drop everything upstream
+	# installed for the mechanism we're not using.
 	rm -f ${DESTDIR}/etc/wireplumber
 	rm -rf ${DESTDIR}/usr/share/pipewire/hardware-profiles
 	rm -rf ${DESTDIR}/usr/share/wireplumber/hardware-profiles
@@ -87,8 +86,8 @@ do_install() {
 
 	# Valve's patched WirePlumber creates the ALSA loopbacks applications
 	# talk to (CreateLoopback() in its alsa.lua, triggered by
-	# node.create-loopback from alsa-loopback.conf). That patch is not
-	# upstream - neither 0.5.14 nor 0.5.17 has it - so Io ships the same
+	# node.create-loopback from alsa-loopback.conf). Void's WirePlumber
+	# (0.5.17) does not have it, only Valve's build does, so Io ships the same
 	# logic as a plain WirePlumber script. Doing it at runtime is what the
 	# earlier static configuration could not: the loopback inherits the
 	# card's identity (device.id, card.profile.device), and only with that
@@ -96,6 +95,7 @@ do_install() {
 	# localized name for it.
 	vinstall ${FILESDIR}/io-create-loopback.lua 644 usr/share/wireplumber/scripts
 	vinstall ${FILESDIR}/90-io-loopback.conf 644 usr/share/wireplumber/wireplumber.conf.d
+	vinstall ${FILESDIR}/91-io-sink-loopback.conf 644 usr/share/wireplumber/wireplumber.conf.d
 
 	vmkdir etc/wireplumber/wireplumber.conf.d
 	for f in wireplumber/hardware-profiles/valve-jupiter/wireplumber.conf.d/*.conf; do
