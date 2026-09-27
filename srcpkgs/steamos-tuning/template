@@ -1,7 +1,7 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
 version=1.2
-revision=1
+revision=2
 depends="util-linux"
 short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, swap file, X11 screen size"
 maintainer="Georg <funer@gmx.at>"
@@ -9,6 +9,8 @@ license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/holo"
 
 # Values match /usr/lib/sysctl.d on SteamOS 3.8.4 (captured on hardware).
+# 50-pid-max.conf and 50-io-inherited.conf add what SteamOS inherits from
+# Arch and systemd rather than setting it itself.
 #
 # From steamos-customizations-jupiter, also on SteamOS 3.8.4:
 #   hid-preload.conf - hid_nintendo and hid_playstation load early, so they
@@ -40,6 +42,7 @@ do_install() {
 	vinstall ${FILESDIR}/30-splitlock.conf 644 usr/lib/sysctl.d
 	vinstall ${FILESDIR}/30-vm.conf 644 usr/lib/sysctl.d
 	vinstall ${FILESDIR}/50-pid-max.conf 644 usr/lib/sysctl.d
+	vinstall ${FILESDIR}/50-io-inherited.conf 644 usr/lib/sysctl.d
 	vmkdir usr/lib/modules-load.d
 	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
 	vinstall ${FILESDIR}/holo-cfs-debugfs-settings 755 usr/libexec
