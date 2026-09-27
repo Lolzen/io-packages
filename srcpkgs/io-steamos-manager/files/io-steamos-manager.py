@@ -25,9 +25,8 @@ TdpLimit 3..15 W, GPU power profiles CAPPED/UNCAPPED only, desktop session
 "plasma.desktop", no PerformanceProfile1. Setters report the value that is
 actually in effect afterwards, read back from sysfs, not the requested one.
 
-Not implemented (Io lacks the backing pieces): Storage1, Jobs, UdevEvents1,
-UpdateBios1, UpdateDock1,
-FactoryReset1, WifiDebug1.
+Not implemented (Io lacks the backing pieces): Storage1, JobManager1,
+UdevEvents1, UpdateBios1, UpdateDock1, FactoryReset1.
 """
 
 import asyncio
@@ -1159,7 +1158,9 @@ class SessionManagement1(ServiceInterface):
         # session manager: ending kwin alone does not end it -
         # kwin_wayland_wrapper restarts kwin (without the shell), and the
         # session stays on a black screen. Only if Plasma does not answer,
-        # the wrapper and kwin go directly.
+        # the wrapper and kwin go directly. pkill -x matches the kernel's
+        # process name, which is cut to 15 characters: the wrapper runs as
+        # "kwin_wayland_wr".
         uid = os.getuid()
         if subprocess.run(["pgrep", "-u", str(uid), "-x", "gamescope-wl"],
                           stdout=subprocess.DEVNULL).returncode == 0:
@@ -1167,7 +1168,7 @@ class SessionManagement1(ServiceInterface):
         else:
             cmd = ("sleep 1; busctl --user call org.kde.Shutdown /Shutdown "
                    "org.kde.Shutdown logout || "
-                   f"pkill -TERM -u {uid} -x 'kwin_wayland_wrapper|kwin_wayland'")
+                   f"pkill -TERM -u {uid} -x 'kwin_wayland_wr|kwin_wayland'")
         subprocess.Popen(["setsid", "sh", "-c", cmd], start_new_session=True,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
