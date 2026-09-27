@@ -64,6 +64,16 @@ if [[ ! -e "$STORAGE_DEVICE" ]]; then
     exit 19 #ENODEV
 fi
 
+# Io: never format the disk Io runs from. On SteamOS that disk is the NVMe SSD,
+# which the list above already excludes; Io runs from an SD card or USB drive,
+# which the list allows. Fails closed if the root disk cannot be worked out.
+IO_ROOT_DISK=$(io_disk_of "$(findmnt -nvo SOURCE / || :)")
+IO_TARGET_DISK=$(io_disk_of "$STORAGE_DEVICE")
+if [[ -z "$IO_ROOT_DISK" || -z "$IO_TARGET_DISK" || "$IO_TARGET_DISK" == "$IO_ROOT_DISK" ]]; then
+    echo "Refusing to format $STORAGE_DEVICE: Io runs from ${IO_ROOT_DISK:-an unknown disk}"
+    exit 16 #EBUSY
+fi
+
 STORAGE_PARTBASE="${STORAGE_PARTITION#/dev/}"
 
 # Shared between this and block-device-event.sh to ensure we're not
