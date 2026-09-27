@@ -126,7 +126,9 @@ fi
 xbps-rindex -c "$PUBDIR"
 
 echo "== signing"
-xbps-rindex --sign --signedby "$SIGNEDBY" --privkey "$PRIVKEY" "$PUBDIR" > /dev/null 2>&1 || true
+# Returns 0 when the repodata already carries this key; anything else is a
+# real error (wrong key file, broken repodata) and stops the upload.
+xbps-rindex --sign --signedby "$SIGNEDBY" --privkey "$PRIVKEY" "$PUBDIR" > /dev/null
 : > "$TMP/unsigned.txt"
 for f in "$PUBDIR"/*.xbps; do
     if [ "$FULL" = 1 ] || [ ! -f "$f.sig2" ]; then
