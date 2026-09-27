@@ -129,9 +129,38 @@ check "$U can read syslog (group socklog)" sh -c "id -nG $U | grep -qw socklog"
 echo "== desktop"
 check "startplasma-wayland present" test -x /usr/bin/startplasma-wayland
 check "storage expansion menu entry" test -r /usr/share/applications/io-grow-storage.desktop
-check "automount rule active (no systemd-run)" sh -c '! grep -q systemd-run /usr/lib/udev/rules.d/99-steamos-automount.rules && grep -q "^ACTION==.add" /usr/lib/udev/rules.d/99-steamos-automount.rules'
+
+echo "== storage"
+HW=/usr/lib/hwsupport
+RULES=/usr/lib/udev/rules.d
+ROOTDISK=$($HW/io-root-disk)
+info "Io runs from: ${ROOTDISK:-unknown}"
+check "root disk can be worked out" test -n "$ROOTDISK"
+check "automount rule active (no systemd-run)" sh -c "! grep -q systemd-run $RULES/99-steamos-automount.rules && grep -q '^ACTION==.add' $RULES/99-steamos-automount.rules"
+check "automount detached from udev (io-detach)" sh -c "test -x $HW/io-detach && grep -q io-detach $RULES/99-steamos-automount.rules"
 check "udisks2 installed" xbps-query udisks2
 check "Steam may eject and adopt drives (game mode)" grep -q "^export STEAM_ALLOW_DRIVE_ADOPT=1" /usr/bin/io-gamemode
+check "format-device.sh refuses the system disk" grep -q "Io runs from" $HW/format-device.sh
+case "$ROOTDISK" in
+    nvme*) info "Io runs from the NVMe: internal SSD not hidden" ;;
+    *)
+        if [ -e /dev/nvme0n1 ]; then
+            check "internal SSD hidden from udisks" sh -c "udevadm info /dev/nvme0n1 | grep -q UDISKS_IGNORE=1"
+        else
+            info "no internal NVMe SSD"
+        fi
+        ;;
+esac
+SM=com.steampowered.SteamOSManager1
+SMP=/com/steampowered/SteamOSManager1
+check "root half: storage jobs (JobManager1)" sh -c "busctl introspect $SM $SMP/Jobs | grep -q JobManager1"
+SPID=$(pgrep -o -x steam)
+if [ -n "$SPID" ]; then
+    SBUS=$(tr '\0' '\n' < /proc/$SPID/environ | grep '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
+    check "session half: Storage1 for Steam" sh -c "setpriv --reuid $(id -u $U) --regid $(id -g $U) --init-groups env 'DBUS_SESSION_BUS_ADDRESS=$SBUS' busctl --user introspect $SM $SMP | grep -q Storage1"
+else
+    info "Steam not running: Storage1 not checked"
+fi
 
 echo "== package database"
 xbps-pkgdb -a > /tmp/io-selftest-pkgdb.txt 2>&1
