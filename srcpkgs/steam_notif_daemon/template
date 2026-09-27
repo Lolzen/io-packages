@@ -1,0 +1,33 @@
+# Template file for 'steam_notif_daemon'
+pkgname=steam_notif_daemon
+version=1.0.1
+revision=1
+_pkgrel=4
+wrksrc="${pkgname}"
+build_style=meson
+configure_args="-Dsd-bus-provider=libelogind -Dwerror=false"
+hostmakedepends="pkg-config git tar"
+makedepends="elogind-devel libcurl-devel"
+short_desc="Steam's notification daemon: passes desktop notifications to Steam"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/jupiter/steam_notif_daemon"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-v${version}-${_pkgrel}.src.tar.gz"
+checksum=94e059435c306d65d49cd4fee2476780d15d152b32146d75e360b2b3d487bdba
+
+# Valve's daemon (jupiter-main steam_notif_daemon-v1.0.1-4) as it is. It
+# takes org.freedesktop.Notifications on the session bus and hands each
+# notification to Steam as a steam:// link. Its sd-bus comes from
+# libelogind instead of libsystemd (the upstream build supports both). On
+# SteamOS it is a user service of the game mode session; on Io, io-gamemode
+# starts it. -Dwerror=false: a new compiler warning must not break the
+# build of an unchanged source.
+
+post_extract() {
+	git --git-dir=${pkgname} archive --format=tar v${version} | tar -x
+	rm -rf ${pkgname}
+}
+
+post_install() {
+	vlicense LICENSE
+}
