@@ -7,7 +7,7 @@ depends="earlyoom>=1.8.2_1"
 short_desc="Valve's earlyoom tuning (SteamOS defaults, SteamAppId-aware kill logging)"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
-homepage="https://gitlab.steamos.cloud/holo/holo"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-2.src.tar.gz"
 checksum=3ff613ed4c72248ad32226753ce57612a22cf232463dcaf6d132d04925f767f6
 

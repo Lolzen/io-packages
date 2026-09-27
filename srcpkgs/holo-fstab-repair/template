@@ -5,7 +5,7 @@ revision=2
 short_desc="Disable invalid SD card fstab entries that block UDisks2"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
-homepage="https://gitlab.steamos.cloud/holo/holo"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main"
 
 # files/holo-fstab-repair is Valve's script exactly as SteamOS 3.8.4
 # installs it (holo-fstab-repair 0.1-1, /usr/lib/steamos). The version stays

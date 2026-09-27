@@ -6,7 +6,7 @@ depends="bash iw iwd NetworkManager polkit runit-void"
 short_desc="SteamOS networking tools: switch the Wi-Fi backend (iwd/wpa_supplicant)"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
-homepage="https://gitlab.steamos.cloud/holo/steamos-networking-tools"
+homepage="https://gitlab.steamos.cloud/holo/holo"
 
 # Valve's steamos-wifi-set-backend, plus the NetworkManager defaults from
 # steamos-customizations-jupiter (wpa_supplicant as backend since Valve's

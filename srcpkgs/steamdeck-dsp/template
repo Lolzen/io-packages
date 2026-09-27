@@ -9,7 +9,7 @@ depends="pipewire wireplumber rnnoise-ladspa"
 short_desc="Valve's Steam Deck speaker/microphone DSP (Faust LV2 plugins, UCM, hardware profiles)"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
-homepage="https://gitlab.steamos.cloud/holo/holo"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
 checksum=33cbb5fe073c69db2fb061258f3212a2b60143513446efb2dcf9cfc86fcd1712
 

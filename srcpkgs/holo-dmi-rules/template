@@ -5,7 +5,7 @@ revision=2
 short_desc="Valve's DMI serial number permissions (dmi-product-serial.conf)"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
-homepage="https://gitlab.steamos.cloud/holo/holo"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main"
 
 # Valve's package is one tmpfiles.d file (product_serial and board_serial:
 # 440 root:wheel); Void has no tmpfiles, so a core-service applies it at boot.

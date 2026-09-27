@@ -6,7 +6,7 @@ depends="util-linux"
 short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, swap file, X11 screen size"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
-homepage="https://gitlab.steamos.cloud/holo/holo"
+homepage="https://github.com/Lolzen/io-packages"
 
 # Values match /usr/lib/sysctl.d on SteamOS 3.8.4 (captured on hardware).
 # 50-pid-max.conf and 50-io-inherited.conf add what SteamOS inherits from

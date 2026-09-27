@@ -8,7 +8,7 @@ depends="bash bluez coreutils drm_info upower wireplumber pipewire iputils
 short_desc="SteamOS system report: collects system state for bug reports"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
-homepage="https://gitlab.steamos.cloud/holo/steamos-systemreport"
+homepage="https://gitlab.steamos.cloud/holo/holo"
 
 # Valve's two scripts as they are, with three changes where the report would
 # otherwise miss what it exists for:

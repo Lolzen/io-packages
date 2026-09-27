@@ -7,7 +7,7 @@ depends="polkit jq alsa-utils dmidecode elogind"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
-homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main"
+homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 
 # Valve's changes from 20250728.1 to 20260807.1 are almost all renames
 # (steamos-* helpers became holo-*, with steamos-alias linking the old names
