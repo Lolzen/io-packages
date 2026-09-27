@@ -5,9 +5,9 @@
 # partition layout is fixed, and there is nothing for an installer to ask.
 # Writing the image with dd is the whole installation.
 #
-# (The live-ISO route is blocked anyway: dracut 112 changed its live-boot
-# logic and void-mklive has not caught up, so self-built ISOs drop to an
-# emergency shell. See docs/ for details.)
+# (A live ISO is not an option at the moment either: self-built void-mklive
+# ISOs drop to dracut's emergency shell because dracut finds no live image;
+# the cause is not known yet.)
 #
 # Usage:
 #   sudo ./mkimg.sh                 build io.img (default size)
@@ -63,18 +63,15 @@ KERNEL_CMDLINE="$KCMD_LOG $KCMD_GPU1 $KCMD_GPU2 $KCMD_MISC"
 
 SERVICES="NetworkManager bluetoothd chronyd dbus earlyoom elogind iio-sensor-proxy sshd udevd socklog-unix nanoklogd holo-zram-swap jupiter-fan-control io-steamos-manager vpower steam-web-debug-portforward jupiter-firewall gpu-trace io-sddm agetty-tty1 agetty-tty2 agetty-tty3 agetty-tty4 agetty-tty5 agetty-tty6"
 
-# Belongs logically in io-desktop's own depends (same reasoning as every
-# other package on this list), but installed explicitly here too so a
-# build never silently ships without it even if the template falls out of
-# sync. Without these, the running system has no persistent
-# /etc/xbps.d/ entry for nonfree/multilib - the -R flags below only grant
-# access for this one install call, not for anything done on-device later.
+# Also in io-desktop's depends; listed here too so an image built against
+# an older io-desktop still gets them. Without these the running system has
+# no persistent xbps.d entry for nonfree/multilib - the -R flags below only
+# cover this one install call, not updates on the device.
 EXTRA_PACKAGES="void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree"
 
-# Hashed on the host, not inside the chroot: chpasswd's internal crypt()
-# call silently failed to write root's entry there before (the shadow line
-# ended up with the literal string "x" instead of a hash). openssl's own
-# implementation does not depend on the target rootfs's crypt support.
+# Hashed on the host with openssl and set with usermod -p below, so nothing
+# depends on crypt() inside the chroot. The passwords are checked after
+# they are set.
 ROOTHASH=$(openssl passwd -6 "$ROOTPASS")
 USERHASH=$(openssl passwd -6 "$USERPASS")
 
@@ -151,11 +148,8 @@ mount --bind /sys "$MNT/sys"
 mount --bind /run "$MNT/run"
 
 echo "== reconfiguring packages"
-# xbps-install above ran before /proc et al. were bind-mounted, so any
-# package with a post_install/trigger script (io-session's PipeWire
-# symlink hook, among possibly others) got left unpacked but never
-# configured - xbps silently defers that without a working chroot. Redo
-# it now that the binds are in place.
+# Configure any package the install step left unconfigured, now that /dev,
+# /proc and /sys are there (normally none; void-mklive runs the same step).
 chroot "$MNT" xbps-reconfigure -a
 # Force it for glibc-locales: it may already count as configured from the
 # install step, and only its configure step generates the locales enabled
@@ -166,8 +160,6 @@ echo "== creating users"
 # Root stays usable for alpha testing. SteamOS locks it; Io does not, yet.
 # usermod -p writes the hash as-is instead of hashing plaintext inside the
 # chroot, so it does not depend on the target's crypt() working correctly.
-# _seatd is required for libseat to grant socket access - without it
-# gamescope falls back to a permission error on /run/seatd.sock.
 chroot "$MNT" usermod -p "$ROOTHASH" root
 chroot "$MNT" useradd -m -G wheel,audio,video,input,storage,socklog,gamemode -s /bin/bash "$USERNAME"
 chroot "$MNT" usermod -p "$USERHASH" "$USERNAME"
@@ -175,11 +167,8 @@ chroot "$MNT" usermod -p "$USERHASH" "$USERNAME"
 # wheel gets sudo through holo-sudo, as on SteamOS.
 
 echo "== verifying passwords"
-# chpasswd has failed silently before (image booted, but nobody could log
-# in through anything that actually checks the password, like tty2's
-# plain login - only the autologin worked, because that skips
-# authentication entirely). Catch that here instead of at the
-# console.
+# A missing hash would only show at the first password prompt (the
+# autologin skips authentication), so check it here.
 for u in root "$USERNAME"; do
     HASH=$(chroot "$MNT" awk -F: -v u="$u" '$1 == u { print $2 }' /etc/shadow)
     case "$HASH" in
@@ -189,20 +178,11 @@ for u in root "$USERNAME"; do
 done
 
 echo "== enabling services"
-# Waits briefly for each service directory instead of skipping on the first
-# miss - seen jupiter-fan-control and elogind both get skipped once despite
-# being correctly listed here and present under /etc/sv/, cause still not
-# fully understood. The wait is cheap insurance either way.
 for svc in $SERVICES; do
-    i=0
-    while [ ! -d "$MNT/etc/sv/$svc" ] && [ $i -lt 5 ]; do
-        sleep 1
-        i=$((i + 1))
-    done
     if [ -d "$MNT/etc/sv/$svc" ]; then
         ln -sf "/etc/sv/$svc" "$MNT/etc/runit/runsvdir/default/"
     else
-        echo "   $svc: no such service after waiting, skipping" >&2
+        echo "   $svc: no such service, skipping" >&2
     fi
 done
 
@@ -210,7 +190,8 @@ done
 
 # elogind ships both the runit service above and a dbus activation file.
 # Whichever loses the boot race retries every second forever. Removing the
-# activation file leaves the runit service as the only way elogind starts.
+# activation file leaves the runit service as the only way elogind starts;
+# io-base's noextract keeps elogind updates from bringing it back.
 rm -f "$MNT/usr/share/dbus-1/system-services/org.freedesktop.login1.service"
 
 echo "== installing bootloader"
@@ -242,9 +223,9 @@ echo "built $OUT"
 ls -lh "$OUT"
 echo
 echo "write with:"
-echo "  gzip -dc ${OUT}.gz | dd of=/dev/sdX bs=4M status=progress"
-echo "or compress first:"
-echo "  gzip -1 < $OUT > ${OUT}.gz"
+echo "  dd if=$OUT of=/dev/sdX bs=4M status=progress conv=fsync"
+echo "for a release: xz-compress, split and checksum it as README's"
+echo "Installation section expects (io.img.xz.part*, io.img.xz.sha256)"
 echo
 echo "login: $USERNAME / $USERPASS   (root / $ROOTPASS)"
 echo "change both on first boot."

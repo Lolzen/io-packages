@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=27
+revision=28
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -15,6 +15,7 @@ depends="
  iana-etc openssh dhcpcd kbd iproute2 iputils iw wpa_supplicant xbps nvi sudo
  void-artwork traceroute ethtool kmod eudev runit-void
  removed-packages glibc-locales
+ void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree
 
  io-base io-branding io-session io-steamos-manager
  linux-neptune-72 linux-firmware deck-hw-support
