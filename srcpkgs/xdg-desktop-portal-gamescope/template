@@ -1,7 +1,7 @@
 # Template file for 'xdg-desktop-portal-gamescope'
 pkgname=xdg-desktop-portal-gamescope
 version=0.1.38
-revision=9
+revision=10
 _commit=c99b9f7a6357e4753391c13933ef8bbfc3a9b7bb
 build_style=cargo
 hostmakedepends="pkg-config git tar"
@@ -32,6 +32,7 @@ post_extract() {
 }
 
 post_install() {
+	vlicense LICENSE
 	vmkdir usr/libexec
 	mv ${DESTDIR}/usr/bin/${pkgname} ${DESTDIR}/usr/libexec/${pkgname}
 	rmdir ${DESTDIR}/usr/bin

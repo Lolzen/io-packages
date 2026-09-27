@@ -1,7 +1,7 @@
 # Template file for 'steamos-powerbuttond'
 pkgname=steamos-powerbuttond
 version=4.2
-revision=1
+revision=2
 wrksrc="steamos-powerbuttond"
 build_wrksrc="src"
 hostmakedepends="pkg-config git tar"
@@ -20,7 +20,7 @@ checksum=d8167f873657a12600a240105b07fcf96a17ac17c7d7520af0ef5477802cdce8
 # with it. Valve's archive carries the git repository; the tag is checked out.
 post_extract() {
 	mkdir -p src
-   	git --git-dir=steamos-powerbuttond archive --format=tar v${version} | tar -x -C src
+	git --git-dir=steamos-powerbuttond archive --format=tar v${version} | tar -x -C src
 }
 
 pre_build() {
@@ -38,4 +38,5 @@ do_install() {
 	# SteamOS runs it as a user service tied to gamescope-session; io-gamemode
 	# starts it with the game mode session.
 	rm -rf ${DESTDIR}/usr/lib/systemd
+	vlicense LICENSE
 }
