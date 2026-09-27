@@ -1,7 +1,7 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
 version=1.2
-revision=2
+revision=3
 depends="util-linux"
 short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, swap file, X11 screen size"
 maintainer="Georg <funer@gmx.at>"
@@ -23,7 +23,8 @@ homepage="https://gitlab.steamos.cloud/holo/holo"
 #     for a later X11 session (VNC, other flavours).
 #   holo-create-swapfile - Valve's 1 GiB swap file in /home next to zram,
 #     created and switched on by the core service 60-io-swapfile.sh.
-# Left out: ntsync.conf - NTSync is built into Io's kernel, nothing to load.
+#   ntsync.conf - loads NTSync early (a module in Valve's kernel config,
+#     which linux-neptune-72 follows from revision 4).
 #
 # 61-io-hibernate-guard.sh is Io's own: hibernation is allowed only when / is
 # on the internal NVMe (see the file). Valve's suspend-then-hibernate itself
@@ -45,6 +46,7 @@ do_install() {
 	vinstall ${FILESDIR}/50-io-inherited.conf 644 usr/lib/sysctl.d
 	vmkdir usr/lib/modules-load.d
 	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
+	vinstall ${FILESDIR}/ntsync.conf 644 usr/lib/modules-load.d
 	vinstall ${FILESDIR}/holo-cfs-debugfs-settings 755 usr/libexec
 	vmkdir etc/runit/core-services
 	vinstall ${FILESDIR}/holo-create-swapfile 755 usr/libexec
