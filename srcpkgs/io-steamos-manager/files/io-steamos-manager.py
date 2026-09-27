@@ -25,8 +25,14 @@ TdpLimit 3..15 W, GPU power profiles CAPPED/UNCAPPED only, desktop session
 "plasma.desktop", no PerformanceProfile1. Setters report the value that is
 actually in effect afterwards, read back from sysfs, not the requested one.
 
-Not implemented (Io lacks the backing pieces): Storage1, JobManager1,
-UdevEvents1, UpdateBios1, UpdateDock1, FactoryReset1.
+Storage1 runs Valve's scripts as jobs, as steamos-manager does: the root
+daemon starts the process and exports it as a Job1 object on the system
+bus, the user daemon mirrors that object on the session bus (JobManager1
+announces it). TrimDevices is real; FormatDevice is refused until
+formatting is ported and tested.
+
+Not implemented (Io lacks the backing pieces): UdevEvents1, UpdateBios1,
+UpdateDock1, FactoryReset1.
 """
 
 import asyncio
@@ -37,11 +43,13 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 from dbus_fast import BusType, Message, MessageType, PropertyAccess, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.errors import DBusError
 from dbus_fast.service import ServiceInterface, dbus_property, method
+from dbus_fast.service import signal as dbus_signal
 
 BUSNAME = "com.steampowered.SteamOSManager1"
 OBJPATH = "/com/steampowered/SteamOSManager1"
@@ -293,12 +301,128 @@ def _fail(msg):
     raise DBusError(ERR, msg)
 
 
+# ================================================================== JOBS
+# As steamos-manager (job.rs): a job is one process; Pause and Resume send
+# SIGSTOP and SIGCONT, Cancel SIGTERM (SIGKILL with force), Wait resumes a
+# paused job and returns the exit code, or the negative signal number.
+
+JOB_PREFIX = f"{OBJPATH}/Jobs"
+JOB_IFACE = f"{IFACE}.Job1"
+JOBMANAGER_IFACE = f"{IFACE}.JobManager1"
+NOT_SUPPORTED = "org.freedesktop.DBus.Error.NotSupported"
+# Valve's platform.toml: [storage.trim_devices]
+TRIM_SCRIPT = "/usr/lib/hwsupport/trim-devices.sh"
+
+
+class JobManager1(ServiceInterface):
+    """Lives at .../Jobs and announces every new job."""
+
+    def __init__(self):
+        super().__init__(JOBMANAGER_IFACE)
+
+    @dbus_signal()
+    def JobStarted(self, job) -> "o":
+        return job
+
+
+class Job1(ServiceInterface):
+    """Root side: one running process."""
+
+    def __init__(self, proc):
+        super().__init__(JOB_IFACE)
+        self.proc = proc
+        self.paused = False
+
+    def _signal(self, sig):
+        if self.proc.returncode is not None:
+            _fail("the job has already finished")
+        try:
+            os.kill(self.proc.pid, sig)
+        except ProcessLookupError:
+            pass  # it ended in the meantime
+
+    @method()
+    def Pause(self):
+        if self.paused:
+            _fail("Already paused")
+        self._signal(signal.SIGSTOP)
+        self.paused = True
+
+    @method()
+    def Resume(self):
+        if not self.paused:
+            _fail("Not paused")
+        self._signal(signal.SIGCONT)
+        self.paused = False
+
+    @method()
+    def Cancel(self, force: "b"):
+        if self.proc.returncode is None:
+            self._signal(signal.SIGKILL if force else signal.SIGTERM)
+            if self.paused and self.proc.returncode is None:
+                self._signal(signal.SIGCONT)
+            self.paused = False
+
+    @method()
+    async def Wait(self) -> "i":
+        if self.paused and self.proc.returncode is None:
+            self._signal(signal.SIGCONT)
+            self.paused = False
+        # asyncio reports a death by signal N as -N, as steamos-manager does
+        return await self.proc.wait()
+
+    @method()
+    def ExitCode(self) -> "i":
+        if self.proc.returncode is None:
+            _fail("the job is still running")
+        return self.proc.returncode
+
+
+class Jobs:
+    """Starts processes as jobs and exports them on one bus. The root daemon
+    numbers its jobs from its start time, so a job path the user daemon still
+    holds from before a root restart cannot name a new job."""
+
+    def __init__(self, bus, first=0):
+        self.bus = bus
+        self.manager = JobManager1()
+        self.next = first
+        bus.export(JOB_PREFIX, self.manager)
+
+    def add(self, iface):
+        path = f"{JOB_PREFIX}/{self.next}"
+        self.next += 1
+        self.bus.export(path, iface)
+        self.manager.JobStarted(path)
+        return path
+
+    async def run(self, argv, what):
+        try:
+            proc = await asyncio.create_subprocess_exec(*argv, stdin=subprocess.DEVNULL)
+        except OSError as err:
+            _fail(f"{what}: {err}")
+        log(f"job {self.next}: {what} (pid {proc.pid})")
+        return self.add(Job1(proc))
+
+
 class RootManager(ServiceInterface):
     """Privileged half. Every method validates its input against the
     hardware's own limits before touching sysfs."""
 
-    def __init__(self):
+    def __init__(self, jobs=None):
         super().__init__(ROOT_IFACE)
+        self.jobs = jobs
+
+    @method()
+    async def TrimDevices(self) -> "o":
+        return await self.jobs.run([TRIM_SCRIPT], "trimming devices")
+
+    @method()
+    def FormatDevice(self, device: "s", label: "s", validate: "b") -> "o":
+        # Formatting is destructive and not ported yet (Alpha 5): refused
+        # the way steamos-manager refuses it on a platform without it.
+        log(f"FormatDevice {device} refused: not available on Io yet")
+        raise DBusError(NOT_SUPPORTED, "FormatDevice is not available on Io yet")
 
     @method()
     def ReloadConfig(self):
@@ -470,7 +594,7 @@ class RootManager(ServiceInterface):
 
 async def run_root():
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
-    bus.export(OBJPATH, RootManager())
+    bus.export(OBJPATH, RootManager(Jobs(bus, first=int(time.time()))))
     await bus.request_name(BUSNAME)
     log("root daemon ready")
     await bus.wait_for_disconnect()
@@ -495,6 +619,16 @@ class Root:
         if reply.message_type == MessageType.ERROR:
             log(f"{member} failed: {reply.error_name} {reply.body}")
             return None
+        return reply.body
+
+    async def call_raise(self, member, signature, body, path=OBJPATH, iface=ROOT_IFACE):
+        """Like _call, but hands the root daemon's error on to the caller."""
+        reply = await self.bus.call(Message(
+            destination=BUSNAME, path=path, interface=iface,
+            member=member, signature=signature, body=body))
+        if reply.message_type == MessageType.ERROR:
+            text = reply.body[0] if reply.body else reply.error_name
+            raise DBusError(reply.error_name, text)
         return reply.body
 
     def write(self, member, signature, body, owner, props, iface=ROOT_IFACE):
@@ -1434,6 +1568,65 @@ class WifiBackend1(ServiceInterface):
         self.root.write("SetWifiBackend", "s", [value], self, ["WifiBackend"])
 
 
+class MirroredJob(ServiceInterface):
+    """User side of a job: the session bus object Steam holds, forwarding
+    every call to the root daemon's job (steamos-manager's MirroredJob)."""
+
+    def __init__(self, root, path):
+        super().__init__(JOB_IFACE)
+        self.root = root
+        self.path = path
+
+    async def _fwd(self, member, signature="", body=None):
+        return await self.root.call_raise(member, signature, body or [],
+                                          path=self.path, iface=JOB_IFACE)
+
+    @method()
+    async def Pause(self):
+        await self._fwd("Pause")
+
+    @method()
+    async def Resume(self):
+        await self._fwd("Resume")
+
+    @method()
+    async def Cancel(self, force: "b"):
+        await self._fwd("Cancel", "b", [force])
+
+    @method()
+    async def Wait(self) -> "i":
+        return (await self._fwd("Wait"))[0]
+
+    @method()
+    async def ExitCode(self) -> "i":
+        return (await self._fwd("ExitCode"))[0]
+
+
+class Storage1(ServiceInterface):
+    """Steam's storage actions, run by the root daemon as jobs."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.Storage1")
+        self.root = root
+        self.jobs = None  # set in run_user, once the session bus is there
+        self.mirrors = {}  # root job path -> session job path
+
+    async def _job(self, member, signature="", body=None):
+        body = await self.root.call_raise(member, signature, body or [])
+        root_path = body[0]
+        if root_path not in self.mirrors:
+            self.mirrors[root_path] = self.jobs.add(MirroredJob(self.root, root_path))
+        return self.mirrors[root_path]
+
+    @method()
+    async def TrimDevices(self) -> "o":
+        return await self._job("TrimDevices")
+
+    @method()
+    async def FormatDevice(self, device: "s", label: "s", validate: "b") -> "o":
+        return await self._job("FormatDevice", "ssb", [device, label, validate])
+
+
 class ObjectManager(ServiceInterface):
     """Steam calls GetManagedObjects at '/' first (seen in both captures)."""
 
@@ -1477,6 +1670,7 @@ USER_INTERFACES = (
     HdmiCec1,
     ScreenReader0,
     ScreenReader1,
+    Storage1,
 )
 
 
@@ -1499,6 +1693,11 @@ async def run_user():
         if isinstance(inst, AmbientLightSensor1):
             gain = await root.get_prop("AlsCalibrationGain")
             inst.gain = list(gain) if gain else []
+
+    jobs = Jobs(session)
+    for inst in instances:
+        if isinstance(inst, Storage1):
+            inst.jobs = jobs
 
     session.export("/", ObjectManager(instances))
     await session.request_name(BUSNAME)
