@@ -129,6 +129,9 @@ check "$U can read syslog (group socklog)" sh -c "id -nG $U | grep -qw socklog"
 echo "== desktop"
 check "startplasma-wayland present" test -x /usr/bin/startplasma-wayland
 check "storage expansion menu entry" test -r /usr/share/applications/io-grow-storage.desktop
+check "automount rule active (no systemd-run)" sh -c '! grep -q systemd-run /usr/lib/udev/rules.d/99-steamos-automount.rules && grep -q "^ACTION==.add" /usr/lib/udev/rules.d/99-steamos-automount.rules'
+check "udisks2 installed" xbps-query udisks2
+check "Steam may eject and adopt drives (game mode)" grep -q "^export STEAM_ALLOW_DRIVE_ADOPT=1" /usr/bin/io-gamemode
 
 echo "== package database"
 xbps-pkgdb -a > /tmp/io-selftest-pkgdb.txt 2>&1

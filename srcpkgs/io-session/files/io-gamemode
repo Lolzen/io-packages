@@ -13,7 +13,7 @@
 # Variables are split in two groups:
 #   A - set exactly like Valve does, Io has everything they depend on
 #   B - Valve sets them too, but they depend on something Io does not ship
-#       yet (udisks storage helpers, systemd scopes). Setting them now would show controls in Steam
+#       yet (systemd scopes). Setting them now would show controls in Steam
 #       that silently do nothing. Enable one by one once the dependency
 #       exists.
 
@@ -198,10 +198,12 @@ export XCURSOR_SCALE=256
 # Chromium, and so Steam, ignores XCursor and takes the GTK setting (Valve)
 command -v kwriteconfig6 > /dev/null 2>&1 && kwriteconfig6 --file gtk-3.0/settings.ini --group Settings --key gtk-cursor-theme-name steam
 
+# Drives: SD cards and USB drives are mounted by udisks (deck-hw-support's
+# automount), Steam can eject them and take over libraries on them
+export STEAM_ALLOW_DRIVE_UNMOUNT=1
+export STEAM_ALLOW_DRIVE_ADOPT=1
+
 # ---------------------------------------- B: waiting for a dependency
-# Storage1 (format/unmount helpers + udisks2):
-#export STEAM_ALLOW_DRIVE_UNMOUNT=1
-#export STEAM_ALLOW_DRIVE_ADOPT=1
 # needs systemd scopes:
 #export STEAM_LAUNCH_WRAPPER_SCOPE=1
 
