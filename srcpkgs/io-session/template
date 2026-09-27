@@ -1,6 +1,6 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.6.3
+version=0.6.4
 revision=1
 # The desktop session (steamos-session-select plasma) needs kde-plasma,
 # which io-desktop pulls in.
@@ -52,4 +52,6 @@ do_install() {
 	vmkdir usr/lib/steamos
 	vinstall ${FILESDIR}/steam-launcher 755 usr/lib/steamos
 	vinstall ${FILESDIR}/steam-short-session-tracker 755 usr/lib/steamos
+	vmkdir usr/libexec/io
+	vinstall ${FILESDIR}/io-low-disk-cleanup 755 usr/libexec/io
 }

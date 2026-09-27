@@ -209,6 +209,10 @@ command -v kwriteconfig6 > /dev/null 2>&1 && kwriteconfig6 --file gtk-3.0/settin
 # Valve raises the fd limit for the whole session (esync, Steam itself)
 ulimit -n 524288 2>/dev/null || ulimit -n "$(ulimit -Hn)"
 
+# Valve's low-disk check: with less than 500 MB free, Steam may not start at
+# all; the session makes room by deleting the least recently changed game.
+/usr/libexec/io/io-low-disk-cleanup
+
 # -------------------------------------------------------------- launch
 set -- --generate-drm-mode fixed
 set -- "$@" --xwayland-count 2
