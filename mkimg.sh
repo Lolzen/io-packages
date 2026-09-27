@@ -35,7 +35,9 @@ USERNAME="${USERNAME:-deck}"
 USERPASS="${USERPASS:-deck}"
 ROOTPASS="${ROOTPASS:-deck}"
 HOSTNAME="${HOSTNAME:-io}"
-TIMEZONE="${TIMEZONE:-Europe/Vienna}"
+# UTC until the user picks a zone in Steam (steamos-set-timezone, via
+# io-base's timedatectl).
+TIMEZONE="${TIMEZONE:-UTC}"
 LANG_DEFAULT="${LANG_DEFAULT:-en_US.UTF-8}"
 # The locales SteamOS ships precompiled (holo-glibc-locales): every
 # language and region Steam offers. Generated from Void's glibc-locales.
