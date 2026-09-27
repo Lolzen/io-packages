@@ -1,12 +1,13 @@
 # Template file for 'vpower'
 pkgname=vpower
 version=1.6.3
-revision=3
+revision=4
 wrksrc="vpower"
 build_style=cargo
 hostmakedepends="git tar"
 makedepends="libsensors-devel"
 depends="libsensors"
+conf_files="/etc/vpower.toml"
 short_desc="Valve's battery daemon: battery metrics and the critical battery shutdown"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
