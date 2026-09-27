@@ -1,5 +1,5 @@
 #!/bin/sh
-# io-selftest - check a running Io system against the expected Alpha 4 state.
+# io-selftest - check a running Io system against the expected state.
 #
 # Run as root while game mode is running (some checks look at the session):
 #   sudo sh io-selftest.sh
@@ -41,6 +41,7 @@ P2="socklog-void kde-plasma steam-jupiter steam-im-modules steamdeck-kde-presets
 P2="$P2 steamos-networking-tools steamos-systemreport sddm scx wireless-regdb gstreamer1-pipewire"
 P2="$P2 pipewire-32bit libspa-videoconvert-32bit libspa-audioconvert-32bit"
 P2="$P2 holo-sudo jupiter-firewall cecd cec-audio-control steamos-devkit-service steam-web-debug-portforward"
+P2="$P2 gpu-trace holo-realtek-firmware-toggles io-release"
 for p in $P1 $P2; do
     check "installed: $p" xbps-query "$p"
 done
@@ -49,7 +50,7 @@ for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptun
 done
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward; do
+for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent
