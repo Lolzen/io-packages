@@ -107,7 +107,6 @@ start at which each boot stage began.
 | `io-boottime.sh` | Boot stage timing, see above |
 | `mountsd.sh /dev/sdX` | Mount an Io card on the build host and prepare a chroot for repairs |
 | `pkgcheck.sh` | Report new or changed packages on Valve's source mirror |
-| `mkiso.sh` | Live ISO build through void-mklive — currently blocked, kept for a later attempt |
 | `mklogo.py` | Generates the ASCII logo |
 
 ## Release workflow

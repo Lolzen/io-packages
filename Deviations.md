@@ -8,6 +8,16 @@ is a bug.
 
 ---
 
+## Versions
+
+Where Valve's newer source differs from what SteamOS 3.8.4 runs, Io takes
+the newer state if it makes sense. It stays with the older state when the
+change is transitional or Arch- or systemd-specific, or when the older one
+simply fits Io better. Each such choice is written down on this page with
+its reason.
+
+---
+
 ## Design choices
 
 | Io | SteamOS | Why |
@@ -114,8 +124,6 @@ the session bus that Steam talks to.
   not set up yet.
 - **Time sync through chrony**: Void has no `systemd-timesyncd`.
 - **Hostname `io`** (SteamOS: `steamdeck`), set by `mkimg.sh`.
-- **`iio-sensor-proxy`** is installed and running; SteamOS 3.8.4 does not
-  ship it.
 - **earlyoom** runs with Valve's full argument set; its `--avoid` list names
   runit's processes instead of systemd.
 - **`tmpfiles.d` rules** from Valve's packages are boot-time core services
@@ -155,9 +163,14 @@ the session bus that Steam talks to.
   `rnnoise-ladspa` (label `noise_suppressor_mono`), because Void's NoiseTorch
   package ships no system-wide plugin.
 - **Version:** Io builds Valve's `steamdeck-dsp` 1.02; SteamOS 3.8.4 runs
-  0.91. Differences that matter are listed here; 0.91's
-  `session.suspend-timeout-seconds = 0` on the microphone filter's node is
-  not in 1.02 and not in Io.
+  0.91. Io follows the newer state (see *Versions* below). 0.91 kept the
+  microphone filter from suspending (`session.suspend-timeout-seconds = 0`);
+  1.02 drops that, so the filter may suspend while nothing records. No
+  Arch- or systemd-specific reason behind it, so Io takes 1.02's behaviour.
+- **UCM profile:** Valve's profile from `steamdeck-dsp` (`Internal Mic`,
+  headphone sink), as on SteamOS. Void's `alsa-ucm-conf` also ships
+  `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM would pick first by the
+  card's long name; `steamdeck-dsp` keeps it out (`noextract`).
 - **No hardware profile switching.** SteamOS picks the audio profile for the
   Deck model at boot through symlinks in `/run`. Io only supports Jupiter and
   installs its configuration directly into the standard search paths.
@@ -260,9 +273,6 @@ mode), automount of SD cards and USB drives (Alpha 5), the holo portal
 (`xdg-desktop-portal-holo`: Settings and app chooser in game mode; Io's
 `gamescope-portals.conf` says `default=gamescope` instead of
 `default=holo;gamescope`), `steam_notif_daemon` (Steam's notifications in
-game mode), `drm_janitor`, `dmemcg-booster` (needs `CONFIG_CGROUP_DMEM`,
-which Io's kernel lacks) and the low-disk cleanup at the start of Valve's
-`gamescope-session` (deletes the oldest game when less than 500 MB are
-free). The dock updater is a
+game mode), `drm_janitor` and `dmemcg-booster`. The dock updater is a
 stub that tells Steam the dock is up to date. Not needed on Io at all: `holo-keyring` (pacman keys),
 `holo-nix-offload` (Nix store), `holo-nfs-utils-tmpfiles` (NFS).

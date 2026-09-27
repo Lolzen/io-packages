@@ -388,11 +388,13 @@ therefore not alternatives: the one in `pipewire.conf.d/` configures the main
 daemon, the one in `filter-chain.conf.d/` the filter instance. Merging them
 applies the filter chain's fixed quantum and `mem.mlock-all` to everything.
 
-**`probe_volumes: Path X is not a volume or mute control` warnings** appear
-on Io but not in SteamOS 3.8.4's journal. Likely cause: Void's
-`alsa-ucm-conf` ships `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM finds
-before Valve's `acp5x.conf` from `steamdeck-dsp` (the card's long name is
-probed first). Not yet checked on the Deck.
+**UCM looks for the card's long name before its driver name.** Void's
+`alsa-ucm-conf` ships `conf.d/acp5x/Valve-Jupiter-1.conf` (a link to the
+upstream profile), so it wins over Valve's `acp5x.conf` from
+`steamdeck-dsp` in the same directory: the microphone was `Mic` instead of
+`Internal Mic` and the headphone sink was missing. `steamdeck-dsp` keeps
+the link out with `noextract`. The `probe_volumes` warnings in the boot log
+probably came from the upstream profile as well.
 
 **A PipeWire client started before the daemon's socket exists just exits**,
 it does not retry. systemd orders this through socket activation; a session
