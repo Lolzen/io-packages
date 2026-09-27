@@ -170,8 +170,9 @@ board=$(cat /sys/class/dmi/id/board_name 2>/dev/null)
 if [ "$board" = "Jupiter" ]; then
     export STEAM_DISPLAY_REFRESH_LIMITS=40,60
 fi
-# Valve points Steam's update screen at its boot splash image; Io uses its own
-bg=/usr/share/plymouth/themes/io/io.png
+# Valve points Steam's update screen at a full-screen picture of its boot logo
+# (1280x720); Io's is made the same way by io-branding.
+bg=/usr/share/plymouth/themes/io/io-update.png
 [ -r "$bg" ] && export STEAM_UPDATEUI_PNG_BACKGROUND="$bg"
 
 # HDMI-CEC: cecd and cec-audio-control run with every session (see above)

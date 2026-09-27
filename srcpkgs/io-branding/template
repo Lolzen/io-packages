@@ -1,7 +1,7 @@
 # Template file for 'io-branding'
 pkgname=io-branding
 version=0.2.0
-revision=4
+revision=5
 hostmakedepends="librsvg-utils"
 depends="plymouth"
 short_desc="Io distribution branding: logo, boot splash, fastfetch config"
@@ -13,6 +13,10 @@ homepage="https://github.com/Lolzen/io-packages"
 
 do_build() {
 	rsvg-convert -w 384 -h 384 ${FILESDIR}/io-logo.svg -o io.png
+	# Steam's update screen (STEAM_UPDATEUI_PNG_BACKGROUND) fills the screen
+	# with this image, so it is a whole 1280x720 picture like Valve's
+	# steamos-jupiter.png: the logo centred on black at the same size.
+	rsvg-convert -w 176 -h 176 --page-width 1280 --page-height 720 --left 552 --top 272 -b black ${FILESDIR}/io-logo.svg -o io-update.png
 }
 
 do_install() {
@@ -28,4 +32,5 @@ do_install() {
 	vinstall ${FILESDIR}/plymouth/io.plymouth 644 usr/share/plymouth/themes/io
 	vinstall ${FILESDIR}/plymouth/io.script 644 usr/share/plymouth/themes/io
 	vinstall io.png 644 usr/share/plymouth/themes/io
+	vinstall io-update.png 644 usr/share/plymouth/themes/io
 }
