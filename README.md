@@ -125,10 +125,11 @@ Everything else lives in the [wiki](https://github.com/Lolzen/io-packages/wiki):
 - [Deviations from SteamOS](https://github.com/Lolzen/io-packages/wiki/Deviations) — where Io differs from SteamOS, and why
 - [Architecture](https://github.com/Lolzen/io-packages/wiki/Architecture) — boot, sessions, SteamOS Manager, logging
 - [Packages](https://github.com/Lolzen/io-packages/wiki/Packages) — every package, its contents and source
+- [Kernel](https://github.com/Lolzen/io-packages/wiki/Kernel) — source, configuration layers, what to do on a kernel update
 - [Helper status](https://github.com/Lolzen/io-packages/wiki/Helper-Status) — which of Valve's helper scripts are real
 - [Building](https://github.com/Lolzen/io-packages/wiki/Building) — building packages and images, release workflow
 - [Pitfalls](https://github.com/Lolzen/io-packages/wiki/Pitfalls) — things that cost real time
-- [Valve package survey](https://github.com/Lolzen/io-packages/wiki/Valve-Package-Survey) — Valve's packages, triaged for Io
+- [SteamOS packages](https://github.com/Lolzen/io-packages/wiki/Valve-Package-Survey) — every SteamOS-specific package, and what Io has in its place
 
 ## License
 
