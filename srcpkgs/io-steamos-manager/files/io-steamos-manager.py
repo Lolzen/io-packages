@@ -669,6 +669,8 @@ class OrcaManager:
         else:
             self._stop_orca()
         self.enabled = enable
+        # A (re)started Orca begins in browse mode.
+        self.mode = "browse"
 
     def set_value(self, key, value):
         low, high = SR_LIMITS[key]
@@ -722,6 +724,12 @@ class OrcaManager:
         ui.syn()
 
     def set_mode(self, mode):
+        # Orca's shortcuts are plain key presses on a virtual keyboard: with
+        # no screen reader running they land in whatever has the focus (Steam
+        # sets the mode at every start, which typed "aa" into Plasma's
+        # search). Only a running Orca gets them.
+        if not self.enabled:
+            return
         if mode == self.mode:
             return
         # Insert+A twice: focus mode sticky; three times: browse mode sticky
@@ -732,6 +740,8 @@ class OrcaManager:
         e = self.keyboard and self.e
         if action == "stop_talking":
             self._signal_orca(signal.SIGUSR2)
+        elif not self.enabled:
+            return
         elif action == "toggle_mode":
             self._insert_a(1)
             self.mode = "focus" if self.mode == "browse" else "browse"
