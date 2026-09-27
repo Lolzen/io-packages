@@ -7,4 +7,17 @@ then
     exec pkexec --disable-internal-agent "$0" "$@"
 fi
 
-hostnamectl set-hostname "$1"
+# Io: Valve's helper runs "hostnamectl set-hostname", which does not exist
+# without systemd. This cleans the name the way hostnamectl does for the
+# static hostname (characters a hostname cannot hold are dropped, repeated
+# dots collapsed, no dot or dash at either end, at most 64 characters) and
+# writes it to /etc/hostname (read at boot by runit's core-services) and to
+# the running kernel.
+name=$(printf '%s' "${1:-}" | tr -cd 'A-Za-z0-9.-' | sed 's/\.\.*/./g; s/^[.-]*//' | cut -c1-64 | sed 's/[.-]*$//')
+if [[ -z "$name" ]]; then
+    echo "steamos-set-hostname: no valid hostname in '${1:-}'" >&2
+    exit 1
+fi
+
+printf '%s\n' "$name" > /etc/hostname
+printf '%s' "$name" > /proc/sys/kernel/hostname

@@ -1,3 +1,8 @@
 # Work around the misdetection of some SanDisk microSD cards
 
+# Io: disabled. The rule starts the script through systemd-run, which Io
+# does not have. While Io boots from the card in the slot it has nothing to
+# do: a misdetected boot card never gets as far as this rule. It matters
+# once Io runs from the internal SSD (replace systemd-run then).
+
 #ACTION=="add", SUBSYSTEM=="mmc", ENV{MMC_NAME}=="SD032", RUN+="/bin/systemd-run --no-block --collect /usr/lib/hwsupport/sdcard-rescan.sh %k"

@@ -1,6 +1,9 @@
 # Originally from https://serverfault.com/a/767079
 # Run a mount script through systemd on any mmcblk* and sd* activity
 
+# Io: disabled until automounting is ported (Alpha 5): the script needs
+# udisks2 and systemd-run, and must leave out the device Io boots from.
+
 #KERNEL!="mmcblk*|sd*",          GOTO="steamos_automount_end"
 #ENV{ID_FS_USAGE}!="filesystem", GOTO="steamos_automount_end"
 

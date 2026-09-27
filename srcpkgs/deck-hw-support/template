@@ -1,13 +1,13 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=7
+revision=8
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
-homepage="https://gitlab.com/evlaV/jupiter-hw-support"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main"
 
 # Valve's changes from 20250728.1 to 20260807.1 are almost all renames
 # (steamos-* helpers became holo-*, with steamos-alias linking the old names
