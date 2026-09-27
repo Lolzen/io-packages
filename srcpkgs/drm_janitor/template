@@ -1,0 +1,22 @@
+# Template file for 'drm_janitor'
+pkgname=drm_janitor
+version=0.0.4
+revision=1
+build_style=meson
+hostmakedepends="pkg-config"
+makedepends="libdrm-devel"
+short_desc="Resets the DRM state to defaults when the game mode session ends"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/zzag/drm_janitor"
+distfiles="https://github.com/zzag/drm_janitor/archive/${version}.tar.gz"
+checksum=712702f131a246d369e766563548bf46355aecaf4a51517fbad01c7af4df0516
+
+# The version of SteamOS 3.8.4 (holo-main drm_janitor-0.0.4-6), from the same
+# upstream archive Valve builds (same checksum). Valve's only addition is a
+# drop-in that runs it after gamescope-session.service stops (ExecStopPost);
+# on Io, io-gamemode runs it after gamescope exits.
+
+post_install() {
+	vlicense LICENSE
+}
