@@ -311,7 +311,8 @@ class RootManager(ServiceInterface):
         d = _hwmon("amdgpu", "power1_cap")
         if not d:
             _fail("no amdgpu power1_cap")
-        # sustained and fast PPT limit, as SteamOS keeps them identical
+        # sustained and fast PPT limit: steamos-manager writes the same value
+        # to both (power.rs, set_tdp_limit, v26.1.0 as on SteamOS 3.8.4)
         for attr in ("power1_cap", "power2_cap"):
             if os.path.exists(f"{d}/{attr}"):
                 _write(f"{d}/{attr}", limit * 1000000)
@@ -1053,7 +1054,8 @@ class Audio1(ServiceInterface):
 
 # Download mode, as steamos-manager: while Steam holds at least one handle,
 # the TDP limit is lowered to the Deck's download_mode_limit (Valve's
-# jupiter.toml: 6 W) and restored when the last handle is closed.
+# data/devices/steam-deck.toml in steamos-manager 26.1.0: 6 W) and restored
+# when the last handle is closed.
 DOWNLOAD_MODE_TDP = 6
 
 
