@@ -7,10 +7,14 @@ ZONEDIR=/usr/share/zoneinfo
 
 case "$1" in
     set-timezone)
-        [ -n "$2" ] || exit 1
-        [ -f "$ZONEDIR/$2" ] || exit 1
+        # Only a zone name below $ZONEDIR: "Europe/Vienna", never a path
+        # ("../..", "/etc/...") - the helper that calls this runs as root
+        # for any local user.
+        case "$2" in
+            ""|/*|*..*|*[!A-Za-z0-9/_+-]*) echo "timedatectl: invalid time zone: $2" >&2; exit 1 ;;
+        esac
+        [ -f "$ZONEDIR/$2" ] || { echo "timedatectl: unknown time zone: $2" >&2; exit 1; }
         ln -sf "$ZONEDIR/$2" /etc/localtime
-        printf '%s\n' "$2" > /etc/timezone
         ;;
     show)
         printf '%s\n' "$(readlink -f /etc/localtime | sed "s|$ZONEDIR/||")"
@@ -23,6 +27,7 @@ case "$1" in
         printf '                Time zone: %s\n' "$(readlink -f /etc/localtime | sed "s|$ZONEDIR/||")"
         ;;
     *)
-        exit 0
+        echo "timedatectl: unsupported command: $1" >&2
+        exit 1
         ;;
 esac

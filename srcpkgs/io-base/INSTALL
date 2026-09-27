@@ -1,5 +1,8 @@
 case "${ACTION}" in
 post)
 	usr/libexec/io/io-i18n-supported 2>/dev/null || true
+	# Io's earlier timedatectl also wrote /etc/timezone (not used on Void
+	# or SteamOS); it would keep a stale zone from now on.
+	rm -f etc/timezone
 	;;
 esac

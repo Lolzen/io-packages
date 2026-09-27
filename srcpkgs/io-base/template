@@ -1,8 +1,8 @@
 # Template file for 'io-base'
 pkgname=io-base
 version=0.4.0
-revision=14
-depends="xbps>=0.45 polkit socklog-void plymouth alsa-pipewire"
+revision=15
+depends="polkit socklog-void plymouth alsa-pipewire"
 conf_files="/etc/elogind/logind.conf.d/10-io.conf"
 short_desc="Io base configuration for Steam Deck"
 maintainer="Georg <funer@gmx.at>"
