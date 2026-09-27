@@ -1,7 +1,7 @@
 # Template file for 'jupiter-fan-control'
 pkgname=jupiter-fan-control
 version=20260902.1
-revision=3
+revision=4
 _pkgrel=1
 wrksrc="${pkgname}"
 python_version=3
@@ -14,18 +14,17 @@ homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupi
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
 checksum=ccc3bcf34f6ad5a1cdb2c1c8e94d6c9251d82532888523f57127ea0b62868a77
 
-do_build() {
-	:
+post_extract() {
+	git --git-dir=jupiter-fan-control archive --format=tar "${version}" | tar -x
 }
 
 do_install() {
-	git --git-dir=jupiter-fan-control archive --format=tar "${version}" | tar -x
 	vmkdir usr/share/jupiter-fan-control
 	vinstall usr/share/jupiter-fan-control/fancontrol.py 755 usr/share/jupiter-fan-control
 	vinstall usr/share/jupiter-fan-control/jupiter-config.yaml 644 usr/share/jupiter-fan-control
 	vinstall usr/share/jupiter-fan-control/galileo-config.yaml 644 usr/share/jupiter-fan-control
 	vinstall usr/share/jupiter-fan-control/fremont-config.yaml 644 usr/share/jupiter-fan-control
-	vmkdir etc/sv/jupiter-fan-control
-	vinstall ${FILESDIR}/run 755 etc/sv/jupiter-fan-control run
-	vinstall ${FILESDIR}/finish 755 etc/sv/jupiter-fan-control finish
+	# vsv adds the supervise link and a log service (vlogger), as for every
+	# other Io service.
+	vsv jupiter-fan-control
 }
