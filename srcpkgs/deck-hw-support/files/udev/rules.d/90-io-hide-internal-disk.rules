@@ -1,0 +1,12 @@
+# Io: while Io runs from the SD card (or a USB drive), the internal SSD holds
+# another system - SteamOS on a Steam Deck. udisks would offer it to Steam
+# and Plasma, and Steam offers to format drives it does not know. Mark it as
+# a system device to hide: user interfaces leave it out, and mounting it
+# needs an administrator. Once Io itself runs from the internal SSD, the
+# rule does nothing (io-root-disk names that disk).
+SUBSYSTEM!="block", GOTO="io_hide_internal_end"
+KERNEL!="nvme*", GOTO="io_hide_internal_end"
+PROGRAM="/usr/lib/hwsupport/io-root-disk", RESULT=="nvme*", GOTO="io_hide_internal_end"
+ENV{UDISKS_IGNORE}="1"
+ENV{UDISKS_SYSTEM}="1"
+LABEL="io_hide_internal_end"

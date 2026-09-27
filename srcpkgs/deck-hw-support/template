@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=9
+revision=10
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind udisks2"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -22,6 +22,8 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # io-detach instead of systemd-run, and leaving out the disk Io runs from.
 # trim-devices.sh does not fall back to trimming /var and /home on a card
 # that is unsafe to trim: on Io they may be on that card.
+# While Io runs from the SD card, the internal SSD (SteamOS) is hidden from
+# udisks, so neither Steam nor Plasma offers it (90-io-hide-internal-disk).
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers

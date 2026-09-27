@@ -1,0 +1,12 @@
+#!/bin/sh
+# io-root-disk - prints the kernel name of the disk / is on (mmcblk0, nvme0n1,
+# sda ...), or nothing if it cannot be worked out. Used by udev rules, so it
+# reads sysfs only and does not ask udev.
+src=$(findmnt -nvo SOURCE / 2>/dev/null) || exit 0
+name=$(basename "$(readlink -f "$src")")
+[ -e "/sys/class/block/$name" ] || exit 0
+if [ -e "/sys/class/block/$name/partition" ]; then
+	basename "$(readlink -f "/sys/class/block/$name/..")"
+else
+	echo "$name"
+fi
