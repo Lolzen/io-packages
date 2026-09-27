@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=29
+revision=30
 metapackage=yes
 provides="base-system-9999_1"
 replaces="base-system>=0"
@@ -32,7 +32,7 @@ depends="
  MangoHud MangoHud-32bit MangoHud-mangoapp
  mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit libcurl-32bit
  mesa-vaapi mesa-vaapi-32bit
- pipewire wireplumber alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
+ pipewire wireplumber wireplumber-elogind alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
 
  NetworkManager elogind polkit dbus
  xdg-desktop-portal xdg-desktop-portal-gamescope
