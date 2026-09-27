@@ -207,27 +207,51 @@ IWD_MAIN_CONF = "/etc/iwd/main.conf"
 def _write_iwd_powersave(enabled):
     """Power save off for iwd: [DriverQuirks] PowerSaveDisable=* in
     main.conf; on: the key removed (iwd then keeps the kernel's default,
-    which is on). Other settings in the file are kept."""
-    import configparser
-    conf = configparser.ConfigParser(interpolation=None)
-    conf.optionxform = str
-    conf.read(IWD_MAIN_CONF)
-    if enabled:
-        if conf.has_option("DriverQuirks", "PowerSaveDisable"):
-            conf.remove_option("DriverQuirks", "PowerSaveDisable")
-        if conf.has_section("DriverQuirks") and not conf.options("DriverQuirks"):
-            conf.remove_section("DriverQuirks")
-    else:
-        if not conf.has_section("DriverQuirks"):
-            conf.add_section("DriverQuirks")
-        conf.set("DriverQuirks", "PowerSaveDisable", "*")
-    if not conf.sections():
+    which is on). Edited line by line, so comments and every other setting
+    in the file stay as they were written."""
+    try:
+        with open(IWD_MAIN_CONF) as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        lines = []
+    out = []
+    section = None
+    header = None
+    written = False
+    for line in lines:
+        s = line.strip()
+        if s.startswith("[") and s.endswith("]"):
+            section = s[1:-1].strip()
+            if section == "DriverQuirks":
+                header = len(out)
+            out.append(line)
+            continue
+        if section == "DriverQuirks" and s.split("=", 1)[0].strip() == "PowerSaveDisable":
+            if not enabled and not written:
+                out.append("PowerSaveDisable=*")
+                written = True
+            continue
+        out.append(line)
+    if not enabled and not written:
+        if header is not None:
+            out.insert(header + 1, "PowerSaveDisable=*")
+        else:
+            if out and out[-1].strip():
+                out.append("")
+            out += ["[DriverQuirks]", "PowerSaveDisable=*"]
+    if enabled and header is not None:
+        # Drop the section header if nothing but blank lines is left under it.
+        nxt = next((i for i in range(header + 1, len(out))
+                    if out[i].strip().startswith("[")), len(out))
+        if not any(l.strip() for l in out[header + 1:nxt]):
+            del out[header:nxt]
+    if not any(l.strip() for l in out):
         if os.path.exists(IWD_MAIN_CONF):
             os.remove(IWD_MAIN_CONF)
         return
     os.makedirs(os.path.dirname(IWD_MAIN_CONF), exist_ok=True)
     with open(IWD_MAIN_CONF, "w") as f:
-        conf.write(f, space_around_delimiters=False)
+        f.write("\n".join(out) + "\n")
 
 
 def read_wifi_backend():
