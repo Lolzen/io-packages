@@ -38,6 +38,9 @@ build_recovery_rootfs() {
   grub_set_defaults "$REC_ROOTFS" "$KERNEL_CMDLINE" "Io-recovery"
   bind_chroot "$REC_ROOTFS"
   chroot_reconfigure "$REC_ROOTFS"
+  # The locale of locale.conf has to exist, or everything runs in "C"
+  # (ANSI_X3.4-1968), which Qt and Plasma complain about.
+  enable_locales "$REC_ROOTFS" "${LANG_DEFAULT%%.*}"
   log "creating recovery user: $REC_USER"
   # Known passwords: the console stays usable if SDDM does not start.
   make_users "$REC_ROOTFS" "$REC_USER" "$ROOTHASH" "$USERHASH" "$REC_GROUPS"
