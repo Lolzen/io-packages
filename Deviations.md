@@ -1,7 +1,7 @@
 # Deviations from SteamOS
 
 Reference: SteamOS 3.8.4 on the same Steam Deck LCD, captured in September
-2026 (the Deck's SSD is a retrofitted 512 GB KIOXIA, not the one it shipped
+2026 (the Deck's SSD is a retrofitted 1 TB KIOXIA, not the one it shipped
 with; process environments and capabilities, SteamOS Manager D-Bus values
 and calls, sysfs, systemd units, configuration files). Everything not listed
 here is meant to behave as on SteamOS; a difference that is not on this page
