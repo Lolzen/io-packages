@@ -2,7 +2,7 @@
 Type=Application
 Name=Install Io
 Comment=Install Io to a disk (erases it)
-Exec=konsole -e /usr/sbin/io-install
+Exec=konsole --hold -e /usr/sbin/io-install
 Icon=drive-harddisk
 Terminal=false
 Categories=System;

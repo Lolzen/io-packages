@@ -1,30 +1,52 @@
 #!/bin/sh
 # io-install - "Install Io" on the recovery desktop: pick a disk, confirm,
 # and let io-restore install Io onto it.
+#
+# Works without a keyboard: the disk is picked and confirmed in dialogs
+# (kdialog), by touch or with the trackpad. Without a graphical session it
+# falls back to questions in the terminal.
 set -eu
-
-pause() { printf '\nPress Enter to close.\n'; read -r _; }
-trap pause EXIT
-
-printf '\nIo Recovery - Install\n\n'
 
 disk_of() { lsblk -nsrpo NAME,TYPE -- "$1" 2>/dev/null | awk '$2 == "disk" { print $1; exit }'; }
 OWN=$(disk_of "$(findmnt -nvo SOURCE /)")
 
 # Whole disks only, without the one the recovery system runs from.
-printf 'Disks Io can be installed on:\n\n'
-lsblk -dpno NAME,SIZE,MODEL,TRAN,TYPE | awk -v own="$OWN" '$NF == "disk" && $1 != own && $1 !~ /zram/'
-printf '\nEnter the target disk (for example /dev/nvme0n1): '
-read -r TARGET
+CANDIDATES=$(lsblk -dpnro NAME,TYPE | awk -v own="$OWN" '$2 == "disk" && $1 != own && $1 !~ /zram/ { print $1 }')
+describe() { printf '%s  %s  %s' "$1" "$(lsblk -dno SIZE "$1" | tr -d ' ')" "$(lsblk -dno MODEL "$1")"; }
 
-[ -n "$TARGET" ] || { echo "no target selected" >&2; exit 1; }
-[ -b "$TARGET" ] || { echo "not a block device: $TARGET" >&2; exit 1; }
+if [ -z "$CANDIDATES" ]; then
+  echo "No disk to install Io on."
+  if [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then kdialog --title "Install Io" --error "No disk to install Io on." || true; fi
+  exit 1
+fi
 
-printf '\nSelected target:\n\n'
-lsblk -o NAME,SIZE,MODEL,FSTYPE,LABEL "$TARGET"
-printf '\nThis will ERASE EVERYTHING on %s. Type yes to continue: ' "$TARGET"
-read -r ANSWER
-[ "$ANSWER" = yes ] || { echo "aborted"; exit 1; }
+if [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] && command -v kdialog > /dev/null; then
+  # Radio list: tag, label, state for every disk.
+  set --
+  for d in $CANDIDATES; do set -- "$@" "$d" "$(describe "$d")" off; done
+  TARGET=$(kdialog --title "Install Io" --radiolist "Install Io on which disk?" "$@") || { echo "aborted"; exit 1; }
+  [ -n "$TARGET" ] || { echo "no disk selected"; exit 1; }
+  kdialog --title "Install Io" --warningcontinuecancel "Everything on this disk will be ERASED:
 
+$(describe "$TARGET")
+
+Continue?" || { echo "aborted"; exit 1; }
+  kdialog --title "Install Io" --warningyesno "Last chance: erase $(describe "$TARGET") and install Io?" || { echo "aborted"; exit 1; }
+else
+  printf '\nIo Recovery - Install\n\nDisks Io can be installed on:\n\n'
+  for d in $CANDIDATES; do describe "$d"; echo; done
+  printf '\nEnter the target disk (for example /dev/nvme0n1): '
+  read -r TARGET
+  case " $(echo $CANDIDATES) " in *" $TARGET "*) ;; *) echo "not one of the disks above" >&2; exit 1 ;; esac
+  printf '\nThis will ERASE EVERYTHING on %s. Type yes to continue: ' "$TARGET"
+  read -r ANSWER
+  [ "$ANSWER" = yes ] || { echo "aborted"; exit 1; }
+fi
+
+echo "Installing Io on $(describe "$TARGET") ..."
 sudo /usr/sbin/io-restore --yes "$TARGET"
-printf '\nInstallation finished. Remove the recovery drive before rebooting.\n'
+echo
+echo "Installation finished. Remove the recovery drive before rebooting."
+if [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
+  kdialog --title "Install Io" --msgbox "Io is installed on $TARGET. Remove the recovery drive before rebooting." || true
+fi

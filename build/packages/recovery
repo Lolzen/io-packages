@@ -70,3 +70,7 @@ polkit
 dbus
 efibootmgr
 socklog-void
+# Without a keyboard: dialogs for Install Io, and Plasma's on-screen
+# keyboard for the Deck's touchscreen.
+kdialog
+maliit-keyboard
