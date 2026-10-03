@@ -100,9 +100,26 @@ Session=plasma
 Relogin=false
 EOF_SDDM
 
+  # SDDM through a service of its own, as Io does (io-sddm): Void's sddm
+  # service asks D-Bus to start elogind by its activation file, which is
+  # removed below (elogind runs as a runit service), and under set -e that
+  # failed request ends the service every second - SDDM never started.
+  _sv="$REC_ROOTFS/etc/sv/io-recovery-sddm"
+  mkdir -p "$_sv/log"
+  cat > "$_sv/run" << 'EOF_RUN'
+#!/bin/sh
+exec 2>&1
+sv check dbus >/dev/null || exit 1
+sv check elogind >/dev/null || exit 1
+[ -r /etc/locale.conf ] && . /etc/locale.conf && export LANG
+exec sddm
+EOF_RUN
+  printf '#!/bin/sh\nexec vlogger -t sddm -p daemon\n' > "$_sv/log/run"
+  chmod 755 "$_sv/run" "$_sv/log/run"
   # shellcheck disable=SC2086
   enable_services "$REC_ROOTFS" $SERVICES
-  [ -L "$REC_ROOTFS/etc/runit/runsvdir/default/sddm" ] || die "sddm service was not enabled"
+  [ -L "$REC_ROOTFS/etc/runit/runsvdir/default/io-recovery-sddm" ] || die "SDDM service was not enabled"
+  rm -f "$REC_ROOTFS/etc/runit/runsvdir/default/sddm"
   drop_elogind_dbus "$REC_ROOTFS"
 
   log "installing recovery tools"
