@@ -8,7 +8,7 @@ runit instead of systemd.
 - [Milestones](Milestones) — what is open, and where it is headed
 - [Changelog](Changelog) — what each release brought
 - [Deviations from SteamOS](Deviations) — where Io differs from SteamOS, and why
-- [Architecture](Architecture) — boot, sessions, SteamOS Manager, logging
+- [Architecture](Architecture) — boot, sessions, SteamOS Manager, drives, logging
 - [Packages](Packages) — every package, its contents and source
 - [Kernel](Kernel) — source, configuration layers, what to do on a kernel update
 - [Helper status](Helper-Status) — which of Valve's helper scripts are real

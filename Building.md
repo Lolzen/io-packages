@@ -101,7 +101,15 @@ sudo ~/io-packages/mkimg.sh
 Builds `/home/gee/io.img` (16 GiB) from the published repository: partitions,
 installs `io-desktop`, creates the user, enables services, installs GRUB and
 the initramfs. Options through the environment: `SIZE=24G`, `OUT=...`,
-`USERNAME`, `USERPASS`, `ROOTPASS`, `HOSTNAME`, `TIMEZONE`.
+`USERNAME`, `USERPASS`, `ROOTPASS`, `HOSTNAME`, `TIMEZONE` (default `UTC`;
+Steam sets the user's zone).
+
+`deck` is the default user, as on SteamOS. With another `USERNAME`, three
+places still name `deck` and have to be changed by hand: SDDM's autologin
+(`User=` in `/usr/lib/sddm/sddm.conf.d/10-io.conf`), the devkit service
+(`/etc/sv/steamos-devkit-service/run`) and Valve's automount script
+(`/usr/lib/hwsupport/steamos-automount.sh`, which stops without a user
+`deck`). A package update puts all three back.
 
 Write it to a card (replace `sdX`; check with `lsblk` first):
 

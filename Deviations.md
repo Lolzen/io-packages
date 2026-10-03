@@ -1,7 +1,8 @@
 # Deviations from SteamOS
 
 Reference: SteamOS 3.8.4 on the same Steam Deck LCD, captured in September
-2026 (process environments and capabilities, SteamOS Manager D-Bus values
+2026 (the Deck's SSD is a retrofitted 512 GB KIOXIA, not the one it shipped
+with; process environments and capabilities, SteamOS Manager D-Bus values
 and calls, sysfs, systemd units, configuration files). Everything not listed
 here is meant to behave as on SteamOS; a difference that is not on this page
 is a bug.
@@ -50,8 +51,8 @@ its reason.
   (`-R`); Io does not need it. The statistics pipe (`-T`) is set as on
   SteamOS.
 - **Steam launch flags, gamescope arguments and environment match
-  SteamOS**, except variables whose counterpart Io does not have yet
-  (drive adoption and unmounting through Steam, systemd scopes). Setting them would show controls in Steam that do nothing.
+  SteamOS**, except `STEAM_LAUNCH_WRAPPER_SCOPE`: it has Steam start each
+  game in a systemd scope, and Io has no systemd.
 - **HDMI-CEC:** `cecd` starts through D-Bus activation and
   `cec-audio-control` directly from the session scripts (SteamOS: user
   services of the graphical session, `cec-audio-control` socket-activated).
@@ -92,8 +93,17 @@ the session bus that Steam talks to.
 - **`SessionManagement1`** writes the same SDDM files as steamos-manager
   (`zz-steamos-autologin.conf`, `zzt-steamos-temp-login.conf`) through the
   root half, and logs Plasma out through `org.kde.Shutdown`.
-- **Not implemented**, for lack of a counterpart on Io: `Storage1`, `Jobs`,
-  `UdevEvents1`, `UpdateBios1`, `UpdateDock1`, `FactoryReset1`.
+- **`Storage1`** runs as steamos-manager 26.1.0 does: `TrimDevices` starts
+  Valve's `trim-devices.sh` as a job (`Job1`, announced by `JobManager1`)
+  on the root half, mirrored for Steam on the session bus. Differences: the
+  session half mirrors the jobs it started itself (Valve's also picks up
+  every root job already running when it starts); `Job1.ExitCode`, declared
+  in Valve's interface file but not implemented in 26.1.0, works; the root
+  half numbers its jobs from the time it started, so a number is not
+  reused after a restart. `FormatDevice` answers `NotSupported` until
+  formatting is ported and tested (see *Storage*).
+- **Not implemented**, for lack of a counterpart on Io: `UdevEvents1`,
+  `UpdateBios1`, `UpdateDock1`, `FactoryReset1`.
   `WifiDebug1` is not needed: SteamOS 3.8.4 does not offer it on the Deck.
 - **`ScreenReader0/1`** starts Orca itself (SteamOS: `orca.service` with
   gamescope's environment file), with the running Steam's display settings.
@@ -226,11 +236,13 @@ the session bus that Steam talks to.
   `holo-*` (Valve's `steamos-alias` links them back); SteamOS 3.8.4 itself
   still runs 20260327.1 with the old names. The cursor images come from
   20260327.1, later versions moved them to another package. Several helpers
-  are stubs, see [Helper status](Helper-Status). The automount udev rules
-  are disabled.
+  are stubs, see [Helper status](Helper-Status). Automount and trimming:
+  see *Storage*. `99-sdcard-rescan.rules` stays disabled (it needs
+  `systemd-run`, and has nothing to do while Io boots from the card).
 - **`steamos-priv-write`** gives the written files to the `wheel` group
-  instead of `deck`, because the user name is chosen when the image is built
-  (`USERNAME` in `mkimg.sh`), and logs through `logger`.
+  instead of `deck`, so that it keeps working with another user name
+  (`USERNAME` in `mkimg.sh`) or when a user sets up an account of their
+  own, and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
   journald to log to.
 - **`xdg-desktop-portal-holo`** comes without its systemd user unit; its
@@ -276,12 +288,45 @@ the session bus that Steam talks to.
 
 ---
 
+## Storage
+
+- **Automount** is Valve's: its udev rule, `block-device-event.sh` and
+  `steamos-automount.sh`, with udisks mounting the drive for `deck`
+  (`/run/media/deck/<label>`). The rule starts the scripts through
+  `io-detach` (`setsid --fork`, output to syslog and `/run/io-detach.log`)
+  instead of `systemd-run`. A drive seen before the system bus exists (at
+  boot) waits up to 10 minutes for it; Valve asks `systemctl` whether the
+  system is up.
+- **The disk Io runs from is never automounted.** Valve's scripts leave
+  SteamOS's own partitions out by their partition sets; Io's check asks
+  which disk `/` is on and leaves that whole disk alone, and also any drive
+  when it cannot tell.
+- **The internal SSD is hidden from udisks** (`UDISKS_IGNORE`,
+  `UDISKS_SYSTEM`) while Io runs from another disk, since it holds SteamOS
+  (Io's `90-io-hide-internal-disk.rules`). Steam leaves it out of its
+  storage list at start, but lists it again after a USB drive is plugged
+  in, most likely from udisks' drive object, which unlike the disk and its
+  partitions cannot be hidden. Accepted; the only thing Steam offers for it
+  is formatting, and Valve's `format-device.sh` refuses NVMe drives.
+- **Trimming** runs Valve's `trim-devices.sh`. For an SD card Valve
+  considers unsafe to trim, SteamOS trims `/var` and `/home` on the
+  internal SSD instead; Io may run from that card, so it trims every ext4
+  or btrfs filesystem mounted read-write except those on the card (not yet
+  needed on the test Deck: its card is safe to trim).
+- **Formatting from Steam is not available yet**: `FormatDevice` answers
+  `NotSupported` until formatting is ported and tested, the format helpers
+  are stubs. Valve's `format-device.sh` is in place with an Io check that
+  refuses the disk `/` is on: Valve's device list takes any SD card or USB
+  drive, and Io runs from one.
+
+---
+
 ## Not present on Io
 
 System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
 updates, the crash log submitter, Valve's nested desktop (Plasma inside game
-mode), automount of SD cards and USB drives (Alpha 5), and the VRAM
+mode), formatting drives from Steam (prepared, see *Storage*), and the VRAM
 priority for the foreground game (`dmemcg-booster`, `kcgroups`,
 `plasma-foreground-booster`: driven by systemd's units and slices). The dock
 updater is a stub that tells Steam the dock is up to date. The full list,

@@ -43,7 +43,8 @@ SDDM's settings are in `/usr/lib/sddm/sddm.conf.d/10-io.conf`: autologin
 for `deck` into game mode, and a fresh login whenever a session ends
 (`Relogin=true`), as on SteamOS. The login runs through PAM and elogind, so
 each session is a real session on `seat0`; the memlock limit for the filter
-chain comes from `/etc/security/limits.d/90-io-memlock.conf`.
+chain comes from `/etc/security/limits.d/90-io-memlock.conf`, for the
+`audio` group (`mkimg.sh` puts the user in it).
 
 - **Steam** is started through `steam-jupiter`, Valve's Deck wrapper: it
   keeps Steam on the `steamdeck_stable` branch, adds `-steamdeck -pipewire`,
@@ -121,7 +122,7 @@ halves, like Valve's daemon:
 |---|---|---|
 | Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, ...) | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `Audio1`, `HdmiCec1`, `ScreenReader0/1`, ...) |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `Audio1`, `HdmiCec1`, `ScreenReader0/1`, `Storage1`, ...), and the root half's jobs it started, mirrored |
 | Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
 
 Access to the root half is limited to root and `wheel`
@@ -139,6 +140,11 @@ Some session-half interfaces drive other programs, as steamos-manager does:
 - **`Audio1`:** WirePlumber's `node.features.audio.mono`, saved
 - **`LowPowerMode1`:** hands out the write end of a pipe; while any is
   open, the TDP is 6 W
+- **`Storage1`:** `TrimDevices` has the root half run Valve's
+  `trim-devices.sh` as a job and returns the session-bus path of a `Job1`
+  object that mirrors it; the caller can wait on it, pause, resume or
+  cancel it there (`SIGSTOP`, `SIGCONT`, `SIGTERM`/`SIGKILL`) and read the
+  exit code. `FormatDevice` is refused for now
 
 Steam does not use D-Bus for everything. Some features are enabled by
 environment variables alone (the adaptive brightness toggle, fan control,
@@ -214,6 +220,37 @@ settings: fixed quantum, `mem.mlock-all` within a 100 MB memlock limit, and
 a single malloc arena. Volume keys are handled by Steam itself.
 Plain ALSA clients reach PipeWire through `alsa-pipewire`, linked in
 `/etc/alsa/conf.d/`.
+
+---
+
+## Drives
+
+```
+udev rule 99-steamos-automount  →  io-detach (setsid --fork)  →  block-device-event.sh  →  steamos-automount.sh  →  udisks Mount (as deck)
+```
+
+1. **Valve's udev rule** fires when an SD card or USB drive (`mmcblk*`,
+   `sd*`) with a filesystem is added or removed, and hands it to
+   `io-detach`, which returns at once and runs the rest in the background,
+   logging to syslog and `/run/io-detach.log`.
+2. **`block-device-event.sh`** leaves out the disk Io runs from (and
+   anything already mounted, or any drive when the root disk cannot be
+   worked out), waits for udev to finish the event and, at boot, for the
+   system bus.
+3. **`steamos-automount.sh`** mounts ext4 only, as on SteamOS (other
+   filesystems are left alone). It runs `fsck.ext4` first, asks udisks to
+   mount the drive for `deck` under `/run/media/deck/<label>`, and makes its
+   top directory writable for everyone if `deck` cannot write to it.
+4. **Steam** learns about the drive from udisks and lists it in its storage
+   settings; a drive without a Steam library gets the offer to format it
+   (refused on Io for now). With `STEAM_ALLOW_DRIVE_ADOPT` and
+   `STEAM_ALLOW_DRIVE_UNMOUNT` set in game mode, as in Valve's session,
+   Steam may take over a library on it and eject it (not tried yet).
+
+The internal SSD holds SteamOS. While Io runs from another disk,
+`90-io-hide-internal-disk.rules` marks it for udisks as ignored and
+belonging to the system (`io-root-disk` tells which disk `/` is on, from
+the mount table and sysfs, without asking udev).
 
 ---
 

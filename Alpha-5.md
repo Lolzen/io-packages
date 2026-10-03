@@ -1,15 +1,22 @@
-# Alpha 5 — in progress
+# Alpha 5 — Storage; parity III
 
-**Not released yet.** This page collects what is done since
-[Alpha 4](Alpha-4) and is completed at release. What is still open is on
-[Milestones](Milestones).
+**Released:** [alpha5](https://github.com/Lolzen/io-packages/releases/tag/alpha5)
 
 **Goal:** storage as on SteamOS — SD cards and USB drives mount on their
-own and can be formatted from Steam. Before that, a third parity round
-closed the small items left from Alpha 4.
+own and Steam can use them. Before that, a third parity round closed the
+small items left from Alpha 4. Formatting from Steam moved to a later
+milestone, because testing it destroys data; the firmware updaters too,
+since their check mode needs Valve's BIOS files and flash tool, and
+SteamOS on the same Deck keeps the firmware current.
 
 ## Highlights
 
+- **SD cards and USB drives mount on their own**, through Valve's scripts
+  and udisks as on SteamOS (tested with a USB card reader), and Steam lists
+  them in its storage settings; the disk Io runs from is left alone, and
+  the internal SSD with SteamOS is hidden
+- **Storage trim through SteamOS Manager** (`Storage1.TrimDevices`) runs
+  Valve's script as a job that can be followed, paused and cancelled
 - **Screen reader:** Steam's accessibility option reads the interface
   aloud (Orca through speech-dispatcher and espeak-ng), with voices,
   speed, pitch, volume and controller shortcuts
@@ -55,12 +62,44 @@ closed the small items left from Alpha 4.
   color) and the app chooser answer instead of *No working backend*
 - The `STEAM_*MANGOAPP*` variables and the GTK cursor theme for Steam, as in
   Valve's session
+- The memlock limit for the filter chain goes to the `audio` group instead
+  of the user name `deck`, so it holds for any `USERNAME`
 - **Leftovers from the agetty days removed:** the 15-second wait for
   `/run/user`, the `XDG_RUNTIME_DIR` exports, and ending PipeWire and the
   power button daemon by hand (the login's end does it)
 - Steam's update screen gets a full-screen picture, like Valve's
 
-### SteamOS Manager (`io-steamos-manager` 0.10.0)
+### Storage
+
+- **Automount as on SteamOS:** Valve's udev rule, `block-device-event.sh` and
+  `steamos-automount.sh` are active. They are started through `io-detach`
+  (`setsid --fork`) instead of `systemd-run`, log to syslog and
+  `/run/io-detach.log`, and at boot wait for the system bus. udisks mounts
+  ext4 drives for `deck` under `/run/media/deck/<label>`
+- **The disk Io runs from is left alone:** it is not automounted, and
+  `format-device.sh` refuses it. The check asks which disk `/` is on and
+  refuses when it cannot tell
+- **The internal SSD is hidden from udisks** while Io runs from another
+  disk: it holds SteamOS. Steam no longer lists it at start
+- **Steam may adopt and eject drives** in game mode
+  (`STEAM_ALLOW_DRIVE_ADOPT`, `STEAM_ALLOW_DRIVE_UNMOUNT`, as in Valve's
+  session; not tried yet)
+- **Trimming:** SteamOS Manager's `Storage1.TrimDevices` runs Valve's
+  `trim-devices.sh`. On an SD card Valve considers unsafe to trim, Io trims
+  every ext4 or btrfs filesystem mounted read-write except those on the
+  card; SteamOS trims `/var` and `/home`, which on Io can be on that card
+- **Formatting is prepared, not enabled:** `format-device.sh`, with Io's
+  check, refuses the disk Io runs from (Valve's device list would take it);
+  `FormatDevice` answers `NotSupported` until formatting is ported and
+  tested
+- `udisks2` is a dependency of `deck-hw-support`
+
+### SteamOS Manager (`io-steamos-manager` 0.11.0)
+
+- **`Storage1` with jobs**, as steamos-manager 26.1.0: the root half runs the
+  work as a job (`JobManager1`, `Job1`), the session half mirrors it for
+  Steam, which can wait for it, pause, resume or cancel it and read its exit
+  code
 
 - **`LowPowerMode1`:** while Steam holds a download handle, the TDP is
   lowered to 6 W (Valve's `download_mode_limit` for the Deck) and restored
@@ -164,3 +203,14 @@ closed the small items left from Alpha 4.
 
 - **Void's gamescope is 3.16.30** (Io's update, merged): screen recording
   works on a stock image
+
+## Known limitations at release
+
+- No formatting from Steam yet, and no firmware updates (see
+  [Milestones](Milestones))
+- After a USB drive is plugged in, Steam lists the hidden internal SSD
+  again (most likely from udisks' drive object, which cannot be hidden);
+  formatting it is refused
+- Steam's developer settings: *Use Legacy X11* is missing; *speaker-test*
+  does nothing
+- SSH enabled with the default password (test phase)

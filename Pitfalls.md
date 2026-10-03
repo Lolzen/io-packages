@@ -147,6 +147,11 @@ org.kde.Shutdown /Shutdown org.kde.Shutdown logout`), as SteamOS does.
 
 **`busctl` is there without systemd** — elogind ships it.
 
+**dbus_fast answers `GetManagedObjects` itself**, for every path, from
+everything exported below it. An `org.freedesktop.DBus.ObjectManager`
+interface of one's own is never called; `io-steamos-manager` still exports
+one at `/`, unused.
+
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
 `auto_null` sink and a gamescope without a window, with no useful error.
@@ -310,9 +315,11 @@ country comes from the access point (`iw reg get`).
 **`force_drivers+=" amdgpu "` in the dracut configuration is mandatory.**
 Without the module in the initramfs the screen stays black through early KMS.
 
-**dracut silently falls back to gzip** when `compress="zstd"` is set but the
-`zstd` program is missing. Check the first bytes after the early cpio
-(`/usr/lib/dracut/skipcpio`), not the configuration.
+**dracut falls back to its default compression** when `compress="zstd"` is
+set but the `zstd` program is missing, or the kernel cannot unpack zstd. It
+says so (*Cannot execute compression command … falling back to default*),
+but the line is easy to miss in a long build log. Check the first bytes
+after the early cpio (`/usr/lib/dracut/skipcpio`), not the configuration.
 
 **`config-neptune` is not Valve's whole kernel configuration.**
 `ci/kernel-config/neptune/config` is the full configuration (about 12,500
@@ -349,6 +356,51 @@ login prompt.
 
 ---
 
+## Drives and udisks
+
+**A udev `RUN` program must return at once.** udev waits for it and kills
+it after a timeout. Valve's automount first waits for udev's queue to
+empty (`udevadm settle`), which includes the event it was started by, so
+run directly from the rule it waits for itself.
+Valve hands the work to `systemd-run`; Io's `io-detach` starts it with
+`setsid --fork` instead.
+
+**Drives present at boot are seen before the system bus exists.** udev
+replays their events in runit's stage 1; udisks is only reachable in stage
+2. Io's `block-device-event.sh` waits for `/run/dbus/system_bus_socket`, up
+to 10 minutes. Valve's version never needs to wait; it asks `systemctl`
+only whether `multi-user.target` is reached, to tell drives present at
+boot from drives inserted later.
+
+**Valve's automount makes a drive's top directory writable for everyone**
+(mode 777) when `deck` cannot write to it, so that Steam can create its
+library there. On an ext4 drive whose top directory belongs to root — an
+Io card in a card reader, any Linux system disk — that is the other
+system's `/`. Set it back (`chmod 755`) before booting that system again.
+Run on the card Io itself runs from, it would make Io's own `/` mode 777;
+that is why Io leaves the disk `/` is on out of automount.
+
+**udisks' hints exist only on block devices, not on drives.**
+`UDISKS_IGNORE` and `UDISKS_SYSTEM` become `HintIgnore` and `HintSystem` on
+the disk and its partitions; the drive object (for NVMe made from the
+controller `nvme0`, not from `nvme0n1`) has no such property, so udev
+properties cannot hide it. Steam leaves a hidden SSD out when it starts,
+but lists it again after a USB drive is plugged in, most likely from the
+drive object.
+
+**A USB card reader that drops out looks like Steam ejecting the drive.**
+Before blaming Steam, look for `usb … USB disconnect` in the kernel log. An
+eject through udisks would show up on the system bus as `Unmount` or
+`PowerOff` to `org.freedesktop.UDisks2` (as root: `dbus-monitor --system
+"destination='org.freedesktop.UDisks2'"`).
+
+**Valve's `format-device.sh` accepts any SD card or USB drive.** On SteamOS
+the system is on the internal SSD, which its device list leaves out; Io
+runs from an SD card or a USB drive, which the list lets through. Io adds a
+check that refuses the disk `/` is on.
+
+---
+
 ## First boot
 
 **`plymouth quit --retain-splash` leaves the console in graphics mode.**
@@ -364,9 +416,9 @@ executable, and the launcher runs it every time (`Exec format error`).
 Removing the empty file makes the launcher set Steam up again. With
 `steam-jupiter`'s preinstalled client there is no first download.
 
-**A fresh Steam profile has fan control off** and applies that at start,
-stopping `jupiter-fan-control` on purpose (`down … normally up`). Not a
-failure.
+**Steam stops `jupiter-fan-control` when its fan control setting is off**
+(Settings → System), when Steam starts (`down … normally up`). With a fresh
+Steam profile the setting was off here. Not a failure.
 
 ---
 
@@ -450,12 +502,6 @@ screen reader mode at every start; steamos-manager presses Orca's key for it
 date"** (Valve's mock script). A stub that simply exits 0 makes Steam
 announce a dock update at every start.
 
-**Valve's `steamos-automount.sh` makes the mount point world-writable**
-(`chmod 777`) when `deck` cannot write to it. Run on a device that is
-already mounted — Io boots from an SD card — it would change the mode of
-that mount point, `/` included. Exclude the boot device before enabling
-automount (Alpha 5).
-
 **SteamOS 3.8.4 does not offer `WifiDebug1`** on the Deck, although Valve's
 interface file describes it.
 
@@ -466,17 +512,18 @@ the real changes; there is no xbps equivalent of the hook.
 
 **Valve's `holo-upower-config` has no effect as shipped** (it is newer than
 SteamOS 3.8.4, which does not carry it). It sets
-`AllowRiskyCriticalPowerAction=yes`; UPower accepts only `true`/`false` and
-falls back to HybridSleep with a warning.
+`AllowRiskyCriticalPowerAction=yes`; UPower reads it as a GLib key file
+boolean, which is only `true`/`false` (or `1`/`0`), and falls back to
+HybridSleep with a warning.
 
 **vpower hardcodes `steamdeck-hwmon/hwmon/hwmon3`.** The hwmon index depends
 on the kernel (`hwmon6` on Io's 7.2); without a patch vpower assumes a 100 %
 charge limit.
 
-**`deck-hw-support`'s udev rules call `/bin/systemd-run`**, which does not
-exist under runit, and the automount script needs udisks2. Replace
-`systemd-run` with `setsid --fork` and exclude the boot device before
-enabling automount.
+**Valve's udev rules call `/bin/systemd-run`**, which does not exist under
+runit. The automount rule runs through `io-detach` instead (see *Drives and
+udisks*); `99-sdcard-rescan.rules` (a workaround for misdetected SanDisk
+cards) stays disabled until Io runs from the internal SSD.
 
 **`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
 (the user name is chosen when the image is built), and `systemd-cat` becomes

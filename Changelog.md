@@ -7,7 +7,7 @@ afterwards. What is still open is on [Milestones](Milestones).
 
 | Release | Theme | |
 |---|---|---|
-| [Alpha 5](Alpha-5) | Storage; parity III (in progress) | — |
+| [Alpha 5](Alpha-5) | Storage; parity III | [alpha5](https://github.com/Lolzen/io-packages/releases/tag/alpha5) |
 | [Alpha 4](Alpha-4) | Parity II: SDDM, screen recording, Wi-Fi | [alpha4](https://github.com/Lolzen/io-packages/releases/tag/alpha4) |
 | [Alpha 3](Alpha-3) | Parity & quality of life | [alpha3](https://github.com/Lolzen/io-packages/releases/tag/alpha3) |
 | [Alpha 2](Alpha-2) | SteamOS behaviour from a reference capture | [alpha2](https://github.com/Lolzen/io-packages/releases/tag/alpha2) |

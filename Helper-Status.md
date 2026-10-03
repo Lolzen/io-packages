@@ -14,7 +14,7 @@ stubs.
 | `steamos-disable-wireless-power-management` | Asks `io-steamos-manager`; the interface is found automatically |
 | `steamos-poweroff-now`, `steamos-reboot-now` | |
 | `steamos-set-hostname`, `steamos-set-timezone` | Hostname written to `/etc/hostname` and the running kernel (no `hostnamectl`); timezone through Io's `timedatectl` replacement |
-| `steamos-trim-devices` | |
+| `steamos-trim-devices` | Valve's `trim-devices.sh`. SteamOS Manager's `Storage1.TrimDevices` runs the same script as a job |
 | `jupiter-check-support`, `jupiter-get-als-gain` | |
 | `steamos-enable-sshd` | Links the `sshd` runit service, the equivalent of Valve's `systemctl enable --now sshd` |
 | `steamos-wifi-set-backend-privileged` | From `steamos-networking-tools`; switches between wpa_supplicant and iwd with runit |
@@ -28,7 +28,7 @@ Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 
 | Helper | Would do |
 |---|---|
-| `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam; needs working automount first |
+| `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam. Automount works and Valve's `format-device.sh` is in place, with Io's check that refuses the disk Io runs from; left for later because testing it destroys data |
 
 ## Stubs, not applicable to Io
 
@@ -37,7 +37,7 @@ Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 | `jupiter-amp-control` | Target script is in none of Valve's published packages and missing on SteamOS 3.8.4 too; audio works without it |
 | `steamos-reboot-other` | A/B slot switching |
 | `steamos-update`, `steamos-select-branch` | SteamOS system updates; `steamos-select-branch` reports `stable`. Steam is moving to a D-Bus API for updates, which Io could serve with xbps (candidate) |
-| `jupiter-biosupdate` | BIOS updates, so far left to SteamOS. Valve's script needs no systemd; a check-only mode is planned for Alpha 5 |
+| `jupiter-biosupdate` | BIOS updates, left to SteamOS, which runs them at boot on the same Deck. A check-only mode is deferred: it needs Valve's BIOS files and flash tool (`h2offt`) |
 | `jupiter-dock-updater` | Dock firmware (Valve's `hub_update`). `--check` answers 7, "up to date": Valve's codes are 0 = update available, 7 = up to date, and answering 0 made Steam announce a dock update at every start. Needs Valve's dock to port and test |
 | `steamos-factory-reset-config` | Records Valve's A/B partitions for a reset; an Io reset would be its own design |
 

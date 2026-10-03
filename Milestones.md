@@ -1,30 +1,23 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog); what is done since the last release is on the
-page of the release in progress ([Alpha 5](Alpha-5)).
+the [Changelog](Changelog). The latest release is [Alpha 5](Alpha-5); Alpha
+6 gets its page once its theme is chosen.
 
 ---
 
-## Alpha 5 — Storage (next)
+## Alpha 6 (next, theme not chosen yet)
 
-**Goal:** games on every drive the Deck can use, as on SteamOS — SD cards
-and USB drives mount on their own and can be formatted from Steam. Risky
-steps (anything that writes to drives or firmware) come last.
+Candidates from what is open:
 
-- [ ] **Automount** for SD cards and USB drives: Valve's
-      `block-device-event.sh` and `steamos-automount.sh` on runit instead of
-      `systemd-run` (`setsid --fork`), leaving out the boot device; Steam
-      then offers the drive as a library. Check udisks2 for Valve's
-      `as-user` changes; `Storage1` in `io-steamos-manager` belongs here
-- [ ] **Formatting from Steam:** `steamos-format-sdcard` /
-      `steamos-format-device` become real (Valve's `format-device.sh`)
-- [ ] **`steamos-trim-devices`:** implemented, never tried from Steam
-- [ ] **Firmware updaters, check mode first**, so Steam can show whether an
-      update is due: `jupiter-biosupdate` (bash and `h2offt`),
-      `jupiter-controller-update` (Python: `hid`, `crcmod`, `click`,
-      `progressbar`), `jupiter-dock-updater` (needs a dock). Flashing itself
-      last, if at all — SteamOS on the same Deck does it anyway
+- **Decisions:** Valve's Mesa patches; system updates from Steam (today
+  `steamos-update` and `steamos-select-branch` are stubs); VRAM priority
+  for the foreground game (see *Later milestones*)
+- **Tests:** everything under *Tests pending*
+- **Checks needing Valve's files:** `linux-firmware-neptune` against Void's
+  firmware packages, `holo-sudo` against Valve's PKGBUILD, whether a game
+  notices the missing `lib32-gamescope`
+- **Open observations** below
 
 ---
 
@@ -49,7 +42,9 @@ steps (anything that writes to drives or firmware) come last.
   general; ip route`
 - **`/` was world-writable** (mode 777, changed on 2026-09-25 during the
   boot analysis; no package and no automount run explains it). Fixed by
-  hand; `io-selftest.sh` checks it now. Check a fresh image before release
+  hand; it has stayed 755 since, also with Alpha 5's automount, which
+  leaves the disk Io runs from alone. `io-selftest.sh` checks it; check
+  fresh images with it before each release
 - **The first dock hot-plug after many session restarts showed no picture**
   on the TV; after a reboot, plugging and unplugging worked every time
 
@@ -57,6 +52,9 @@ steps (anything that writes to drives or firmware) come last.
 
 ## Tests pending
 
+- **Drives in Steam:** a drive that already carries a Steam library (Steam
+  should take it over), and ejecting a drive from Steam
+- **Decky Loader**
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
 - **Notifications in game mode from a game:** `steam_notif_daemon` hands
@@ -102,6 +100,21 @@ someone with the hardware.
 - **Installing to the internal NVMe**, once SteamOS on it is no longer needed
   as the reference; suspend-then-hibernate comes with it (Valve's resume path
   keeps the swap file's position in an EFI variable through systemd)
+- **Formatting drives from Steam** (from Alpha 5): Valve's `format-device.sh`
+  is in place with Io's check against formatting the disk Io runs from;
+  `FormatDevice` and the format helpers still refuse. Tested together with
+  the move to the NVMe: first against the internal SSD while Io runs from
+  the card (its SteamOS is wiped then anyway; Valve's device list must
+  refuse it), then, with Io on the NVMe, against SD cards and USB drives
+- **Firmware updaters** (from Alpha 5): a check mode for `jupiter-biosupdate`,
+  `jupiter-controller-update` and `jupiter-dock-updater`, so Steam can show
+  whether an update is due, and flashing last, if at all. The BIOS updater
+  needs Valve's BIOS files and flash tool (`h2offt`); until then SteamOS on
+  the same Deck keeps the firmware current
+- **Catching up with Valve:** once Io matches SteamOS 3.8.4 apart from its
+  documented deviations, one review round against Valve's newest version of
+  every ported package, then one large update. Until then SteamOS 3.8.4
+  stays the reference
 - **System updates from Steam:** Steam moves from `steamos-update` to a D-Bus
   API (`atomupd-manager`), which `io-steamos-manager` could serve with
   `xbps-install -Su` behind it

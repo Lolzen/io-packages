@@ -73,7 +73,7 @@ Newer than SteamOS 3.8.4 and ported as well: `holo-upower-config`,
 | `inputplumber` | Installed on SteamOS 3.8.4 but not running on the Deck |
 | `galileo-mura` | Steam Deck OLED only |
 | `lib32-gamescope` | Void builds gamescope for 64 bit only, so 32-bit Vulkan games run without gamescope's WSI layer. Worth checking whether a game notices |
-| `dirlock` | Not looked at yet |
+| `dirlock` | Encryption of the home directory with fscrypt, experimental and opt-in in SteamOS 3.8 (a PAM module unlocks it at login). Not ported: it would need a look at Io's PAM chain and SDDM's autologin first |
 | `holo-keyring`, `holo-nix-offload`, `holo-nfs-utils-tmpfiles` | pacman keys, Nix store, NFS: nothing Io needs |
 
 ---
