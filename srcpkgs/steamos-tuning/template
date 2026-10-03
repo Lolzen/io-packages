@@ -1,7 +1,7 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
 version=1.2
-revision=3
+revision=4
 depends="util-linux"
 short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, swap file, X11 screen size"
 maintainer="Georg <funer@gmx.at>"
@@ -27,7 +27,7 @@ homepage="https://github.com/Lolzen/io-packages"
 #     which linux-neptune-72 follows from revision 4).
 #
 # 61-io-hibernate-guard.sh is Io's own: hibernation is allowed only when / is
-# on the internal NVMe (see the file). Valve's suspend-then-hibernate itself
+# on the internal NVMe and the kernel command line has resume= (see the file). Valve's suspend-then-hibernate itself
 # follows with installing to the NVMe, where it can be tested.
 # Not included on purpose:
 #   20-panic-sysctls.conf, 21-steamos-panic-sysctls.conf - reboot on kernel
