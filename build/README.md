@@ -61,9 +61,7 @@ labelled `IOESP` and `IOROOT` like an Io card; the recovery drive's are
 
 ## Status
 
-- `mkrootfs.sh` and `mkimg.sh`: in use. `compare-images.sh` compares two
-  images file by file (packages, capabilities, configuration, ESP) when the
-  pipeline changes.
+- `mkrootfs.sh` and `mkimg.sh`: in use.
 - Recovery image: build and boot it; **do not install** with it yet.
   Installing to the internal SSD is a later milestone (it wipes SteamOS,
   the reference until then).
