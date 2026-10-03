@@ -1,0 +1,9 @@
+#!/bin/sh
+# io-repair - "Repair Io" on the recovery desktop. A placeholder for repair
+# tools to come; for now it lists the disks.
+set -eu
+printf 'Io repair tools are not implemented yet.\n\n'
+printf 'Block devices:\n\n'
+lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS,MODEL,TRAN
+printf '\nPress Enter to close.\n'
+read -r _

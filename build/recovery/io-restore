@@ -1,0 +1,151 @@
+#!/bin/sh
+# io-restore - install Io from the recovery image's payload onto a whole
+# disk. EVERYTHING on that disk is lost.
+#
+# Usage: io-restore [--yes] /dev/nvme0n1
+#   --yes   skip the confirmation (io-install has asked already)
+#
+# Refuses the disk the recovery system runs from, and any disk with a
+# mounted partition or active swap. The installed system gets fstab by
+# UUID, a machine-id of its own, a fresh initramfs, and GRUB both as an
+# NVRAM entry and at the removable path as a fallback.
+set -eu
+
+SRC=${IO_PAYLOAD:-/recovery/io-rootfs.tar.zst}
+MNT=/mnt/io-restore
+
+die() { printf 'io-restore: %s\n' "$*" >&2; exit 1; }
+
+cleanup() {
+  set +e
+  umount -R "$MNT" 2>/dev/null
+}
+trap cleanup EXIT
+trap 'cleanup; exit 130' INT TERM HUP
+
+YES=0
+if [ "${1:-}" = --yes ]; then YES=1; shift; fi
+DST=${1:-}
+
+[ "$(id -u)" -eq 0 ] || die "must run as root"
+[ -n "$DST" ] || die "usage: io-restore [--yes] /dev/nvme0n1"
+# /dev/disk/by-id/... and the like: work with the kernel name from here on.
+DST=$(readlink -f "$DST")
+[ -b "$DST" ] || die "not a block device: $DST"
+[ -f "$SRC" ] || die "no payload $SRC"
+[ "$(lsblk -dno TYPE "$DST")" = disk ] || die "$DST is not a whole disk"
+
+disk_of() { lsblk -nsrpo NAME,TYPE -- "$1" 2>/dev/null | awk '$2 == "disk" { print $1; exit }'; }
+OWN=$(disk_of "$(findmnt -nvo SOURCE /)")
+[ -n "$OWN" ] || die "cannot tell which disk the recovery system runs from"
+[ "$(readlink -f "$DST")" != "$(readlink -f "$OWN")" ] || die "$DST is the disk the recovery system runs from"
+# lsblk run on its own: in a pipe its failure would read as "nothing
+# mounted".
+MOUNTED=$(lsblk -nrpo MOUNTPOINTS "$DST") || die "lsblk failed for $DST"
+if [ -n "$(printf '%s' "$MOUNTED" | tr -d '[:space:]')" ]; then
+  lsblk -o NAME,MOUNTPOINTS "$DST" >&2
+  die "partitions of $DST are mounted; unmount them first"
+fi
+NAMES=$(lsblk -nrpo NAME "$DST") || die "lsblk failed for $DST"
+for p in $NAMES; do
+  real=$(readlink -f "$p")
+  if grep -q -e "^$p " -e "^$real " /proc/swaps; then die "$p is in use as swap"; fi
+done
+
+if [ "$YES" != 1 ]; then
+  lsblk -o NAME,SIZE,MODEL,FSTYPE,LABEL "$DST"
+  echo "WARNING: ALL DATA ON $DST WILL BE DESTROYED."
+  printf 'Continue? [y/N] '
+  read -r ANSWER
+  case "$ANSWER" in y|Y|yes|YES|Yes) ;; *) echo "aborted"; exit 1 ;; esac
+fi
+
+echo "== partitioning $DST (IOESP + IOROOT)"
+wipefs -a -q "$DST"
+sgdisk --zap-all "$DST" > /dev/null
+sgdisk -n 1:0:+512M -t 1:ef00 -c 1:"IOESP" "$DST" > /dev/null
+sgdisk -n 2:0:0 -t 2:8300 -c 2:"IOROOT" "$DST" > /dev/null
+udevadm settle 2>/dev/null || sleep 2
+# The kernel has to take the new table; if something still holds an old
+# partition, mkfs would write within the old boundaries.
+blockdev --rereadpt "$DST" || partprobe "$DST" || die "the kernel did not take the new partition table of $DST (something still uses it)"
+udevadm settle 2>/dev/null || sleep 2
+# Partition names from the kernel, not built from the disk's name.
+ESP_PART=""; ROOT_PART=""
+for p in $(lsblk -nrpo NAME,TYPE "$DST" | awk '$2 == "part" { print $1 }'); do
+  case "$(lsblk -no PARTLABEL "$p")" in
+    IOESP) ESP_PART=$p ;;
+    IOROOT) ROOT_PART=$p ;;
+  esac
+done
+[ -b "$ESP_PART" ] || die "no IOESP partition on $DST after partitioning"
+[ -b "$ROOT_PART" ] || die "no IOROOT partition on $DST after partitioning"
+# And the kernel's idea of where they are must match the new table
+# (compared in bytes: sysfs counts 512-byte sectors, sgdisk the disk's
+# logical sectors).
+SS=$(blockdev --getss "$DST")
+for n in 1 2; do
+  [ "$n" = 1 ] && p=$ESP_PART || p=$ROOT_PART
+  want=$(sgdisk -i "$n" "$DST" | awk '/First sector:/ { print $3 }')
+  have=$(cat "/sys/class/block/$(basename "$p")/start")
+  [ $((want * SS)) = $((have * 512)) ] || die "$p is not where the new table puts it"
+done
+
+echo "== formatting"
+mkfs.vfat -F32 -n IOESP "$ESP_PART" > /dev/null
+# 1 % reserved for root instead of ext4's 5 %, which would be about 25 GB
+# on a 512 GB drive.
+mkfs.ext4 -q -F -m 1 -L IOROOT "$ROOT_PART"
+
+echo "== unpacking the system"
+mkdir -p "$MNT"
+mount "$ROOT_PART" "$MNT"
+# Before the ESP is mounted: tar would try to set owner and mode on the
+# vfat mount point. --xattrs-include='*' keeps file capabilities.
+tar --zstd --xattrs --xattrs-include='*' --acls --numeric-owner -xf "$SRC" -C "$MNT"
+mkdir -p "$MNT/boot/efi"
+mount "$ESP_PART" "$MNT/boot/efi"
+
+echo "== configuring"
+ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART")
+ESP_UUID=$(blkid -s UUID -o value "$ESP_PART")
+[ -n "$ROOT_UUID" ] && [ -n "$ESP_UUID" ] || die "no filesystem UUIDs"
+cat > "$MNT/etc/fstab" << EOF
+UUID=$ROOT_UUID  /          ext4  defaults              0 1
+UUID=$ESP_UUID  /boot/efi  vfat  defaults,noatime      0 2
+tmpfs  /tmp  tmpfs  defaults,nosuid,nodev  0 0
+EOF
+
+# Every installation from the same payload would otherwise share one
+# machine-id.
+ID=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+printf '%s\n' "$ID" > "$MNT/etc/machine-id"
+if [ -e "$MNT/var/lib/dbus/machine-id" ] || [ -L "$MNT/var/lib/dbus/machine-id" ]; then
+  rm -f "$MNT/var/lib/dbus/machine-id"
+  ln -s /etc/machine-id "$MNT/var/lib/dbus/machine-id"
+fi
+
+# rbind for /sys: efivarfs is mounted below it, and grub-install needs it
+# for the NVRAM entry.
+for d in dev sys; do mount --rbind "/$d" "$MNT/$d"; mount --make-rslave "$MNT/$d"; done
+for d in proc run; do mount --bind "/$d" "$MNT/$d"; done
+
+# The newest kernel, as GRUB boots it by default.
+KVER=$(ls "$MNT/usr/lib/modules" | sort -V | tail -n 1)
+[ -n "$KVER" ] || die "no kernel modules found in the installed system"
+echo "== generating initramfs for $KVER"
+chroot "$MNT" dracut --force --kver "$KVER" "/boot/initramfs-${KVER}.img"
+
+echo "== installing bootloader"
+# An NVRAM entry, so the firmware boots Io from this disk by default, as
+# SteamOS's own entry did; and the removable path as a fallback for
+# firmware that drops or ignores the entry.
+if ! chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Io; then
+  echo "io-restore: no NVRAM entry written; the removable path below still boots" >&2
+fi
+chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Io --removable --no-nvram
+[ -f "$MNT/boot/efi/EFI/BOOT/BOOTX64.EFI" ] || die "no EFI loader written"
+chroot "$MNT" grub-mkconfig -o /boot/grub/grub.cfg
+
+sync
+echo "== installation complete"

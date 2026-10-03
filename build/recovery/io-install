@@ -1,0 +1,30 @@
+#!/bin/sh
+# io-install - "Install Io" on the recovery desktop: pick a disk, confirm,
+# and let io-restore install Io onto it.
+set -eu
+
+pause() { printf '\nPress Enter to close.\n'; read -r _; }
+trap pause EXIT
+
+printf '\nIo Recovery - Install\n\n'
+
+disk_of() { lsblk -nsrpo NAME,TYPE -- "$1" 2>/dev/null | awk '$2 == "disk" { print $1; exit }'; }
+OWN=$(disk_of "$(findmnt -nvo SOURCE /)")
+
+# Whole disks only, without the one the recovery system runs from.
+printf 'Disks Io can be installed on:\n\n'
+lsblk -dpno NAME,SIZE,MODEL,TRAN,TYPE | awk -v own="$OWN" '$NF == "disk" && $1 != own && $1 !~ /zram/'
+printf '\nEnter the target disk (for example /dev/nvme0n1): '
+read -r TARGET
+
+[ -n "$TARGET" ] || { echo "no target selected" >&2; exit 1; }
+[ -b "$TARGET" ] || { echo "not a block device: $TARGET" >&2; exit 1; }
+
+printf '\nSelected target:\n\n'
+lsblk -o NAME,SIZE,MODEL,FSTYPE,LABEL "$TARGET"
+printf '\nThis will ERASE EVERYTHING on %s. Type yes to continue: ' "$TARGET"
+read -r ANSWER
+[ "$ANSWER" = yes ] || { echo "aborted"; exit 1; }
+
+sudo /usr/sbin/io-restore --yes "$TARGET"
+printf '\nInstallation finished. Remove the recovery drive before rebooting.\n'

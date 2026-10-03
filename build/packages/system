@@ -1,0 +1,9 @@
+# Packages of the Io system (mkrootfs.sh). io-desktop pulls in everything.
+io-desktop
+# Also in io-desktop's depends; listed here too so a rootfs built against an
+# older io-desktop still gets them. Without these the running system has no
+# persistent xbps.d entry for nonfree/multilib - the -R flags of the build
+# only cover the install itself, not updates on the device.
+void-repo-nonfree
+void-repo-multilib
+void-repo-multilib-nonfree

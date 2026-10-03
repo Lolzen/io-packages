@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Repair Io
+Comment=Inspect the system and recovery tools
+Exec=konsole -e /usr/sbin/io-repair
+Icon=applications-system
+Terminal=false
+Categories=System;
