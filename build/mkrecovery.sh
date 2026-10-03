@@ -46,6 +46,37 @@ build_recovery_rootfs() {
   make_users "$REC_ROOTFS" "$REC_USER" "$ROOTHASH" "$USERHASH" "$REC_GROUPS"
   verify_passwords "$REC_ROOTFS" "$REC_USER"
 
+  # amdgpu in the initramfs, as io-base does for Io: the Deck's display
+  # needs it from the start.
+  mkdir -p "$REC_ROOTFS/etc/dracut.conf.d"
+  printf '%s\n' 'hostonly=no' 'force_drivers+=" amdgpu "' > "$REC_ROOTFS/etc/dracut.conf.d/10-io-recovery.conf"
+
+  if [ -n "$REC_WIFI_SSID" ]; then
+    log "adding Wi-Fi network $REC_WIFI_SSID"
+    _nm="$REC_ROOTFS/etc/NetworkManager/system-connections"
+    mkdir -p "$_nm"
+    cat > "$_nm/recovery-wifi.nmconnection" << EOF_NM
+[connection]
+id=recovery-wifi
+type=wifi
+autoconnect=true
+
+[wifi]
+ssid=$REC_WIFI_SSID
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk=$REC_WIFI_PSK
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=auto
+EOF_NM
+    chmod 600 "$_nm/recovery-wifi.nmconnection"
+  fi
+
   log "configuring passwordless sudo"
   mkdir -p "$REC_ROOTFS/etc/sudoers.d"
   printf '%s ALL=(ALL) NOPASSWD: ALL\n' "$REC_USER" > "$REC_ROOTFS/etc/sudoers.d/iorecovery"
