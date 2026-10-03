@@ -1,0 +1,66 @@
+# Template file for 'gamescope-wsi'
+#
+# Gamescope's Vulkan WSI layer for 32-bit games, SteamOS's lib32-gamescope.
+# Void builds gamescope for 64 bit only. Without the layer a 32-bit Vulkan
+# game (32-bit DXVK, so most D3D9 to D3D11 Windows games) presents through
+# Xwayland: Steam's frame rate limit does not apply to it, and it gets no
+# direct scanout (bypass) and no HDR.
+#
+# Built for i686 only; xbps-src turns that into gamescope-wsi-32bit for the
+# x86_64 multilib repository, which is what Io installs:
+#   ./xbps-src -A i686 pkg gamescope-wsi     (build.sh does this)
+# lib32mode=full keeps the layer's JSON; its library_path names /usr/lib,
+# where lib32symlinks puts a link to the library in /usr/lib32.
+#
+# Keep version and subproject hashes in step with Void's gamescope: the
+# layer talks to gamescope over its private Wayland protocols.
+pkgname=gamescope-wsi
+version=3.16.30
+revision=1
+_glm_hash=0af55ccecd98d4e5a8d1fad7de25ba429d60e863
+_stb_hash=5736b15f7ea0ffb08dd38af21067c314d6a3aae9
+_vkroots_hash=5106d8a0df95de66cc58dc1ea37e69c99afc9540
+archs="i686"
+build_style=meson
+configure_args="-Denable_gamescope=false -Denable_gamescope_wsi_layer=true
+ -Denable_openvr_support=false -Denable_tests=false -Denable_zenity=false
+ -Dpipewire=disabled"
+hostmakedepends="pkg-config wayland-devel"
+makedepends="libX11-devel libxcb-devel vulkan-loader-devel wayland-devel
+ wayland-protocols"
+short_desc="Gamescope's Vulkan WSI layer (for 32-bit games)"
+maintainer="Georg <funer@gmx.at>"
+license="BSD-2-Clause, BSD-3-Clause, MIT"
+homepage="https://github.com/ValveSoftware/gamescope"
+distfiles="https://github.com/ValveSoftware/gamescope/archive/refs/tags/${version}.tar.gz
+ https://github.com/g-truc/glm/archive/${_glm_hash}.tar.gz
+ https://github.com/nothings/stb/archive/${_stb_hash}.tar.gz
+ https://github.com/Joshua-Ashton/vkroots/archive/${_vkroots_hash}.tar.gz"
+checksum="e85b06cfa0fce1f7609bb3a691911029b1014bc6014f5d20dc9fbeac80a3d628
+ e7f187d83523f505eb38dd25d297ea6c0d4ed856d733e808f18253f5a8fa88a0
+ d00921d49b06af62aa6bfb97c1b136bec661dd11dd4eecbcb0da1f6da7cedb4c
+ 37b77586e91f7ebee70380dcddd73bf01ae4acef1053e6be41d0485ede022422"
+skip_extraction="${_glm_hash}.tar.gz
+ ${_stb_hash}.tar.gz
+ ${_vkroots_hash}.tar.gz"
+lib32mode=full
+lib32symlinks="libVkLayer_FROG_gamescope_wsi_x86.so"
+
+post_extract() {
+	vsrcextract -C subprojects/glm "${_glm_hash}.tar.gz"
+	cp subprojects/packagefiles/glm/meson.build subprojects/glm
+	vsrcextract -C subprojects/stb "${_stb_hash}.tar.gz"
+	cp subprojects/packagefiles/stb/meson.build subprojects/stb
+	vsrcextract -C subprojects/vkroots "${_vkroots_hash}.tar.gz"
+}
+
+post_install() {
+	vlicense LICENSE
+	# Only the layer: gamescope's scripts and looks (installed by an
+	# install script even without gamescope) and vkroots' header belong
+	# to the gamescope package.
+	rm -rf ${DESTDIR}/usr/share/gamescope
+	rm -f ${DESTDIR}/usr/include/vkroots.h
+	rm -f ${DESTDIR}/usr/lib/pkgconfig/vkroots.pc
+	rmdir --ignore-fail-on-non-empty ${DESTDIR}/usr/include ${DESTDIR}/usr/lib/pkgconfig 2>/dev/null || true
+}

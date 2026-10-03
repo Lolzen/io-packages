@@ -12,6 +12,10 @@
 #
 # Subpackages (linux-neptune-72-headers, ...) are symlinks to their main
 # package in srcpkgs/; naming one copies the main package as well.
+#
+# A package with archs="i686" (gamescope-wsi) is built in an i686 masterdir
+# (xbps-src -A i686, created on first use); xbps-src turns it into
+# <name>-32bit for the x86_64 multilib repository, which publish.sh takes.
 
 set -eu
 
@@ -58,7 +62,11 @@ done
 
 cd "$VP_DIR"
 for pkg in "$@"; do
-    ./xbps-src pkg "$pkg"
+    if grep -q '^archs="i686"' "srcpkgs/$pkg/template"; then
+        ./xbps-src -A i686 pkg "$pkg"
+    else
+        ./xbps-src pkg "$pkg"
+    fi
 done
 
 if [ "$PUBLISH" = 1 ]; then

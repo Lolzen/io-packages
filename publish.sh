@@ -61,6 +61,12 @@ pkgname_of() {
     xbps-uhelper getpkgname "${b%.*}" 2> /dev/null || true
 }
 
+# Packages built for i686 only (archs="i686") are published as their
+# -32bit package from the multilib directory, never as the i686 package.
+is_lib32() { grep -q '^archs="i686"' "$SRCPKGS/$1/template" 2> /dev/null; }
+pubname() { if is_lib32 "$1"; then echo "$1-32bit"; else echo "$1"; fi; }
+bindir() { if is_lib32 "$1"; then echo "$BINPKGS/multilib"; else echo "$BINPKGS"; fi; }
+
 # newest file of package $2 in directory $1 (x86_64 or noarch)
 newest_in() {
     for f in "$1/$2"-[0-9]*.xbps; do
@@ -86,7 +92,7 @@ fi
 echo "== collecting"
 : > "$TMP/new.txt"
 for pkg in $COLLECT; do
-    src=$(newest_in "$BINPKGS" "$pkg")
+    src=$(newest_in "$(bindir "$pkg")" "$(pubname "$pkg")")
     if [ -z "$src" ]; then
         echo "  $pkg: not built, skipping"
         continue
@@ -105,7 +111,7 @@ done
 echo "== pruning"
 : > "$TMP/keep.txt"
 for pkg in $ALL; do
-    f=$(newest_in "$PUBDIR" "$pkg")
+    f=$(newest_in "$PUBDIR" "$(pubname "$pkg")")
     [ -n "$f" ] && echo "${f##*/}" >> "$TMP/keep.txt"
 done
 for f in "$PUBDIR"/*.xbps; do
