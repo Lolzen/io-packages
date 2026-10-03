@@ -69,3 +69,4 @@ elogind
 polkit
 dbus
 efibootmgr
+socklog-void
