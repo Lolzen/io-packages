@@ -1,7 +1,7 @@
 #!/bin/sh
-# compare-images.sh - compare two Io images file by file: an io.img from
-# ../mkimg.sh and one from mkimg.sh here. Nothing is written to either
-# image (mounted read-only).
+# compare-images.sh - compare two Io images file by file, e.g. before and
+# after a change to the build. Nothing is written to either image (mounted
+# read-only).
 #
 # Usage: sudo ./compare-images.sh OLD.img NEW.img [OUTDIR]
 # Results in OUTDIR (default /tmp/imgcmp): one diff per aspect, and a

@@ -1,7 +1,9 @@
 # Io build scripts (rootfs, image, recovery)
 
-The successor of `../mkimg.sh`, which stays until both produce the same
-system. The build has two steps:
+How Io's images are built (this replaced the single `mkimg.sh` in the
+repository's top directory after an image built both ways came out the
+same, apart from fstab by UUID and the xbps cache left out). The build has
+two steps:
 
 ```
 mkrootfs.sh ──► io-rootfs.tar.zst ──┬──► mkimg.sh ──────► io.img
@@ -57,8 +59,9 @@ labelled `IOESP` and `IOROOT` like an Io card; the recovery drive's are
 
 ## Status
 
-- `mkrootfs.sh` and `mkimg.sh`: to replace `../mkimg.sh` once an image built
-  with them matches one built the old way (`compare-images.sh`).
+- `mkrootfs.sh` and `mkimg.sh`: in use. `compare-images.sh` compares two
+  images file by file (packages, capabilities, configuration, ESP) when the
+  pipeline changes.
 - Recovery image: build and boot it; **do not install** with it yet.
   Installing to the internal SSD is a later milestone (it wipes SteamOS,
   the reference until then).

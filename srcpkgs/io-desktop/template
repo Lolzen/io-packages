@@ -10,7 +10,7 @@ metapackage=yes
 # elogind).
 provides="base-system-9999_1"
 replaces="base-system>=0"
-# mkimg.sh installs only this package, so everything the finished system
+# build/mkrootfs.sh installs only this package, so everything the system
 # runs must be reachable from here - either listed directly or pulled in by
 # one of the packages below.
 depends="
