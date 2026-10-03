@@ -27,7 +27,7 @@ its reason.
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
 | Steam Deck LCD (Jupiter) only | LCD and OLED (Galileo) | No OLED hardware to test with |
-| Disk image written with `dd` | Recovery image with installer | Fixed hardware, nothing for an installer to ask. Self-built live ISOs do not boot yet (they stop in dracut's emergency shell; cause not found) |
+| Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
 | SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the test phase. Images for 1.0 will follow SteamOS |
@@ -45,7 +45,10 @@ its reason.
   `plasma.desktop`: it runs Io's session setup (PipeWire, the filter chain,
   Steam's DPI setting) before Plasma, which SteamOS does through user
   services. `SessionManagement1` accepts Plasma's session names and maps
-  them to it.
+  them to it. Because it reports this one session, Steam's developer page
+  shows a session menu with one entry instead of *Use Legacy X11 Desktop
+  Mode* (shown only for exactly `plasma.desktop` and `plasmax11.desktop`);
+  Io has no X11 desktop session.
 - **gamescope starts Steam as its child.** SteamOS runs gamescope and Steam
   as two systemd units and passes the display names through a startup socket
   (`-R`); Io does not need it. The statistics pipe (`-T`) is set as on
@@ -134,11 +137,28 @@ the session bus that Steam talks to.
   instead of systemd's `zram-generator`, with Valve's values: half of RAM,
   zstd, priority 100, zswap off. Valve's 1 GiB swap file is switched on by
   a core service instead of `swapfile.service` and `home-swapfile.swap`.
-- **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
-  core service writes elogind's `sleep.conf.d`). Suspend-then-hibernate is
-  not set up yet.
+- **Hibernation is allowed only with `/` on the internal NVMe and `resume=`
+  on the kernel command line** (Io's own core service writes elogind's
+  `sleep.conf.d`); without a resume path a hibernated session would be
+  lost. SteamOS 3.8.4 switches hibernation off altogether ("disabled for
+  3.8.x cycle"); Valve's newer configuration allows hibernation and
+  suspend-then-hibernate again (delay 20 minutes, counted only on battery).
+  Not set up on Io yet.
+- **No Proton nice limit**, as on SteamOS 3.8.4, where Valve's
+  `15-proton-nice.conf` sat in a directory `pam_limits` does not read.
+  Valve fixed the path in August 2026 (`* hard nice -8` in
+  `/etc/security/limits.d`); a candidate for Io.
+- **Firmware comes from Void's `linux-firmware` packages**, not Valve's
+  `linux-firmware-neptune`. Every file the LCD needs is there, but some
+  differ: Valve ships its own Realtek Bluetooth firmware
+  (`rtl_bt/rtl8822cu_fw.bin`, `rtl8822cu_config.bin`), which Valve's
+  wake-on-Bluetooth kernel patch needs (with Void's, it most likely logs
+  "Failed to enable wake-on-bluetooth"; not checked on the Deck yet); and 8
+  of the 11 `amdgpu/vangogh_*` files differ from Valve's (mostly newer),
+  among them a `vangogh_vcn.bin` that AMD withdrew again in September 2026
+  (video decoding with older Mesa, e.g. in Flatpaks).
 - **Time sync through chrony**: Void has no `systemd-timesyncd`.
-- **Hostname `io`** (SteamOS: `steamdeck`), set by `mkimg.sh`.
+- **Hostname `io`** (SteamOS: `steamdeck`), set by the image build (`build/`).
 - **earlyoom** runs with Valve's full argument set; its `--avoid` list names
   runit's processes instead of systemd.
 - **`tmpfiles.d` rules** from Valve's packages are boot-time core services
@@ -159,8 +179,10 @@ the session bus that Steam talks to.
 
 - **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration`
   tree; SteamOS 3.8.4 runs 6.16. The configuration is Void's as the base,
-  Valve's full configuration and `config-neptune` on top, then a few Io
-  overrides, each with its reason — see [Kernel](Kernel).
+  Valve's in-tree CI configuration and `config-neptune` on top, then a few Io
+  overrides, each with its reason — see [Kernel](Kernel). Open: Valve's
+  package builds from a different full configuration than the one Io
+  takes from the tree (133 options apart, see [Kernel](Kernel)).
 - **Kernel command line** matches SteamOS except `fbcon=rotate:1` instead of
   `fbcon=vc:4-6` (see *Login and sessions*), no `console=tty1`, and none of
   the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
@@ -169,6 +191,26 @@ the session bus that Steam talks to.
 - **No reboot on kernel panic.** SteamOS's panic sysctls are left out during
   the alpha phase: Valve pairs them with a crash log submitter, and without
   one a frozen device is more useful for debugging.
+
+---
+
+## Graphics
+
+- **Mesa is Void's** (26.2.x), not Valve's (radeonsi 25.3.0 with one Valve
+  patch, RADV from Valve's `steamos-25.11.12` branch). Missing as a result:
+  - Valve's frame limiter for OpenGL through gamescope
+    (`GAMESCOPE_LIMITER_FILE`, DRI3): **OpenGL games most likely ignore
+    Steam's FPS limit** (from Mesa's source; to be confirmed with a game).
+    Vulkan games are limited through gamescope's WSI layer.
+  - RADV's game fixes that only exist in Valve's branch: NGG culling off
+    for *No Rest for the Wicked*, `vk_x11_override_min_image_count=4` for
+    *Forza Horizon 5*.
+
+  Why: Io would have to rebuild Mesa, with its 32-bit build, on every Void
+  update; the gain does not justify that (decided 2026-10-03).
+- **gamescope's WSI layer for 32-bit games** is Io's `gamescope-wsi-32bit`,
+  built from gamescope's source (SteamOS: `lib32-gamescope`). Void builds
+  gamescope for 64 bit only.
 
 ---
 
@@ -241,7 +283,7 @@ the session bus that Steam talks to.
   `systemd-run`, and has nothing to do while Io boots from the card).
 - **`steamos-priv-write`** gives the written files to the `wheel` group
   instead of `deck`, so that it keeps working with another user name
-  (`USERNAME` in `mkimg.sh`) or when a user sets up an account of their
+  (`USERNAME` of the image build) or when a user sets up an account of their
   own, and logs through `logger`.
 - **`xdg-desktop-portal-gamescope`** no longer aborts when there is no
   journald to log to.
@@ -328,6 +370,9 @@ dock firmware updates, factory reset (`steamos-reset`), controller firmware
 updates, the crash log submitter, Valve's nested desktop (Plasma inside game
 mode), formatting drives from Steam (prepared, see *Storage*), and the VRAM
 priority for the foreground game (`dmemcg-booster`, `kcgroups`,
-`plasma-foreground-booster`: driven by systemd's units and slices). The dock
+`plasma-foreground-booster`: driven by systemd's units and slices; decided
+not to implement on 2026-10-03: `dmemcg-booster` protects the user's
+`app.slice` and `user@` service against the system, session and
+background slices, and on Io nothing else competes for VRAM in game mode). The dock
 updater is a stub that tells Steam the dock is up to date. The full list,
 package by package, is on [SteamOS packages](Valve-Package-Survey).

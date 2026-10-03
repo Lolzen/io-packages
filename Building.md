@@ -35,6 +35,13 @@ changed behaviour) raises the version and resets the revision to 1;
 packaging-only changes raise the revision. Ported packages keep their
 upstream version. 1.0 is reserved for the beta.
 
+**32-bit packages:** a template with `archs="i686"` (today
+`gamescope-wsi`) is built by `build.sh` in an i686 masterdir
+(`xbps-src -A i686`, created on first use). xbps-src's 32-bit hook turns the
+result into `<name>-32bit` in `binpkgs/multilib`, and `publish.sh` publishes
+that package, never the i686 one. The template sets `lib32mode=full` and
+names the libraries to link with `lib32symlinks`.
+
 Large sources can be put into `xbps-src`'s cache beforehand to avoid a second
 download, e.g. `steam-jupiter`'s 428 MB archive into
 `~/void-packages/hostdir/sources/steam-jupiter-<version>/`.
@@ -92,17 +99,46 @@ ones should come from the local repository. Once the test passes,
 See [Kernel](Kernel): the configuration is reviewed on every update before
 the kernel is built.
 
-## Building an image
+## Building images
+
+The scripts are in `build/` (details in its `README.md`; settings in
+`build/config/`, package lists in `build/packages/`). Two steps:
 
 ```
-sudo ~/io-packages/mkimg.sh
+build/mkrootfs.sh ──► io-rootfs.tar.zst ──┬──► build/mkimg.sh ──────► io.img
+                                          └──► build/mkrecovery.sh ─► recovery.img
 ```
 
-Builds `/home/gee/io.img` (16 GiB) from the published repository: partitions,
-installs `io-desktop`, creates the user, enables services, installs GRUB and
-the initramfs. Options through the environment: `SIZE=24G`, `OUT=...`,
-`USERNAME`, `USERPASS`, `ROOTPASS`, `HOSTNAME`, `TIMEZONE` (default `UTC`;
-Steam sets the user's zone).
+```
+sudo build/mkrootfs.sh --clean
+sudo build/mkimg.sh
+sudo build/mkrecovery.sh
+```
+
+- **`mkrootfs.sh`** installs `io-desktop` from the published repository
+  into a directory (`/home/gee/io-build/io-rootfs`), sets up locales, users,
+  services and GRUB's defaults with Io's kernel command line, and packs it
+  with every xattr and ACL (file capabilities included). What depends on
+  the disk is left out of the tarball. The xbps cache and the root's shell
+  history are removed before packing.
+- **`mkimg.sh`** writes the tarball into `/home/gee/io.img` (16 GiB) and
+  adds what depends on the disk: fstab by UUID, the initramfs, GRUB in
+  removable mode.
+- **`mkrecovery.sh`** builds the recovery stick (see
+  [Installation](Installation)): a Void system with Plasma, the tarball
+  inside, its size worked out from the contents.
+- **`--clean`** removes the script's own earlier results, nothing else:
+  `mkrootfs.sh` the rootfs and tarball, `mkimg.sh` the image,
+  `mkrecovery.sh` the recovery rootfs and image. Without it the scripts ask
+  before reusing one; a kept root is updated before the package list is
+  installed.
+- **`BUILD_ROOTFS=1`** makes `mkimg.sh` or `mkrecovery.sh` run `mkrootfs.sh`
+  first; `BUILD_ROOTFS=clean` runs it with `--clean`.
+- **`TRIM=1`** shrinks an image to its contents plus a margin (2 GiB for
+  `io.img`, the free space until the user expands the storage).
+- Other settings through the environment, as in `build/config/system.conf`:
+  `SIZE`, `OUT`, `USERNAME`, `USERPASS`, `ROOTPASS`, `HOSTNAME`,
+  `TIMEZONE` (default `UTC`; Steam sets the user's zone).
 
 `deck` is the default user, as on SteamOS. With another `USERNAME`, three
 places still name `deck` and have to be changed by hand: SDDM's autologin
@@ -111,7 +147,7 @@ places still name `deck` and have to be changed by hand: SDDM's autologin
 (`/usr/lib/hwsupport/steamos-automount.sh`, which stops without a user
 `deck`). A package update puts all three back.
 
-Write it to a card (replace `sdX`; check with `lsblk` first):
+Write an image to a card (replace `sdX`; check with `lsblk` first):
 
 ```
 sudo dd if=/home/gee/io.img of=/dev/sdX bs=4M status=progress conv=fsync
@@ -143,12 +179,12 @@ start at which each boot stage began.
 | `io-boottime.sh` | Boot stage timing, see above |
 | `mountsd.sh /dev/sdX` | Mount an Io card on the build host and prepare a chroot for repairs |
 | `pkgcheck.sh` | Report new or changed packages on Valve's source mirror |
-| `mklogo.py` | Generates the ASCII logo |
+| `mklogo.py` | Generates the ASCII logo (source of `io-branding`'s `io.txt`) |
 
 ## Release workflow
 
 1. The milestone's items done, or left open on [Milestones](Milestones)
-2. Fresh image built, written to a spare card, booted, storage grown,
+2. Fresh image built (`build/`), written to a spare card, booted, storage grown,
    `io-selftest.sh` passes
 3. The release page written (see [Changelog](Changelog)): goal,
    highlights, changes by area, known limitations; done items removed from

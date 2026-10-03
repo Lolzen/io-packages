@@ -30,7 +30,7 @@ previous with the kernel's own `merge_config.sh`:
 | Order | File | What it is |
 |---|---|---|
 | 1 | `files/x86_64-dotconfig` | Void's configuration for its `linux7.2` package: the base, so that every option Valve's files do not mention gets Void's value |
-| 2 | `ci/kernel-config/neptune/config` (from the patch) | Valve's full configuration for this tree, about 12,500 lines, as Valve's CI builds it (generated from Arch's configuration; its header still reads 6.18.9-arch1) |
+| 2 | `ci/kernel-config/neptune/config` (from the patch) | Valve's in-tree full configuration, about 12,500 lines, as Valve's CI builds it (generated from Arch's configuration; its header still reads 6.18.9-arch1). Valve's package uses a different file, see *Open* below |
 | 3 | `files/config-neptune` | Valve's Deck fragment (about 150 lines) |
 | 4 | `files/config-io` | Io's own overrides, each with its reason |
 
@@ -43,6 +43,17 @@ relies on, such as `CGROUP_DMEM` and transparent huge pages set to
 for revision 4 left 24 differences: toolchain values (compiler and
 assembler versions, Rust), a number of built-in-versus-module choices, and
 the overrides below.
+
+**Open (found 2026-10-03):** Valve's own `linux-neptune-72` PKGBUILD does
+not build from layer 2. It copies `config.x86_64` (Arch's configuration,
+7.1.5, shipped next to the PKGBUILD) and merges `config-neptune` over it;
+the file in the tree is older. Against Valve's actual build, Io's
+configuration differs in 133 options, mostly drivers for other hardware
+switched off, but also transparent huge pages for shmem and tmpfs (`never`
+instead of `advise`). With `config.x86_64` as layer 2, 9 differences remain:
+`config-io` and two options from Void's base. To be decided with the next
+kernel update (Valve has 7.2.7.valve1; `config.x86_64` and `config-neptune`
+are unchanged between 7.2.4 and 7.2.7).
 
 ### Io's overrides (`config-io`)
 
@@ -90,7 +101,7 @@ systemd does:
 
 ## Kernel command line
 
-Set by `mkimg.sh`. It matches SteamOS except where [Deviations](Deviations)
+Set by the image build (`build/mkrootfs.sh`, GRUB's defaults). It matches SteamOS except where [Deviations](Deviations)
 (*Kernel*) says otherwise.
 
 ---
@@ -100,6 +111,10 @@ Set by `mkimg.sh`. It matches SteamOS except where [Deviations](Deviations)
 - **HDMI-CEC through the dock:** the configuration is complete
   (`CEC_CORE`, `DRM_DISPLAY_HDMI_CEC_NOTIFIER_HELPER`,
   `DRM_DISPLAY_DP_AUX_CEC`); a test needs a dock that passes CEC through
-- **VRAM priority for the foreground game:** `CGROUP_DMEM` is on now, as on
-  SteamOS. Valve's `dmemcg-booster` uses it but depends on systemd's units
-  and slices; Io would need its own way (see [Milestones](Milestones))
+- **Wake-on-Bluetooth:** Valve's patch for the LCD's Realtek controller is
+  in; it most likely needs Valve's own Bluetooth firmware, which Void's
+  packages do not have (dmesg: `wake-on-bluetooth enabled` or `Failed to enable
+  wake-on-bluetooth`; see [Deviations](Deviations), *System services*)
+
+`CGROUP_DMEM` is on, as on SteamOS; Valve's `dmemcg-booster` that uses it
+is not ported (decided, see [Deviations](Deviations)).

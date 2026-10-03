@@ -2,7 +2,7 @@
 
 All packages live in [io-packages/srcpkgs](https://github.com/Lolzen/io-packages/tree/main/srcpkgs)
 and are published to the [io-repo](https://github.com/Lolzen/io-repo/releases/tag/current)
-release. `io-desktop` pulls in everything; `mkimg.sh` installs nothing
+release. `io-desktop` pulls in everything; the image build installs nothing
 else. Differences to Valve's originals are listed in [Deviations](Deviations).
 
 ## Io's own
@@ -49,6 +49,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `cecd` | `cecd` 0.2.0 | Valve's HDMI-CEC daemon, as on SteamOS 3.8.4; group rules for `/dev/cec*` and `/dev/uinput` |
 | `cec-audio-control` | `cec-audio-control` 0.1.0 | TV volume and mute over HDMI-CEC for PipeWire |
 | `steamos-devkit-service` | `steamos-devkit-service` 0.20250916.0 | Service for the SteamOS Devkit Client; mDNS through Avahi (patch); runit service |
+| `gamescope-wsi` (published as `gamescope-wsi-32bit`) | gamescope 3.16.30 (SteamOS: `lib32-gamescope`) | gamescope's Vulkan WSI layer for 32-bit games (frame limiter, bypass, HDR), built for i686; only the layer, not gamescope |
 
 ## From elsewhere
 

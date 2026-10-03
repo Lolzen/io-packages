@@ -187,6 +187,30 @@ it with the login, so each session starts its own. When testing audio
 configuration changes by hand, start a new session; a cold boot is the
 reliable way.
 
+**Steam shows *Use Legacy X11 Desktop Mode* only for exactly two desktop
+sessions.** Its developer page reads `SessionManagement1`'s session list:
+when it is exactly `plasma.desktop` and `plasmax11.desktop`, Steam shows the
+X11 switch, otherwise a session menu (or nothing for an empty list). It has
+nothing to do with gamescope. Io reports its one session,
+`io-desktop.desktop`.
+
+**Steam's developer *Speaker Test* only sends a counter** to the client's
+audio controller (`AudioDevices.UpdateSomething`); it looks like a
+placeholder. The real speaker test is per channel
+(`PlaySpeakerTestOnChannel`). Still to compare once on SteamOS.
+
+**Void's `sddm` run script needs elogind's D-Bus activation file.** It asks
+D-Bus to start `org.freedesktop.login1` (`dbus-send ... StartServiceByName`)
+under `set -e`. Io removes that file (elogind runs as a runit service), so
+the request fails and the service ends every second without starting SDDM.
+Io and the recovery stick run SDDM through services of their own
+(`io-sddm`, `io-recovery-sddm`).
+
+**Starting a second SDDM by hand can freeze the display** while the
+service's instance is retrying or running: on the recovery stick the screen
+stayed frozen until a reboot (seen once). Look at the service's log
+instead.
+
 ---
 
 ## Packaging (xbps-src)
@@ -242,7 +266,7 @@ never on the target at install time. Code for install time goes into
 
 **`xbps-install -r` runs the packages' `INSTALL` scripts chrooted, but
 without `/proc`, `/dev` and `/sys`** unless they are bind-mounted first.
-`mkimg.sh` runs `xbps-reconfigure -a` after the mounts (configures whatever
+The image build (`build/`) runs `xbps-reconfigure -a` after the mounts (configures whatever
 was left unconfigured, as void-mklive does); a script that needs the
 pseudo file systems has to be forced with `xbps-reconfigure -f`.
 
@@ -276,6 +300,21 @@ tar"`, or it fails with `tar: command not found`.
 **A pasted heredoc write or append can arrive incomplete.** Happened three
 times (PipeWire configuration, kernel configuration fragment); long pasted
 lines get cut at about 120 characters. `cat` the file after writing it.
+
+**GNU tar restores only `user.*` xattrs unless told otherwise.** File
+capabilities (for example `cap_net_raw` on iputils' `ping`) are stored with
+`--xattrs`, but lost on unpacking without `--xattrs-include='*'`. The image
+build uses `--xattrs --xattrs-include='*' --acls --numeric-owner` on both
+sides.
+
+**The xbps cache ends up in an image** unless it is emptied: a root built
+with `xbps-install -r` keeps every downloaded package in
+`var/cache/xbps` (2.6 GB in Io's image before the image build removed it).
+
+**Building for 32-bit needs its own masterdir.** `xbps-src -A i686`
+builds natively for i686 in `masterdir-i686`; the 32-bit hook
+(`lib32mode=full`, `lib32symlinks`) turns the result into `<name>-32bit`
+in `binpkgs/multilib`. Publishing the i686 package itself would be wrong.
 
 ---
 
@@ -437,6 +476,11 @@ sizes the keyboard for 1280 pixels and then enlarges it. Steam's own
 setting fixes it (`DPIScaling` 0 in `~/.steam/registry.vdf`);
 `STEAM_FORCE_DESKTOPUI_SCALING` does not.
 
+**KWin's on-screen keyboard opens only on touch input.** With Maliit set as
+input method (`kwinrc`: `[Wayland] InputMethod`), tapping a text field with
+a finger opens it; a click with the trackpad or R2 does not. On the
+recovery stick: tap into the terminal window once to type.
+
 ---
 
 ## Audio
@@ -532,6 +576,28 @@ cards) stays disabled until Io runs from the internal SSD.
 **Valve's `python<3.14` constraints were too conservative** and have been
 relaxed upstream.
 
+**Valve's Proton nice limit had no effect on SteamOS 3.8.4.**
+`15-proton-nice.conf` (`* hard nice -8`) was installed to `/etc/limits.d`,
+which `pam_limits` does not read; Valve moved it to
+`/etc/security/limits.d` in August 2026. A capture of 3.8.4 therefore shows
+no such limit.
+
+**Valve's version strings do not always sort by date.** Versions such as
+`jupiter.20260504.1` or `3.8.20260807.1` sort below plain dates
+(`20230217`) in pacman's version comparison: the newest build of a package
+is not always the "highest" version. Compare by date or by branch.
+
+**Valve's kernel package does not build from the configuration in its own
+tree.** The PKGBUILD uses `config.x86_64` (Arch's configuration) plus
+`config-neptune`; `ci/kernel-config/neptune/config` in the tree is older
+(see [Kernel](Kernel)).
+
+**Valve's source mirror does not list every package name.** Split
+packages (`-headers`, `-debug`) and a few others (`steamfs-git`) appear
+only in the binary repositories' databases
+(`archlinux-mirror/<repo>/os/x86_64/<repo>.db`). A name check should read
+those.
+
 ---
 
 ## Shell and tools
@@ -547,3 +613,7 @@ type** (`rxvt-unicode-256color`). Use `--no-pager`.
 
 **Wildcards are expanded by your own shell before `sudo` runs.** For paths
 only root can list, run the whole command under `sudo sh -c '...'`.
+
+**Root cannot log in with a password over SSH.** OpenSSH's default
+`PermitRootLogin prohibit-password` refuses it even with the right
+password; log in as the user and use `sudo`.

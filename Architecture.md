@@ -17,7 +17,7 @@ behind each difference, see [Deviations](Deviations).
    - `20-fstab-repair.sh` — comments out invalid SD card lines in fstab
    - `60-io-swapfile.sh` — Valve's 1 GiB swap file in `/home`
    - `61-io-hibernate-guard.sh` — hibernation allowed only with `/` on the
-     internal NVMe
+     internal NVMe and `resume=` on the kernel command line
    - `70-io-cfs-tunings.sh` — mounts debugfs, applies Valve's scheduler tunings
    - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
 4. **runit stage 2** starts the services linked in `/var/service`, among them
@@ -44,7 +44,7 @@ for `deck` into game mode, and a fresh login whenever a session ends
 (`Relogin=true`), as on SteamOS. The login runs through PAM and elogind, so
 each session is a real session on `seat0`; the memlock limit for the filter
 chain comes from `/etc/security/limits.d/90-io-memlock.conf`, for the
-`audio` group (`mkimg.sh` puts the user in it).
+`audio` group (the image build puts the user in it).
 
 - **Steam** is started through `steam-jupiter`, Valve's Deck wrapper: it
   keeps Steam on the `steamdeck_stable` branch, adds `-steamdeck -pipewire`,
