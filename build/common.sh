@@ -154,6 +154,18 @@ install_pkgfile() {
   xbps_root -S -r "$1" $_pkgs
 }
 
+# BUILD_ROOTFS=1 runs mkrootfs.sh first, BUILD_ROOTFS=clean runs it with
+# --clean. The calling script's own --clean is not passed on: it removes
+# only that script's results, never the system rootfs or its tarball.
+maybe_build_rootfs() {
+  case "${BUILD_ROOTFS:-0}" in
+    0) ;;
+    1) log "building rootfs tarball first"; "$SCRIPT_DIR/mkrootfs.sh" ;;
+    clean) log "building rootfs tarball first (clean)"; "$SCRIPT_DIR/mkrootfs.sh" --clean ;;
+    *) die "BUILD_ROOTFS=$BUILD_ROOTFS: use 1 or clean" ;;
+  esac
+}
+
 # Configure any package the install step left unconfigured, now that /dev,
 # /proc and /sys are there (normally none; void-mklive runs the same step).
 chroot_reconfigure() {

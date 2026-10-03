@@ -7,7 +7,9 @@
 #
 # Usage:
 #   sudo ./mkimg.sh                      io.img from the existing tarball
-#   sudo BUILD_ROOTFS=1 ./mkimg.sh       run mkrootfs.sh first
+#   sudo BUILD_ROOTFS=1 ./mkimg.sh       run mkrootfs.sh first (clean: with
+#                                        --clean); --clean here only
+#                                        removes io.img, never the rootfs
 #   sudo SIZE=24G ./mkimg.sh             larger image
 #   sudo TRIM=1 ./mkimg.sh               shrink to the contents plus
 #                                        TRIM_MARGIN_MB (see system.conf)
@@ -64,14 +66,7 @@ pack_system_image() {
   own_workdir "$WORKDIR"
 }
 
-if [ "${BUILD_ROOTFS:-0}" = 1 ]; then
-  log "building rootfs tarball first"
-  if [ "$CLEAN_BUILD" = 1 ]; then
-    "$SCRIPT_DIR/mkrootfs.sh" --clean
-  else
-    "$SCRIPT_DIR/mkrootfs.sh"
-  fi
-fi
+maybe_build_rootfs
 require_tarball "$ROOTFS_TARBALL"
 confirm_existing "$OUT" "system image"
 pack_system_image

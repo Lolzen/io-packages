@@ -34,11 +34,13 @@ sudo ./mkimg.sh
 sudo ./mkrecovery.sh
 ```
 
-- `--clean` removes the earlier result first. Without it the scripts ask
-  before reusing one; a kept root is updated (`xbps-install -Su`) before the
-  package list is installed, so no old package slips into the tarball.
+- `--clean` removes the script's own earlier results first, nothing else:
+  `mkrootfs.sh` the system rootfs and tarball, `mkimg.sh` io.img,
+  `mkrecovery.sh` the recovery rootfs and recovery.img. Without it the
+  scripts ask before reusing one; a kept root is updated (`xbps-install
+  -Su`) before the package list is installed, so no old package slips in.
 - `BUILD_ROOTFS=1` makes `mkimg.sh` or `mkrecovery.sh` run `mkrootfs.sh`
-  first.
+  first, `BUILD_ROOTFS=clean` runs it with `--clean`.
 - `TRIM=1` shrinks an image to its contents plus `TRIM_MARGIN_MB` (2 GB for
   `io.img`: until the user expands the storage, that is all the free space
   there is).

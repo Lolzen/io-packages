@@ -7,6 +7,10 @@
 #   sudo ./mkrecovery.sh                     reuse existing roots (asks)
 #   sudo ./mkrecovery.sh --clean             clean rebuild
 #   sudo BUILD_ROOTFS=1 ./mkrecovery.sh      run mkrootfs.sh first
+#   sudo BUILD_ROOTFS=clean ./mkrecovery.sh  the same with --clean
+#
+# --clean removes only the recovery's own rootfs and image, never the
+# system rootfs or its tarball (that is mkrootfs.sh --clean).
 #
 # A plain ext4 root instead of a live ISO: self-built void-mklive ISOs stop
 # in dracut's emergency shell, and a recovery system that can be written to
@@ -141,14 +145,7 @@ construct_recovery_image() {
   own_workdir "$WORKDIR"
 }
 
-if [ "${BUILD_ROOTFS:-0}" = 1 ]; then
-  log "building rootfs tarball first"
-  if [ "$CLEAN_BUILD" = 1 ]; then
-    "$SCRIPT_DIR/mkrootfs.sh" --clean
-  else
-    "$SCRIPT_DIR/mkrootfs.sh"
-  fi
-fi
+maybe_build_rootfs
 # Checked before the long recovery rootfs build, not after it.
 require_tarball "$ROOTFS_TARBALL"
 confirm_existing "$OUT" "recovery image"
