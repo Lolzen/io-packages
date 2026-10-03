@@ -136,7 +136,8 @@ RULES=/usr/lib/udev/rules.d
 ROOTDISK=$($HW/io-root-disk)
 info "Io runs from: ${ROOTDISK:-unknown}"
 check "root disk can be worked out" test -n "$ROOTDISK"
-check "automount rule active (no systemd-run)" sh -c "! grep -q systemd-run $RULES/99-steamos-automount.rules && grep -q '^ACTION==.add' $RULES/99-steamos-automount.rules"
+# Only rule lines count: the file's comment names systemd-run too.
+check "automount rule active (no systemd-run)" sh -c "! grep -v '^#' $RULES/99-steamos-automount.rules | grep -q systemd-run && grep -q '^ACTION==.add' $RULES/99-steamos-automount.rules"
 check "automount detached from udev (io-detach)" sh -c "test -x $HW/io-detach && grep -q io-detach $RULES/99-steamos-automount.rules"
 check "udisks2 installed" xbps-query udisks2
 check "Steam may eject and adopt drives (game mode)" grep -q "^export STEAM_ALLOW_DRIVE_ADOPT=1" /usr/bin/io-gamemode
@@ -166,7 +167,7 @@ echo "== package database"
 xbps-pkgdb -a > /tmp/io-selftest-pkgdb.txt 2>&1
 N=$(grep -c ERROR /tmp/io-selftest-pkgdb.txt)
 info "xbps-pkgdb: $N error line(s), details in /tmp/io-selftest-pkgdb.txt"
-info "expected: elogind activation file (removed on purpose), base-files os-release (Io branding)"
+info "expected: elogind activation file (removed on purpose), base-files os-release and lsb_release (Io branding)"
 grep ERROR /tmp/io-selftest-pkgdb.txt | sed 's/^/      /'
 
 echo
