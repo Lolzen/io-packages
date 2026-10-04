@@ -4,6 +4,8 @@
 # Usage:
 #   ./build.sh io-session io-base      copy and build these packages
 #   ./build.sh -p io-session io-base   same, then publish them
+#   ./publish.sh io-session io-base    publish only (already built), e.g.
+#                                      after a run that stopped half-way
 #
 # xbps-src builds inside a chroot that only sees the void-packages tree, so
 # the templates are copied, not symlinked: a symlink pointing into
