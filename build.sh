@@ -11,7 +11,8 @@
 # so files deleted in io-packages do not linger in void-packages.
 #
 # Subpackages (linux-neptune-72-headers, ...) are symlinks to their main
-# package in srcpkgs/; naming one copies the main package as well.
+# package in srcpkgs/; naming one copies the main package as well, and
+# copying a main package copies its subpackage links.
 #
 # A package with archs="i686" (gamescope-wsi) is built in an i686 masterdir
 # (xbps-src -A i686, created on first use); xbps-src turns it into
@@ -46,6 +47,15 @@ copy_pkg() {
     rm -rf "$VP_DIR/srcpkgs/$1"
     cp -a "$IO_DIR/srcpkgs/$1" "$VP_DIR/srcpkgs/$1"
     echo "copied: $1"
+    # xbps-src needs the subpackage links next to the main package
+    # (srcpkgs/<subpkg> -> <main>), or it stops with "nonexistent file".
+    for link in "$IO_DIR"/srcpkgs/*; do
+        [ -L "$link" ] || continue
+        [ "$(readlink "$link")" = "$1" ] || continue
+        rm -rf "$VP_DIR/srcpkgs/${link##*/}"
+        cp -a "$link" "$VP_DIR/srcpkgs/${link##*/}"
+        echo "copied: ${link##*/} -> $1"
+    done
 }
 
 for pkg in "$@"; do
