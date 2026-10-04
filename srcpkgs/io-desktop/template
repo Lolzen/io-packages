@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=35
+revision=36
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to linux-neptune-72 and does not
@@ -12,7 +12,9 @@ provides="base-system-9999_1"
 replaces="base-system>=0"
 # build/mkrootfs.sh installs only this package, so everything the system
 # runs must be reachable from here - either listed directly or pulled in by
-# one of the packages below.
+# one of the packages below. The IBus engines and the Noto CJK fonts at the
+# end serve the Chinese, Japanese and Korean layouts of Steam's on-screen
+# keyboard, as on SteamOS.
 depends="
  base-files ncurses coreutils findutils diffutils libgcc dash bash grep gzip
  file sed gawk less util-linux which tar man-pages mdocml shadow e2fsprogs
@@ -47,6 +49,9 @@ depends="
 
  kde-plasma konsole dolphin kate ark gwenview okular spectacle kdeconnect
  partitionmanager plasma-keyboard xdg-desktop-portal-gtk kio-extras kdialog octoxbps
+
+ ibus ibus-pinyin ibus-table-cangjie-lite ibus-anthy-jupiter ibus-hangul
+ noto-fonts-cjk
 "
 short_desc="Io meta package: complete Steam Deck game mode system"
 maintainer="Georg <funer@gmx.at>"

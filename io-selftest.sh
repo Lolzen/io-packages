@@ -108,6 +108,7 @@ check "Steam open-file hard limit 524288" sh -c 'prlimit --nofile -o HARD --nohe
 check "LIBVA_DRIVER_NAME=radeonsi for Steam" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^LIBVA_DRIVER_NAME=radeonsi'
 check "STEAM_USE_WPASUPPLICANT set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_USE_WPASUPPLICANT=1'
 check "ibus-daemon running for Steam's keyboard" sh -c 'pgrep -u deck -f "ibus-daemon -r --panel=disable"'
+check "IBus engines for Steam's CJK layouts" sh -c 'for c in pinyin table anthy hangul; do [ -e /usr/share/ibus/component/$c.xml ] || exit 1; done; [ -e /usr/share/ibus-table/tables/cangjie5.db ]'
 check "STEAM_ENABLE_VOLUME_HANDLER set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_VOLUME_HANDLER=1'
 check "STEAM_ENABLE_DYNAMIC_BACKLIGHT set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_DYNAMIC_BACKLIGHT=1'
 check "rtkit-daemon running" pgrep -x rtkit-daemon
