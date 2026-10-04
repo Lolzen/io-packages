@@ -1,0 +1,45 @@
+# Template file for 'pyzy'
+pkgname=pyzy
+version=1.1
+revision=1
+_commit=5ac51d833777a881e80f0b23d704345cf0feb0d0
+wrksrc="${pkgname}"
+build_style=gnu-configure
+configure_args="--disable-static"
+# android.db is built with a "set -o pipefail" pipeline (data/db/android).
+make_build_args="SHELL=/bin/bash"
+hostmakedepends="git tar autoconf automake libtool pkg-config glib-devel
+ python3 sqlite"
+makedepends="glib-devel sqlite-devel libuuid-devel"
+short_desc="Chinese PinYin and Bopomofo conversion library"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://github.com/openSUSE/pyzy"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/${pkgname}-${version}-2.6.src.tar.gz"
+checksum=02e960ae6a05821e92096266b0bc03d666b545ca391bf9d6801e54f238b894c4
+
+# Valve's pyzy (jupiter-3.9 1.1-2.6, as on SteamOS 3.9.2): openSUSE's tree at
+# the commit above. Needed by ibus-pinyin, the engine behind the "pinyin"
+# and "bopomofo" layouts of Steam's on-screen keyboard. The dictionary
+# (android.db) is generated from the raw data in the tree; the open-phrase
+# database, which would be downloaded, stays off (default, as Valve's).
+# Valve runs gnome-common's autogen.sh; Void has no gnome-common, and
+# autoreconf does the same.
+
+post_extract() {
+	git --git-dir=${pkgname} archive --format=tar ${_commit} | tar -x
+}
+
+pre_configure() {
+	autoreconf -fi -I m4
+}
+
+pyzy-devel_package() {
+	depends="${sourcepkg}>=${version}_${revision} glib-devel"
+	short_desc+=" - development files"
+	pkg_install() {
+		vmove usr/include
+		vmove usr/lib/pkgconfig
+		vmove "usr/lib/*.so"
+	}
+}

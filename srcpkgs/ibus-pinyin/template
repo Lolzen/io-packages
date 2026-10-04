@@ -1,0 +1,34 @@
+# Template file for 'ibus-pinyin'
+pkgname=ibus-pinyin
+version=1.5.1
+revision=1
+build_style=gnu-configure
+configure_args="--with-python=/usr/bin/python3"
+hostmakedepends="autoconf automake libtool pkg-config intltool gettext
+ python3 sqlite"
+makedepends="ibus-devel pyzy-devel sqlite-devel lua54-devel libuuid-devel"
+depends="ibus python3-gobject pyzy>=1.1_1"
+# libpyzy comes from Io's pyzy, which Void's common/shlibs does not know;
+# the dependency is given above instead.
+allow_unknown_shlibs=yes
+short_desc="Pinyin and Bopomofo (Chinese) input method for IBus"
+maintainer="Georg <funer@gmx.at>"
+license="GPL-2.0-or-later"
+homepage="https://github.com/ibus/ibus-pinyin"
+distfiles="https://github.com/ibus/ibus-pinyin/archive/refs/tags/${version}.tar.gz"
+checksum=3e971567b72dae4b08b710fd1471bff34f58814df2aa74e97ed386590df3c5db
+
+# As SteamOS 3.9.2 (Valve's jupiter-3.9 ibus-pinyin 1.5.1-2.4, same upstream
+# archive): Steam's on-screen keyboard asks IBus for the engines "pinyin" and
+# "bopomofo" by name and writes ibus-pinyin's own settings (engine/pinyin,
+# engine/bopomofo). Void's ibus-libpinyin has other engine names and keys.
+# Valve runs gnome-common's autogen.sh; autoreconf does the same here.
+# configure looks for lua.pc or lua5.1.pc and silently builds without the
+# Lua extension if neither exists; Void's lua54 has lua5.4.pc, so the flags
+# are passed in directly.
+
+pre_configure() {
+	autoreconf -fi -I m4
+	export LUA_CFLAGS="$(${PKG_CONFIG:-pkg-config} --cflags lua5.4)"
+	export LUA_LIBS="$(${PKG_CONFIG:-pkg-config} --libs lua5.4)"
+}
