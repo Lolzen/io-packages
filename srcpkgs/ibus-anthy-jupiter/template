@@ -1,0 +1,39 @@
+# Template file for 'ibus-anthy-jupiter'
+pkgname=ibus-anthy-jupiter
+version=1.5.14
+revision=1
+_commit=0962741856498bc9d197be0713b2fae1879c29ba
+wrksrc="ibus-anthy"
+build_style=gnu-configure
+build_helper=gir
+configure_args="--with-python=python3 --with-layout=default"
+hostmakedepends="git tar automake libtool pkg-config gettext gettext-devel-tools
+ ibus"
+makedepends="anthy-unicode-devel ibus-devel python3-gobject-devel"
+depends="ibus python3-gobject"
+provides="ibus-anthy-${version}_${revision}"
+replaces="ibus-anthy>=0"
+short_desc="Japanese input method Anthy for IBus (Valve's fork)"
+maintainer="Georg <funer@gmx.at>"
+license="GPL-2.0-or-later"
+homepage="https://github.com/bjj/ibus-anthy"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/ibus-anthy-${version}-4.5.src.tar.gz"
+checksum=3252e4e3050924c2cb294796d37db7f35b179182eb4fe0de9ffa032ecd9b3990
+
+# Valve's ibus-anthy (jupiter-3.9 1.5.14-4.5, as on SteamOS 3.9.2): 1.5.14 plus
+# six commits not upstream - page up/down and number keys in prediction mode,
+# and the settings show-lut-on-convert and behavior-on-select-candidate, which
+# Steam's on-screen keyboard writes for its "anthy" layout. They do not apply
+# to Void's 1.5.16, so this is Valve's tree under its own name, replacing
+# Void's ibus-anthy (an Io package of the same name would never be picked:
+# xbps takes a package from the first repository that has it, and Void's
+# repository comes first). Built against anthy-unicode as Void's ibus-anthy;
+# Valve's uses the older anthy.
+
+post_extract() {
+	git --git-dir=ibus-anthy archive --format=tar ${_commit} | tar -x
+}
+
+pre_configure() {
+	autoreconf -fi
+}
