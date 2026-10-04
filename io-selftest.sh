@@ -30,6 +30,8 @@ fi
 echo "== system"
 info "kernel $(uname -r)"
 check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
+check "Valve's Bluetooth firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "RTL: fw version 0x3d7679d7"'
+check "Valve's VCN firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "Found VCN firmware Version ENC: 1.27 DEC: 2"'
 check "kernel.pid_max = 4194304" sh -c '[ "$(sysctl -n kernel.pid_max)" = 4194304 ]'
 # systemd's defaults (50-io-inherited.conf); ufw must not override them
 check "rp_filter 2 (loose, as SteamOS)" sh -c '[ "$(sysctl -n net.ipv4.conf.default.rp_filter)" = 2 ]'
@@ -42,6 +44,7 @@ check "kwin_wayland file capability (realtime threads)" sh -c 'getcap /usr/bin/k
 echo "== packages"
 # Split in two lists only to keep the lines short.
 P1="io-desktop io-base io-branding io-session io-steamos-manager linux-neptune-72 deck-hw-support linux-firmware"
+P1="$P1 deck-firmware"
 P1="$P1 jupiter-fan-control steamos-powerbuttond steamdeck-dsp rnnoise-ladspa holo-zram-swap holo-earlyoom"
 P1="$P1 steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-desktop-portal-gamescope rtkit"
 P2="socklog-void kde-plasma steam-jupiter steam-im-modules steamdeck-kde-presets vpower holo-upower-config"

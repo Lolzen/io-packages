@@ -1,0 +1,37 @@
+# Template file for 'deck-firmware'
+pkgname=deck-firmware
+version=20260910.1
+revision=1
+short_desc="Steam Deck LCD firmware files as SteamOS has them (VCN, Bluetooth)"
+maintainer="Georg <funer@gmx.at>"
+license="custom:AMD, custom:Realtek"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9"
+
+# The three firmware files of Valve's linux-firmware-neptune (tag
+# jupiter-20260910.1, SteamOS 3.9.2) the Deck LCD loads in a different
+# version from Void's linux-firmware. Everything else the LCD needs is the
+# same in both. The files are in files/, taken from Valve's source archive
+# (1.1 GB, too large to download for three files):
+#   amdgpu/vangogh_vcn.bin - the video engine firmware of 2025-03 (SteamOS:
+#     VCN ENC 1.27 DEC 2). Void's 20260810 has AMD's newer one, which AMD
+#     itself withdrew on 2026-09-14 because of a Mesa VA-API bug.
+#   rtl_bt/rtl8822cu_fw.bin, rtl_bt/rtl8822cu_config.bin - Realtek's
+#     Bluetooth firmware for the Deck ("wake-on-Bluetooth fixed", fw
+#     0x3d7679d7) and Valve's 10-byte config; Void has upstream's 0x2b66d962
+#     and a link to an empty generic config.
+# They go to /usr/lib/firmware/updates, which the kernel searches before
+# /usr/lib/firmware, uncompressed, which it tries before Void's .zst files,
+# so no file of Void's packages is replaced. amdgpu loads from the
+# initramfs: dracut takes the files from updates/ as well, but only when it
+# rebuilds the initramfs (image build, kernel update, or
+# xbps-reconfigure -f linux-neptune-72).
+
+do_install() {
+	vmkdir usr/lib/firmware/updates/amdgpu
+	vinstall ${FILESDIR}/amdgpu/vangogh_vcn.bin 644 usr/lib/firmware/updates/amdgpu
+	vmkdir usr/lib/firmware/updates/rtl_bt
+	vinstall ${FILESDIR}/rtl_bt/rtl8822cu_fw.bin 644 usr/lib/firmware/updates/rtl_bt
+	vinstall ${FILESDIR}/rtl_bt/rtl8822cu_config.bin 644 usr/lib/firmware/updates/rtl_bt
+	vlicense ${FILESDIR}/LICENSE.amdgpu
+	vlicense ${FILESDIR}/LICENCE.rtlwifi_firmware.txt
+}
