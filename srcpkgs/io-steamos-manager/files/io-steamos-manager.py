@@ -436,7 +436,7 @@ class RootManager(ServiceInterface):
         if not d:
             _fail("no amdgpu power1_cap")
         # sustained and fast PPT limit: steamos-manager writes the same value
-        # to both (power.rs, set_tdp_limit, v26.1.0 as on SteamOS 3.8.4)
+        # to both (power.rs, set_tdp_limit; v26.1.0 on SteamOS 3.8.4, v26.4.1 on 3.9.2)
         for attr in ("power1_cap", "power2_cap"):
             if os.path.exists(f"{d}/{attr}"):
                 _write(f"{d}/{attr}", limit * 1000000)
@@ -455,14 +455,18 @@ class RootManager(ServiceInterface):
         _, lo, hi = read_od()
         if not lo <= clocks <= hi:
             _fail(f"GPU clock {clocks} outside {lo}..{hi}")
-        d = _gpu_dev()
-        level = f"{d}/power_dpm_force_performance_level"
-        if _read_file(level) != "manual":
-            _write(level, "manual")
-        od = f"{d}/pp_od_clk_voltage"
-        _write(od, f"s 0 {clocks}")
-        _write(od, f"s 1 {clocks}")
-        _write(od, "c")
+        # As steamos-manager (gpu.rs, set_clocks): write the clock and leave
+        # the performance level alone. The kernel takes it only in manual
+        # mode and answers EINVAL otherwise, which goes back to Steam as an
+        # error, as on SteamOS (Steam sets the clock at every start, also in
+        # auto mode).
+        od = f"{_gpu_dev()}/pp_od_clk_voltage"
+        try:
+            _write(od, f"s 0 {clocks}")
+            _write(od, f"s 1 {clocks}")
+            _write(od, "c")
+        except OSError as err:
+            _fail(f"Error setting manual GPU clock: {err}")
 
     @method()
     def SetGpuPowerProfile(self, value: "s"):
@@ -1150,42 +1154,6 @@ class HdmiCec1(ServiceInterface):
         self.emit_properties_changed({"HdmiCecState": read_cec_state()})
 
 
-# Audio mode (Steam's developer setting "Mono audio"): WirePlumber's own
-# setting, which downmixes every sink to mono; --save keeps it across
-# sessions and reboots.
-MONO_SETTING = "node.features.audio.mono"
-
-
-def read_audio_mode():
-    try:
-        out = subprocess.run(["wpctl", "settings", MONO_SETTING], capture_output=True,
-                             text=True, timeout=5, check=False).stdout
-    except (OSError, subprocess.TimeoutExpired):
-        return "stereo"
-    for line in out.splitlines():
-        if "Value:" in line:
-            return "mono" if line.split("Value:", 1)[1].strip().startswith("true") else "stereo"
-    return "stereo"
-
-
-class Audio1(ServiceInterface):
-    def __init__(self, root):
-        super().__init__(f"{IFACE}.Audio1")
-
-    @dbus_property()
-    def Mode(self) -> "s":
-        return read_audio_mode()
-
-    @Mode.setter
-    def Mode(self, value: "s"):
-        if value not in ("mono", "stereo"):
-            raise DBusError(ERR, f"unknown audio mode: {value}")
-        subprocess.run(["wpctl", "settings", "--save", MONO_SETTING,
-                        "true" if value == "mono" else "false"],
-                       capture_output=True, timeout=5, check=False)
-        self.emit_properties_changed({"Mode": read_audio_mode()})
-
-
 # Download mode, as steamos-manager: while Steam holds at least one handle,
 # the TDP limit is lowered to the Deck's download_mode_limit (Valve's
 # data/devices/steam-deck.toml in steamos-manager 26.1.0: 6 W) and restored
@@ -1420,7 +1388,7 @@ class GpuPerformanceLevel1(ServiceInterface):
     @ManualGpuClock.setter
     def ManualGpuClock(self, value: "u"):
         self.root.write("SetManualGpuClock", "u", [value], self,
-                        ["ManualGpuClock", "GpuPerformanceLevel"])
+                        ["ManualGpuClock"])
 
     @dbus_property(access=PropertyAccess.READ)
     def ManualGpuClockMin(self) -> "u":
@@ -1666,7 +1634,6 @@ USER_INTERFACES = (
     WifiPowerManagement1,
     WifiBackend1,
     LowPowerMode1,
-    Audio1,
     HdmiCec1,
     ScreenReader0,
     ScreenReader1,
