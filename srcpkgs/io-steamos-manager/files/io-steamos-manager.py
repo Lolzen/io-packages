@@ -429,6 +429,18 @@ class RootManager(ServiceInterface):
         pass
 
     @method()
+    def SetFanSpeed(self, rpm: "u"):
+        # As steamos-manager (hardware.rs, set_speed): the fan target of the
+        # Deck's steamdeck_hwmon, used by download mode.
+        d = _hwmon("steamdeck_hwmon")
+        if not d:
+            _fail("no steamdeck_hwmon")
+        try:
+            _write(f"{d}/fan1_target", rpm)
+        except OSError as err:
+            _fail(f"Error setting fan speed: {err}")
+
+    @method()
     def SetTdpLimit(self, limit: "u"):
         if not TDP_MIN <= limit <= TDP_MAX:
             _fail(f"TDP {limit} W outside {TDP_MIN}..{TDP_MAX}")
@@ -1278,10 +1290,12 @@ class HdmiCec2(ServiceInterface):
 
 
 # Download mode, as steamos-manager: while Steam holds at least one handle,
-# the TDP limit is lowered to the Deck's download_mode_limit (Valve's
-# data/devices/steam-deck.toml in steamos-manager 26.1.0: 6 W) and restored
-# when the last handle is closed.
+# the TDP limit is lowered to the Deck's download_mode_limit and the fan runs
+# at download_mode_fan_speed (Valve's data/devices/steam-deck.toml, 26.4.1:
+# 6 W, 2000 rpm; OS fan control is stopped first and started again at the
+# end, as power.rs does); both are restored when the last handle is closed.
 DOWNLOAD_MODE_TDP = 6
+DOWNLOAD_MODE_FAN_RPM = 2000
 
 
 class LowPowerMode1(ServiceInterface):
@@ -1293,6 +1307,7 @@ class LowPowerMode1(ServiceInterface):
         self.root = root
         self.handles = {}
         self.previous_tdp = None
+        self.restart_fan_control = False
 
     async def _update(self):
         if self.handles:
@@ -1301,10 +1316,23 @@ class LowPowerMode1(ServiceInterface):
                 log(f"download mode: TDP {self.previous_tdp} -> {DOWNLOAD_MODE_TDP} W")
             if read_tdp() != DOWNLOAD_MODE_TDP:
                 await self.root._call("SetTdpLimit", "u", [DOWNLOAD_MODE_TDP])
+            if read_fan_state() == 1:
+                log("download mode: stopping OS fan control")
+                await self.root._call("Set", "ssv", [ROOT_IFACE, "FanControlState",
+                                                     Variant("u", 0)],
+                                      iface="org.freedesktop.DBus.Properties")
+                self.restart_fan_control = True
+            await self.root._call("SetFanSpeed", "u", [DOWNLOAD_MODE_FAN_RPM])
         elif self.previous_tdp is not None:
             log(f"download mode ends: TDP back to {self.previous_tdp} W")
             await self.root._call("SetTdpLimit", "u", [self.previous_tdp])
             self.previous_tdp = None
+            if self.restart_fan_control:
+                log("download mode ends: OS fan control again")
+                await self.root._call("Set", "ssv", [ROOT_IFACE, "FanControlState",
+                                                     Variant("u", 1)],
+                                      iface="org.freedesktop.DBus.Properties")
+                self.restart_fan_control = False
 
     def _closed(self, fd, identifier):
         loop = asyncio.get_running_loop()
