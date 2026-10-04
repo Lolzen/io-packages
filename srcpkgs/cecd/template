@@ -1,7 +1,7 @@
 # Template file for 'cecd'
 pkgname=cecd
-version=0.2.0
-revision=2
+version=0.3.0
+revision=1
 wrksrc="cecd"
 build_wrksrc="src"
 build_style=cargo
@@ -14,8 +14,13 @@ homepage="https://gitlab.steamos.cloud/holo/linux-cec"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/cecd-0.3.0-2.src.tar.gz"
 checksum=17cbf7826e1596a5b68f7b6112cd08325455c91f5c81cea67d7c139f9f09d00f
 
-# cecd 0.2.0, the version of SteamOS 3.8.4, built from Valve's archive of
-# 0.3.0 (its git repository carries the 0.2.0 tag). On SteamOS it is a
+# cecd 0.3.0, the version of SteamOS 3.9.2, from Valve's source archive. New
+# in 0.3.0: the TV goes to standby when the Deck suspends (cecd holds a
+# logind sleep delay inhibitor, which elogind provides as well), cecd asks
+# whether it is the active source when it starts or wakes up
+# (request_active_source, on by default), and it no longer answers a Feature
+# Abort with another one; from 0.2.1 it reports its power status after
+# waking up. Config1 gained RequestActiveSource. On SteamOS it is a
 # systemd user service of the graphical session; Io's session scripts start
 # it through D-Bus activation (io-session), so there is one way it is
 # started and the bus keeps it to one instance; the service file runs it
@@ -24,7 +29,7 @@ checksum=17cbf7826e1596a5b68f7b6112cd08325455c91f5c81cea67d7c139f9f09d00f
 # io-steamos-manager (HdmiCec1) writes what steamos-manager writes.
 post_extract() {
 	mkdir -p src
-	git --git-dir=cecd-0.3.0 archive --format=tar cecd-0.2.0 | tar -x -C src
+	git --git-dir=cecd-0.3.0 archive --format=tar cecd-0.3.0 | tar -x -C src
 }
 
 do_install() {
