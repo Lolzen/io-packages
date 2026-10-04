@@ -1,6 +1,9 @@
-# Io's own settings on top of Void's base config, Valve's full neptune
-# config (ci/kernel-config/neptune/config from the linux-integration patch)
-# and config-neptune. Each line says why it differs from Valve's.
+# Io's own settings on top of Void's base config, Valve's config.x86_64 and
+# config-neptune (what SteamOS's linux-neptune-72 is built from). Each line
+# says why it differs from Valve's.
+# Not set because Io builds without Rust (xbps-src has no Rust toolchain in
+# the kernel build): Valve's Rust-only options, the Rust Binder (the C
+# Binder below takes its place) and the QR code on the panic screen.
 # Review on every kernel bump: compare Void, Valve and SteamOS and decide
 # per option (towards SteamOS, towards Void, or a deliberate Io choice).
 
@@ -13,7 +16,7 @@
 # CONFIG_MODULE_COMPRESS_ALL is not set
 # Arch-specific default; the real hostname comes from /etc/hostname.
 CONFIG_DEFAULT_HOSTNAME="(none)"
-# Towards SteamOS 3.8.4 (and Void): Binder for Android containers
-# (Waydroid). Valve's 7.2 CI config dropped it, SteamOS 3.8.4 has it.
+# Towards SteamOS (and Void): Binder for Android containers (Waydroid).
+# SteamOS 3.8.4 has the C Binder, 3.9.2 the Rust Binder, which needs Rust.
 CONFIG_ANDROID_BINDER_IPC=y
 CONFIG_ANDROID_BINDERFS=y

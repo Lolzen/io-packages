@@ -1,7 +1,7 @@
 # Template file for 'linux-neptune-72'
 pkgname=linux-neptune-72
-version=7.2.4
-revision=4
+version=7.2.7
+revision=1
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.2 series)"
 depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
@@ -15,7 +15,7 @@ if [ "${version##*.}" != 0 ]; then
 fi
 
 checksum="f9fef3d14c0df53819026f4be74459835c2a0b0dcbf5b5bbd9ea19f0829402b3
- 0299fed2ede06d36315caab88aa1c932862d76606683f6be6a45ff717117bc79"
+ 7d08d70146f0c81bfd529d97450044d356e774a93ae2ec041e7cd825f48b0695"
 python_version=3
 
 # XXX Restrict archs until a proper <arch>-dotconfig is available in FILESDIR.
@@ -76,15 +76,16 @@ post_patch() {
 
 do_configure() {
 	local arch=x86_64
-	# Layered config: Void's linux7.2 base (x86_64-dotconfig), then Valve's
-	# full neptune config as SteamOS builds it (ci/kernel-config/neptune/
-	# config, shipped in the linux-integration patch), then Valve's
-	# config-neptune fragment, then Io's own overrides (config-io, each with
-	# its reason). Options Valve's config does not know keep Void's value.
-	msg_normal "Using Void base, Valve's neptune config, config-neptune, config-io.\n"
+	# Layered config: Void's linux7.2 base (x86_64-dotconfig), then the
+	# config Valve's package builds SteamOS's kernel from (config.x86_64,
+	# Arch's 7.1.5 config, from the linux-neptune-72 source archive), then
+	# Valve's config-neptune fragment (both as Valve's PKGBUILD merges them),
+	# then Io's own overrides (config-io, each with its reason). Options
+	# Valve's config does not know keep Void's value.
+	msg_normal "Using Void base, Valve's config.x86_64, config-neptune, config-io.\n"
 	cp -f ${FILESDIR}/${arch}-dotconfig .config
 	chmod +x scripts/kconfig/merge_config.sh
-	scripts/kconfig/merge_config.sh -m .config ci/kernel-config/neptune/config
+	scripts/kconfig/merge_config.sh -m .config ${FILESDIR}/config.x86_64
 	scripts/kconfig/merge_config.sh -m .config ${FILESDIR}/config-neptune
 	scripts/kconfig/merge_config.sh -m .config ${FILESDIR}/config-io
 	make ${makejobs} ARCH=$arch ${_cross} olddefconfig
