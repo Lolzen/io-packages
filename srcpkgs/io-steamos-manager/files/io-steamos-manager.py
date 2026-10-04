@@ -1092,14 +1092,35 @@ class ScreenReader1(ServiceInterface):
         self.o.trigger(action)
 
 
-# HDMI-CEC, as steamos-manager: two files in cecd's configuration, the same
-# as on SteamOS 3.8.4 (captured): 00 names the device, 99 follows Steam's
-# switches. cecd keeps running in every state and reloads on SIGHUP.
-#   0 = off: wake_tv false, uinput false
-#   1 = CEC on: wake_tv false, uinput true (the TV remote drives Steam)
-#   2 = CEC on and "wake TV on resume": wake_tv true, uinput true (default)
+# HDMI-CEC, as steamos-manager (cec.rs, 26.4.1): two files in cecd's
+# configuration, the same as on SteamOS (captured on 3.8.4 and 3.9.2): 00
+# names the device, 99 holds Steam's switches. After a change cecd reloads
+# its configuration through its own D-Bus API (Config1.Reload); MakeActive
+# asks cecd to wake the TV and take the input (Daemon1.Wake).
+# The four switches of 99-steamos-manager.toml, in Valve's order:
+#   wake_tv        wake the TV when the Deck wakes
+#   suspend_tv     put the TV into standby when the Deck sleeps
+#   uinput         relay the TV remote to Steam ("enable control")
+#   allow_standby  let the TV's standby suspend the Deck
+# Valve rebuilds the file from the values cecd reports; Io keeps its own copy
+# in the file and changes one switch at a time, so two quick changes cannot
+# undo each other while cecd is still reloading.
+# HdmiCecState (HdmiCec1) as Valve maps it: 3 ("extended") when suspend_tv or
+# allow_standby is on, else 2 (control and wake), 1 (control only) or 0.
+# Without the file Io starts as before in state 2 (control and wake).
 CECD_CONF = os.path.expanduser("~/.config/cecd/config.d")
 CECD_IDENTITY = 'osd_name = "Steam Deck"\nvendor_id = "e0-31-9e"\n'
+CECD_RUNTIME = "99-steamos-manager.toml"
+CECD_KEYS = ("wake_tv", "suspend_tv", "uinput", "allow_standby")
+CECD_INITIAL = {"wake_tv": True, "suspend_tv": False, "uinput": True,
+                "allow_standby": False}
+# cecd's own defaults for a key the file does not set (its README)
+CECD_DEFAULTS = {"wake_tv": False, "suspend_tv": False, "uinput": True,
+                 "allow_standby": False}
+CECD_BUSNAME = "com.steampowered.CecDaemon1"
+CECD_PATH = "/com/steampowered/CecDaemon1/Daemon"
+# The session bus, for calls to cecd (set by run_user).
+SESSION_BUS = None
 
 
 def _cecd_write(name, text):
@@ -1116,42 +1137,144 @@ def _cecd_write(name, text):
     return True
 
 
-def read_cec_state():
+def read_cec_config():
     try:
-        with open(os.path.join(CECD_CONF, "99-steamos-manager.toml"), encoding="utf-8") as f:
+        with open(os.path.join(CECD_CONF, CECD_RUNTIME), encoding="utf-8") as f:
             text = f.read()
     except OSError:
-        return 2
-    uinput = "uinput = true" in text
-    wake = "wake_tv = true" in text
-    return 2 if (uinput and wake) else (1 if uinput else 0)
+        return dict(CECD_INITIAL)
+    config = dict(CECD_DEFAULTS)
+    for line in text.splitlines():
+        key, sep, value = line.partition("=")
+        key = key.strip()
+        if sep and key in CECD_KEYS:
+            config[key] = value.strip().lower() == "true"
+    return config
 
 
-def write_cec_state(state):
-    wake = "true" if state == 2 else "false"
-    uinput = "true" if state >= 1 else "false"
+async def _cecd_call(interface, member):
+    """One call to cecd on the session bus (D-Bus activation starts it)."""
+    if SESSION_BUS is None:
+        raise DBusError(ERR, "no session bus")
+    reply = await SESSION_BUS.call(Message(
+        destination=CECD_BUSNAME, path=CECD_PATH,
+        interface=f"{CECD_BUSNAME}.{interface}", member=member))
+    if reply.message_type == MessageType.ERROR:
+        text = reply.body[0] if reply.body else reply.error_name
+        raise DBusError(reply.error_name, text)
+
+
+async def _cecd_reload():
+    try:
+        await _cecd_call("Config1", "Reload")
+    except DBusError as err:
+        log(f"cecd reload failed: {err.text}")
+
+
+def write_cec_config(config):
+    """Write both files; ask cecd to reload when something changed."""
+    text = "".join(f"{k} = {'true' if config[k] else 'false'}\n" for k in CECD_KEYS)
     changed = _cecd_write("00-steamos-manager.toml", CECD_IDENTITY)
-    changed |= _cecd_write("99-steamos-manager.toml", f"wake_tv = {wake}\nuinput = {uinput}\n")
-    if changed:
-        subprocess.run(["pkill", "-HUP", "-u", str(os.getuid()), "-x", "cecd"], check=False)
+    changed |= _cecd_write(CECD_RUNTIME, text)
+    if changed and SESSION_BUS is not None:
+        task = asyncio.ensure_future(_cecd_reload())
+        _CEC_TASKS.add(task)
+        task.add_done_callback(_CEC_TASKS.discard)
+
+
+_CEC_TASKS = set()
+
+
+def cec_state(config):
+    if config["suspend_tv"] or config["allow_standby"]:
+        return 3
+    if config["uinput"]:
+        return 2 if config["wake_tv"] else 1
+    return 0
 
 
 class HdmiCec1(ServiceInterface):
     def __init__(self, root):
         super().__init__(f"{IFACE}.HdmiCec1")
         # Make sure cecd has both files, as steamos-manager does at session start.
-        write_cec_state(read_cec_state())
+        write_cec_config(read_cec_config())
 
     @dbus_property()
     def HdmiCecState(self) -> "u":
-        return read_cec_state()
+        return cec_state(read_cec_config())
 
     @HdmiCecState.setter
     def HdmiCecState(self, value: "u"):
-        if value not in (0, 1, 2):
+        if value not in (0, 1, 2, 3):
             raise DBusError(ERR, f"unknown HDMI-CEC state: {value}")
-        write_cec_state(value)
-        self.emit_properties_changed({"HdmiCecState": read_cec_state()})
+        # As Valve's set_enabled_state: 3 turns control on and the rest off.
+        write_cec_config({"wake_tv": value == 2, "uinput": value != 0,
+                          "suspend_tv": False, "allow_standby": False})
+        self.emit_properties_changed({"HdmiCecState": cec_state(read_cec_config())})
+
+
+class HdmiCec2(ServiceInterface):
+    """steamos-manager 26.4.1: Steam's CEC switches one by one (SteamOS 3.9.2's
+    Steam beta sets them from the power menu) and MakeActive. Waking the Deck
+    from the TV needs CEC wake hardware (a ChromeOS EC on Valve's newer
+    devices); the Deck LCD has none, as WakeDeviceSupported says."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.HdmiCec2")
+
+    def _set(self, key, value, prop):
+        config = read_cec_config()
+        config[key] = bool(value)
+        write_cec_config(config)
+        self.emit_properties_changed({prop: read_cec_config()[key]})
+
+    @dbus_property()
+    def EnableControl(self) -> "b":
+        return read_cec_config()["uinput"]
+
+    @EnableControl.setter
+    def EnableControl(self, value: "b"):
+        self._set("uinput", value, "EnableControl")
+
+    @dbus_property()
+    def SuspendTv(self) -> "b":
+        return read_cec_config()["suspend_tv"]
+
+    @SuspendTv.setter
+    def SuspendTv(self, value: "b"):
+        self._set("suspend_tv", value, "SuspendTv")
+
+    @dbus_property()
+    def SuspendDevice(self) -> "b":
+        return read_cec_config()["allow_standby"]
+
+    @SuspendDevice.setter
+    def SuspendDevice(self, value: "b"):
+        self._set("allow_standby", value, "SuspendDevice")
+
+    @dbus_property()
+    def WakeTv(self) -> "b":
+        return read_cec_config()["wake_tv"]
+
+    @WakeTv.setter
+    def WakeTv(self, value: "b"):
+        self._set("wake_tv", value, "WakeTv")
+
+    @dbus_property()
+    def WakeDevice(self) -> "b":
+        return False
+
+    @WakeDevice.setter
+    def WakeDevice(self, value: "b"):
+        raise DBusError(ERR, "HDMI CEC hardware not configured")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def WakeDeviceSupported(self) -> "b":
+        return False
+
+    @method()
+    async def MakeActive(self):
+        await _cecd_call("Daemon1", "Wake")
 
 
 # Download mode, as steamos-manager: while Steam holds at least one handle,
@@ -1644,6 +1767,7 @@ USER_INTERFACES = (
     WifiBackend1,
     LowPowerMode1,
     HdmiCec1,
+    HdmiCec2,
     ScreenReader0,
     ScreenReader1,
     Storage1,
@@ -1655,6 +1779,8 @@ async def run_user():
     # Unix fds: LowPowerMode1.EnterDownloadMode returns one.
     session = await MessageBus(bus_type=BusType.SESSION, negotiate_unix_fd=True).connect()
     root = Root(system)
+    global SESSION_BUS
+    SESSION_BUS = session
 
     instances = []
     for cls in USER_INTERFACES:
