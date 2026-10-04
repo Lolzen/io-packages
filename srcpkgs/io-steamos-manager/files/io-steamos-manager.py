@@ -1334,6 +1334,15 @@ class SessionManagement1(ServiceInterface):
             raise DBusError(ERR, f"unknown login mode: {login_mode}")
         await self._switch(login_mode)
 
+    # steamos-manager 26.4.1 (SteamOS 3.9.2): log out into a given desktop
+    # session. Io has one desktop session; every plasma name Valve's
+    # ValidDesktopSessions can list selects it, as DefaultDesktopSession does.
+    @method()
+    async def SwitchToDesktopSession(self, session: "s"):
+        if session not in DESKTOP_ALIASES:
+            raise DBusError(ERR, f"Invalid desktop session {session}")
+        await self._switch("desktop")
+
     @method()
     def ValidDesktopSessions(self) -> "as":
         return [DESKTOP_SESSION]
