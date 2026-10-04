@@ -1,7 +1,7 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
 version=1.3
-revision=1
+revision=2
 depends="util-linux"
 short_desc="Valve's SteamOS tuning: sysctls, limits, scheduler, HID preload, swap file"
 maintainer="Georg <funer@gmx.at>"
@@ -34,6 +34,12 @@ homepage="https://github.com/Lolzen/io-packages"
 #     pam_limits is part of Void's system-auth, which SDDM's login uses.
 #   libva.sh - LIBVA_DRIVER_NAME=radeonsi for every login (profile.d),
 #     written by Valve's PKGBUILD.
+#   holo.sh - EDITOR=vim (and VISUAL=gvim) unless set, as on SteamOS.
+# Everything ported here is identical in 20260827.2, the version of SteamOS
+# 3.9.2 (checked 2026-10-04). Not ported yet: Valve's suspend-then-hibernate
+# settings of 3.9.2 (sleep.conf.d, delay 20 minutes on battery); they only
+# matter once Io runs from the NVMe with a resume path (see
+# 61-io-hibernate-guard.sh).
 #
 # 61-io-hibernate-guard.sh is Io's own: hibernation is allowed only when / is
 # on the internal NVMe and the kernel command line has resume= (see the file). Valve's suspend-then-hibernate itself
@@ -58,6 +64,7 @@ do_install() {
 	vinstall ${FILESDIR}/50-io-nofile.conf 644 etc/security/limits.d
 	vmkdir etc/profile.d
 	vinstall ${FILESDIR}/libva.sh 644 etc/profile.d
+	vinstall ${FILESDIR}/holo.sh 644 etc/profile.d
 	vmkdir usr/lib/modules-load.d
 	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
 	vinstall ${FILESDIR}/ntsync.conf 644 usr/lib/modules-load.d
