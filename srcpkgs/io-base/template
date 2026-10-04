@@ -1,9 +1,9 @@
 # Template file for 'io-base'
 pkgname=io-base
-version=0.4.0
-revision=16
+version=0.5.0
+revision=1
 depends="polkit socklog-void plymouth alsa-pipewire"
-conf_files="/etc/elogind/logind.conf.d/10-io.conf"
+conf_files="/etc/elogind/logind.conf.d/10-io.conf /etc/sv/bluetoothd/conf"
 short_desc="Io base configuration for Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -31,4 +31,11 @@ do_install() {
 	vinstall ${FILESDIR}/io-i18n-supported 755 usr/libexec/io
 	vmkdir etc/runit/core-services
 	vinstall ${FILESDIR}/12-io-i18n-supported.sh 644 etc/runit/core-services
+	# SteamOS's BlueZ settings (Valve patches them into bluez's main.conf),
+	# as a file of Io's own that Void's bluetoothd service is pointed at, so
+	# Void's /etc/bluetooth/main.conf stays untouched.
+	vmkdir usr/share/io/bluetooth
+	vinstall ${FILESDIR}/bluetooth-main.conf 644 usr/share/io/bluetooth main.conf
+	vmkdir etc/sv/bluetoothd
+	vinstall ${FILESDIR}/bluetoothd.conf 644 etc/sv/bluetoothd conf
 }
