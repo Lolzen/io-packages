@@ -1,18 +1,20 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
-version=1.2
-revision=4
+version=1.3
+revision=1
 depends="util-linux"
-short_desc="Valve's SteamOS tuning: sysctls, scheduler, HID preload, swap file, X11 screen size"
+short_desc="Valve's SteamOS tuning: sysctls, limits, scheduler, HID preload, swap file"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
 homepage="https://github.com/Lolzen/io-packages"
 
-# Values match /usr/lib/sysctl.d on SteamOS 3.8.4 (captured on hardware).
-# 50-pid-max.conf and 50-io-inherited.conf add what SteamOS inherits from
-# Arch and systemd rather than setting it itself.
+# Values match /usr/lib/sysctl.d on SteamOS 3.8.4 and 3.9.2 (captured on
+# hardware). 50-pid-max.conf and 50-io-inherited.conf add what SteamOS
+# inherits from Arch and systemd rather than setting it itself;
+# 50-io-nofile.conf does the same for systemd's open-file limit.
 #
-# From steamos-customizations-jupiter, also on SteamOS 3.8.4:
+# From steamos-customizations-jupiter (on SteamOS 3.8.4 and 3.9.2 unless
+# noted):
 #   hid-preload.conf - hid_nintendo and hid_playstation load early, so they
 #     claim their controllers before Steam falls back to evdev.
 #   holo-cfs-debugfs-settings - scheduler tunings through debugfs, run by
@@ -25,6 +27,13 @@ homepage="https://github.com/Lolzen/io-packages"
 #     created and switched on by the core service 60-io-swapfile.sh.
 #   ntsync.conf - loads NTSync early (a module in Valve's kernel config,
 #     which linux-neptune-72 follows from revision 4).
+#   15-proton-nice.conf - lets Proton raise its game threads to nice -8.
+#     Valve's package put it in /etc/limits.d, which pam_limits does not
+#     read, so it had no effect on 3.8.4; 3.9.2 has it in
+#     /etc/security/limits.d and game threads run at nice -1, -2 and -8.
+#     pam_limits is part of Void's system-auth, which SDDM's login uses.
+#   libva.sh - LIBVA_DRIVER_NAME=radeonsi for every login (profile.d),
+#     written by Valve's PKGBUILD.
 #
 # 61-io-hibernate-guard.sh is Io's own: hibernation is allowed only when / is
 # on the internal NVMe and the kernel command line has resume= (see the file). Valve's suspend-then-hibernate itself
@@ -33,8 +42,8 @@ homepage="https://github.com/Lolzen/io-packages"
 #   20-panic-sysctls.conf, 21-steamos-panic-sysctls.conf - reboot on kernel
 #     panic; Valve pairs this with its crash log submitter, Io has none yet,
 #     so a frozen device is more useful for debugging during the alpha.
-# Removed in revision 4: 15-proton-nice.conf and the pam_limits core
-# service - SteamOS has no such nice limit (only gamemode's @gamemode one).
+# Void's own hardening sysctls (base-files: kptr_restrict, kexec_load_disabled,
+# unprivileged_bpf_disabled) stay as Void sets them; SteamOS has 0, 0 and 2.
 do_install() {
 	vmkdir usr/lib/sysctl.d
 	vinstall ${FILESDIR}/20-mtu-probing.conf 644 usr/lib/sysctl.d
@@ -44,6 +53,11 @@ do_install() {
 	vinstall ${FILESDIR}/30-vm.conf 644 usr/lib/sysctl.d
 	vinstall ${FILESDIR}/50-pid-max.conf 644 usr/lib/sysctl.d
 	vinstall ${FILESDIR}/50-io-inherited.conf 644 usr/lib/sysctl.d
+	vmkdir etc/security/limits.d
+	vinstall ${FILESDIR}/15-proton-nice.conf 644 etc/security/limits.d
+	vinstall ${FILESDIR}/50-io-nofile.conf 644 etc/security/limits.d
+	vmkdir etc/profile.d
+	vinstall ${FILESDIR}/libva.sh 644 etc/profile.d
 	vmkdir usr/lib/modules-load.d
 	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
 	vinstall ${FILESDIR}/ntsync.conf 644 usr/lib/modules-load.d
