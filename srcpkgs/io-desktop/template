@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=34
+revision=35
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to linux-neptune-72 and does not
@@ -46,7 +46,7 @@ depends="
  fastfetch dmidecode
 
  kde-plasma konsole dolphin kate ark gwenview okular spectacle kdeconnect
- partitionmanager maliit-keyboard xdg-desktop-portal-gtk kio-extras kdialog octoxbps
+ partitionmanager plasma-keyboard xdg-desktop-portal-gtk kio-extras kdialog octoxbps
 "
 short_desc="Io meta package: complete Steam Deck game mode system"
 maintainer="Georg <funer@gmx.at>"

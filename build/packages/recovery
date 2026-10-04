@@ -71,6 +71,6 @@ dbus
 efibootmgr
 socklog-void
 # Without a keyboard: dialogs for Install Io, and Plasma's on-screen
-# keyboard for the Deck's touchscreen.
+# keyboard for the Deck's touchscreen (plasma-keyboard, as SteamOS 3.9.2).
 kdialog
-maliit-keyboard
+plasma-keyboard

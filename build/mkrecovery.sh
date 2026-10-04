@@ -131,12 +131,13 @@ EOF_RUN
   # Executable, or Plasma asks before it runs a desktop file.
   install -m 0755 "$SCRIPT_DIR/recovery/Install-Io.desktop" "$_desk/"
   install -m 0755 "$SCRIPT_DIR/recovery/Repair-Io.desktop" "$_desk/"
-  # Plasma's on-screen keyboard (Maliit), for the touchscreen: what System
-  # Settings writes when it is picked under Keyboard > Virtual Keyboard.
+  # Plasma's on-screen keyboard (plasma-keyboard, as SteamOS 3.9.2), for the
+  # touchscreen: what System Settings writes when it is picked under
+  # Keyboard > Virtual Keyboard.
   mkdir -p "$REC_ROOTFS/home/$REC_USER/.config"
   cat > "$REC_ROOTFS/home/$REC_USER/.config/kwinrc" << 'EOF_KWIN'
 [Wayland]
-InputMethod[$e]=/usr/share/applications/com.github.maliit.keyboard.desktop
+InputMethod[$e]=/usr/share/applications/org.kde.plasma.keyboard.desktop
 VirtualKeyboardEnabled=true
 EOF_KWIN
   chroot "$REC_ROOTFS" chown -R "$REC_USER:$REC_USER" "/home/$REC_USER/Desktop" "/home/$REC_USER/.config"
