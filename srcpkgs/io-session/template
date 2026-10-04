@@ -1,6 +1,6 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.6.8
+version=0.7.0
 revision=1
 # The desktop session (steamos-session-select plasma) needs kde-plasma,
 # which io-desktop pulls in.
@@ -43,12 +43,13 @@ do_install() {
 	ln -sf /usr/share/examples/pipewire/20-pipewire-pulse.conf "${DESTDIR}/etc/pipewire/pipewire.conf.d/20-pipewire-pulse.conf"
 
 	vmkdir etc/runit/core-services
-	vinstall ${FILESDIR}/90-io-gamescope-caps.sh 644 etc/runit/core-services
+	vinstall ${FILESDIR}/90-io-caps.sh 644 etc/runit/core-services
 
 	vbin ${FILESDIR}/io-devmode
 
 	# Valve's steam-launcher and steam-short-session-tracker as on SteamOS
-	# 3.8.4; io-gamemode runs them the way steam-launcher.service does.
+	# 3.8.4 and 3.9.2; io-gamemode runs them the way steam-launcher.service
+	# does.
 	vmkdir usr/lib/steamos
 	vinstall ${FILESDIR}/steam-launcher 755 usr/lib/steamos
 	vinstall ${FILESDIR}/steam-short-session-tracker 755 usr/lib/steamos

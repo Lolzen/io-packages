@@ -1,6 +1,6 @@
 #!/bin/bash
 # io-low-disk-cleanup - Valve's low-disk check from /usr/lib/steamos/
-# gamescope-session (SteamOS 3.8.4), unchanged: when less than 500 MB are
+# gamescope-session (SteamOS 3.8.4 and 3.9.2), unchanged: when less than 500 MB are
 # free in the home directory, the least recently changed installed games are
 # deleted (their compatdata stays, it may hold save files) until enough space
 # is free. io-gamemode runs it before gamescope starts, as Valve's session does.

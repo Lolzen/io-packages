@@ -1,7 +1,8 @@
 #!/bin/sh
 # io-gamemode - Io's game mode session, modelled on Valve's
 # /usr/lib/steamos/gamescope-session and /usr/lib/steamos/steam-launcher
-# (SteamOS 3.8.4, captured on real hardware).
+# (SteamOS 3.8.4 and 3.9.2, captured on real hardware; 3.9.2 runs the script
+# of gamescope 3.16.30, which Void ships too).
 #
 # Valve runs gamescope and Steam as two systemd user units and passes the
 # X/Wayland display names through a startup socket. Io has no user units,
@@ -74,6 +75,24 @@ start_mangoapp() {
     ) > /dev/null 2>&1 &
 }
 
+# IBus for Steam's on-screen keyboard (SteamOS: ibus-gamescope.service, a
+# user service of the game mode session, with the environment gamescope
+# writes at startup). Started once gamescope is up, like mangoapp.
+start_ibus() {
+    command -v ibus-daemon > /dev/null 2>&1 || return
+    (
+        i=0
+        while ! pgrep -x gamescope-wl > /dev/null || [ ! -S /tmp/.X11-unix/X0 ]; do
+            [ "$i" -ge 30 ] && exit 0
+            sleep 1
+            i=$((i + 1))
+        done
+        export DISPLAY=:0
+        export GAMESCOPE_WAYLAND_DISPLAY=gamescope-0
+        exec ibus-daemon -r --panel=disable --emoji-extension=disable
+    ) > /dev/null 2>&1 &
+}
+
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
@@ -106,6 +125,8 @@ export XDG_DESKTOP_PORTAL_DIR=/usr/share/xdg-desktop-portal/gamescope-portals
 dbus-update-activation-environment XDG_DESKTOP_PORTAL_DIR
 
 # ------------------------------------------------- A: same as Valve
+# NetworkManager's Wi-Fi backend, as Valve's script since gamescope 3.16.30
+export STEAM_USE_WPASUPPLICANT=1
 export SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS=0
 export HOMETEST_DESKTOP=1
 export HOMETEST_DESKTOP_SESSION=plasma
@@ -157,6 +178,9 @@ export STEAM_GAMESCOPE_NIS_SUPPORTED=1
 export STEAM_GAMESCOPE_TEARING_SUPPORTED=1
 export STEAM_GAMESCOPE_VRR_SUPPORTED=1
 export STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED=0
+# Valve: "Disable gamescope path in streaming_client until buffer frozen
+# issues are understood better" (gamescope 3.16.30)
+export GAMESCOPE_DISPLAY_DISABLED=1
 export vk_xwayland_wait_ready=false
 export STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT=1
 export STEAM_GAMESCOPE_COLOR_MANAGED=1
@@ -164,7 +188,6 @@ export STEAM_GAMESCOPE_VIRTUAL_WHITE=1
 export QT_QPA_PLATFORM_THEME=kde
 export ENABLE_GAMESCOPE_WSI=1
 export GAMESCOPE_LIMITER_FILE="$(mktemp /tmp/gamescope-limiter.XXXXXXXX)"
-export GAMESCOPE_DISABLE_ASYNC_FLIPS=1
 
 board=$(cat /sys/class/dmi/id/board_name 2>/dev/null)
 if [ "$board" = "Jupiter" ]; then
@@ -179,7 +202,7 @@ bg=/usr/share/plymouth/themes/io/io-update.png
 export STEAM_ENABLE_CEC=1
 
 # Steam's performance overlay through mangoapp (Valve's gamescope-session;
-# all four are in Steam's environment on SteamOS 3.8.4)
+# all four are in Steam's environment on SteamOS 3.8.4 and 3.9.2)
 export STEAM_USE_MANGOAPP=1
 export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
 export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
@@ -222,7 +245,6 @@ set -- "$@" --default-touch-mode 4
 set -- "$@" --hide-cursor-delay 3000
 set -- "$@" --max-scale 2
 set -- "$@" --fade-out-duration 200
-set -- "$@" --cursor-scale-height 720
 set -- "$@" -e -T "$GAMESCOPE_STATS"
 set -- "$@" -O '*',eDP-1
 
@@ -239,6 +261,7 @@ setsid /usr/bin/steam_notif_daemon &
 tracker=/usr/lib/steamos/steam-short-session-tracker
 "$tracker" --track-started
 start_mangoapp
+start_ibus
 gamescope "$@" -- /usr/lib/steamos/steam-launcher
 rc=$?
 "$tracker" --track-stopped
