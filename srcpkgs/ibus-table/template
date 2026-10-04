@@ -2,7 +2,6 @@
 pkgname=ibus-table
 version=1.17.19
 revision=1
-archs=noarch
 build_style=gnu-configure
 configure_args="PYTHON=/usr/bin/python3"
 hostmakedepends="pkg-config python3"

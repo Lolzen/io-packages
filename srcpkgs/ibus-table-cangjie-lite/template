@@ -3,7 +3,6 @@ pkgname=ibus-table-cangjie-lite
 version=1.8.8
 revision=1
 _commit=cc4a17fde8904c6e60ded3558c551c90d9b72454
-archs=noarch
 wrksrc="${pkgname}"
 build_style=cmake
 # The tables are generated next to their sources (Valve configures in the
