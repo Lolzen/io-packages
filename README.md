@@ -10,7 +10,8 @@ the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
 > **Status:** [Alpha 5](https://github.com/Lolzen/io-packages/releases/tag/alpha5)
-> released (storage: SD cards and USB drives); Alpha 6 not planned yet — see
+> released (storage: SD cards and USB drives); Alpha 6 in progress (reference
+> now SteamOS 3.9.2, theme proposed: SteamOS 3.9.2 parity) — see
 > [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) and the
 > [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog).
 > Io ships as a disk image, written straight to an SD card with `dd`. It
@@ -43,8 +44,8 @@ creates it sitting on the ring.
 
 Behave like SteamOS wherever the hardware and the Steam client are
 concerned, on top of Void Linux with runit instead of systemd. Io's
-behaviour is checked against a reference capture of real SteamOS on the
-same device, not against assumptions. Where Io deliberately differs, the
+behaviour is checked against a reference capture of real SteamOS (now
+3.9.2) on the same device, not against assumptions. Where Io deliberately differs, the
 reason is documented in
 [Deviations from SteamOS](https://github.com/Lolzen/io-packages/wiki/Deviations).
 
