@@ -14,5 +14,13 @@ post)
 		sed -i 's/^ENABLED=.*/ENABLED=yes/' etc/ufw/ufw.conf
 		touch etc/ufw/.jupiter-firewall
 	fi
+	# ufw also loads its own sysctl file (IPT_SYSCTL in /etc/default/ufw)
+	# each time it starts, after the boot has applied Io's sysctl files, and
+	# overrides rp_filter, accept_redirects and accept_source_route. On
+	# SteamOS they keep systemd's values (captured on 3.9.2). Emptied unless
+	# someone chose another file; steamos-tuning's values then stay.
+	if grep -q '^IPT_SYSCTL=/etc/ufw/sysctl.conf$' etc/default/ufw 2> /dev/null; then
+		sed -i 's|^IPT_SYSCTL=/etc/ufw/sysctl.conf$|IPT_SYSCTL=|' etc/default/ufw
+	fi
 	;;
 esac
