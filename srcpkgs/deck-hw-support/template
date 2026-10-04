@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=11
+revision=12
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind udisks2"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -11,10 +11,10 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 
 # Valve's changes from 20250728.1 to 20260807.1 are almost all renames
 # (steamos-* helpers became holo-*, with steamos-alias linking the old names
-# back). SteamOS 3.8.4 still runs 20260327.1 with the steamos-* names, and
-# Steam and io-steamos-manager call those, so Io keeps them and takes only
-# the actual changes: a sturdier jupiter-check-support and the restructured
-# GPU reset rules. Valve's cursor theme (the images come from 20260327.1:
+# back). SteamOS 3.8.4 runs 20260327.1 with the steamos-* names, 3.9.2 runs
+# 20260807.1 with steamos-alias's links; Steam and io-steamos-manager call
+# the steamos-* names, so Io keeps them and takes only the actual changes: a
+# sturdier jupiter-check-support and the restructured GPU reset rules. Valve's cursor theme (the images come from 20260327.1:
 # later versions moved them to a holo package) is new in Io.
 #
 # Automount of SD cards and USB drives as on SteamOS: Valve's udev rule and

@@ -1,2 +1,24 @@
 #!/bin/sh
-echo stable
+# Io: SteamOS's script, with the one branch Io has. Steam reads the current
+# branch with -c and the list with -l; SteamOS names the stable branch "rel"
+# there. Switching to another branch is refused until Io's update concept
+# (Alpha 6, phase 5) gives branches a meaning.
+
+if [ $# -eq 1 ]; then
+	case "$1" in
+	-c|-l)
+		echo rel
+		exit 0
+		;;
+	rel|stable)
+		exit 0
+		;;
+	rc|beta|bc|preview|pc|main|staging)
+		echo "Io has no branch '$1'; it stays on rel" >&2
+		exit 1
+		;;
+	esac
+fi
+
+echo "Usage: steamos-select-branch <-c|-l|rel|rc|beta|bc|preview|pc|main>" >&2
+exit 1
