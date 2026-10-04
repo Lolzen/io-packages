@@ -587,9 +587,13 @@ class RootManager(ServiceInterface):
 
     @FanControlState.setter
     def FanControlState(self, value: "u"):
-        # runit's finish script returns the fan to the EC on 'down'
+        # runit's finish script returns the fan to the EC on 'down'. Waited
+        # for, as steamos-manager waits for systemd's stop job: download mode
+        # sets its fan speed right after, and the finish script would
+        # otherwise reset the fan target behind it.
         try:
-            subprocess.run(["sv", "up" if value else "down", "jupiter-fan-control"],
+            subprocess.run(["sv", "-v", "-w", "15", "up" if value else "down",
+                            "jupiter-fan-control"],
                            check=False, stdout=subprocess.DEVNULL)
         except OSError as err:
             _fail(f"sv failed: {err}")
