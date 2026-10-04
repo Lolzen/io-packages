@@ -1,0 +1,20 @@
+# Template file for 'ibus-table'
+pkgname=ibus-table
+version=1.17.19
+revision=1
+archs=noarch
+build_style=gnu-configure
+configure_args="PYTHON=/usr/bin/python3"
+hostmakedepends="pkg-config python3"
+makedepends="ibus-devel"
+depends="ibus python3-gobject"
+short_desc="IBus engine for table-based input methods (CangJie, Quick, ...)"
+maintainer="Georg <funer@gmx.at>"
+license="LGPL-2.1-or-later"
+homepage="https://github.com/kaio/ibus-table"
+distfiles="https://github.com/kaio/ibus-table/releases/download/${version}/${pkgname}-${version}.tar.gz"
+checksum=ddee2bb4e00fd6286fe2844abe4bf994413ba1196e06ba06559c211997704d9f
+
+# The engine behind the "table:cangjie5" and "table:quick5" layouts of
+# Steam's on-screen keyboard; the tables come from ibus-table-cangjie-lite.
+# SteamOS 3.9.2 runs Arch's ibus-table 1.17.19. Python only, no binaries.

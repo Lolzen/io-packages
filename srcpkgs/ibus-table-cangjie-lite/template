@@ -1,0 +1,36 @@
+# Template file for 'ibus-table-cangjie-lite'
+pkgname=ibus-table-cangjie-lite
+version=1.8.8
+revision=1
+_commit=cc4a17fde8904c6e60ded3558c551c90d9b72454
+archs=noarch
+wrksrc="${pkgname}"
+build_style=cmake
+# The tables are generated next to their sources (Valve configures in the
+# source tree too); a separate build directory finds no rule for them.
+cmake_builddir="."
+configure_args="-DENABLE_TABLE_PREPROCESS=1 -DCMAKE_FEDORA_TMP_DIR=.
+ -DDATA_DIR=/usr/share"
+hostmakedepends="git tar python3 ibus-table fontconfig noto-fonts-cjk-sans"
+depends="ibus-table"
+short_desc="CangJie and Quick tables for ibus-table (Valve's trimmed set)"
+maintainer="Georg <funer@gmx.at>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/mike-fabian/ibus-table-chinese"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/${pkgname}-${version}-2.5.src.tar.gz"
+checksum=9788d6a8609613842db950cc272b6dd6ed1c44e91679f3f748e1174e39d876f2
+
+# Valve's ibus-table-cangjie-lite (jupiter-3.9 1.8.8-2.5, as on SteamOS
+# 3.9.2): Valve's fork of ibus-table-chinese at the commit above, built with
+# Valve's two patches from the same archive - limit-tables.patch (only the
+# cangjie and quick tables) and upstream's fix for newer CMake. The fork's
+# preprocessing comments out characters Noto Sans CJK cannot display (about
+# 36000 in cangjie5) and takes frequencies from the Cantonese table; it needs
+# fc-list and the font at build time. Steam's on-screen keyboard uses
+# table:cangjie5 and table:quick5.
+
+post_extract() {
+	git --git-dir=ibus-table-chinese archive --format=tar ${_commit} | tar -x
+	patch -Np1 -i limit-tables.patch
+	patch -Np1 -i 347071955719eb10f87f1ac4aa37003f74ed657e.patch
+}
