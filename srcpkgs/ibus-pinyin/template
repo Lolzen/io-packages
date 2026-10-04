@@ -5,7 +5,7 @@ revision=1
 build_style=gnu-configure
 configure_args="--with-python=/usr/bin/python3"
 hostmakedepends="autoconf automake libtool pkg-config intltool gettext
- python3 sqlite"
+ gettext-devel-tools python3 sqlite"
 makedepends="ibus-devel pyzy-devel sqlite-devel lua54-devel libuuid-devel"
 depends="ibus python3-gobject pyzy>=1.1_1"
 # libpyzy comes from Io's pyzy, which Void's common/shlibs does not know;
@@ -22,7 +22,8 @@ checksum=3e971567b72dae4b08b710fd1471bff34f58814df2aa74e97ed386590df3c5db
 # archive): Steam's on-screen keyboard asks IBus for the engines "pinyin" and
 # "bopomofo" by name and writes ibus-pinyin's own settings (engine/pinyin,
 # engine/bopomofo). Void's ibus-libpinyin has other engine names and keys.
-# Valve runs gnome-common's autogen.sh; autoreconf does the same here.
+# Valve runs gnome-common's autogen.sh; autoreconf does the same here
+# (intltool's macros need gettext's nls.m4, from gettext-devel-tools).
 # configure looks for lua.pc or lua5.1.pc and silently builds without the
 # Lua extension if neither exists; Void's lua54 has lua5.4.pc, so the flags
 # are passed in directly.
