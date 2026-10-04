@@ -191,13 +191,22 @@ reliable way.
 sessions.** Its developer page reads `SessionManagement1`'s session list:
 when it is exactly `plasma.desktop` and `plasmax11.desktop`, Steam shows the
 X11 switch, otherwise a session menu (or nothing for an empty list). It has
-nothing to do with gamescope. Io reports its one session,
-`io-desktop.desktop`.
+nothing to do with gamescope. SteamOS 3.9.2 reports exactly these two and
+shows the switch; Io reports its one session, `io-desktop.desktop`.
 
 **Steam's developer *Speaker Test* only sends a counter** to the client's
 audio controller (`AudioDevices.UpdateSomething`); it looks like a
 placeholder. The real speaker test is per channel
-(`PlaySpeakerTestOnChannel`). Still to compare once on SteamOS.
+(`PlaySpeakerTestOnChannel`). On SteamOS 3.9.2 it does nothing either.
+
+**A test notification shows nothing in game mode, on SteamOS too.**
+`notify-send` made Steam show nothing on SteamOS 3.9.2, although the call
+reaches `org.freedesktop.Notifications`; on Io a `busctl` test behaved the
+same. Not a bug of Io; Steam presumably shows only notifications of
+processes it knows.
+
+**Steam's HDMI-CEC switches are in the power menu**, not under display
+settings. The current Steam beta sets them through `HdmiCec2`.
 
 **Void's `sddm` run script needs elogind's D-Bus activation file.** It asks
 D-Bus to start `org.freedesktop.login1` (`dbus-send ... StartServiceByName`)
@@ -310,6 +319,15 @@ sides.
 **The xbps cache ends up in an image** unless it is emptied: a root built
 with `xbps-install -r` keeps every downloaded package in
 `var/cache/xbps` (2.6 GB in Io's image before the image build removed it).
+
+**xbps takes a package from the first repository that has it**, not the
+highest version (`xbps-install(1)`; `bestmatching` is off by default).
+xbps reads `/etc/xbps.d` first, then `/usr/share/xbps.d`, each in
+alphabetical order (a file in `/etc` masks a same-named one). Void's
+`00-repository-main.conf` and Io's `20-io.conf` are both in
+`/usr/share/xbps.d`, so Void's repository comes first: an Io build of a
+package Void also ships would be ignored, unless Io's repository is
+declared in `/etc/xbps.d`.
 
 **Building for 32-bit needs its own masterdir.** `xbps-src -A i686`
 builds natively for i686 in `masterdir-i686`; the 32-bit hook
@@ -546,12 +564,14 @@ screen reader mode at every start; steamos-manager presses Orca's key for it
 date"** (Valve's mock script). A stub that simply exits 0 makes Steam
 announce a dock update at every start.
 
-**SteamOS 3.8.4 does not offer `WifiDebug1`** on the Deck, although Valve's
-interface file describes it.
+**SteamOS does not offer `WifiDebug1`** on the Deck (3.8.4 and 3.9.2),
+although Valve's interface file describes it. On 3.9.2 neither
+`FirmwareDebug1`, `PerformanceProfile1` nor `GameStreaming1` is exported
+on the LCD.
 
 **`jupiter-hw-support` 20260807.1 renames the helpers to `holo-*`**, with
-`steamos-alias` (a pacman hook) linking the old names back. Steam and
-SteamOS 3.8.4 still use `steamos-*`. Io keeps the old names and takes only
+`steamos-alias` (a pacman hook) linking the old names back. Steam still
+calls `steamos-*` (SteamOS 3.9.2 included). Io keeps the old names and takes only
 the real changes; there is no xbps equivalent of the hook.
 
 **Valve's `holo-upower-config` has no effect as shipped** (it is newer than
@@ -580,7 +600,8 @@ relaxed upstream.
 `15-proton-nice.conf` (`* hard nice -8`) was installed to `/etc/limits.d`,
 which `pam_limits` does not read; Valve moved it to
 `/etc/security/limits.d` in August 2026. A capture of 3.8.4 therefore shows
-no such limit.
+no such limit; on 3.9.2 Steam's hard nice limit is 28 and Proton's game
+threads run at negative nice values.
 
 **Valve's version strings do not always sort by date.** Versions such as
 `jupiter.20260504.1` or `3.8.20260807.1` sort below plain dates

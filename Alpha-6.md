@@ -52,3 +52,16 @@ on [Milestones](Milestones); this page collects what has changed since
 
 - Valve's Mesa is not ported; VRAM priority for the foreground game is not
   implemented. Reasons on [Deviations](Deviations).
+- The reference moves from SteamOS 3.8.4 to **SteamOS 3.9.2** (2026-10-04):
+  a new capture with the Steam beta client and a guided test run with D-Bus
+  per step showed Io's ported packages already at 3.9.2's versions, apart
+  from the updates planned on [Milestones](Milestones).
+- Input methods for Steam's keyboard (Chinese, Japanese, Korean) will be
+  added for completeness.
+
+### Closed by the 3.9.2 captures
+
+- Notifications from a test in game mode and the developer *Speaker Test*
+  show nothing on SteamOS either: Io behaves the same.
+- *Use Legacy X11 Desktop Mode*: cause confirmed, stays a documented
+  deviation.

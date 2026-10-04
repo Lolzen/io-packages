@@ -1,8 +1,8 @@
 # Kernel
 
 `linux-neptune-72` is Valve's Steam Deck kernel, 7.2.4 (`7.2.4-valve1`),
-built with Void's kernel packaging. SteamOS 3.8.4 runs 6.16
-(`linux-neptune-616`). Io moved from 6.15.8 to Valve's 7.2 branch in
+built with Void's kernel packaging. SteamOS 3.9.2 runs the same branch,
+7.2.7 (`7.2.7-valve1`); SteamOS 3.8.4 ran 6.16 (`linux-neptune-616`). Io moved from 6.15.8 to Valve's 7.2 branch in
 September 2026, for NTSync, the newer HID drivers and HDMI-CEC over the
 dock's DisplayPort link.
 
@@ -51,9 +51,10 @@ the file in the tree is older. Against Valve's actual build, Io's
 configuration differs in 133 options, mostly drivers for other hardware
 switched off, but also transparent huge pages for shmem and tmpfs (`never`
 instead of `advise`). With `config.x86_64` as layer 2, 9 differences remain:
-`config-io` and two options from Void's base. To be decided with the next
-kernel update (Valve has 7.2.7.valve1; `config.x86_64` and `config-neptune`
-are unchanged between 7.2.4 and 7.2.7).
+`config-io` and two options from Void's base. SteamOS 3.9.2 confirms it at
+runtime: `shmem_enabled` is `advise` there. To be decided with the update to
+7.2.7 (planned for Alpha 6; `config.x86_64` and `config-neptune` are
+unchanged between 7.2.4 and 7.2.7).
 
 ### Io's overrides (`config-io`)
 
@@ -113,8 +114,10 @@ Set by the image build (`build/mkrootfs.sh`, GRUB's defaults). It matches SteamO
   `DRM_DISPLAY_DP_AUX_CEC`); a test needs a dock that passes CEC through
 - **Wake-on-Bluetooth:** Valve's patch for the LCD's Realtek controller is
   in; it most likely needs Valve's own Bluetooth firmware, which Void's
-  packages do not have (dmesg: `wake-on-bluetooth enabled` or `Failed to enable
-  wake-on-bluetooth`; see [Deviations](Deviations), *System services*)
+  packages do not have. In dmesg: `wake-on-bluetooth enabled` or `Failed
+  to enable wake-on-bluetooth`; SteamOS 3.9.2 loads Valve's firmware
+  (version `0x3d7679d7`) and logs the first. See [Deviations](Deviations),
+  *System services*
 
 `CGROUP_DMEM` is on, as on SteamOS; Valve's `dmemcg-booster` that uses it
 is not ported (decided, see [Deviations](Deviations)).

@@ -1,9 +1,11 @@
 # Deviations from SteamOS
 
-Reference: SteamOS 3.8.4 on the same Steam Deck LCD, captured in September
-2026 (the Deck's SSD is a retrofitted 1 TB KIOXIA, not the one it shipped
-with; process environments and capabilities, SteamOS Manager D-Bus values
-and calls, sysfs, systemd units, configuration files). Everything not listed
+Reference: SteamOS 3.9.2 (Beta Candidate, build 20260925.101, kernel 7.2.7,
+Steam client beta) on the same Steam Deck LCD, captured on 2026-10-04
+(process environments and capabilities, SteamOS Manager D-Bus values and
+calls per step, sysfs, systemd units, configuration files, firmware); until
+then SteamOS 3.8.4, captured in September 2026. The Deck's SSD is a
+retrofitted 1 TB KIOXIA, not the one it shipped with. Everything not listed
 here is meant to behave as on SteamOS; a difference that is not on this page
 is a bug.
 
@@ -11,10 +13,12 @@ is a bug.
 
 ## Versions
 
-Where Valve's newer source differs from what SteamOS 3.8.4 runs, Io takes
-the newer state if it makes sense. It stays with the older state when the
-change is transitional or Arch- or systemd-specific, or when the older one
-simply fits Io better. Each such choice is written down on this page with
+Where Valve's newer source differs from what the reference SteamOS runs, Io
+takes the newer state if it makes sense; Io's ported packages chosen this
+way under 3.8.4 turned out to be what 3.9.2 runs (apart from the updates
+listed under *Other ported packages*). Io stays with the
+older state when the change is transitional or Arch- or systemd-specific,
+or when the older one simply fits Io better. Each such choice is written down on this page with
 its reason.
 
 ---
@@ -54,8 +58,14 @@ its reason.
   (`-R`); Io does not need it. The statistics pipe (`-T`) is set as on
   SteamOS.
 - **Steam launch flags, gamescope arguments and environment match
-  SteamOS**, except `STEAM_LAUNCH_WRAPPER_SCOPE`: it has Steam start each
-  game in a systemd scope, and Io has no systemd.
+  SteamOS**, with these exceptions: `STEAM_LAUNCH_WRAPPER_SCOPE` (it has
+  Steam start each game in a systemd scope, and Io has no systemd);
+  `LIBVA_DRIVER_NAME=radeonsi` and the `ibus-daemon` SteamOS starts for
+  Steam's keyboard (`ibus-gamescope.service`), both already on 3.8.4 and
+  missing on Io; and Valve's session script for gamescope 3.16.30 (SteamOS
+  3.9.2), which adds `STEAM_USE_WPASUPPLICANT=1` and
+  `GAMESCOPE_DISPLAY_DISABLED=1` and drops `GAMESCOPE_DISABLE_ASYNC_FLIPS=1`
+  and `--cursor-scale-height 720`. All planned for Alpha 6.
 - **HDMI-CEC:** `cecd` starts through D-Bus activation and
   `cec-audio-control` directly from the session scripts (SteamOS: user
   services of the graphical session, `cec-audio-control` socket-activated).
@@ -107,7 +117,16 @@ the session bus that Steam talks to.
   formatting is ported and tested (see *Storage*).
 - **Not implemented**, for lack of a counterpart on Io: `UdevEvents1`,
   `UpdateBios1`, `UpdateDock1`, `FactoryReset1`.
-  `WifiDebug1` is not needed: SteamOS 3.8.4 does not offer it on the Deck.
+  `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
+  and 3.9.2).
+- **Not yet as in steamos-manager 26.4.1 (SteamOS 3.9.2):** `HdmiCec2`
+  is missing, although the current Steam beta sets its CEC switches through
+  it (`EnableControl`, `SuspendDevice`, `SuspendTv`, `WakeTv`) and calls
+  `MakeActive` at several points (after a game ends, before the desktop
+  switch, and at times without a visible trigger) — on Io
+  Steam's CEC switches have no effect yet; `HdmiCecState` can be 3
+  ("Extended") on 3.9.2; `SwitchToDesktopSession` is missing (Steam still
+  uses `SwitchToDesktopMode`). Valve removed `Audio1`; Io still has it.
 - **`ScreenReader0/1`** starts Orca itself (SteamOS: `orca.service` with
   gamescope's environment file), with the running Steam's display settings.
   When it writes Orca's settings file before Orca ever ran, it adds the
@@ -115,8 +134,9 @@ the session bus that Steam talks to.
 - **`Audio1`** sets WirePlumber's `node.features.audio.mono` with `wpctl`.
 - **`CpuScheduler1`** switches `scx_lavd` through a runit service `scx` in
   place of SteamOS's `scx.service`, with Valve's `/etc/default/scx`.
-- **Wi-Fi backend:** wpa_supplicant by default, as in Valve's current
-  configuration; SteamOS 3.8.4 still defaults to iwd. Switching works in
+- **Wi-Fi backend:** wpa_supplicant by default, as Valve ships SteamOS
+  3.9.2 (3.8.4 still defaulted to iwd; the captured Deck runs iwd because
+  it was switched in Steam's settings). Switching works in
   both directions. iwd runs as a runit service linked only while it is the
   backend.
 - **Wi-Fi power save** goes into a file of Io's own
@@ -140,14 +160,14 @@ the session bus that Steam talks to.
 - **Hibernation is allowed only with `/` on the internal NVMe and `resume=`
   on the kernel command line** (Io's own core service writes elogind's
   `sleep.conf.d`); without a resume path a hibernated session would be
-  lost. SteamOS 3.8.4 switches hibernation off altogether ("disabled for
-  3.8.x cycle"); Valve's newer configuration allows hibernation and
-  suspend-then-hibernate again (delay 20 minutes, counted only on battery).
-  Not set up on Io yet.
-- **No Proton nice limit**, as on SteamOS 3.8.4, where Valve's
-  `15-proton-nice.conf` sat in a directory `pam_limits` does not read.
-  Valve fixed the path in August 2026 (`* hard nice -8` in
-  `/etc/security/limits.d`); a candidate for Io.
+  lost. SteamOS 3.9.2 allows hibernation and suspend-then-hibernate (delay
+  20 minutes, counted only on battery); 3.8.4 switched it off ("disabled for
+  3.8.x cycle"). Not set up on Io yet.
+- **No Proton nice limit yet.** SteamOS 3.9.2 sets `* hard nice -8`
+  (`/etc/security/limits.d/15-proton-nice.conf`; Steam's hard limit is 28)
+  and Proton uses it: game threads run at nice −1, −2 and −8. On 3.8.4 the
+  file sat in a directory `pam_limits` does not read, which is why Io left
+  it out. Planned for Alpha 6.
 - **Firmware comes from Void's `linux-firmware` packages**, not Valve's
   `linux-firmware-neptune`. Every file the LCD needs is there, but some
   differ: Valve ships its own Realtek Bluetooth firmware
@@ -178,7 +198,7 @@ the session bus that Steam talks to.
 ## Kernel
 
 - **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration`
-  tree; SteamOS 3.8.4 runs 6.16. The configuration is Void's as the base,
+  tree; SteamOS 3.9.2 runs 7.2.7 (3.8.4: 6.16). The configuration is Void's as the base,
   Valve's in-tree CI configuration and `config-neptune` on top, then a few Io
   overrides, each with its reason — see [Kernel](Kernel). Open: Valve's
   package builds from a different full configuration than the one Io
@@ -196,8 +216,9 @@ the session bus that Steam talks to.
 
 ## Graphics
 
-- **Mesa is Void's** (26.2.x), not Valve's (radeonsi 25.3.0 with one Valve
-  patch, RADV from Valve's `steamos-25.11.12` branch). Missing as a result:
+- **Mesa is Void's** (26.2.x), not Valve's (SteamOS 3.9.2: radeonsi 26.1.2,
+  RADV from Valve's `steamos-26.05` branch; analysed on 3.8.4's radeonsi
+  25.3.0 with one Valve patch and RADV `steamos-25.11.12`). Missing as a result:
   - Valve's frame limiter for OpenGL through gamescope
     (`GAMESCOPE_LIMITER_FILE`, DRI3): **OpenGL games most likely ignore
     Steam's FPS limit** (from Mesa's source; to be confirmed with a game).
@@ -220,11 +241,9 @@ the session bus that Steam talks to.
   plugin (label `nt-filter`). Io builds werman/noise-suppression-for-voice as
   `rnnoise-ladspa` (label `noise_suppressor_mono`), because Void's NoiseTorch
   package ships no system-wide plugin.
-- **Version:** Io builds Valve's `steamdeck-dsp` 1.02; SteamOS 3.8.4 runs
-  0.91. Io follows the newer state (see *Versions* above). 0.91 kept the
-  microphone filter from suspending (`session.suspend-timeout-seconds = 0`);
-  1.02 drops that, so the filter may suspend while nothing records. No
-  Arch- or systemd-specific reason behind it, so Io takes 1.02's behaviour.
+- **Version:** `steamdeck-dsp` 1.02, as on SteamOS 3.9.2 (3.8.4 ran 0.91,
+  which kept the microphone filter from suspending; 1.02 drops that, and Io
+  follows).
 - **UCM profile:** Valve's profile from `steamdeck-dsp` (`Internal Mic`,
   headphone sink), as on SteamOS. Void's `alsa-ucm-conf` also ships
   `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM would pick first by the
@@ -238,8 +257,8 @@ the session bus that Steam talks to.
   loopback carries — that is what makes Steam show its own localized device
   names.
 - **Sources and sinks get a loopback**, as on SteamOS 3.8.4
-  (`steamdeck-dsp` 0.91); Valve's 1.02 marks only sources, Io adds the sink
-  rule back (`91-io-sink-loopback.conf`). The sink
+  (`steamdeck-dsp` 0.91); 1.02 (SteamOS 3.9.2) marks only sources, Io adds
+  the sink rule back (`91-io-sink-loopback.conf`). The sink
   loopback keeps applications from seeing the speaker rebuilt: with Steam's
   *Mono audio*, a stream on the bare speaker saw the channel count change,
   and Steam's interface sound closed for good when switching back.
@@ -256,7 +275,7 @@ the session bus that Steam talks to.
   `steam-udev-rules`. Arch's `lib32-pipewire` becomes `pipewire-32bit` plus
   every `libspa-*-32bit`, which Void ships separately.
 - **gamescope** is Void's, 3.16.30 (Io's update to Void), built from
-  Valve's source. SteamOS 3.8.4 runs 3.16.23.
+  Valve's source, the version SteamOS 3.9.2 runs as well.
 - **`jupiter-firewall`:** Valve's rules with ufw instead of firewalld, which
   Void does not have: SSH, DHCPv6 and every port from 1024 up come in, the
   privileged ports below are rejected. The package sets them up once in ufw,
@@ -268,15 +287,15 @@ the session bus that Steam talks to.
   developer mode keeps the devkit service on.
 - **`steam-web-debug-portforward`** is a runit service with `socat` instead
   of a socket unit with `systemd-socket-proxyd`.
-- **`cecd`** is 0.2.0 and **`cec-audio-control`** 0.1.0, the versions of
-  SteamOS 3.8.4, built from Valve's newer source archives.
+- **`cecd`** is 0.2.0 (SteamOS 3.9.2: 0.3.0, planned) and
+  **`cec-audio-control`** 0.1.0, built from Valve's source archives.
 - **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
   assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
   so that UPower actually honours it.
 - **`deck-hw-support`** is Valve's `jupiter-hw-support` 20260807.1 with the
   helpers under their `steamos-*` names: that version renames them to
-  `holo-*` (Valve's `steamos-alias` links them back); SteamOS 3.8.4 itself
-  still runs 20260327.1 with the old names. The cursor images come from
+  `holo-*` (Valve's `steamos-alias` links them back), the version SteamOS
+  3.9.2 runs; Steam still calls the `steamos-*` names. The cursor images come from
   20260327.1, later versions moved them to another package. Several helpers
   are stubs, see [Helper status](Helper-Status). Automount and trimming:
   see *Storage*. `99-sdcard-rescan.rules` stays disabled (it needs
@@ -308,18 +327,18 @@ the session bus that Steam talks to.
   instead of setting it itself: `kernel.pid_max`, `kernel.sysrq`, the
   inotify limits, `fs.protected_regular`/`fifos`, `net.core.default_qdisc`,
   `rp_filter` and `promote_secondaries` (values as captured on SteamOS
-  3.8.4).
+  3.8.4, unchanged on 3.9.2). Missing so far: `accept_source_route=0` and
+  `ping_group_range` from systemd's `50-default.conf`.
 - **`holo-fstab-repair`** runs Valve's script on every boot; SteamOS runs it
   only when the user changed `fstab` in its `/etc` overlay, which Io does
   not have.
-- **Newer than SteamOS 3.8.4:** several Valve packages are built from newer
-  source archives than SteamOS 3.8.4 carries — `steamdeck-dsp` 1.02 (0.91),
-  `vpower` 1.6.3 (1.5.7), `steamdeck-kde-presets` 3.9.4 (3.8.5),
-  `xdg-desktop-portal-gamescope` 0.1.38 (0.1.33), `jupiter-fan-control`
-  20260902.1 (20260422.2), `holo-fstab-repair` 0.2 (0.1),
-  `steamos-systemreport` 1.23 (0.16), `steam-jupiter-stable` -12 (-8; adds
-  `-pipewire` to Steam's command line), and `holo-upower-config` and
-  `holo-realtek-firmware-toggles` (not on SteamOS 3.8.4).
+- **Versions:** the ported Valve packages are the versions of SteamOS
+  3.9.2, except `cecd` 0.2.0 (0.3.0), `gpu-trace` 2.14 (2.16),
+  `holo-realtek-firmware-toggles` 1.3-1 (1.3-3), `steamos-networking-tools`
+  1.2 (1.3), `steamos-tuning` (3.8.4's parts of
+  `steamos-customizations-jupiter`; 3.9.2 runs 20260827.2) and the kernel
+  7.2.4 (7.2.7); all planned for Alpha 6
+  ([SteamOS packages](Valve-Package-Survey)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses

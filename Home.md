@@ -19,7 +19,7 @@ runit instead of systemd.
 
 ## Principle
 
-Io is checked against a reference capture of SteamOS 3.8.4 taken on the
-same hardware: process environments, D-Bus values and calls, sysfs values,
+Io is checked against a reference capture of SteamOS 3.9.2 (until October
+2026: 3.8.4) taken on the same hardware: process environments, D-Bus values and calls, sysfs values,
 configuration. Where Io matches SteamOS, the wiki does not repeat it. Where
 it differs, [Deviations](Deviations) says why.

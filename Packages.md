@@ -46,7 +46,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `holo-sudo` | `holo-sudo` | Valve's sudoers files: `wheel`, `sudo`, `no-fqdn` |
 | `holo-realtek-firmware-toggles` | `holo-realtek-firmware-toggles` 1.3 | Valve's toggles for Realtek rtw89 USB Wi-Fi sticks |
 | `jupiter-firewall` | `jupiter-firewall` 0.1 | Valve's firewall rules, with ufw and `plasma-firewall` (Void has no firewalld); runit service |
-| `cecd` | `cecd` 0.2.0 | Valve's HDMI-CEC daemon, as on SteamOS 3.8.4; group rules for `/dev/cec*` and `/dev/uinput` |
+| `cecd` | `cecd` 0.2.0 | Valve's HDMI-CEC daemon (SteamOS 3.9.2: 0.3.0, planned); group rules for `/dev/cec*` and `/dev/uinput` |
 | `cec-audio-control` | `cec-audio-control` 0.1.0 | TV volume and mute over HDMI-CEC for PipeWire |
 | `steamos-devkit-service` | `steamos-devkit-service` 0.20250916.0 | Service for the SteamOS Devkit Client; mDNS through Avahi (patch); runit service |
 | `gamescope-wsi` (published as `gamescope-wsi-32bit`) | gamescope 3.16.30 (SteamOS: `lib32-gamescope`) | gamescope's Vulkan WSI layer for 32-bit games (frame limiter, bypass, HDR), built for i686; only the layer, not gamescope |
@@ -74,5 +74,5 @@ The kernel is not maintained as a fork: Valve's delta is a single patch
 against the official tarball. How the patch and the configuration come
 about, and what to do on a kernel update, is on [Kernel](Kernel).
 
-What SteamOS 3.8.4 runs of Valve's packages, and what Io has in their place,
+What SteamOS 3.9.2 runs of Valve's packages, and what Io has in their place,
 is on [SteamOS packages](Valve-Package-Survey).

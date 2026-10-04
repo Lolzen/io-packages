@@ -203,7 +203,9 @@ filter) → loopback source, which Steam and games use. Valve's WirePlumber
 access rules hide the raw hardware microphone from applications. Speaker
 tuning happens in the CS35L41 amplifiers' own DSP.
 
-The speaker gets a loopback too, as on SteamOS 3.8.4: applications play into
+The speaker gets a loopback too, as on SteamOS 3.8.4 (3.9.2's `steamdeck-dsp`
+1.02 creates loopbacks only for sources, see [Deviations](Deviations)):
+applications play into
 a loopback sink in front of it. The loopback keeps its two channels when the
 speaker itself is rebuilt (Steam's *Mono audio* turns it into one channel),
 so no application sees the channel count change.

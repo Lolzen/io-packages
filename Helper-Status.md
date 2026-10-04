@@ -29,13 +29,13 @@ Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 | Helper | Would do |
 |---|---|
 | `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam. Automount works and Valve's `format-device.sh` is in place, with Io's check that refuses the disk Io runs from; left for later because testing it destroys data |
-| `steamos-update`, `steamos-select-branch` | SteamOS system updates, today stubs (`steamos-select-branch` reports `stable`; SteamOS prints `rel` for it). Candidate for a real implementation with xbps (Alpha 6): Steam checks and applies through the `steamos-update` script itself (via pkexec; `check` answers 0 with a build id, 7 for no update, 8 for an update waiting for a reboot; applying prints progress lines like `42.17%`), and lists or switches the branch through `steamos-select-branch` (`-c`, `-l`, a branch name). Valve's scripts talk to the `Atomupd1` D-Bus service behind that; Steam itself seems to call it only for its proxy setting. To be confirmed with the next SteamOS capture |
+| `steamos-update`, `steamos-select-branch` | SteamOS system updates, today stubs (`steamos-select-branch` reports `stable`; SteamOS prints `rel` for it). Candidate for a real implementation with xbps (Alpha 6): Steam checks and applies through the `steamos-update` script itself (via pkexec; `check` answers 0 with a build id, 7 for no update, 8 for an update waiting for a reboot; applying prints progress lines like `42.17%`), and lists or switches the branch through `steamos-select-branch` (`-c`, `-l`, a branch name). Valve's scripts talk to the `Atomupd1` D-Bus service behind that; Steam itself calls it only for its proxy setting. Confirmed on SteamOS 3.9.2 with the Steam beta (2026-10-04): the check runs as `steamos-update --enable-duplicate-detection check`, Steam reads its output with stderr included |
 
 ## Stubs, not applicable to Io
 
 | Helper | Why |
 |---|---|
-| `jupiter-amp-control` | Target script is in none of Valve's published packages and missing on SteamOS 3.8.4 too; audio works without it |
+| `jupiter-amp-control` | Target script is in none of Valve's published packages and missing on SteamOS too (3.8.4 and 3.9.2); audio works without it |
 | `steamos-reboot-other` | A/B slot switching |
 | `jupiter-biosupdate` | BIOS updates, left to SteamOS, which runs them at boot on the same Deck. A check-only mode is deferred: it needs Valve's BIOS files and flash tool (`h2offt`) |
 | `jupiter-dock-updater` | Dock firmware (Valve's `hub_update`). `--check` answers 7, "up to date": Valve's codes are 0 = update available, 7 = up to date, and answering 0 made Steam announce a dock update at every start. Needs Valve's dock to port and test |
