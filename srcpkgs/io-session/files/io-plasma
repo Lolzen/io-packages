@@ -53,9 +53,48 @@ steam_dpi_scaling_off() {
     grep -q '"DPIScaling"[[:space:]]*"0"' "$reg" && touch "$mark"
 }
 
+# Keep the brightness set in game mode. kwin restores the brightness saved in
+# kwinoutputconfig.json when it starts, so the screen jumps to the value from
+# the last desktop session. Valve patches kwin for this (0002, "Keep screen
+# brightness from gamescope", KDE bug 508163: Workspace::assignBrightnessDevices
+# takes the device's observed brightness). Io writes the current backlight
+# into the saved value of the internal panel (eDP) instead, in kwin's scale:
+# (raw - 1) / (max - 1), as ExternalBrightnessDeviceV1::observedBrightness.
+keep_game_mode_brightness() {
+    cfg="${XDG_CONFIG_HOME:-$HOME/.config}/kwinoutputconfig.json"
+    [ -f "$cfg" ] || return
+    for bl in /sys/class/backlight/*; do
+        [ -r "$bl/brightness" ] || continue
+        python3 - "$cfg" "$(cat "$bl/brightness")" "$(cat "$bl/max_brightness")" << 'EOF' || echo "io: brightness not kept" >&2
+import json, os, sys
+path, raw, top = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+if top <= 1:
+    sys.exit(0)
+value = round(min(max((raw - 1) / (top - 1), 0.0), 1.0), 4)
+with open(path) as f:
+    config = json.load(f)
+changed = False
+for part in config:
+    if part.get("name") != "outputs":
+        continue
+    for output in part.get("data", []):
+        if str(output.get("connectorName", "")).startswith("eDP"):
+            if output.get("brightness") != value:
+                output["brightness"] = value
+                changed = True
+if changed:
+    with open(path + ".io", "w") as f:
+        json.dump(config, f, indent=4)
+    os.replace(path + ".io", path)
+EOF
+        return
+    done
+}
+
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 steam_dpi_scaling_off
+keep_game_mode_brightness
 # HDMI-CEC (SteamOS: cecd.service and cec-audio-control, user services of
 # the graphical session). cecd starts through D-Bus activation: anyone asking
 # for com.steampowered.CecDaemon1 early (Steam, io-steamos-manager) would
