@@ -8,9 +8,9 @@ license="LGPL-2.1-or-later"
 homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main"
 
 # files/holo-fstab-repair is Valve's script exactly as SteamOS 3.8.4
-# installs it (holo-fstab-repair 0.1-1, /usr/lib/steamos). The version stays
-# at 0.2, the archive this package was first made from, so updates keep
-# working. A runit core-service stands in for the systemd unit.
+# (holo-fstab-repair 0.1-1, /usr/lib/steamos) and 3.9.2 (0.2-1, the same
+# script under /usr/lib/holo) install it. The version is 0.2, the archive
+# this package was first made from. A runit core-service stands in for the systemd unit.
 do_install() {
 	vmkdir usr/lib/steamos
 	vinstall ${FILESDIR}/holo-fstab-repair 755 usr/lib/steamos

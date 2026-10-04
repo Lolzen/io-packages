@@ -9,7 +9,7 @@ license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/holo"
 conf_files="/etc/sudoers.d/wheel /etc/sudoers.d/sudo /etc/sudoers.d/no-fqdn"
 
-# Valve's three files as on SteamOS 3.8.4 (captured on hardware). no-fqdn
+# Valve's three files as on SteamOS 3.8.4 and 3.9.2 (captured on hardware). no-fqdn
 # keeps sudo from hanging while it resolves the host name with no network
 # or a broken DNS server. The group "sudo" does not exist on Void; the rule
 # does nothing then, as on any system without that group.

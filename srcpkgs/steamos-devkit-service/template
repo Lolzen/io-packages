@@ -14,7 +14,7 @@ homepage="https://gitlab.steamos.cloud/devkit/steamos-devkit-service"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
 checksum=535095a6259a69b3def22123e69dc6b52b3791c34b4539883d01b72b31aca09d
 
-# Valve's service, the version of SteamOS 3.8.4, with one change: it publishes
+# Valve's service, the version of SteamOS 3.8.4 and 3.9.2, with one change: it publishes
 # itself on mDNS through Avahi instead of systemd-resolved (patch). A runit
 # service replaces the systemd unit; Steam's developer setting switches it
 # through steamos-devkit-mode (deck-hw-support). Valve's polkit rule, which

@@ -12,7 +12,7 @@ homepage="https://github.com/zzag/drm_janitor"
 distfiles="https://github.com/zzag/drm_janitor/archive/${version}.tar.gz"
 checksum=712702f131a246d369e766563548bf46355aecaf4a51517fbad01c7af4df0516
 
-# The version of SteamOS 3.8.4 (holo-main drm_janitor-0.0.4-6), from the same
+# The version of SteamOS 3.8.4 and 3.9.2 (holo drm_janitor 0.0.4), from the same
 # upstream archive Valve builds (same checksum). Valve's only addition is a
 # drop-in that runs it after gamescope-session.service stops (ExecStopPost);
 # on Io, io-gamemode runs it after gamescope exits.
