@@ -31,6 +31,13 @@ echo "== system"
 info "kernel $(uname -r)"
 check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
 check "kernel.pid_max = 4194304" sh -c '[ "$(sysctl -n kernel.pid_max)" = 4194304 ]'
+# systemd's defaults (50-io-inherited.conf); ufw must not override them
+check "rp_filter 2 (loose, as SteamOS)" sh -c '[ "$(sysctl -n net.ipv4.conf.default.rp_filter)" = 2 ]'
+check "accept_redirects 1 (ufw's sysctl.conf not applied)" sh -c '[ "$(sysctl -n net.ipv4.conf.default.accept_redirects)" = 1 ]'
+check "accept_source_route 0" sh -c '[ "$(sysctl -n net.ipv4.conf.default.accept_source_route)" = 0 ]'
+check "ping_group_range 0 2147483647" sh -c 'sysctl -n net.ipv4.ping_group_range | grep -q "^0[[:space:]]*2147483647$"'
+check "net.unix.max_dgram_qlen = 512" sh -c '[ "$(sysctl -n net.unix.max_dgram_qlen)" = 512 ]'
+check "kwin_wayland file capability (realtime threads)" sh -c 'getcap /usr/bin/kwin_wayland | grep -q cap_sys_nice=ep'
 
 echo "== packages"
 # Split in two lists only to keep the lines short.
@@ -62,6 +69,7 @@ check "no resize core service" sh -c '! ls /etc/runit/core-services/ | grep -q r
 check "no io-autologin (SDDM logs in)" sh -c '[ ! -e /var/service/io-autologin ]'
 check "/ has mode 755 (not world-writable)" sh -c '[ "$(stat -c %a /)" = 755 ]'
 check "firewall active (ufw)" sh -c 'ufw status | grep -q "Status: active"'
+check "bluetoothd with SteamOS's settings" sh -c 'tr "\0" " " < /proc/$(pgrep -x bluetoothd)/cmdline | grep -q /usr/share/io/bluetooth/main.conf'
 check "logout ends the session (KillUserProcesses)" grep -q "KillUserProcesses=yes" /etc/elogind/logind.conf.d/10-io-kill-user-processes.conf
 check "no iwd service (wpa_supplicant is the default backend)" sh -c '[ ! -e /var/service/iwd ] || grep -q iwd /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf'
 
@@ -91,7 +99,12 @@ check "gamescope file capability" sh -c 'getcap /usr/bin/gamescope | grep -q cap
 check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /proc/$(pgrep -x gamescope-wl)/status'
 check "steam started with -gamepadui" sh -c 'tr "\0" " " < /proc/$(pgrep -o -x steam)/cmdline | grep -q -- -gamepadui'
 check "mangoapp running (performance overlay)" pgrep -x mangoapp
-check "user in group gamemode" sh -c 'id -nG deck | grep -qw gamemode'
+check "deck not in group gamemode (as SteamOS)" sh -c '! id -nG deck | grep -qw gamemode'
+check "Steam nice limit 0/28 (Proton nice)" sh -c 'prlimit --nice -o SOFT,HARD --noheadings -p $(pgrep -o -x steam) | grep -q "^ *0 *28 *$"'
+check "Steam open-file hard limit 524288" sh -c 'prlimit --nofile -o HARD --noheadings -p $(pgrep -o -x steam) | grep -q "^ *524288 *$"'
+check "LIBVA_DRIVER_NAME=radeonsi for Steam" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^LIBVA_DRIVER_NAME=radeonsi'
+check "STEAM_USE_WPASUPPLICANT set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_USE_WPASUPPLICANT=1'
+check "ibus-daemon running for Steam's keyboard" sh -c 'pgrep -u deck -f "ibus-daemon -r --panel=disable"'
 check "STEAM_ENABLE_VOLUME_HANDLER set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_VOLUME_HANDLER=1'
 check "STEAM_ENABLE_DYNAMIC_BACKLIGHT set" sh -c 'tr "\0" "\n" < /proc/$(pgrep -o -x steam)/environ | grep -q ^STEAM_ENABLE_DYNAMIC_BACKLIGHT=1'
 check "rtkit-daemon running" pgrep -x rtkit-daemon
@@ -113,7 +126,7 @@ fi
 echo "== audio"
 check "loopback script installed" test -r /usr/share/wireplumber/scripts/io-create-loopback.lua
 check "filter chain in its own PipeWire instance" pgrep -f "pipewire -c filter-chain.conf"
-check "filter chain memlock 100 MB" sh -c 'prlimit --memlock -o HARD -n -p $(pgrep -f "pipewire -c filter-chain.conf" | head -n 1) | grep -q 104857600'
+check "filter chain memlock 100 MB" sh -c 'prlimit --memlock -o HARD --noheadings -p $(pgrep -f "pipewire -c filter-chain.conf" | head -n 1) | grep -q 104857600'
 check "Steam on the Deck branch" sh -c 'grep -qx steamdeck_stable /home/deck/.local/share/Steam/package/beta'
 check "ALSA default device goes through PipeWire" test -e /etc/alsa/conf.d/99-pipewire-default.conf
 check "locale en_US.UTF-8 generated" sh -c 'locale -a | grep -qi "^en_US.utf8$"'
