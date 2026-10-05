@@ -116,11 +116,16 @@ for pkg in $PKGS; do
     BUILD="$BUILD $pkg"
 done
 
+# "xbps-src clean" first: after a failed build xbps-src resumes in the old
+# build directory and skips extract and patch, so changed patches (or a
+# regenerated overlay) would not be applied.
 cd "$VP_DIR"
 for pkg in $BUILD; do
     if grep -q '^archs="i686"' "srcpkgs/$pkg/template"; then
+        ./xbps-src -A i686 clean "$pkg"
         ./xbps-src -A i686 pkg "$pkg"
     else
+        ./xbps-src clean "$pkg"
         ./xbps-src pkg "$pkg"
     fi
 done
