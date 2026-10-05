@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=12
+revision=13
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind udisks2"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -47,7 +47,9 @@ do_install() {
 	vmkdir usr/share/polkit-1/rules.d
 	vinstall ${FILESDIR}/polkit-1/rules.d/org.valve.steamos.rules 644 usr/share/polkit-1/rules.d
 
-	for f in steamos-update steamos-select-branch jupiter-biosupdate; do
+	# /usr/bin/steamos-update is the real script (io-steamos-manager); the
+	# helper above re-runs itself through pkexec and calls it, as Valve's.
+	for f in steamos-select-branch jupiter-biosupdate; do
 		ln -sf steamos-polkit-helpers/$f ${DESTDIR}/usr/bin/$f
 	done
 
