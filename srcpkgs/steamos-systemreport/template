@@ -1,8 +1,8 @@
 # Template file for 'steamos-systemreport'
 pkgname=steamos-systemreport
 version=1.23
-revision=1
-depends="bash bluez coreutils drm_info upower wireplumber pipewire iputils
+revision=2
+depends="bash bluez-holo coreutils drm_info upower wireplumber pipewire iputils
  iproute2 iw pciutils usbutils procps-ng util-linux parted smartmontools
  polkit zstd jq alsa-utils pulseaudio-utils xbps"
 short_desc="SteamOS system report: collects system state for bug reports"

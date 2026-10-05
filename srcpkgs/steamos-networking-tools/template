@@ -1,8 +1,8 @@
 # Template file for 'steamos-networking-tools'
 pkgname=steamos-networking-tools
 version=1.3
-revision=1
-depends="bash iw iwd NetworkManager polkit runit-void"
+revision=2
+depends="bash iw iwd NetworkManager-holo polkit runit-void"
 short_desc="SteamOS networking tools: switch the Wi-Fi backend (iwd/wpa_supplicant)"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
