@@ -16,5 +16,11 @@ SteamOS.
 Applies to 1.56.0 with line offsets only (dry run against the 1.56.0 tag).
 Not compiled here; the gee build is the compile test.
 
+Measured on Georg's Deck (2026-10-05, one 5 GHz network, 3 suspend cycles
+each, `io-nm-resume-test.sh`): connected 1.4/1.4/1.5 s after resume with
+Void's 1.56.0, 1.3/1.2/1.4 s with the overlay. Small at home; kept
+(Georg's decision) for places with many networks, where the full scan
+costs more, and as SteamOS does.
+
 Way back: remove the overlay once a Void release of NetworkManager contains
 the change (see overlay/README.md).
