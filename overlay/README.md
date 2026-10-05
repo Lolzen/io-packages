@@ -52,6 +52,11 @@ overlay/holo.sh check            status of all overlays, changes nothing
 `publish.sh` publishes the overlay packages with Io's own; their names come
 from `holo.sh names`.
 
+Io's own templates (`io-desktop`, `steamos-networking-tools`, ...) depend on
+the `-holo` names, not on Void's: a dependency on the Void name is met by
+the `provides` on an installed system, but when an image is built from
+scratch xbps could pick Void's package for it, next to the stand-in.
+
 Only x86_64 is built: Void's `-32bit` package of an overlaid package stays
 Void's (its dependency on the 64-bit package is met by the `provides`).
 
@@ -72,6 +77,8 @@ one release, so the update removes the overlay package and installs Void's.
 | Overlay | Replaces | Void base | Patches | Upstream | Since |
 |---|---|---|---|---|---|
 | [MangoHud](MangoHud/README.md) | MangoHud, MangoHud-mangoapp | 0.8.4 | mangoapp renders once per game frame (`2c1dc52`) | master, not in 0.8.4 | 2026-10-05 |
+| [NetworkManager](NetworkManager/README.md) | NetworkManager, libnm, NetworkManager-devel | 1.56.0 | Wi-Fi: after resume scan only the last-associated frequency | MR 2514, open | 2026-10-05 |
+| [bluez](bluez/README.md) | bluez, libbluetooth and subpackages | 5.86 | LE resolving list fix (Steam Controller suspend); Switch Pro Controller not forced active | not merged / not sent | 2026-10-05 |
 
 ## Hand-written stand-ins
 
@@ -92,8 +99,6 @@ fork is cheap; these deserve a second look:
 
 | Package | Valve patch | Earlier verdict |
 |---|---|---|
-| NetworkManager (Void 1.56.0) | Wi-Fi: scan only the last-associated frequency after resume (MR 2514, open) | worth having; measure reconnect time after resume first |
-| bluez (Void 5.86) | Switch Pro v1 disconnect fix; LE resolving-list fix (Steam Controller and suspend) | optional, small |
 | xorg-server-xwayland (Void 24.1.13) | 2 reverts for a seamless Steam start under gamescope | dropped with 4.7 (black screen not pursued) |
 | kwin (Void 6.7.5) | 0006 + 0011: Steam keyboard input through libei in the desktop | only if the Steam keyboard misbehaves in the desktop |
 | mesa (Void 26.2) | DRI3 frame limiter for OpenGL (`GAMESCOPE_LIMITER_FILE`), RADV game fixes | decided 2026-10-03: stay with Void's Mesa; large build, needs 32-bit too |
