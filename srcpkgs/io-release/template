@@ -1,7 +1,7 @@
 # Template file for 'io-release'
 pkgname=io-release
 version=0.5
-revision=1
+revision=2
 _codename=loki
 _name="Alpha 5"
 _build=20260926.1
