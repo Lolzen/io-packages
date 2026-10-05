@@ -1,5 +1,5 @@
-# Template file for 'ibus-anthy-jupiter'
-pkgname=ibus-anthy-jupiter
+# Template file for 'ibus-anthy-holo'
+pkgname=ibus-anthy-holo
 version=1.5.14
 revision=1
 _commit=0962741856498bc9d197be0713b2fae1879c29ba
@@ -12,7 +12,7 @@ hostmakedepends="git tar automake libtool pkg-config gettext gettext-devel-tools
 makedepends="anthy-unicode-devel ibus-devel python3-gobject-devel"
 depends="ibus python3-gobject"
 provides="ibus-anthy-${version}_${revision}"
-replaces="ibus-anthy>=0"
+replaces="ibus-anthy>=0 ibus-anthy-jupiter>=0"
 short_desc="Japanese input method Anthy for IBus (Valve's fork)"
 maintainer="Georg <funer@gmx.at>"
 license="GPL-2.0-or-later"
@@ -27,8 +27,10 @@ checksum=3252e4e3050924c2cb294796d37db7f35b179182eb4fe0de9ffa032ecd9b3990
 # to Void's 1.5.16, so this is Valve's tree under its own name, replacing
 # Void's ibus-anthy (an Io package of the same name would never be picked:
 # xbps takes a package from the first repository that has it, and Void's
-# repository comes first). Built against anthy-unicode as Void's ibus-anthy;
-# Valve's uses the older anthy.
+# repository comes first). The -holo name marks Io's stand-ins for Void
+# packages (overlay/README.md); a Void update of ibus-anthy cannot replace
+# it. It was ibus-anthy-jupiter until 2026-10-05. Built against anthy-unicode
+# as Void's ibus-anthy; Valve's uses the older anthy.
 
 post_extract() {
 	git --git-dir=ibus-anthy archive --format=tar ${_commit} | tar -x
