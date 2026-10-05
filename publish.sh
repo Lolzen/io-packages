@@ -10,8 +10,9 @@
 #   4. uploads only files the release does not have yet, then the index
 #   5. deletes release assets that are no longer part of the repository
 #
-# The package list is taken from ~/io-packages/srcpkgs, so a new package is
-# published automatically and a removed one disappears from the release.
+# The package list is taken from ~/io-packages/srcpkgs and the overlays
+# (overlay/), so a new package is published automatically and a removed one
+# disappears from the release.
 # Unrelated packages that xbps-src rebuilt (openssl, pipewire, ...) stay out.
 #
 # Usage:
@@ -81,7 +82,18 @@ if [ "${1:-}" = "--full" ]; then
     shift
 fi
 
-ALL=$(ls "$SRCPKGS")
+# Overlay packages (overlay/holo.sh: MangoHud-holo, MangoHud-mangoapp-holo,
+# ...) belong to Io as well. Their names come from Void's templates, so a
+# failure here stops the run: a short list would prune them from the release.
+HOLO="${SRCPKGS%/srcpkgs}/overlay/holo.sh"
+HOLONAMES=""
+if [ -f "$HOLO" ]; then
+    HOLONAMES=$(IO_DIR="${SRCPKGS%/srcpkgs}" sh "$HOLO" names) || {
+        echo "publish: overlay/holo.sh names failed - not publishing" >&2
+        exit 1
+    }
+fi
+ALL="$(ls "$SRCPKGS") $HOLONAMES"
 if [ $# -gt 0 ]; then
     COLLECT="$*"
 else
