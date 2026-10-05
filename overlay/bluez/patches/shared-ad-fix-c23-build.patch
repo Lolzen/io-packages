@@ -1,0 +1,24 @@
+From: Io <funer@gmx.at>
+Subject: [PATCH] shared/ad: return NULL, not false, from bt_ad_has_data
+
+autoconf 2.73 (Void) makes AC_PROG_CC prefer C23; after autoreconf the
+build runs with -std=gnu23, where false is a bool and no longer a null
+pointer constant:
+
+  src/shared/ad.c:1251:24: error: incompatible types when returning type
+  '_Bool' but 'struct bt_ad_data *' was expected
+
+Still unfixed upstream (master, 2026-10). Same kind of fix as upstream
+da5b5b0ec ("shared/ad: fix -std=c23 build failure") for another function.
+---
+--- a/src/shared/ad.c
++++ b/src/shared/ad.c
+@@ -1248,7 +1248,7 @@
+ 					const struct bt_ad_data *data)
+ {
+ 	if (!ad)
+-		return false;
++		return NULL;
+ 
+ 	return queue_find(ad->data, data_match, data);
+ }
