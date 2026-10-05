@@ -12,6 +12,8 @@
 #   overlay.conf   base_version=<Void version the patches are made for>
 #                  io_revision=<1..99, raised when Io's patches change>
 #   patches/       *.patch, applied after Void's own patches
+#   template.append  optional: template lines added at the end (build
+#                  settings such as CFLAGS)
 #   README.md      what the patches do, where they come from, upstream state
 #
 # gen copies Void's srcpkgs/<name> (template, files/, patches/) to
@@ -252,6 +254,13 @@ cmd_gen() {
             print "provides=\"${provides:+$provides }" name "-${version}_${revision}\""
         }
     ' "$src/template" > "$dst/template"
+    if [ -f "$OVERLAY/$o/template.append" ]; then
+        {
+            echo
+            echo "# from overlay/$o/template.append"
+            cat "$OVERLAY/$o/template.append"
+        } >> "$dst/template"
+    fi
     sed -i "1s/.*/# Template file for '$o-holo' (generated from Void's '$o')/" "$dst/template"
 
     for s in $subs; do

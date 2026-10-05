@@ -20,6 +20,7 @@ An overlay is a directory `overlay/<name>/`, named after the Void package:
 |---|---|
 | `overlay.conf` | `base_version`: the Void version the patches are made for. `io_revision`: 1..99, raised whenever the patches change |
 | `patches/*.patch` | applied after Void's own patches (as `zz-io-*.patch`) |
+| `template.append` | optional: lines added at the end of the generated template, for build settings (`CFLAGS`, ...) |
 | `README.md` | what each patch does, where it comes from, upstream state, way back |
 
 `overlay/holo.sh gen <name>` copies Void's `srcpkgs/<name>` in
