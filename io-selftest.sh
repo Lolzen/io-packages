@@ -102,6 +102,7 @@ check "gamescope file capability" sh -c 'getcap /usr/bin/gamescope | grep -q cap
 check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /proc/$(pgrep -x gamescope-wl)/status'
 check "steam started with -gamepadui" sh -c 'tr "\0" " " < /proc/$(pgrep -o -x steam)/cmdline | grep -q -- -gamepadui'
 check "mangoapp running (performance overlay)" pgrep -x mangoapp
+check "mangoapp from Io's overlay (one render per game frame)" sh -c 'xbps-query MangoHud-mangoapp-holo > /dev/null'
 check "deck not in group gamemode (as SteamOS)" sh -c '! id -nG deck | grep -qw gamemode'
 check "Steam nice limit 0/28 (Proton nice)" sh -c 'prlimit --nice -o SOFT,HARD --noheadings -p $(pgrep -o -x steam) | grep -q "^ *0 *28 *$"'
 check "Steam open-file hard limit 524288" sh -c 'prlimit --nofile -o HARD --noheadings -p $(pgrep -o -x steam) | grep -q "^ *524288 *$"'

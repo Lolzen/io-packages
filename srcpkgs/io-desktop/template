@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=36
+revision=37
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to linux-neptune-72 and does not
@@ -36,7 +36,7 @@ depends="
  steamos-systemreport gstreamer1-pipewire wireless-regdb
  holo-sudo holo-realtek-firmware-toggles steam-web-debug-portforward jupiter-firewall
  cecd cec-audio-control steamos-devkit-service gpu-trace io-release
- MangoHud MangoHud-32bit MangoHud-mangoapp
+ MangoHud-holo MangoHud-32bit MangoHud-mangoapp-holo
  mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit libcurl-32bit
  mesa-vaapi mesa-vaapi-32bit
  pipewire wireplumber wireplumber-elogind alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
@@ -50,7 +50,7 @@ depends="
  kde-plasma konsole dolphin kate ark gwenview okular spectacle kdeconnect
  partitionmanager plasma-keyboard xdg-desktop-portal-gtk kio-extras kdialog octoxbps
 
- ibus ibus-pinyin ibus-table-cangjie-lite ibus-anthy-jupiter ibus-hangul
+ ibus ibus-pinyin ibus-table-cangjie-lite ibus-anthy-holo ibus-hangul
  noto-fonts-cjk
 "
 short_desc="Io meta package: complete Steam Deck game mode system"
