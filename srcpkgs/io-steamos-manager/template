@@ -1,9 +1,9 @@
 # Template file for 'io-steamos-manager'
 pkgname=io-steamos-manager
-version=0.13.0
-revision=2
+version=0.14.0
+revision=1
 python_version=3
-depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void
+depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void xbps util-linux
  steamos-networking-tools scx
  orca speech-dispatcher espeak-ng python3-evdev gsettings-desktop-schemas dconf glib
  at-spi2-core"
@@ -21,5 +21,11 @@ do_install() {
 	vsv scx
 	vinstall ${FILESDIR}/scx.default 644 etc/default scx
 	vinstall ${FILESDIR}/com.steampowered.SteamOSManager1.conf 644 usr/share/dbus-1/system.d
+	vinstall ${FILESDIR}/com.steampowered.Atomupd1.conf 644 usr/share/dbus-1/system.d
+	# System updates from Steam with xbps: Steam's script interface and the
+	# helper it shares with the Atomupd1 service of the root half.
+	vbin ${FILESDIR}/steamos-update
+	vmkdir usr/libexec/io
+	vinstall ${FILESDIR}/io-update 755 usr/libexec/io
 	vinstall ${FILESDIR}/io-steamos-manager.desktop 644 etc/xdg/autostart
 }

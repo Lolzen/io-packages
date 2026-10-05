@@ -1,0 +1,190 @@
+#!/bin/sh
+# io-update - Io's system update: xbps behind Steam's SteamOS updater.
+# Run as root. steamos-update (Steam's script interface) and the Atomupd1
+# D-Bus service of io-steamos-manager both use it.
+#
+#   io-update check     sync the repositories; if updates are pending, print
+#                       "<build id> <packages> <download bytes>" and exit 0;
+#                       exit 7 when there is nothing to update, 1 on errors
+#   io-update apply     install all updates; prints "progress <percent>
+#                       <seconds left>" lines and "done"; exit 0 when
+#                       applied, 7 when there was nothing to do, 1 on errors
+#   io-update applied   exit 0 (and print the build id) when an update has
+#                       been applied since boot, i.e. a reboot is pending
+#
+# The build id has SteamOS's form (digits and dots, as Steam checks):
+# today's date and the number of pending packages, e.g. 20261005.12.
+# An HTTP proxy set through Atomupd1.EnableHttpProxy is kept in
+# /run/io-update/proxy ("address port") and used for the downloads.
+# Everything xbps prints goes to /var/log/io-update.log.
+
+set -u
+
+XBPS_INSTALL="${IO_UPDATE_XBPS_INSTALL:-xbps-install}"
+XBPS_OPTS="${IO_UPDATE_XBPS_OPTS:-}"
+STATE="${IO_UPDATE_STATE:-/run/io-update}"
+LOG="${IO_UPDATE_LOG:-/var/log/io-update.log}"
+
+mkdir -p "$STATE"
+TMP=$(mktemp -d "$STATE/tmp.XXXXXX") || exit 1
+trap 'rm -rf "$TMP"' EXIT INT TERM
+
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+say() { echo "io-update: $*" >&2; log "$*"; }
+
+if [ -s "$STATE/proxy" ]; then
+    read -r paddr pport < "$STATE/proxy"
+    if [ -n "${paddr:-}" ] && [ -n "${pport:-}" ]; then
+        case "$paddr" in
+            *://*) proxy="$paddr:$pport" ;;
+            *) proxy="http://$paddr:$pport" ;;
+        esac
+        export HTTP_PROXY="$proxy" HTTPS_PROXY="$proxy"
+    fi
+fi
+
+# One run at a time: Steam and Atomupd1 may both ask.
+lock() {
+    exec 9> "$STATE/lock"
+    if ! flock -n 9; then
+        say "another update or check is running"
+        exit 1
+    fi
+}
+
+xi() {
+    # shellcheck disable=SC2086
+    "$XBPS_INSTALL" $XBPS_OPTS "$@"
+}
+
+sync_repos() {
+    if ! xi -S >> "$LOG" 2>&1; then
+        say "could not sync the repositories (network?)"
+        exit 1
+    fi
+}
+
+# pending updates as "pkgver action arch repo installed-size download-size"
+pending() {
+    if ! xi -un > "$TMP/pending" 2>> "$LOG"; then
+        say "xbps could not resolve the update"
+        exit 1
+    fi
+}
+
+count() { grep -c . "$TMP/pending"; }
+dlsize() { awk '{ s += $6 } END { printf "%d\n", s }' "$TMP/pending"; }
+buildid() { echo "$(date -u +%Y%m%d).$(count)"; }
+
+cmd_check() {
+    lock
+    sync_repos
+    pending
+    if [ "$(count)" -eq 0 ]; then
+        log "check: no updates"
+        exit 7
+    fi
+    log "check: $(count) package(s): $(awk '{ printf "%s ", $1 }' "$TMP/pending")"
+    echo "$(buildid) $(count) $(dlsize)"
+}
+
+# xbps-install -yu output -> percent lines. Downloads count by bytes (up
+# to $dlw percent), the rest by the per-package steps "unpacking ..." and
+# "configuring ..." and the "... successfully." lines.
+progress_filter() {
+    awk -v n="$1" -v total="$2" -v sizes="$TMP/pending" '
+        BEGIN {
+            dlw = (total > 0) ? 50 : 0
+            while ((getline l < sizes) > 0) {
+                split(l, f, " ")
+                size[f[1]] = f[6]
+            }
+            steps = 3 * n
+            last = -1
+        }
+        function show(p) {
+            if (p > 99) p = 99
+            if (p - last >= 0.5 || p == 99) {
+                printf "progress %.2f\n", p
+                fflush()
+                last = p
+            }
+        }
+        # "foo-1.0_2.x86_64.xbps: 2932KB [avg rate: ...]": a file is done
+        / \[avg rate: / {
+            file = $1; sub(/:$/, "", file)
+            if (file ~ /\.xbps$/) {
+                pv = file; sub(/\.[^.]*\.xbps$/, "", pv)
+                done_dl += size[pv]
+                cur = 0
+                if (total > 0) show(dlw * done_dl / total)
+            }
+            next
+        }
+        # "foo-1.0_2.x86_64.xbps: [2932KB 40%] ...": a file in progress
+        /\.xbps: \[[^ ]+ [0-9]+%\]/ {
+            file = $1; sub(/:$/, "", file)
+            pv = file; sub(/\.[^.]*\.xbps$/, "", pv)
+            pc = $0; sub(/.*\[[^ ]+ /, "", pc); sub(/%\].*/, "", pc)
+            if (total > 0) show(dlw * (done_dl + size[pv] * pc / 100) / total)
+            next
+        }
+        /: unpacking \.\.\.$/ || /: configuring \.\.\.$/ || / successfully\.$/ {
+            st++
+            if (steps > 0) show(dlw + (100 - dlw) * st / steps)
+        }
+    '
+}
+
+cmd_apply() {
+    lock
+    sync_repos
+    pending
+    # xbps refuses to update anything else while it is outdated itself
+    if grep -q '^xbps-[^-]*_[0-9]* ' "$TMP/pending"; then
+        say "updating xbps first"
+        if ! xi -yu xbps >> "$LOG" 2>&1; then
+            say "updating xbps failed"
+            exit 1
+        fi
+        pending
+    fi
+    n=$(count)
+    if [ "$n" -eq 0 ]; then
+        say "no updates"
+        exit 7
+    fi
+    id=$(buildid)
+    total=$(dlsize)
+    log "apply $id: $n package(s), $total bytes to download"
+    start=$(date +%s)
+    {
+        xi -yu 2>&1
+        echo $? > "$TMP/rc"
+    } | tee -a "$LOG" | progress_filter "$n" "$total" | while read -r _ pct; do
+        now=$(date +%s)
+        eta=$(awk -v p="$pct" -v e=$((now - start)) 'BEGIN { if (p > 0) printf "%d", e * (100 - p) / p; else print 0 }')
+        echo "progress $pct $eta"
+    done
+    rc=$(cat "$TMP/rc" 2> /dev/null || echo 1)
+    if [ "$rc" != 0 ]; then
+        say "xbps-install failed (exit $rc), see $LOG"
+        exit 1
+    fi
+    echo "$id" > "$STATE/applied"
+    log "apply $id: done"
+    echo "progress 100.00 0"
+    echo "done"
+}
+
+cmd_applied() {
+    [ -f "$STATE/applied" ] || exit 1
+    cat "$STATE/applied"
+}
+
+case "${1:-}" in
+    check) cmd_check ;;
+    apply) cmd_apply ;;
+    applied) cmd_applied ;;
+    *) echo "usage: io-update check|apply|applied" >&2; exit 1 ;;
+esac

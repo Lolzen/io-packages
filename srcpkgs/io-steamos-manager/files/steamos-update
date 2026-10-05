@@ -1,0 +1,103 @@
+#!/bin/sh
+# steamos-update - the script interface Steam uses for system updates
+# (SteamOS 3.9.2: /usr/bin/steamos-update from jupiter-legacy-support, a
+# wrapper around atomupd-manager). Steam runs it as root through
+# pkexec /usr/bin/steamos-polkit-helpers/steamos-update:
+#
+#   --supports-duplicate-detection   exit 0
+#   check [--enable-duplicate-detection]
+#       exit 0 and the build id on stdout: an update is available
+#       exit 7: no update; exit 8 (only with duplicate detection): an
+#       update was applied, reboot pending; exit 1: error
+#   (no argument)                    apply: progress as atomupd-manager
+#       prints it ("\r\e[K\r42.17%  1m05s"), then "Update completed";
+#       exit 0 applied, 7 nothing to do, 1 failed
+#
+# Messages go to stderr, as in Valve's script. Io's work is done by
+# /usr/libexec/io/io-update with xbps.
+
+IO_UPDATE="${IO_UPDATE:-/usr/libexec/io/io-update}"
+
+info() { echo "$*" >&2; }
+
+checkmode=""
+error=""
+duplicate_detection=""
+
+while [ $# -ge 1 ]; do
+    case "$1" in
+        check) checkmode=1 ;;
+        --beta)
+            info "'--beta' is deprecated; use 'steamos-select-branch beta' then 'steamos-update'"
+            ;;
+        -d) ;;
+        --enable-duplicate-detection) duplicate_detection=1 ;;
+        --supports-duplicate-detection)
+            info "This script supports the duplicate detection option"
+            exit 0
+            ;;
+        *)
+            error=1
+            info "Unknown option \"$1\""
+            ;;
+    esac
+    shift
+done
+
+if [ -n "$error" ]; then
+    info "!! Usage: $0 [check]"
+    exit 1
+fi
+
+if [ -n "$checkmode" ]; then
+    if [ -n "$duplicate_detection" ] && "$IO_UPDATE" applied > /dev/null; then
+        info "An update has already been applied, please reboot to enable it"
+        exit 8
+    fi
+    out=$("$IO_UPDATE" check)
+    rc=$?
+    case $rc in
+        0)
+            info "Update available"
+            echo "${out%% *}"
+            exit 0
+            ;;
+        7)
+            info "No update available"
+            exit 7
+            ;;
+        *)
+            info "Failed to check for updates"
+            exit 1
+            ;;
+    esac
+fi
+
+# Apply. io-update's exit status travels through a file: the pipe's last
+# command is the formatter.
+st=$(mktemp) || exit 1
+trap 'rm -f "$st"' EXIT INT TERM
+{
+    "$IO_UPDATE" apply
+    echo $? > "$st"
+} | while read -r what pct eta; do
+    case "$what" in
+        progress)
+            # as atomupd-manager: minutes only when > 0, no time when 0
+            printf '\r\033[K\r%s%%  ' "$pct"
+            if [ "$eta" -gt 0 ]; then
+                [ $((eta / 60)) -gt 0 ] && printf '%dm' $((eta / 60))
+                printf '%02ds' $((eta % 60))
+            fi
+            ;;
+        done)
+            printf '\nUpdate completed\n'
+            ;;
+    esac
+done
+rc=$(cat "$st" 2> /dev/null || echo 1)
+case $rc in
+    0) info "Applied an update"; exit 0 ;;
+    7) info "No update available"; exit 7 ;;
+    *) info "Update failed"; exit 1 ;;
+esac

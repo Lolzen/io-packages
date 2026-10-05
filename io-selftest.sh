@@ -174,6 +174,8 @@ esac
 SM=com.steampowered.SteamOSManager1
 SMP=/com/steampowered/SteamOSManager1
 check "root half: storage jobs (JobManager1)" sh -c "busctl introspect $SM $SMP/Jobs | grep -q JobManager1"
+check "root half: Atomupd1 (system updates)" sh -c "busctl get-property com.steampowered.Atomupd1 /com/steampowered/Atomupd1 com.steampowered.Atomupd1 Version | grep -q 'u 8'"
+check "steamos-update speaks Steam's interface" /usr/bin/steamos-update --supports-duplicate-detection
 SPID=$(pgrep -o -x steam)
 if [ -n "$SPID" ]; then
     SBUS=$(tr '\0' '\n' < /proc/$SPID/environ | grep '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
