@@ -10,8 +10,8 @@ the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
 > **Status:** [Alpha 5](https://github.com/Lolzen/io-packages/releases/tag/alpha5)
-> released (storage: SD cards and USB drives); Alpha 6 in progress (reference
-> now SteamOS 3.9.2, theme proposed: SteamOS 3.9.2 parity) — see
+> released (storage: SD cards and USB drives); Alpha 6 (SteamOS 3.9.2
+> parity, system updates from Steam) done, release pending — see
 > [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) and the
 > [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog).
 > Io ships as a disk image, written straight to an SD card with `dd`. It
@@ -55,6 +55,7 @@ reason is documented in
   switching to the desktop and back through SDDM, as on SteamOS
 - Steam as on SteamOS: Valve's Deck packaging, on the Deck's update branch,
   preinstalled — the first start needs no download
+- System updates from Steam (Settings → System), with xbps behind it
 - Graphics, Wi-Fi (backend switchable from Steam, as on SteamOS), Ethernet
   through a dock, Bluetooth including audio
 - Audio as on SteamOS: speakers, headphones, filtered microphone, with
@@ -68,9 +69,12 @@ reason is documented in
 - Battery: controlled shutdown through Steam when the battery runs empty
   (Valve's vpower)
 - Proton games, gamemode, screenshots, screen recording
+- Steam's keyboard in game mode, including Chinese, Japanese and Korean
+  input
 - KDE Plasma desktop with Valve's Deck defaults: Steam runs in the
-  background, Steam's on-screen keyboard (Steam + X), *Return to Gaming
-  Mode*
+  background, Steam's on-screen keyboard (Steam + X), Plasma's own
+  (`plasma-keyboard`, switched on in System Settings), *Return to Gaming
+  Mode*; the brightness set in game mode carries over
 - Storage expansion to the full card, as an explicit user step
 - SD cards and USB drives mount on their own (ext4, as on SteamOS); the
   internal SSD with SteamOS stays hidden; storage trim from SteamOS
@@ -79,8 +83,8 @@ reason is documented in
   SteamOS; the LAVD CPU scheduler for tools that switch it
 - Steam's system report, saved from Steam's own UI
 - Accessibility: Steam's screen reader and mono audio
-- HDMI-CEC, a firewall with Valve's rules (and Plasma's firewall page), and
-  the SteamOS Devkit Client
+- HDMI-CEC with Steam's switches, a firewall with Valve's rules (and
+  Plasma's firewall page), and the SteamOS Devkit Client
 
 Not yet: formatting drives from Steam, firmware updates, installing to the
 internal SSD. Built for the Steam Deck LCD; the OLED model
