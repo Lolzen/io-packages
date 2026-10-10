@@ -4,5 +4,22 @@ post)
 	# Io's earlier timedatectl also wrote /etc/timezone (not used on Void
 	# or SteamOS); it would keep a stale zone from now on.
 	rm -f etc/timezone
+	# GRUB without its menu: Io boots at once, as SteamOS does. A boot that
+	# goes wrong ends in dracut's emergency shell anyway; the recovery stick
+	# keeps its menu. grub (a dependency) is configured before this runs.
+	if [ -f etc/default/grub ]; then
+		sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' etc/default/grub
+		grep -q '^GRUB_TIMEOUT=' etc/default/grub || echo 'GRUB_TIMEOUT=0' >> etc/default/grub
+		if grep -q '^GRUB_TIMEOUT_STYLE=' etc/default/grub; then
+			sed -i 's/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=hidden/' etc/default/grub
+		else
+			echo 'GRUB_TIMEOUT_STYLE=hidden' >> etc/default/grub
+		fi
+		# Into grub.cfg now on an installed system (an image build runs
+		# grub-mkconfig itself).
+		if [ -f boot/grub/grub.cfg ] && command -v grub-mkconfig > /dev/null 2>&1; then
+			grub-mkconfig -o boot/grub/grub.cfg > /dev/null 2>&1 || echo "io-base: grub-mkconfig failed; run: grub-mkconfig -o /boot/grub/grub.cfg"
+		fi
+	fi
 	;;
 esac
