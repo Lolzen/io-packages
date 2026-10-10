@@ -1,8 +1,8 @@
 #!/bin/sh
 # Io: SteamOS's script, with the one branch Io has. Steam reads the current
 # branch with -c and the list with -l; SteamOS names the stable branch "rel"
-# there. Switching to another branch is refused until Io's update concept
-# (Alpha 6, phase 5) gives branches a meaning.
+# there. Switching to another branch is refused: Io's updates (xbps behind
+# steamos-update, Alpha 6) have one branch.
 
 if [ $# -eq 1 ]; then
 	case "$1" in
