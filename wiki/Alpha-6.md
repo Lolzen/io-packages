@@ -1,9 +1,11 @@
 # Alpha 6 — SteamOS 3.9.2 parity
 
-**Status:** all planned work is done and tested on the Deck, except the
-recovery stick with `plasma-keyboard` (not built since the switch); the
-release itself (`io-release` 0.6) is still to come. Theme: *SteamOS 3.9.2 parity*.
-What is open afterwards is on [Milestones](Milestones).
+**Released:** [alpha6](https://github.com/Lolzen/io-packages/releases/tag/alpha6)
+
+**Goal:** SteamOS 3.9.2 parity — SteamOS 3.9.2 as the reference, Io's
+packages brought to its versions, the gaps a comparison with it showed
+closed, and system updates from Steam. What is open afterwards is on
+[Milestones](Milestones).
 
 ## Highlights
 
@@ -86,8 +88,8 @@ What is open afterwards is on [Milestones](Milestones).
   `ibus-anthy-holo` (Valve's fork, Japanese), Void's `ibus-hangul`, and the
   Noto CJK fonts.
 - **`plasma-keyboard`** instead of Maliit, in the desktop (switched on in
-  System Settings, as on SteamOS) and on the recovery stick (set there; not
-  built and tested yet). It types umlauts.
+  System Settings, as on SteamOS) and on the recovery stick (set there; it
+  opens on touch only). It types umlauts.
 - **The desktop keeps the brightness set in game mode:** `io-plasma` writes
   it into kwin's saved output configuration before kwin starts (Valve
   patches kwin for this).
@@ -147,7 +149,9 @@ What is open afterwards is on [Milestones](Milestones).
 - `build.sh` builds overlay packages, copies subpackage links, runs
   `xbps-src clean` before each build, and builds `archs="i686"` packages in
   an i686 masterdir; `publish.sh` publishes overlay packages and the
-  `-32bit` packages.
+  `-32bit` packages. The image scripts put the repository keys (Void's,
+  Io's) into each root before installing, so a build never stops at xbps's
+  key import question.
 - `io-selftest.sh`: a storage section, the 32-bit WSI layer, and checks for
   the fixes above, the input methods, mangoapp from the overlay, Atomupd1
   and `steamos-update`.
@@ -180,3 +184,6 @@ What is open afterwards is on [Milestones](Milestones).
 - Pausing or cancelling a system update is refused (xbps cannot be stopped
   safely in the middle of a transaction).
 - The TV side of HDMI-CEC is untested (needs a dock that passes CEC).
+- With SteamOS on the internal SSD, *Restart* from Io starts SteamOS: the
+  firmware boots its default entry, and Io on the SD card has none (see
+  [Pitfalls](Pitfalls)). Use Volume Down + Power and pick the card.

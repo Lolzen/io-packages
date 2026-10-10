@@ -9,9 +9,8 @@ system. The sulphur it throws into space forms a plasma ring around Jupiter,
 the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
-> **Status:** [Alpha 5](https://github.com/Lolzen/io-packages/releases/tag/alpha5)
-> released (storage: SD cards and USB drives); Alpha 6 (SteamOS 3.9.2
-> parity, system updates from Steam) done, release pending — see
+> **Status:** [Alpha 6](https://github.com/Lolzen/io-packages/releases/tag/alpha6)
+> released (SteamOS 3.9.2 parity, system updates from Steam) — see
 > [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) and the
 > [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog).
 > Io ships as a disk image, written straight to an SD card with `dd`. It

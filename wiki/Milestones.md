@@ -1,22 +1,15 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog). The latest release is [Alpha 5](Alpha-5); what has
-changed since is on [Alpha 6](Alpha-6), done and about to be released.
-
----
-
-## Alpha 6 (done, release pending)
-
-Theme *SteamOS 3.9.2 parity*. Everything planned is done and tested on the
-Deck; what it brought is on [Alpha 6](Alpha-6). Left before the release:
-`io-release` 0.6 and the release workflow ([Building](Building)); the
-recovery stick with `plasma-keyboard` is still to be built and tried.
+the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6).
 
 ---
 
 ## Next (no theme yet)
 
+- **Restart back into Io:** *Restart* from Io should start Io again, not
+  the internal SteamOS (see [Pitfalls](Pitfalls)); power-on keeps
+  starting SteamOS
 - **Overlay candidates** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
   kwin's patches for Steam's keyboard in the desktop (only if it
   misbehaves there), Valve's Mesa (decided against on 2026-10-03; to
