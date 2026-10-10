@@ -1,0 +1,4 @@
+# /etc/default/io-bootnext - read by /usr/libexec/io/io-bootnext.
+# yes: Restart from Io starts Io again (UEFI BootNext, next boot only).
+# no:  the firmware starts its default system, as before Alpha 7.
+IO_BOOTNEXT=yes

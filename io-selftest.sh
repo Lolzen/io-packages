@@ -70,6 +70,8 @@ check "no runit polkitd service (D-Bus activated only)" sh -c '[ ! -e /var/servi
 check "exactly one polkitd" sh -c '[ "$(pgrep -c polkitd)" = 1 ]'
 check "no resize core service" sh -c '! ls /etc/runit/core-services/ | grep -q resize'
 check "no io-autologin (SDDM logs in)" sh -c '[ ! -e /var/service/io-autologin ]'
+check "restart into Io: shutdown hook installed" test -r /etc/runit/shutdown.d/75-io-bootnext.sh
+check "restart into Io: io-bootnext finds a boot entry or would create one" sh -c '/usr/libexec/io/io-bootnext --dry-run | grep -q "BootNext"'
 check "/ has mode 755 (not world-writable)" sh -c '[ "$(stat -c %a /)" = 755 ]'
 check "firewall active (ufw)" sh -c 'ufw status | grep -q "Status: active"'
 check "bluetoothd with SteamOS's settings" sh -c 'tr "\0" " " < /proc/$(pgrep -x bluetoothd)/cmdline | grep -q /usr/share/io/bluetooth/main.conf'

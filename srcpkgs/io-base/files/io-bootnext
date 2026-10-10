@@ -1,0 +1,93 @@
+#!/bin/sh
+# io-bootnext - make the firmware start Io again on the next boot.
+#
+# Io on an SD card has GRUB at the removable path and no boot entry of its
+# own, so the firmware starts its default entry on a warm reboot: SteamOS on
+# the internal SSD. UEFI's BootNext is used once, for the next boot only;
+# afterwards the firmware is back to its BootOrder. So Restart starts Io
+# again, power-on still starts the default system, and a missing card falls
+# back to it as well.
+#
+# Run as root on reboot by /etc/runit/shutdown.d/75-io-bootnext.sh.
+#
+#   io-bootnext           set BootNext to Io's entry (created once if missing,
+#                         without adding it to BootOrder)
+#   io-bootnext --dry-run print what it would do, change nothing
+#
+# /etc/default/io-bootnext: IO_BOOTNEXT=no switches it off.
+
+set -u
+
+LOADER='\EFI\BOOT\BOOTX64.EFI'
+LABEL="Io"
+LOG=/var/log/io-bootnext.log
+ESP_MNT=/boot/efi
+EFIVARS=/sys/firmware/efi/efivars
+
+DRY=""
+[ "${1:-}" = "--dry-run" ] && DRY=1
+
+IO_BOOTNEXT=yes
+# shellcheck disable=SC1091
+[ -r /etc/default/io-bootnext ] && . /etc/default/io-bootnext
+
+say() {
+    if [ -n "$DRY" ]; then
+        echo "$*"
+    else
+        echo "$(date '+%F %T') $*" >> "$LOG" 2> /dev/null
+    fi
+}
+stop() { say "$*"; exit 0; }
+
+[ "$IO_BOOTNEXT" = yes ] || stop "switched off in /etc/default/io-bootnext"
+[ -d /sys/firmware/efi ] || stop "not booted with UEFI"
+command -v efibootmgr > /dev/null || stop "efibootmgr missing"
+if ! mountpoint -q "$EFIVARS"; then
+    mount -t efivarfs efivarfs "$EFIVARS" || stop "cannot mount $EFIVARS"
+fi
+
+# The ESP Io booted from: the one mounted at /boot/efi (fstab, by UUID).
+esp=$(findmnt -n -o SOURCE "$ESP_MNT") || stop "$ESP_MNT not mounted"
+partuuid=$(blkid -s PARTUUID -o value "$esp")
+[ -n "$partuuid" ] || stop "no PARTUUID for $esp"
+say "ESP $esp, PARTUUID $partuuid"
+
+# The first boot entry on that partition, e.g.
+# "Boot0003* Io  HD(1,GPT,<partuuid>,0x800,0x100000)/\EFI\BOOT\BOOTX64.EFI"
+find_entry() {
+    efibootmgr -v | awk -v u="$partuuid" '
+        /^Boot[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]/ && index(tolower($0), tolower(u)) {
+            print substr($1, 5, 4)
+            exit
+        }'
+}
+
+entry=$(find_entry)
+if [ -z "$entry" ]; then
+    # disk and partition number from sysfs (udev is already stopped)
+    p=${esp#/dev/}
+    disk=$(basename "$(readlink -f "/sys/class/block/$p/..")")
+    part=$(cat "/sys/class/block/$p/partition" 2> /dev/null)
+    [ -n "$disk" ] && [ -n "$part" ] || stop "cannot find disk and partition of $esp"
+    if [ -n "$DRY" ]; then
+        stop "would create entry \"$LABEL\" on /dev/$disk partition $part ($LOADER), not in BootOrder, and set BootNext to it"
+    fi
+    # -C: create the entry without adding it to BootOrder
+    if ! efibootmgr -q -C -d "/dev/$disk" -p "$part" -L "$LABEL" -l "$LOADER" >> "$LOG" 2>&1; then
+        stop "creating the boot entry failed"
+    fi
+    entry=$(find_entry)
+    [ -n "$entry" ] || stop "created entry not found"
+    say "created boot entry Boot$entry ($LABEL)"
+fi
+
+if [ -n "$DRY" ]; then
+    stop "would set BootNext to Boot$entry"
+fi
+if efibootmgr -q -n "$entry" >> "$LOG" 2>&1; then
+    say "BootNext set to Boot$entry"
+else
+    say "setting BootNext failed"
+fi
+exit 0

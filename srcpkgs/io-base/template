@@ -1,9 +1,10 @@
 # Template file for 'io-base'
 pkgname=io-base
-version=0.5.0
+version=0.6.0
 revision=1
-depends="polkit socklog-void plymouth alsa-pipewire"
-conf_files="/etc/elogind/logind.conf.d/10-io.conf /etc/sv/bluetoothd/conf"
+depends="polkit socklog-void plymouth alsa-pipewire efibootmgr util-linux"
+conf_files="/etc/elogind/logind.conf.d/10-io.conf /etc/sv/bluetoothd/conf
+ /etc/default/io-bootnext"
 short_desc="Io base configuration for Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -26,9 +27,14 @@ do_install() {
 	ln -s /usr/share/alsa/alsa.conf.d/99-pipewire-default.conf ${DESTDIR}/etc/alsa/conf.d/
 	vmkdir etc/runit/shutdown.d
 	vinstall ${FILESDIR}/05-io-ssh-sessions.sh 644 etc/runit/shutdown.d
+	# Restart from Io starts Io again (UEFI BootNext, next boot only)
+	vinstall ${FILESDIR}/75-io-bootnext.sh 644 etc/runit/shutdown.d
+	vmkdir etc/default
+	vinstall ${FILESDIR}/io-bootnext.default 644 etc/default io-bootnext
 	# /usr/share/i18n/SUPPORTED, regenerated from libc-locales (as on Arch)
 	vmkdir usr/libexec/io
 	vinstall ${FILESDIR}/io-i18n-supported 755 usr/libexec/io
+	vinstall ${FILESDIR}/io-bootnext 755 usr/libexec/io
 	vmkdir etc/runit/core-services
 	vinstall ${FILESDIR}/12-io-i18n-supported.sh 644 etc/runit/core-services
 	# SteamOS's BlueZ settings (Valve patches them into bluez's main.conf),
