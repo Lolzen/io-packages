@@ -1,0 +1,32 @@
+# Publishes wiki/ to the GitHub wiki of this repository.
+# wiki/ is the only source: the wiki is overwritten with its content on every
+# run (pages removed here disappear there), edits made in the web wiki are lost.
+# Runs on main only, so test branches never reach the wiki.
+name: Publish wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - wiki/**
+      - .github/workflows/publish-wiki.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: false
+
+jobs:
+  publish-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Andrew-Chen-Wang/github-wiki-action@v5.0.6
+        with:
+          path: wiki/
+          # the pages already use wiki links (](Deviations)); publish them as they are
+          preprocess: false
+          commit-message: "${{ github.event.head_commit.message || 'Publish wiki' }}"
