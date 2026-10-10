@@ -1,0 +1,40 @@
+# Template file for 'ttf-twemoji-default'
+pkgname=ttf-twemoji-default
+version=13.1.0
+revision=1
+# SteamOS's emoji font, as Valve builds it (holo ttf-twemoji-default
+# 13.1.0-2.5): Fedora's Twemoji build (colour bitmaps, CBDT), with the glyphs
+# for space, digits, '#', '*', (c) and (R) removed so that ordinary text
+# never falls back to emoji, and a fontconfig file that makes Twemoji the
+# emoji font for everything (requests for Noto Color Emoji, Apple, Segoe
+# included). Void's twemoji is a different build (SVG-in-OpenType).
+create_wrksrc=yes
+hostmakedepends="bsdtar fonttools"
+depends="font-util fontconfig"
+short_desc="Twitter's Twemoji as the default emoji font (SteamOS's)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT, CC-BY-4.0, Apache-2.0"
+homepage="https://github.com/twitter/twemoji"
+_fedrel=1.fc35
+distfiles="https://kojipkgs.fedoraproject.org/packages/twitter-twemoji-fonts/${version}/${_fedrel}/noarch/twitter-twemoji-fonts-${version}-${_fedrel}.noarch.rpm"
+checksum=2730d76b7939be467571dd0f10d4f5b1f8396e96743173750e27d45ac7ab2f07
+font_dirs="/usr/share/fonts/twemoji"
+provides="font:emoji-0_1"
+conflicts="twemoji>=0"
+
+do_build() {
+	# Valve's prepare(): to XML, drop the glyphs, back to a font
+	ttx -q -o twemoji.ttx usr/share/fonts/twemoji/Twemoji.ttf
+	patch twemoji.ttx ${FILESDIR}/twemoji-glyph-remove.diff
+	ttx -q -o twemoji.ttf twemoji.ttx
+}
+
+do_install() {
+	vinstall twemoji.ttf 644 usr/share/fonts/twemoji
+	vinstall ${FILESDIR}/75-twemoji.conf 644 usr/share/fontconfig/conf.avail
+	vmkdir etc/fonts/conf.d
+	ln -s /usr/share/fontconfig/conf.avail/75-twemoji.conf ${DESTDIR}/etc/fonts/conf.d/
+	vlicense usr/share/licenses/twitter-twemoji-fonts/LICENSE
+	vlicense usr/share/licenses/twitter-twemoji-fonts/LICENSE-BUILD
+	vlicense usr/share/licenses/twitter-twemoji-fonts/LICENSE-GRAPHICS
+}
