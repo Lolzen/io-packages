@@ -139,12 +139,22 @@ xbps_root() {
   # shellcheck disable=SC2086
   XBPS_ARCH=x86_64 xbps-install -y -R "$IO_REPO" -R "$VOID" -R "$VOID/nonfree" -R "$VOID/multilib" -R "$VOID/multilib/nonfree" "$@"
 }
+# The repository keys (Void's two, Io's) go into a root before xbps first
+# talks to it: a fresh root has none, and xbps asks before importing each
+# one - "-y" does not answer that, so a build with its output in a log
+# stopped there. void-mklive does the same with its keys/ directory.
+# File name = the key's fingerprint, as xbps names them.
+install_repo_keys() {
+  mkdir -p "$1/var/db/xbps/keys"
+  cp "$SCRIPT_DIR/keys/"*.plist "$1/var/db/xbps/keys/"
+}
 # Install the package list into a root. A root kept from an earlier build
 # is brought up to date first: xbps-install without -u installs what is
 # missing but leaves installed packages at their old version, and the
 # tarball would quietly carry them. xbps updates itself first when needed.
 install_pkgfile() {
   _pkgs=$(pkglist "$2")
+  install_repo_keys "$1"
   if [ -x "$1/usr/bin/xbps-install" ]; then
     log "updating the existing root first"
     xbps_root -S -u -r "$1" xbps
