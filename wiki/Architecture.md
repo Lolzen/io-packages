@@ -7,9 +7,16 @@ behind each difference, see [Deviations](Deviations).
 
 ## Boot
 
-1. **GRUB** from the card's EFI partition. It is installed in removable mode
-   without an NVRAM entry, because the card's partition GUIDs change with
-   every image build.
+1. **GRUB** from the card's EFI partition, without showing its menu
+   (`GRUB_TIMEOUT=0`, `GRUB_TIMEOUT_STYLE=hidden`, set by `io-base`). It is
+   installed in removable mode without an NVRAM entry, because the card's
+   partition GUIDs change with every image build. On *Restart* the shutdown
+   hook `75-io-bootnext.sh` runs `/usr/libexec/io/io-bootnext`: it sets UEFI
+   `BootNext` to the firmware's boot entry for the EFI partition Io started
+   from (found by its PARTUUID; created once, outside `BootOrder`, if the
+   firmware has none), so the next boot starts Io again. Switching off
+   leaves `BootNext` alone; `IO_BOOTNEXT=no` in `/etc/default/io-bootnext`
+   turns it off. Log: `/var/log/io-bootnext.log`.
 2. **Initramfs** (dracut) with the `amdgpu` module included for early display, and
    Plymouth, which shows the Io splash from here on.
 3. **runit stage 1** runs Void's core services, plus Io's own:

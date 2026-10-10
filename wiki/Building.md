@@ -166,6 +166,10 @@ sudo build/mkrecovery.sh
   with every xattr and ACL (file capabilities included). What depends on
   the disk is left out of the tarball. The xbps cache and the root's shell
   history are removed before packing.
+- `mkrootfs.sh` and `mkrecovery.sh` put the repository keys from
+  `build/keys/` (Void's two and Io's, named by fingerprint as xbps names
+  them) into a root before installing into it, so a build never stops at xbps's question whether to import a
+  key — `-y` does not answer that one.
 - **`mkimg.sh`** writes the tarball into `/home/gee/io.img` (16 GiB) and
   adds what depends on the disk: fstab by UUID, the initramfs, GRUB in
   removable mode.

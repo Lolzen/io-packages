@@ -185,9 +185,11 @@ for some day.
 other kernel series, and the old CEC path (`wakehook`,
 `plasma-remotecontrollers`).
 
-**To check:** `zenity-gtk3` (Void's `zenity` should do, Steam only uses
-`zenity --error`; test that its dialogs work), `inputattach-cec-units`
-(optional, only for USB CEC adapters).
+**Checked, not needed** (2026-10-10): `zenity-gtk3` — Void's `zenity` 4
+behaves as Valve's 3.44 does: in game mode neither shows a dialog while
+Steam is running, in the desktop both do; `inputattach-cec-units` — its
+udev rules only match Pulse-Eight and RainShadow USB-CEC adapters, and
+the JSAUX dock used for testing contains none (`lsusb` on Io and SteamOS).
 
 **Not installed on SteamOS, not evaluated yet:** Valve's repair, recovery
 and media creation tools (`steamos-repair-tool-git`,

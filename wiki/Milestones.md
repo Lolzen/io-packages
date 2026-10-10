@@ -1,24 +1,34 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6).
+the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6); what
+has changed since is on [Alpha 7](Alpha-7).
+
+---
+
+## Alpha 7 (in progress)
+
+- **Done:** *Restart* from Io starts Io again (`io-base` 0.6.0); GRUB
+  boots without its menu (`io-base` 0.7.0); the image scripts bring the
+  repository keys along. See [Alpha 7](Alpha-7)
+- **Checked against SteamOS:** `zenity` (same behaviour, no `zenity-gtk3`
+  needed), `inputattach-cec-units` (no USB-CEC adapter, not needed),
+  Steam's patch notes for updates (Valve's; they stay, see
+  [Deviations](Deviations)), the screen sharing prompt (the permission
+  store looks as on SteamOS apart from the app ID; a fresh user is still to
+  be tried, see *Tests pending*)
+- **Open:** a capture with Steam's experimental SteamRT3 client
 
 ---
 
 ## Next (no theme yet)
 
-- **Restart back into Io:** *Restart* from Io should start Io again, not
-  the internal SteamOS (see [Pitfalls](Pitfalls)); power-on keeps
-  starting SteamOS
 - **Overlay candidates** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
   kwin's patches for Steam's keyboard in the desktop (only if it
   misbehaves there), Valve's Mesa (decided against on 2026-10-03; to
   revisit only if an OpenGL game ignores Steam's frame limit), iwd and
   wpa_supplicant fixes (no effect on the LCD today)
-- **Steam's update changelog:** Steam shows Valve's official SteamOS
-  changelog for an update; Io's could take its place (cosmetic)
 - **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
-- A capture with Steam's experimental SteamRT3 client
 - **Twemoji**, SteamOS's emoji look: some day
 
 ---
@@ -34,25 +44,14 @@ the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6).
   the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
   missing realtime threads are fixed in Alpha 6. Same scheduler, governor
   and preemption. To check again after the move to the NVMe
-- **Screen sharing prompt in the desktop:** Steam asks Plasma's portal for
-  screen sharing at start; the prompt appears until *Allow restoring* is
-  chosen once. SteamOS 3.9.2 does the same calls (ScreenCast session, then
-  a permission stored); what a new user sees there is still unchecked
 - **vpower's shutdown at 0.5 %:** never tested on a real empty battery
-- **`Previous system reset reason`** in the kernel log once: watch whether it
-  comes back
 - **Wi-Fi next to the dock's Ethernet showed "can't reach network"** once,
   during a day of heavy testing; plugging and unplugging the dock later
   behaved correctly. If it comes back, record before reconnecting:
   `nmcli -f DEVICE,STATE,IP4-CONNECTIVITY device; nmcli -f CONNECTIVITY
   general; ip route`
-- **`/` was world-writable** (mode 777, changed on 2026-09-25 during the
-  boot analysis; no package and no automount run explains it). Fixed by
-  hand; it has stayed 755 since, also with Alpha 5's automount, which
-  leaves the disk Io runs from alone. `io-selftest.sh` checks it; check
-  fresh images with it before each release
-- **The first dock hot-plug after many session restarts showed no picture**
-  on the TV; after a reboot, plugging and unplugging worked every time
+- **Touch only with the dock on SteamOS:** SteamOS switches the trackpads
+  off while the dock is attached; Io does not (see [Deviations](Deviations))
 
 ---
 
@@ -61,6 +60,10 @@ the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6).
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
   should take it over), and ejecting a drive from Steam
 - **Decky Loader**
+- **Screen sharing prompt for a new user:** set
+  `~/.local/share/flatpak/db/screencast` aside, reboot, switch to the
+  desktop: Steam should ask once and, with *Allow restoring*, never again
+  (as on SteamOS, which grants nothing in advance either)
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
 - **Wake-on-Bluetooth** (a controller waking the Deck from suspend). Io

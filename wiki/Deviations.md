@@ -34,6 +34,7 @@ its reason.
 | Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
+| GRUB boots Io without its menu; *Restart* from Io starts Io again (UEFI `BootNext`), switching on starts the firmware's default system | `steamcl` without a menu, SteamOS on the internal SSD is the firmware's default | Io on an SD card has no boot entry of its own (GRUB at the removable path), so a restart started the internal SteamOS. `BootNext` lasts one boot, so SteamOS stays the default. A boot that goes wrong ends in dracut's emergency shell; the recovery stick keeps its menu |
 | SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the test phase. Images for 1.0 will follow SteamOS |
 
 ---
@@ -92,8 +93,17 @@ its reason.
 - **On-screen keyboard in the desktop:** `plasma-keyboard`, as SteamOS 3.9.2
   (it replaced Maliit there). As on SteamOS it is not set as kwin's input
   method by default; System Settings → Keyboard → Virtual Keyboard turns it
-  on. The recovery stick's build sets it (not built and tested since the
-  switch).
+  on. The recovery stick's build sets it (it opens on touch only).
+- **Screen sharing permission in the desktop:** Steam asks Plasma's portal
+  for screen sharing when it starts in the desktop; the answer is kept with
+  a restore token. Io stores it for an app without an ID (`""`), SteamOS for
+  `steam`, most likely because without systemd the portal cannot name
+  Steam from a cgroup scope. Neither system grants it in advance
+  (`kde-authorized` empty on both), so a new user should be asked once on
+  either; not tried yet on a fresh user (see [Milestones](Milestones)).
+- **Touch only with the dock:** SteamOS switches the trackpads and the
+  pointer off while the dock is attached and leaves only the touchscreen
+  (seen with a mirrored display); Io leaves them on. Not looked into yet.
 - **Session output goes to a rotating log** (`/run/user/1000/io-log-<session>/`,
   or `~/.local/state/io/` while Steam's developer mode is on) instead of
   the systemd journal.
@@ -443,6 +453,12 @@ interfaces Steam uses:
   SteamOS Manager (Valve: anyone, with polkit per method).
 - Every update is logged to `/var/log/io-update.log`. An update does not
   restart running services; the reboot Steam asks for does.
+- **Patch notes are Valve's.** When an update is offered, Steam shows the
+  newest patch notes event of Valve's Steam Deck app (1675200) for the
+  update channel (stable, beta or preview, from the OS branch and the
+  client's beta), not notes that belong to the update. So Io's updates come
+  with SteamOS's latest notes. Only Valve can post there, and Io does not
+  change Steam's client.
 
 ---
 

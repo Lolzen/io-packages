@@ -23,7 +23,9 @@ sudo dd if=io.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
 Boot the Deck from the card: hold **Volume Down**, press **Power**, pick the
-card in the boot manager.
+card in the boot manager. *Restart* from Io starts Io again; switching the
+Deck off and on starts the firmware's default system (SteamOS on the
+internal SSD, if there is one).
 
 **The first boot**
 

@@ -30,10 +30,6 @@ start. A stale `~/.steam/steam.pipe` makes the next `steam.sh` exit silently
 with status 0; delete it if Steam launches and immediately exits without
 output.
 
-**Steam's bootstrapper fails offline with a misleading "needs to be online"
-message** whenever it has to download the client — with a plain bootstrap,
-that is the first start. `steam-jupiter`'s preinstalled client avoids it.
-
 **Steam's 32-bit bootstrapper needs `libcurl-32bit`.** Without it every
 update check fails with a generic `http error 0` that reads like a network
 problem.
@@ -61,12 +57,6 @@ library.** Arch's `lib32-pipewire` ships both; Void splits them into
 alone, screen recording fails with *Failed to create PipeWire main loop*
 (no support plugins) or *Could not connect receiving stream* (no
 converters) in `streaming_log.txt`.
-
-**gamescope before 3.16.22 never finishes PipeWire negotiation with
-PipeWire 1.6.** It iterated its PipeWire loop without `pw_loop_enter`. The
-link to gamescope's capture node stays `negotiating`, the consumer's stream
-`paused`, and Steam never creates a video encoder: recordings have sound
-but no picture. Upstream fix: *pipewire: Fix pipewire loop locking*.
 
 **Steam creates its video encoder only when the first frame arrives.** No
 *Trying to create an encoder* line in `streaming_log.txt` means no frame
@@ -442,11 +432,12 @@ pulse layer), which is why it went unnoticed.
 
 **`EV_FF` is bit `0x200000`** in `/proc/bus/input/devices`, not `0x100000`.
 
-**A warm reboot can boot a different OS.** With Io on an SD card (GRUB in
-removable mode, no NVRAM entry) next to an internal SteamOS, a warm reboot
-skips the boot selector and starts whatever owns the NVRAM default. From the
-outside it looks like a broken Io service until you see the other system's
-login prompt.
+**A restart from the recovery stick boots the firmware's default system.**
+The stick has no `io-bootnext` (it lacks `io-base`), and neither does Io with
+`IO_BOOTNEXT=no`: GRUB at the removable path has no boot entry of its own,
+so a warm reboot skips the boot selector and starts the internal SteamOS.
+From the outside it looks like a broken Io service until you see the other
+system's login prompt.
 
 ---
 
@@ -503,12 +494,6 @@ first-boot network prompt waited invisibly for input on every fresh image,
 and only there, because a development card already knows its Wi-Fi. The
 fallback shell would be just as invisible. Test first boot with a fresh
 image, not on a development card.
-
-**An interrupted first Steam download leaves Steam broken** — only relevant
-with a plain Steam bootstrap. `~/.local/share/Steam/steam.sh` stays empty but
-executable, and the launcher runs it every time (`Exec format error`).
-Removing the empty file makes the launcher set Steam up again. With
-`steam-jupiter`'s preinstalled client there is no first download.
 
 **xbps does not restart a runit service when its package is updated.** The
 service keeps running the old program until a reboot or `sv restart`; a
@@ -646,16 +631,6 @@ cards) stays disabled until Io runs from the internal SSD.
 **`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
 (the user name is chosen when the image is built), and `systemd-cat` becomes
 `logger`.
-
-**Valve's `python<3.14` constraints were too conservative** and have been
-relaxed upstream.
-
-**Valve's Proton nice limit had no effect on SteamOS 3.8.4.**
-`15-proton-nice.conf` (`* hard nice -8`) was installed to `/etc/limits.d`,
-which `pam_limits` does not read; Valve moved it to
-`/etc/security/limits.d` in August 2026. A capture of 3.8.4 therefore shows
-no such limit; on 3.9.2 Steam's hard nice limit is 28 and Proton's game
-threads run at negative nice values.
 
 **Being in the `gamemode` group raises the nice limit.** Void's gamemode
 package gives its group `nice -10` in `limits.d`; with `deck` in it, Steam
