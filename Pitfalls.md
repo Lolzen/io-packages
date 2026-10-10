@@ -208,6 +208,16 @@ processes it knows.
 **Steam's HDMI-CEC switches are in the power menu**, not under display
 settings. The current Steam beta sets them through `HdmiCec2`.
 
+**SDDM ignores `InputMethod=qtvirtualkeyboard` on a Wayland greeter.**
+SDDM 0.21 drops it there (the compositor has to provide the keyboard), and
+it is SDDM's default anyway; Valve's `holo.conf` setting it changes nothing.
+
+**kwin restores the brightness it saved, not the current one.** At start
+kwin sets the panel to the value in `~/.config/kwinoutputconfig.json`
+(`brightness`, 0–1, for the `eDP` output), so the desktop jumped away from
+the level set in game mode. `io-plasma` writes the current backlight there
+first, in kwin's scale: (raw − 1) / (max − 1).
+
 **Void's `sddm` run script needs elogind's D-Bus activation file.** It asks
 D-Bus to start `org.freedesktop.login1` (`dbus-send ... StartServiceByName`)
 under `set -e`. Io removes that file (elogind runs as a runit service), so
@@ -290,12 +300,36 @@ resolves crates itself. Crates that generate bindings (`clang-sys`) also need
 `clang`, `llvm` and `clang21-devel`: the versioned `-devel` package is the only
 one shipping the unversioned `libclang.so` that `clang-sys` looks for.
 
+**xbps-src no longer builds `archs=noarch`.** A template with it stops
+with "this package cannot be built for x86_64"; leave `archs` out.
+
+**Void's autoconf 2.73 makes configure prefer C23.** A template that runs
+`autoreconf` gets a configure that adds `-std=gnu23`, where `false` is no
+longer a null pointer constant; older code such as bluez 5.86 then fails
+("incompatible types when returning type '_Bool'"). Void's own bluez
+template fails this way since; packages built before still install. Fix:
+`CFLAGS="-std=gnu17"` (the default of GCC 14).
+
+**A library from an Io package is unknown to Void's `common/shlibs`.**
+`xbps-src` stops at the consumer ("SONAME ... UNKNOWN PKG PLEASE FIX!",
+`ibus-pinyin` with `pyzy`'s `libpyzy`). `allow_unknown_shlibs=yes` in the
+consumer turns that into a warning; then name the library's package in
+`depends` by hand.
+
+**`autoreconf` needs `gettext-devel-tools` in Void** for gettext's macros
+(`AM_NLS`, `AM_GNU_GETTEXT`) and `autopoint`; they are not in Void's
+`gettext` package (Ubuntu has `nls.m4` in `gettext`, so a test build there
+passes). Without it autoconf stops with "undefined or overquoted macro:
+AM_NLS".
+
 **A git repository in Valve's archive can be named like the program being
 built** (`steamos-powerbuttond`): `ld` then fails with "Is a directory".
 Unpack the tree into a subdirectory and set `build_wrksrc`.
 
-**After a failed build `post_extract` does not run again** — `xbps-src`
-remembers the extraction. `./xbps-src clean <package>` first.
+**After a failed build `post_extract` and the patches do not run again** —
+`xbps-src` continues in the old build directory and remembers which steps
+are done, so a patch added after the failure is never applied.
+`./xbps-src clean <package>` first; `build.sh` does it before every build.
 
 **Check which git tag you unpack from Valve's archive.** The newest tag in
 `git tag | tail -1` sorts alphabetically, not by date; use the tag that
@@ -327,7 +361,9 @@ alphabetical order (a file in `/etc` masks a same-named one). Void's
 `00-repository-main.conf` and Io's `20-io.conf` are both in
 `/usr/share/xbps.d`, so Void's repository comes first: an Io build of a
 package Void also ships would be ignored, unless Io's repository is
-declared in `/etc/xbps.d`.
+declared in `/etc/xbps.d`. Io therefore builds such packages under their
+own name (`<name>-holo`) with `replaces` and `provides` (the overlay, see
+[Building](Building)).
 
 **Building for 32-bit needs its own masterdir.** `xbps-src -A i686`
 builds natively for i686 in `masterdir-i686`; the 32-bit hook
@@ -378,11 +414,12 @@ says so (*Cannot execute compression command … falling back to default*),
 but the line is easy to miss in a long build log. Check the first bytes
 after the early cpio (`/usr/lib/dracut/skipcpio`), not the configuration.
 
-**`config-neptune` is not Valve's whole kernel configuration.**
-`ci/kernel-config/neptune/config` is the full configuration (about 12,500
-lines) Valve's CI builds the tree with; `config-neptune` is a 150-line
-fragment on top. Void's base plus the fragment alone differed from Valve's
-configuration in about 1,220 options. Merge the full file first, see [Kernel](Kernel).
+**`config-neptune` is not Valve's whole kernel configuration.** It is a
+150-line fragment on top of a full configuration; Void's base plus the
+fragment alone differed from Valve's configuration in about 1,220 options.
+Merge the full file first: `config.x86_64` from Valve's package, not the
+older `ci/kernel-config/neptune/config` in the tree (see below and
+[Kernel](Kernel)).
 
 **A module needs a `modules-load.d` entry to be there at boot.** With
 Valve's configuration NTSync is a module (`=m`), and nothing loads it on
@@ -473,6 +510,17 @@ executable, and the launcher runs it every time (`Exec format error`).
 Removing the empty file makes the launcher set Steam up again. With
 `steam-jupiter`'s preinstalled client there is no first download.
 
+**xbps does not restart a runit service when its package is updated.** The
+service keeps running the old program until a reboot or `sv restart`; a
+test right after an update of `io-steamos-manager` tests the old root half.
+
+**`sv down` returns before the `finish` script has run.**
+`jupiter-fan-control`'s `finish` hands the fan back to the embedded
+controller, which also resets the fan target; a speed set right after
+`sv down` was undone (download mode's 2000 rpm read back as 0, the fan ran
+at 4100 rpm). `sv -w <seconds> down` waits for the service to be down,
+`finish` included.
+
 **Steam stops `jupiter-fan-control` when its fan control setting is off**
 (Settings → System), when Steam starts (`down … normally up`). With a fresh
 Steam profile the setting was off here. Not a failure.
@@ -494,10 +542,16 @@ sizes the keyboard for 1280 pixels and then enlarges it. Steam's own
 setting fixes it (`DPIScaling` 0 in `~/.steam/registry.vdf`);
 `STEAM_FORCE_DESKTOPUI_SCALING` does not.
 
-**KWin's on-screen keyboard opens only on touch input.** With Maliit set as
-input method (`kwinrc`: `[Wayland] InputMethod`), tapping a text field with
-a finger opens it; a click with the trackpad or R2 does not. On the
-recovery stick: tap into the terminal window once to type.
+**KWin's on-screen keyboard opens only on touch input.** With an on-screen
+keyboard set as input method (`kwinrc`: `[Wayland] InputMethod`, Maliit
+before Alpha 6, `plasma-keyboard` since), tapping a text field with a finger
+opens it; a click with the trackpad or R2 does not. On the recovery stick:
+tap into the terminal window once to type.
+
+**kwin has no input method until one is chosen.** Installing
+`plasma-keyboard` is not enough: kwin starts it only when `kwinrc` names its
+desktop file (`/usr/share/applications/org.kde.plasma.keyboard.desktop`),
+set through System Settings → Keyboard → Virtual Keyboard.
 
 ---
 
@@ -603,6 +657,28 @@ which `pam_limits` does not read; Valve moved it to
 no such limit; on 3.9.2 Steam's hard nice limit is 28 and Proton's game
 threads run at negative nice values.
 
+**Being in the `gamemode` group raises the nice limit.** Void's gamemode
+package gives its group `nice -10` in `limits.d`; with `deck` in it, Steam
+ran with a nice limit of 30/30 instead of SteamOS's 0/28. SteamOS's `deck`
+is not in the group.
+
+**ufw sets sysctls of its own after boot.** `ufw-init start` applies
+`/etc/ufw/sysctl.conf` (`IPT_SYSCTL` in `/etc/default/ufw`) after the boot
+sysctls, so `rp_filter` and `accept_redirects` ended up as ufw's values.
+`jupiter-firewall` empties `IPT_SYSCTL`.
+
+**Steam checks for updates without duplicate detection unless
+`steamos-update --supports-duplicate-detection` exits 0.** With the old
+stub (exit 7 for everything) Steam called `check` alone; with the answer 0
+it calls `--enable-duplicate-detection check` and accepts exit 8
+("applied, reboot pending").
+
+**Steam's keyboard asks IBus for engines by name.** `pinyin`, `bopomofo`,
+`table:cangjie5`, `table:quick5`, `anthy`, `hangul`, with each engine's own
+settings keys: Void's `ibus-libpinyin` (engines `libpinyin`, `libbopomofo`)
+is no replacement for `ibus-pinyin`. A layout whose engine is missing is
+greyed out in Steam.
+
 **Valve's version strings do not always sort by date.** Versions such as
 `jupiter.20260504.1` or `3.8.20260807.1` sort below plain dates
 (`20230217`) in pacman's version comparison: the newest build of a package
@@ -610,8 +686,8 @@ is not always the "highest" version. Compare by date or by branch.
 
 **Valve's kernel package does not build from the configuration in its own
 tree.** The PKGBUILD uses `config.x86_64` (Arch's configuration) plus
-`config-neptune`; `ci/kernel-config/neptune/config` in the tree is older
-(see [Kernel](Kernel)).
+`config-neptune`; `ci/kernel-config/neptune/config` in the tree is older.
+Io uses `config.x86_64` since 7.2.7 (see [Kernel](Kernel)).
 
 **Valve's source mirror does not list every package name.** Split
 packages (`-headers`, `-debug`) and a few others (`steamfs-git`) appear
@@ -624,6 +700,8 @@ those.
 ## Shell and tools
 
 **`avahi-browse` is in `avahi-utils`**, not in `avahi`.
+
+**`prlimit -n` means `--nofile`**, not "no headings" (`--noheadings`).
 
 **Over SSH, `loginctl` and other paged tools fail on an unknown terminal
 type** (`rxvt-unicode-256color`). Use `--no-pager`.

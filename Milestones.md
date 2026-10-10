@@ -2,62 +2,31 @@
 
 What is still open, and where it is headed. What each release brought is in
 the [Changelog](Changelog). The latest release is [Alpha 5](Alpha-5); what has
-changed since is on [Alpha 6](Alpha-6).
+changed since is on [Alpha 6](Alpha-6), done and about to be released.
 
 ---
 
-## Alpha 6 (in progress)
+## Alpha 6 (done, release pending)
 
-What has changed since Alpha 5 is on [Alpha 6](Alpha-6). The plan (draft,
-proposed theme *SteamOS 3.9.2 parity*) is kept in the project's working
-notes and comes here once Georg confirms it.
+Theme *SteamOS 3.9.2 parity*. Everything planned is done and tested on the
+Deck; what it brought is on [Alpha 6](Alpha-6). Left before the release:
+`io-release` 0.6 and the release workflow ([Building](Building)); the
+recovery stick with `plasma-keyboard` is still to be built and tried.
 
-**Decided:**
+---
 
-- The reference is now **SteamOS 3.9.2** (2026-10-04; before 3.8.4). Io's
-  ported packages already match it, apart from the updates below
-- Valve's Mesa: not ported, Io stays with Void's Mesa (see
-  [Deviations](Deviations), *Graphics*)
-- VRAM priority for the foreground game: not implemented (see
-  [Deviations](Deviations), *Not present on Io*)
-- `lib32-gamescope`: done, as `gamescope-wsi-32bit`
-- Input methods for Steam's keyboard (Chinese, Japanese, Korean): yes, for
-  completeness
+## Next (no theme yet)
 
-**Done:** the SteamOS reference round (capture of 3.9.2 with the Steam beta
-client, guided test run with D-Bus per step) and the evaluation of the
-Valve packages Io did not track ([SteamOS packages](Valve-Package-Survey);
-a few not installed on SteamOS are still open).
-
-**Planned, by phase:**
-
-- **Checks on Io first:** GPU performance level after Steam starts,
-  Bluetooth firmware log, emoji font, Proton nice limit, transparent huge
-  pages, three sysctls Void sets differently, desktop responsiveness
-  (SteamOS's desktop felt faster), Steam's keyboard in the desktop with a
-  German layout
-- **Fixes:** a probable `io-steamos-manager` bug (setting the manual GPU
-  clock switches the GPU to manual itself; Valve refuses outside manual
-  mode, so Io likely stays at a fixed 1600 MHz after every Steam start);
-  `steamos-select-branch -c` answers `rel`; the game mode session as
-  Valve's 3.9.2 script (see [Deviations](Deviations)); the Proton nice
-  limit; two sysctls; `Audio1` removed; Valve's Bluetooth settings
-- **Updates to 3.9.2:** `cecd` 0.3.0, `gpu-trace` 2.16,
-  `holo-realtek-firmware-toggles` 1.3-3, `steamos-networking-tools` 1.3,
-  kernel 7.2.7 with the configuration base ([Kernel](Kernel)), an add-on
-  package with Valve's Bluetooth firmware and the older `vangogh_vcn.bin`
-- **`io-steamos-manager`:** `HdmiCec2` (Steam's CEC switches use it),
-  `SwitchToDesktopSession`, the fan in download mode
-- **Input and desktop:** input methods, `plasma-keyboard` instead of
-  Maliit, a colour emoji font, the desktop keeping game mode's brightness,
-  mangoapp's frame pacing
-- **System updates from Steam** through a real `steamos-update` with xbps
-  behind it (see [Helper status](Helper-Status)); the largest item, may
-  move to Alpha 7
-
-**Also open:** a capture with Steam's experimental SteamRT3 client; a
-collection directory for Valve's patches against Void's packages (no build
-integration yet).
+- **Overlay candidates** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
+  kwin's patches for Steam's keyboard in the desktop (only if it
+  misbehaves there), Valve's Mesa (decided against on 2026-10-03; to
+  revisit only if an OpenGL game ignores Steam's frame limit), iwd and
+  wpa_supplicant fixes (no effect on the LCD today)
+- **Steam's update changelog:** Steam shows Valve's official SteamOS
+  changelog for an update; Io's could take its place (cosmetic)
+- **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
+- A capture with Steam's experimental SteamRT3 client
+- **Twemoji**, SteamOS's emoji look: some day
 
 ---
 
@@ -68,7 +37,10 @@ integration yet).
   `wireless-regdb`). Compare with wpa_supplicant; note that Void builds
   `wpa_supplicant` without the roaming features Arch enables (WNM, MBO)
 - **Desktop responsiveness:** SteamOS 3.9.2's desktop felt more responsive
-  than Io's; to compare
+  than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
+  the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
+  missing realtime threads are fixed in Alpha 6. Same scheduler, governor
+  and preemption. To check again after the move to the NVMe
 - **Screen sharing prompt in the desktop:** Steam asks Plasma's portal for
   screen sharing at start; the prompt appears until *Allow restoring* is
   chosen once. SteamOS 3.9.2 does the same calls (ScreenCast session, then
@@ -98,8 +70,11 @@ integration yet).
 - **Decky Loader**
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
-- **Wake-on-Bluetooth** (a controller waking the Deck from suspend), on
-  SteamOS and on Io, before and after Valve's Bluetooth firmware
+- **Wake-on-Bluetooth** (a controller waking the Deck from suspend). Io
+  logs "wake-on-bluetooth enabled" with Void's and with Valve's firmware
+  (Valve's is in place since Alpha 6); a real wake is untested
+- **bluez-holo's fixes** with the hardware they are for: a Steam Controller
+  across suspend, a Switch Pro Controller
 
 ---
 
@@ -111,7 +86,8 @@ someone with the hardware.
 
 - **Valve's Docking Station:** its firmware updater (`hub_update`, today a
   stub that reports "up to date"), and HDMI-CEC with a dock that passes it
-  through (`/dev/cec*`); cecd and the switches in Steam work, the TV side is
+  through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
+  cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
@@ -152,7 +128,6 @@ someone with the hardware.
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
   once for 3.9.2 in October 2026
-- **System updates from Steam:** see Alpha 6 above
 - **A factory reset of Io's own** (fresh home directory): a design decision,
   and destructive
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
@@ -170,6 +145,9 @@ someone with the hardware.
 ## Recurring
 
 - `pkgcheck.sh`: Valve's package versions against Io's
+- After Void updates: `./build.sh -p --overlays` (rebuilds what Void
+  rebuilt; stops for a review when Void moved to a new version), see
+  [Building](Building)
 - Valve's kernel updates, with the configuration review described on
   [Kernel](Kernel)
 - Boot logs, for regressions and new warnings

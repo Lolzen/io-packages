@@ -16,9 +16,9 @@ and sources of Io's packages are on [Packages](Packages).
 
 | SteamOS 3.9.2 | On Io | Notes |
 |---|---|---|
-| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-72` 7.2.4 | 7.2.7 planned, see [Kernel](Kernel) |
-| `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status) |
-| `steamos-manager` 26.4.1 (26.1.0) | `io-steamos-manager` | Io's own implementation, see [Architecture](Architecture); 26.4.1's `HdmiCec2` and `SwitchToDesktopSession` still missing |
+| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-72` 7.2.7 | Built from the configuration Valve's package uses, see [Kernel](Kernel) |
+| `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps |
+| `steamos-manager` 26.4.1 (26.1.0) | `io-steamos-manager` | Io's own implementation of 26.4.1's interfaces (with `HdmiCec2`, `SwitchToDesktopSession`, without `Audio1`), see [Architecture](Architecture) |
 | `steam-jupiter-stable` 1.0.0.85-12 (-8) | `steam-jupiter` (-12) | |
 | `steamdeck-dsp` 1.02 (0.91) | `steamdeck-dsp` 1.02 | Sink loopbacks kept as in 0.91 |
 | `steamdeck-kde-presets` 3.9.4 (3.8.5) | 3.9.4 | |
@@ -28,26 +28,28 @@ and sources of Io's packages are on [Packages](Packages).
 | `xdg-desktop-portal-holo` 0.1.18 | 0.1.18 | Started by D-Bus, no systemd unit |
 | `steamos-systemreport` 1.23 (0.16) | 1.23 | socklog and xbps instead of journal and pacman |
 | `steamos-powerbuttond` 4.2 | 4.2 | |
-| `steamos-networking-tools` 1.3 (1.2) | 1.2 | runit port of the backend switch; 1.3 planned |
+| `steamos-networking-tools` 1.3 (1.2) | 1.3 | runit port of the backend switch |
 | `steamos-passwd` 1.0 | 1.0 | |
 | `steamos-devkit-service` 0.20250916.0 | same | mDNS through Avahi |
 | `steam-im-modules` 20240131 | same | |
 | `steam_notif_daemon` 1.0.1 | 1.0.1 | sd-bus from libelogind; started by the game mode session |
 | `drm_janitor` 0.0.4 | 0.0.4 | Run by the game mode session when gamescope exits |
-| `cecd` 0.3.0 (0.2.0), `cec-audio-control` 0.1.0 | `cecd` 0.2.0, `cec-audio-control` 0.1.0 | cecd 0.3.0 planned |
-| `gpu-trace` 2.16 (2.14) | 2.14 | runit service; 2.16 planned |
+| `cecd` 0.3.0 (0.2.0), `cec-audio-control` 0.1.0 | same | |
+| `gpu-trace` 2.16 (2.14) | 2.16 | runit service |
 | `holo-zram-swap` 0.3 | 0.3 | runit service |
 | `holo-earlyoom` 1.1 | 1.1 | |
 | `holo-dmi-rules` 1.1 | 1.1 | Core service instead of tmpfiles |
 | `holo-fstab-repair` 0.2 (0.1) | 0.2 | Runs at every boot |
 | `holo-sudo` | same files | Checked against Valve's source for 3.8.4; unchanged since (Valve's main branch moves it to `holo-sudo-config`) |
 | `holo-upower-config` 1.0 (not on 3.8.4) | 1.0 | With a fix for Valve's `yes`/`true` bug |
-| `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.3-1 | 1.3-3 changes one line (low-latency mode); planned |
+| `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.3-3 | |
 | `jupiter-firewall` 0.1 | 0.1 | ufw instead of firewalld |
-| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own. Not yet taken from 3.9.2: the Proton nice limit (see [Deviations](Deviations)) |
+| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
 | `steamos-tweak-mtu-probing` | in `steamos-tuning` | |
 | `lib32-gamescope` 3.16.30 (3.16.15) | `gamescope-wsi-32bit` 3.16.30 | Only gamescope's WSI layer for 32-bit Vulkan games (frame limiter, bypass, HDR), built for i686 from gamescope's source |
-| `jupiter-legacy-support` | parts | `KillUserProcesses` (in `io-session`) and `steam-web-debug-portforward`; Valve's own header calls the rest leftovers to be removed |
+| `jupiter-legacy-support` | parts | `KillUserProcesses` (in `io-session`), `steam-web-debug-portforward`, and `steamos-update` (Io's own, with xbps behind it); Valve's own header calls the rest leftovers to be removed |
+| `ibus-pinyin` 1.5.1, `pyzy` 1.1, `ibus-table-cangjie-lite` 1.8.8, `ibus-anthy` 1.5.14 (Valve's fork), `ibus-table` 1.17.19 (Arch), `ibus-hangul` (Arch) | `ibus-pinyin`, `pyzy`, `ibus-table-cangjie-lite`, `ibus-anthy-holo`, `ibus-table`, Void's `ibus-hangul` | Input methods for Steam's keyboard; same sources and versions |
+| `mangohud` (Valve's build with `2c1dc52`), `networkmanager`, `bluez` (Valve's builds) | `MangoHud-holo`, `NetworkManager-holo`, `bluez-holo` | Void's packages with Valve's patches that matter on the LCD, through Io's overlay, see [Deviations](Deviations) |
 
 ## Replaced by Io's own or Void's
 
@@ -56,8 +58,8 @@ and sources of Io's packages are on [Packages](Packages).
 | `holo-plymouth-themes` | `io-branding` (Valve's logos are Valve's trademarks) |
 | `holo-glibc-locales` | Void's `glibc-locales`; the image build generates the same set of locales |
 | `gamescope` 3.16.30 (3.16.23) | Void's gamescope 3.16.30 |
-| `mangohud`, `gamemode`, `orca`, `speech-dispatcher`, `espeak-ng`, `sof-firmware`, `sdl2-compat`, `sdl3`, `knighttime` | Void's packages |
-| `linux-firmware-neptune`, `amd-ucode-neptune` | Void's `linux-firmware` packages (the amplifier firmware, the Wi-Fi firmware and AMD's microcode are in them). Nothing the LCD needs is missing, but Valve's own Realtek Bluetooth firmware (most likely needed for wake-on-Bluetooth: SteamOS loads it and logs "wake-on-bluetooth enabled") is not in Void's, and 8 of the 11 `vangogh_*` files differ, see [Deviations](Deviations). An add-on package is planned |
+| `gamemode`, `orca`, `speech-dispatcher`, `espeak-ng`, `sof-firmware`, `sdl2-compat`, `sdl3`, `knighttime`, `plasma-keyboard`, `noto-fonts-cjk` | Void's packages |
+| `linux-firmware-neptune`, `amd-ucode-neptune` | Void's `linux-firmware` packages (the amplifier firmware, the Wi-Fi firmware and AMD's microcode are in them). Nothing the LCD needs is missing; Io's `deck-firmware` adds Valve's older `vangogh_vcn.bin` (AMD withdrew Void's) and Valve's Realtek Bluetooth firmware, see [Deviations](Deviations) |
 | `mesa`, `vulkan-radeon` (Valve's builds) | Void's Mesa, see [Deviations](Deviations) (*Graphics*) |
 | `scx-scheds` | Void's `scx`, switched through a runit service by `io-steamos-manager` |
 | `iio-sensor-proxy` (new in 3.9.2) | Not on Io: removed in Alpha 5, when SteamOS 3.8.4 did not have it either; Steam reads the light sensor itself. On 3.9.2 it runs, but nothing in game mode uses it |
@@ -66,7 +68,7 @@ and sources of Io's packages are on [Packages](Packages).
 
 | SteamOS 3.9.2 | Why |
 |---|---|
-| `steamos-atomupd-client`, `atomupd-daemon`, `rauc`, `holo-desync`, `steamos-efi` | Atomic A/B system updates; Io updates with xbps. System updates from Steam are planned through the `steamos-update` script, see [Helper status](Helper-Status) |
+| `steamos-atomupd-client`, `atomupd-daemon`, `rauc`, `holo-desync`, `steamos-efi` | Atomic A/B system updates; Io updates with xbps behind Steam's `steamos-update` script and its own `Atomupd1` service, see [Deviations](Deviations), *System updates* |
 | `steamos-reset` | Factory reset of the A/B system; an Io reset would be its own design |
 | `dmemcg-booster`, `kcgroups`, `plasma-foreground-booster` | Driven by systemd's units and slices (`org.freedesktop.systemd1`); decided not to implement, see [Deviations](Deviations) |
 | `steamos-log-submitter`, `jupiter-steamos-log-submitter` | Sends crash logs to Valve; would have to be retargeted first |
@@ -79,8 +81,8 @@ and sources of Io's packages are on [Packages](Packages).
 | `steamos-alias` (new in 3.9.2) | A pacman hook linking `steamos-*` names to the renamed `holo-*` helpers; Io keeps the `steamos-*` names Steam calls |
 | `wireless-domain-setter` (new) | Does nothing on the LCD ("no self-managed phy's"); for the OLED's and Steam Machine's Wi-Fi |
 | `ec-log`, `holo-debuginfod-config`, `holo-grant-cap-sys-nice` (new) | Embedded controller logging for other hardware (service disabled); debug symbols only for SteamOS builds; `cap_sys_nice` for SteamVR's compositor |
-| `holo-session-selection` (new) | `holo-session-select` and SDDM's `holo.conf`; Steam calls `steamos-session-select`, which Io has |
-| `plasma-login-manager`, `plasma-keyboard` (new) | Login manager installed but disabled (SDDM stays); `plasma-keyboard` replaces Maliit on 3.9.2 — planned for Io |
+| `holo-session-selection` (new) | `holo-session-select` and SDDM's `holo.conf`; Steam calls `steamos-session-select`, which Io has. `holo.conf`'s `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
+| `plasma-login-manager` (new) | Login manager installed but disabled (SDDM stays) |
 
 ---
 
@@ -138,20 +140,20 @@ script, which re-creates a broken swap file), `offload/` and
 
 ---
 
-## Updates planned for Alpha 6
+## Updates of Alpha 6
 
-What SteamOS 3.9.2 runs and Io does not have yet (checked 2026-10-03/04;
+What Io took over from SteamOS 3.9.2 in Alpha 6 (checked 2026-10-03/04;
 Valve's main branch renames most `steamos-*` tools to `holo-*`, 3.9.2 still
 ships the old names, and Steam still calls them):
 
-| Package | Io | SteamOS 3.9.2 | Why |
+| Package | Before | Now (SteamOS 3.9.2) | Why |
 |---|---|---|---|
 | `cecd` | 0.2.0 | 0.3.0 | Holds suspend to put the TV in standby (logind delay inhibitor, works with elogind), *Request Active Source*, no double suspend, no reply loop on *Feature Abort* |
 | `linux-neptune-72` | 7.2.4 | 7.2.7.valve1 | Display interrupt race (`flip_done` timeouts), VRAM after resume, backlight steps, S4 wake bits, Valve's Bluetooth delay removed; with the configuration base ([Kernel](Kernel)) |
 | `gpu-trace` | 2.14 | 2.16 | The daemon shuts down cleanly |
 | `holo-realtek-firmware-toggles` | 1.3-1 | 1.3-3 | Low-latency mode turns aggressive EDCA on (rtw89 USB sticks only) |
 | `steamos-networking-tools` | 1.2 | 1.3 | An error message when `wlan0` cannot be added |
-| `steamos-customizations-jupiter` | 3.8.4's | 20260827.2 | Proton nice limit at the right path; the rest is A/B work and renames |
+| `steamos-customizations-jupiter` | 3.8.4's | 20260827.2 | Proton nice limit at the right path, `EDITOR=vim`; the rest is A/B work and renames |
 | `steamos-manager` (API) | 26.1.0's | 26.4.1 | `HdmiCec2` (the current Steam beta uses it), `SwitchToDesktopSession`; `Audio1` removed |
 
 Not taken: `rnnoise-ladspa` stays 1.10 (upstream 1.21 raised the LADSPA
@@ -165,12 +167,15 @@ filter chain sets none; the microphone would cut more).
 Names in Valve's `jupiter-*` and `holo-*` repositories this page did not
 mention before, checked against SteamOS 3.9.2 and Void.
 
-**To do (in the Alpha 6 plan):** input methods for Steam's keyboard
-(`ibus-daemon` in game mode as SteamOS's `ibus-gamescope.service`; the
-engines `ibus-pinyin` with `pyzy`, `ibus-table` with `cangjie-lite`,
-Valve's `ibus-anthy` fork, Void's `ibus-hangul`), `holo-libva-config`
-(`LIBVA_DRIVER_NAME=radeonsi`), a colour emoji font (`ttf-twemoji-default`
-or Void's `noto-fonts-emoji`), `plasma-keyboard` instead of Maliit.
+**Done in Alpha 6:** input methods for Steam's keyboard (`ibus-daemon` in
+game mode as SteamOS's `ibus-gamescope.service`; the engines `ibus-pinyin`
+with `pyzy`, `ibus-table` with `cangjie-lite`, Valve's `ibus-anthy` fork,
+Void's `ibus-hangul`), Valve's `libva.sh` (`LIBVA_DRIVER_NAME=radeonsi`,
+from `steamos-customizations-jupiter`; `holo-libva-config` is its successor
+on Valve's main branch, not installed on 3.9.2), `plasma-keyboard` instead
+of Maliit. Io already had a colour emoji font
+(`Noto Color Emoji`); SteamOS's Twemoji look (`ttf-twemoji-default`) is left
+for some day.
 
 **Skipped:** `fremont-hw-support` (Steam Machine BIOS only),
 `usbhid-gadget-passthru` (USB device mode, developer tool),
@@ -195,14 +200,15 @@ packages of Valve's main branch (`holo-plymouth-config`,
 `holo-sudo`, `holo-config-mtu-probing` with the file Io already has in
 `steamos-tuning`).
 
-**Arch packages Valve rebuilds with patches:** nothing Io must carry today.
-Worth having, without rebuilding Void's packages where possible: Valve's
-Bluetooth settings (`MultiProfile=multiple`, `FastConnectable=true`,
-`ScanIntervalSuspend=2240`, `ScanWindowSuspend=224`), the desktop keeping
-the brightness set in game mode (kwin patch, KDE bug 508163), mangoapp
-drawing once per game frame (MangoHud, fixed upstream after 0.8.4).
-Watched: NetworkManager (Valve scans only the last channel after resume;
-Void is on 1.56), PipeWire's next major release (Bluetooth profiles, dock
-HDMI fixes), Steam's keyboard in the desktop (kwin and Xwayland patches),
-and Void's `wpa_supplicant`, built without the roaming features
-(WNM, MBO) Arch enables.
+**Arch packages Valve rebuilds with patches:** taken in Alpha 6, without
+patching where possible: Valve's Bluetooth settings (a configuration file),
+the desktop keeping the brightness set in game mode (Valve's kwin patch,
+KDE bug 508163; Io does it before kwin starts). Through the overlay
+(`-holo` packages): mangoapp drawing once per game frame (MangoHud, fixed
+upstream after 0.8.4), NetworkManager's scan of the last channel after
+resume, bluez's fixes for re-pairing and the Switch Pro Controller.
+Left for later (candidates in io-packages' `overlay/README.md`): Steam's
+keyboard in the desktop (kwin and Xwayland patches), Valve's Mesa, iwd and
+wpa_supplicant fixes. Watched: PipeWire's next major release (Bluetooth
+profiles, dock HDMI fixes), and Void's `wpa_supplicant`, built without the
+roaming features (WNM, MBO) Arch enables.

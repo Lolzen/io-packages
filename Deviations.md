@@ -44,7 +44,9 @@ its reason.
   the runit service `io-sddm`. Its settings are Io's own
   (`/usr/lib/sddm/sddm.conf.d/10-io.conf`), with the Wayland greeter on
   kwin. Each session runs `io-start` under its own `dbus-run-session`;
-  SteamOS uses systemd user units instead.
+  SteamOS uses systemd user units instead. Valve's SDDM file also sets
+  `InputMethod=qtvirtualkeyboard`; Io leaves it out, since it is SDDM's
+  default and SDDM 0.21 drops it for a Wayland greeter anyway.
 - **The desktop session is `io-desktop.desktop`**, not Plasma's own
   `plasma.desktop`: it runs Io's session setup (PipeWire, the filter chain,
   Steam's DPI setting) before Plasma, which SteamOS does through user
@@ -58,14 +60,13 @@ its reason.
   (`-R`); Io does not need it. The statistics pipe (`-T`) is set as on
   SteamOS.
 - **Steam launch flags, gamescope arguments and environment match
-  SteamOS**, with these exceptions: `STEAM_LAUNCH_WRAPPER_SCOPE` (it has
-  Steam start each game in a systemd scope, and Io has no systemd);
-  `LIBVA_DRIVER_NAME=radeonsi` and the `ibus-daemon` SteamOS starts for
-  Steam's keyboard (`ibus-gamescope.service`), both already on 3.8.4 and
-  missing on Io; and Valve's session script for gamescope 3.16.30 (SteamOS
-  3.9.2), which adds `STEAM_USE_WPASUPPLICANT=1` and
-  `GAMESCOPE_DISPLAY_DISABLED=1` and drops `GAMESCOPE_DISABLE_ASYNC_FLIPS=1`
-  and `--cursor-scale-height 720`. All planned for Alpha 6.
+  SteamOS 3.9.2**, except `STEAM_LAUNCH_WRAPPER_SCOPE` (it has Steam start
+  each game in a systemd scope, and Io has no systemd).
+  `LIBVA_DRIVER_NAME=radeonsi` comes from Valve's `/etc/profile.d/libva.sh`
+  (`steamos-customizations-jupiter`), for every login as on SteamOS.
+- **`ibus-daemon` for Steam's keyboard** is started by `io-gamemode` once
+  gamescope is up, with the same arguments as SteamOS's
+  `ibus-gamescope.service` (a user service there).
 - **HDMI-CEC:** `cecd` starts through D-Bus activation and
   `cec-audio-control` directly from the session scripts (SteamOS: user
   services of the graphical session, `cec-audio-control` socket-activated).
@@ -84,6 +85,15 @@ its reason.
   always runs).
 - **The text console stays on tty1** with a login prompt. SteamOS moves it
   to tty4–6 (`fbcon=vc:4-6`). The sessions run on tty7 either way.
+- **The desktop keeps the brightness set in game mode.** `io-plasma` writes
+  the current backlight into the internal panel's entry of kwin's
+  `kwinoutputconfig.json` before kwin starts. Valve patches kwin for the
+  same result (KDE bug 508163); Io gets it without a kwin build.
+- **On-screen keyboard in the desktop:** `plasma-keyboard`, as SteamOS 3.9.2
+  (it replaced Maliit there). As on SteamOS it is not set as kwin's input
+  method by default; System Settings → Keyboard → Virtual Keyboard turns it
+  on. The recovery stick's build sets it (not built and tested since the
+  switch).
 - **Session output goes to a rotating log** (`/run/user/1000/io-log-<session>/`,
   or `~/.local/state/io/` while Steam's developer mode is on) instead of
   the systemd journal.
@@ -119,19 +129,24 @@ the session bus that Steam talks to.
   `UpdateBios1`, `UpdateDock1`, `FactoryReset1`.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
   and 3.9.2).
-- **Not yet as in steamos-manager 26.4.1 (SteamOS 3.9.2):** `HdmiCec2`
-  is missing, although the current Steam beta sets its CEC switches through
-  it (`EnableControl`, `SuspendDevice`, `SuspendTv`, `WakeTv`) and calls
-  `MakeActive` at several points (after a game ends, before the desktop
-  switch, and at times without a visible trigger) — on Io
-  Steam's CEC switches have no effect yet; `HdmiCecState` can be 3
-  ("Extended") on 3.9.2; `SwitchToDesktopSession` is missing (Steam still
-  uses `SwitchToDesktopMode`). Valve removed `Audio1`; Io still has it.
+- **HDMI-CEC (`HdmiCec1`, `HdmiCec2`)** as in steamos-manager 26.4.1: the
+  switches Steam sets go into `cecd`'s configuration, and `cecd` reloads it
+  through its own D-Bus interface (`Config1.Reload`). Io keeps its own copy
+  of the four settings in `99-steamos-manager.toml` instead of rebuilding
+  the file from a cache, as Valve does. `WakeDevice` is unsupported (false),
+  as on the LCD under SteamOS. `MakeActive` asks `cecd` to wake the TV.
+- **Download mode** stops the OS fan control through runit, sets the fan to
+  2000 rpm (`fan1_target`) and starts fan control again afterwards, in
+  Valve's order; the root half waits until runit has really stopped the fan
+  service (`sv -w`), whose `finish` script would otherwise reset the fan
+  after Io set it.
+- **`com.steampowered.Atomupd1`**, atomupd-daemon's update API (interface
+  version 8), is served by the root half with xbps behind it; see
+  *System updates*. Steam itself only calls its proxy methods.
 - **`ScreenReader0/1`** starts Orca itself (SteamOS: `orca.service` with
   gamescope's environment file), with the running Steam's display settings.
   When it writes Orca's settings file before Orca ever ran, it adds the
   sections Orca needs (Orca would otherwise stop at start).
-- **`Audio1`** sets WirePlumber's `node.features.audio.mono` with `wpctl`.
 - **`CpuScheduler1`** switches `scx_lavd` through a runit service `scx` in
   place of SteamOS's `scx.service`, with Valve's `/etc/default/scx`.
 - **Wi-Fi backend:** wpa_supplicant by default, as Valve ships SteamOS
@@ -163,20 +178,39 @@ the session bus that Steam talks to.
   lost. SteamOS 3.9.2 allows hibernation and suspend-then-hibernate (delay
   20 minutes, counted only on battery); 3.8.4 switched it off ("disabled for
   3.8.x cycle"). Not set up on Io yet.
-- **No Proton nice limit yet.** SteamOS 3.9.2 sets `* hard nice -8`
-  (`/etc/security/limits.d/15-proton-nice.conf`; Steam's hard limit is 28)
-  and Proton uses it: game threads run at nice −1, −2 and −8. On 3.8.4 the
-  file sat in a directory `pam_limits` does not read, which is why Io left
-  it out. Planned for Alpha 6.
+- **Proton's nice limit** as on SteamOS 3.9.2: `* hard nice -8` in
+  `/etc/security/limits.d/15-proton-nice.conf`, read by `pam_limits` in
+  SDDM's login (Steam's hard limit 28; game threads run at nice −1, −2 and
+  −8). `deck` is not in the `gamemode` group, as on SteamOS: its limit
+  would raise Steam's nice range to 30.
+- **Open-file limit** 1024 soft / 524288 hard from
+  `/etc/security/limits.d/50-io-nofile.conf`; SteamOS gets the same from
+  systemd (`DefaultLimitNOFILE`).
 - **Firmware comes from Void's `linux-firmware` packages**, not Valve's
-  `linux-firmware-neptune`. Every file the LCD needs is there, but some
-  differ: Valve ships its own Realtek Bluetooth firmware
-  (`rtl_bt/rtl8822cu_fw.bin`, `rtl8822cu_config.bin`), which Valve's
-  wake-on-Bluetooth kernel patch needs (with Void's, it most likely logs
-  "Failed to enable wake-on-bluetooth"; not checked on the Deck yet); and 8
-  of the 11 `amdgpu/vangogh_*` files differ from Valve's (mostly newer),
-  among them a `vangogh_vcn.bin` that AMD withdrew again in September 2026
-  (video decoding with older Mesa, e.g. in Flatpaks).
+  `linux-firmware-neptune`, plus Io's `deck-firmware` with the files where
+  Valve's differ and matter: Valve's older `amdgpu/vangogh_vcn.bin` (Void's
+  newer one was withdrawn by AMD in September 2026: video decoding with
+  older Mesa, e.g. in Flatpaks) and Valve's Realtek Bluetooth firmware
+  (`rtl_bt/rtl8822cu_fw.bin`, `rtl8822cu_config.bin`, version
+  `0x3d7679d7`). They lie in `/usr/lib/firmware/updates`, which the kernel
+  searches first, so Void's files stay untouched. Wake-on-Bluetooth is
+  enabled with either firmware. The other `amdgpu/vangogh_*` files that
+  differ (mostly newer in Void) are Void's.
+- **Bluetooth settings** as SteamOS's (`MultiProfile=multiple`,
+  `FastConnectable=true`, scan interval and window during suspend), in a
+  file of Io's own (`/usr/share/io/bluetooth/main.conf`) that the
+  `bluetoothd` service reads (`-f`); Valve patches them into bluez's
+  `main.conf`.
+- **sysctls Void's `base-files` set and SteamOS does not** stay as Void's:
+  `kernel.kptr_restrict=1`, `kernel.kexec_load_disabled=1`,
+  `kernel.unprivileged_bpf_disabled=1` (SteamOS: 0, 0, 2). Hardening; the
+  last two cannot be undone at runtime once set.
+- **ufw's own `sysctl.conf` is not applied** (`IPT_SYSCTL` emptied by
+  `jupiter-firewall`): ufw would set `rp_filter` and `accept_redirects`
+  after the boot sysctls, against SteamOS's values.
+- **`CAP_SYS_NICE` for kwin** (realtime threads for its main, output and
+  input threads), set as a file capability at boot like gamescope's; Arch's
+  kwin package carries it.
 - **Time sync through chrony**: Void has no `systemd-timesyncd`.
 - **Hostname `io`** (SteamOS: `steamdeck`), set by the image build (`build/`).
 - **earlyoom** runs with Valve's full argument set; its `--avoid` list names
@@ -184,8 +218,8 @@ the session bus that Steam talks to.
 - **`tmpfiles.d` rules** from Valve's packages are boot-time core services
   (`holo-dmi-rules`, `holo-fstab-repair`), since Void has no tmpfiles.
 - **`CAP_SYS_NICE` for gamescope** is set as a file capability, exactly as
-  on SteamOS, but by a boot-time core service, because gamescope comes from
-  Void's package and an update would drop it.
+  on SteamOS, but by a boot-time core service (with kwin's), because
+  gamescope comes from Void's package and an update would drop it.
 - **Boot splash** is ended by `io-sddm` right before SDDM starts. There is no
   controller firmware update splash (`plymouth-wrap`), since Io has no
   controller update service.
@@ -197,12 +231,12 @@ the session bus that Steam talks to.
 
 ## Kernel
 
-- **`linux-neptune-72`, 7.2.4**, built from Valve's `linux-integration`
-  tree; SteamOS 3.9.2 runs 7.2.7 (3.8.4: 6.16). The configuration is Void's as the base,
-  Valve's in-tree CI configuration and `config-neptune` on top, then a few Io
-  overrides, each with its reason — see [Kernel](Kernel). Open: Valve's
-  package builds from a different full configuration than the one Io
-  takes from the tree (133 options apart, see [Kernel](Kernel)).
+- **`linux-neptune-72`, 7.2.7**, as SteamOS 3.9.2, built from Valve's
+  `linux-integration` tree. The configuration is Void's as the base, the
+  full configuration Valve's package builds from and `config-neptune` on
+  top, then a few Io overrides, each with its reason — see
+  [Kernel](Kernel). Io builds without Rust (Valve: Rust Binder, panic QR
+  code); the C Binder takes the Rust one's place.
 - **Kernel command line** matches SteamOS except `fbcon=rotate:1` instead of
   `fbcon=vc:4-6` (see *Login and sessions*), no `console=tty1`, and none of
   the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
@@ -287,8 +321,9 @@ the session bus that Steam talks to.
   developer mode keeps the devkit service on.
 - **`steam-web-debug-portforward`** is a runit service with `socat` instead
   of a socket unit with `systemd-socket-proxyd`.
-- **`cecd`** is 0.2.0 (SteamOS 3.9.2: 0.3.0, planned) and
-  **`cec-audio-control`** 0.1.0, built from Valve's source archives.
+- **`cecd`** 0.3.0 and **`cec-audio-control`** 0.1.0, built from Valve's
+  source archives. `cecd`'s TV standby on suspend uses logind's delay
+  inhibitor, which elogind provides as well.
 - **`vpower`** is patched to find the `steamdeck-hwmon` directory instead of
   assuming `hwmon3`; **`holo-upower-config`** has `yes` changed to `true`
   so that UPower actually honours it.
@@ -300,6 +335,8 @@ the session bus that Steam talks to.
   are stubs, see [Helper status](Helper-Status). Automount and trimming:
   see *Storage*. `99-sdcard-rescan.rules` stays disabled (it needs
   `systemd-run`, and has nothing to do while Io boots from the card).
+  `steamos-select-branch` knows one branch, `rel` (stable); switching to
+  another is refused.
 - **`steamos-priv-write`** gives the written files to the `wheel` group
   instead of `deck`, so that it keeps working with another user name
   (`USERNAME` of the image build) or when a user sets up an account of their
@@ -326,19 +363,16 @@ the session bus that Steam talks to.
 - **`steamos-tuning`** adds what SteamOS inherits from systemd and Arch
   instead of setting it itself: `kernel.pid_max`, `kernel.sysrq`, the
   inotify limits, `fs.protected_regular`/`fifos`, `net.core.default_qdisc`,
-  `rp_filter` and `promote_secondaries` (values as captured on SteamOS
-  3.8.4, unchanged on 3.9.2). Missing so far: `accept_source_route=0` and
-  `ping_group_range` from systemd's `50-default.conf`.
+  `rp_filter`, `promote_secondaries`, `accept_source_route=0` and
+  `ping_group_range` (values as captured on SteamOS, from systemd's
+  `50-default.conf`), and `net.unix.max_dgram_qlen=512`, which systemd
+  raises at start. Valve's suspend-then-hibernate settings are not taken
+  over (see *System services*, hibernation).
 - **`holo-fstab-repair`** runs Valve's script on every boot; SteamOS runs it
   only when the user changed `fstab` in its `/etc` overlay, which Io does
   not have.
 - **Versions:** the ported Valve packages are the versions of SteamOS
-  3.9.2, except `cecd` 0.2.0 (0.3.0), `gpu-trace` 2.14 (2.16),
-  `holo-realtek-firmware-toggles` 1.3-1 (1.3-3), `steamos-networking-tools`
-  1.2 (1.3), `steamos-tuning` (3.8.4's parts of
-  `steamos-customizations-jupiter`; 3.9.2 runs 20260827.2) and the kernel
-  7.2.4 (7.2.7); all planned for Alpha 6
-  ([SteamOS packages](Valve-Package-Survey)).
+  3.9.2 ([SteamOS packages](Valve-Package-Survey)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
@@ -346,6 +380,69 @@ the session bus that Steam talks to.
 - **ALSA's default device** is routed through PipeWire by links `io-base`
   ships. Void leaves enabling `alsa-pipewire` to the admin; SteamOS has it
   out of the box.
+
+---
+
+## Input methods for Steam's keyboard
+
+- **Chinese, Japanese and Korean** layouts of Steam's keyboard in game mode
+  work as on SteamOS: the IBus engines Steam asks for by name (`pinyin`,
+  `bopomofo`, `table:cangjie5`, `table:quick5`, `anthy`, `hangul`) come from
+  the same sources as SteamOS's: `pyzy` and `ibus-pinyin`, `ibus-table`
+  with Valve's `ibus-table-cangjie-lite`, Valve's fork of `ibus-anthy`
+  (as `ibus-anthy-holo`, see *Io overlay*) and Void's `ibus-hangul`.
+  Differences: `ibus-anthy-holo` is built against Void's `anthy-unicode`
+  (Valve: the older `anthy`); `ibus-pinyin` and `pyzy` are built with
+  `autoreconf` instead of GNOME's `autogen.sh`.
+- **Umlauts in game mode:** Steam's keyboard types them on Io, but not on
+  SteamOS 3.9.2 (system language English, German keyboard); why was not
+  looked into.
+
+---
+
+## Io overlay
+
+Where Io needs a patch Valve carries in a package Void also has, it builds
+Void's package with the patch as a package of its own, `<name>-holo`, that
+replaces Void's (the build is described in io-packages'
+[overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)).
+Void's `-32bit` packages of these stay Void's.
+
+| Package | Replaces | Valve's patches carried |
+|---|---|---|
+| `MangoHud-holo` | `MangoHud`, `MangoHud-mangoapp` | mangoapp draws once per game frame (MangoHud `2c1dc52`, after 0.8.4; Void's 0.8.4 draws continuously) |
+| `NetworkManager-holo` | `NetworkManager`, `libnm`, `NetworkManager-devel` | after resume, scan only the last-associated frequency (MR 2514, not merged) |
+| `bluez-holo` | `bluez`, `libbluetooth` and the other bluez packages | a re-paired device's old entry with the same key is removed (Steam Controller and suspend); the Switch Pro Controller's link may use sniff mode. Built with `-std=gnu17`: Void's autoconf 2.73 makes bluez 5.86 compile as C23, where it fails |
+| `ibus-anthy-holo` | `ibus-anthy` | Valve's fork of 1.5.14 (Void: 1.5.16, Valve's changes do not apply to it); not generated from Void's template |
+
+Valve's other patches to these packages are left out: for bluez, the
+`main.conf` settings (Io sets them in its own file), the wake-policy
+plugin and LL privacy (no effect on SteamOS 3.9.2), test changes; for
+NetworkManager, the iwd backend patches (wpa_supplicant is the backend).
+
+---
+
+## System updates
+
+SteamOS updates its read-only image atomically (A/B partitions,
+`atomupd-daemon`, RAUC). Io updates packages with xbps, behind the same
+interfaces Steam uses:
+
+- **`/usr/bin/steamos-update`** behaves like Valve's script: `check` answers
+  0 with a build id, 7 without an update, 8 when an update was applied and
+  a reboot is pending; applying prints progress the way `atomupd-manager`
+  does and ends with *Update completed*. The build id has SteamOS's form
+  but means something else: the date and the number of pending packages
+  (`20261005.12`). `xbps` itself is updated first when it is outdated.
+- **`com.steampowered.Atomupd1`** (interface version 8) is served by
+  `io-steamos-manager`'s root half: the proxy methods (a proxy set in
+  Steam is used for xbps's downloads), `CheckForUpdates`, `StartUpdate` and
+  the properties. One variant (`steamdeck`) and one branch (`stable`).
+  Pausing and cancelling are refused: xbps cannot be stopped safely in the
+  middle of a transaction. Access is limited to root and `wheel`, as for
+  SteamOS Manager (Valve: anyone, with polkit per method).
+- Every update is logged to `/var/log/io-update.log`. An update does not
+  restart running services; the reboot Steam asks for does.
 
 ---
 
@@ -384,7 +481,8 @@ the session bus that Steam talks to.
 
 ## Not present on Io
 
-System updates (`steamos-atomupd`, `holo-desync`, `steamos-efi`), BIOS and
+Atomic A/B updates (`steamos-atomupd`, `rauc`, `holo-desync`,
+`steamos-efi`; Io updates with xbps, see *System updates*), BIOS and
 dock firmware updates, factory reset (`steamos-reset`), controller firmware
 updates, the crash log submitter, Valve's nested desktop (Plasma inside game
 mode), formatting drives from Steam (prepared, see *Storage*), and the VRAM

@@ -19,7 +19,8 @@ behind each difference, see [Deviations](Deviations).
    - `61-io-hibernate-guard.sh` — hibernation allowed only with `/` on the
      internal NVMe and `resume=` on the kernel command line
    - `70-io-cfs-tunings.sh` — mounts debugfs, applies Valve's scheduler tunings
-   - `90-io-gamescope-caps.sh` — `CAP_SYS_NICE` file capability on gamescope
+   - `90-io-caps.sh` — `CAP_SYS_NICE` file capability on gamescope and
+     `kwin_wayland`
 4. **runit stage 2** starts the services linked in `/var/service`, among them
    `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
    `jupiter-fan-control`, `socklog-unix` and `nanoklogd`,
@@ -70,7 +71,8 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`, for the
   notification daemon (`steam_notif_daemon`, which owns
   `org.freedesktop.Notifications` and hands each notification to Steam as a
   `steam://` link), and — right before gamescope, once the environment is
-  complete — mangoapp for Steam's performance overlay. When gamescope exits,
+  complete — mangoapp for Steam's performance overlay, and once gamescope
+  is up `ibus-daemon` for Steam's keyboard. When gamescope exits,
   `drm_janitor` resets the display state before the next session takes the
   screen, as Valve's `ExecStopPost` does.
 - **HDMI-CEC:** `cecd` is started through D-Bus activation
@@ -122,11 +124,12 @@ halves, like Valve's daemon:
 |---|---|---|
 | Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `Audio1`, `HdmiCec1`, `ScreenReader0/1`, `Storage1`, ...), and the root half's jobs it started, mirrored |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `SetFanSpeed`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs`; also `com.steampowered.Atomupd1` at `/com/steampowered/Atomupd1` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, ...), and the root half's jobs it started, mirrored |
 | Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
 
 Access to the root half is limited to root and `wheel`
-(`/usr/share/dbus-1/system.d/com.steampowered.SteamOSManager1.conf`).
+(`/usr/share/dbus-1/system.d/com.steampowered.SteamOSManager1.conf`,
+`com.steampowered.Atomupd1.conf`).
 
 Some session-half interfaces drive other programs, as steamos-manager does:
 
@@ -135,11 +138,14 @@ Some session-half interfaces drive other programs, as steamos-manager does:
   Orca reload it (`SIGUSR1`), lists voices from speech-dispatcher, and
   presses Orca's shortcuts on a virtual keyboard named `steamos-manager`
   (`/dev/uinput`, group `input`)
-- **`HdmiCec1`:** writes `~/.config/cecd/config.d/00-` and
-  `99-steamos-manager.toml`, then sends cecd `SIGHUP`
-- **`Audio1`:** WirePlumber's `node.features.audio.mono`, saved
+- **`HdmiCec1`, `HdmiCec2`:** write the four switches (`wake_tv`,
+  `suspend_tv`, `uinput`, `allow_standby`) to
+  `~/.config/cecd/config.d/99-steamos-manager.toml` (identity in `00-`),
+  then have cecd reload them over D-Bus (`Config1.Reload`); `MakeActive`
+  calls cecd's `Daemon1.Wake`
 - **`LowPowerMode1`:** hands out the write end of a pipe; while any is
-  open, the TDP is 6 W
+  open, the TDP is 6 W and the fan runs at a fixed 2000 rpm (OS fan control
+  is stopped meanwhile and started again afterwards)
 - **`Storage1`:** `TrimDevices` has the root half run Valve's
   `trim-devices.sh` as a job and returns the session-bus path of a `Job1`
   object that mirrors it; the caller can wait on it, pause, resume or
@@ -160,6 +166,28 @@ directly (`steamos-priv-write` hands the file to `wheel` once). No sensor
 daemon is involved. The brightness slider stays active: it sets the level
 the automatic adjustment works around, so with the slider near the bottom
 there is little left to adjust.
+
+---
+
+## System updates
+
+```
+Steam → pkexec steamos-polkit-helpers/steamos-update → /usr/bin/steamos-update → /usr/libexec/io/io-update → xbps-install
+D-Bus clients → com.steampowered.Atomupd1 (root half) ───────────────────────────────┘
+```
+
+- **`io-update`** does the work: `check` syncs the repositories and lists
+  pending updates (`xbps-install -un`); `apply` updates `xbps` first if it
+  is outdated, then runs `xbps-install -yu` and turns its output into
+  percentages (downloads by bytes, then the unpack and configure steps per
+  package); `applied` tells whether an update waits for a reboot (marker in
+  `/run/io-update`, gone after the reboot). One run at a time (`flock`).
+  A proxy set through `Atomupd1.EnableHttpProxy` is kept in
+  `/run/io-update/proxy` and passed to xbps.
+- **`steamos-update`** is Steam's interface on top: exit codes, build id,
+  progress lines and *Update completed* as Valve's script prints them.
+- Log: `/var/log/io-update.log` (everything xbps printed, with timestamps
+  for each run).
 
 ---
 

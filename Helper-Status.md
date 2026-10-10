@@ -20,6 +20,8 @@ stubs.
 | `steamos-wifi-set-backend-privileged` | From `steamos-networking-tools`; switches between wpa_supplicant and iwd with runit |
 | `steamos-devkit-mode` | Links (`--enable`) or removes (`--disable`) the runit services `avahi-daemon` and `steamos-devkit-service`; Steam calls it when developer mode is switched |
 | `steamos-restart-sddm` | `sv restart io-sddm` (Valve: `systemctl restart sddm`); ends any session, SDDM logs in fresh |
+| `steamos-update` | Valve's wrapper (re-runs itself through pkexec) around Io's `/usr/bin/steamos-update`, which answers as Valve's script with xbps behind it: `--supports-duplicate-detection` 0; `check` 0 with a build id, 7 for no update, 8 for an update waiting for a reboot (with `--enable-duplicate-detection`), 1 on errors; applying prints `atomupd-manager`'s progress lines and *Update completed*. Steam checks as `steamos-update --enable-duplicate-detection check` and reads stdout with stderr included. See [Architecture](Architecture), *System updates* |
+| `steamos-select-branch` | One branch: `-c` and `-l` print `rel` (SteamOS's name for stable), `rel` and `stable` are accepted, other branches refused |
 
 Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 (Valve's script; exits at once on Jupiter).
@@ -29,7 +31,6 @@ Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 | Helper | Would do |
 |---|---|
 | `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam. Automount works and Valve's `format-device.sh` is in place, with Io's check that refuses the disk Io runs from; left for later because testing it destroys data |
-| `steamos-update`, `steamos-select-branch` | SteamOS system updates, today stubs (`steamos-select-branch` reports `stable`; SteamOS prints `rel` for it). Candidate for a real implementation with xbps (Alpha 6): Steam checks and applies through the `steamos-update` script itself (via pkexec; `check` answers 0 with a build id, 7 for no update, 8 for an update waiting for a reboot; applying prints progress lines like `42.17%`), and lists or switches the branch through `steamos-select-branch` (`-c`, `-l`, a branch name). Valve's scripts talk to the `Atomupd1` D-Bus service behind that; Steam itself calls it only for its proxy setting. Confirmed on SteamOS 3.9.2 with the Steam beta (2026-10-04): the check runs as `steamos-update --enable-duplicate-detection check`, Steam reads its output with stderr included |
 
 ## Stubs, not applicable to Io
 
@@ -42,4 +43,5 @@ Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 | `steamos-factory-reset-config` | Records Valve's A/B partitions for a reset; an Io reset would be its own design |
 
 Steam also looks for `steamos-update` and `steamos-select-branch` in
-`/usr/bin`, so symlinks are installed for both.
+`/usr/bin`: `/usr/bin/steamos-update` is Io's script itself (from
+`io-steamos-manager`), `steamos-select-branch` a symlink to the helper.

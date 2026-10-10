@@ -17,6 +17,9 @@ Requirements: a working `xbps-src` setup, `gh` authenticated for the
 ```
 ~/io-packages/build.sh io-session io-base       build
 ~/io-packages/build.sh -p io-session io-base    build and publish
+~/io-packages/publish.sh io-session io-base     publish what is already built
+~/io-packages/build.sh -p MangoHud-holo         an overlay package (see below)
+~/io-packages/build.sh -p --overlays            every overlay whose build is missing
 ```
 
 `build.sh` first pulls `void-packages` (a stale checkout makes `xbps-src`
@@ -25,7 +28,15 @@ copies the named packages from `io-packages` into `void-packages` and runs
 `xbps-src pkg` for each. It copies rather than symlinks: `xbps-src`
 builds inside a chroot that only sees the `void-packages` tree, where a link
 into `io-packages` would point nowhere. Naming a subpackage
-(`linux-neptune-72-headers`) copies its main package too.
+(`linux-neptune-72-headers`) copies its main package too, and copying a
+main package copies its subpackage links (`pyzy-devel` → `pyzy`), which
+`xbps-src` needs. Before each build `build.sh` runs `xbps-src clean` for the
+package: after a failed build `xbps-src` would otherwise continue in the old
+build directory and skip the patch step.
+
+When a run stops half-way, the packages built before the failure are
+published with `publish.sh` and their names; `build.sh` would build them
+again.
 
 **Bump `revision` in the template for every change**, or the build produces
 the same file name and `publish.sh` treats it as already published.
@@ -57,9 +68,37 @@ download, e.g. `steam-jupiter`'s 428 MB archive into
 4. uploads only files the release does not have yet, then the index
 5. deletes release assets that are no longer part of the repository
 
-`publish.sh --full` re-indexes and re-uploads everything.
+`publish.sh --full` re-indexes and re-uploads everything. The overlay
+packages count as Io's (their names come from `overlay/holo.sh names`); if
+that list cannot be made, `publish.sh` stops instead of pruning them.
+
+## Overlay packages
+
+Void packages that need Io's (mostly Valve's) patches are not forked. Each
+is a directory `overlay/<name>/` in io-packages (`overlay.conf`,
+`patches/`, optionally `template.append`, `README.md`); `overlay/README.md`
+describes it in full.
+
+- `build.sh <name>-holo` has `overlay/holo.sh` generate
+  `srcpkgs/<name>-holo` in `void-packages` from Void's current
+  `srcpkgs/<name>`: `-holo` names for the package and its subpackages,
+  `replaces` and `provides` for Void's names, Io's patches after Void's
+  own, and the revision Void's revision × 100 + `io_revision`
+  (`0.8.4_1` → `0.8.4_101`). Nothing generated is committed.
+- If Void's version is not the overlay's `base_version`, the overlay is not
+  built and `build.sh` ends with exit status 2 ("REVIEW"): check the patches
+  against the new version, then raise `base_version` (or drop the overlay).
+  A revision bump in Void only means a new build.
+- `overlay/holo.sh check` shows each overlay's state without changing
+  anything; `build.sh -p --overlays` builds what is missing. Run it after
+  Void updates, before updating the Deck.
+- Io's own templates depend on the `-holo` names, so a fresh image never
+  installs Void's package next to the stand-in.
 
 ## Updating a device
+
+From Steam: Settings → System, check for updates and apply; then reboot
+(log: `/var/log/io-update.log`). On the command line:
 
 ```
 sudo xbps-install -Syu
@@ -70,7 +109,13 @@ dependencies.
 
 Changes to the session scripts and to audio configuration take effect with
 the next session (a switch to the desktop and back); a cold boot is the
-reliable test.
+reliable test. xbps does not restart runit services: after an update of
+`io-steamos-manager`, its root half keeps running the old code until a
+reboot or `sudo sv restart io-steamos-manager`.
+
+Right after `publish.sh`, an update may still see the old index for a few
+minutes (GitHub's download servers cache release assets); repeat it, or
+check with `xbps-query -Rp pkgver <package>`.
 
 ## Testing a build before publishing
 
