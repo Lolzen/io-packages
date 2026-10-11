@@ -32,6 +32,14 @@
   builds it), the emoji font for the whole system through its fontconfig
   file.
 
+### Steam
+
+- **USB over-current warning** (`io-steamos-manager` 0.15.0): the session
+  half emits steamos-manager's `UdevEvents1.UsbOverCurrent` signal when the
+  kernel reports that a USB port tripped; Steam's client knows the signal.
+  Tested with a simulated event: the signal arrives; Steam showed nothing
+  for it in game mode.
+
 ### Wi-Fi
 
 - **`wpa_supplicant-holo`:** Valve's patches (a wrong WPA3 password is
@@ -40,6 +48,15 @@
   not, among them WNM and MBO for roaming between access points.
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
+
+### Other hardware (untested, no hardware)
+
+- `io-steamos-manager` takes Valve's device files for hardware other than
+  the Steam Deck: the performance profile (`PerformanceProfile1`) on Legion
+  Go, ROG Ally, MSI Claw and Zotac Zone, EC logging (`FirmwareDebug1`,
+  Valve's `ec-log`) on the Steam Machine. The Deck's own interfaces (TDP,
+  download mode, light sensor, charge limit, fan control) are not offered
+  on those devices. Nothing changes on the Deck.
 
 ### Image build
 

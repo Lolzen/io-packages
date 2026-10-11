@@ -609,6 +609,21 @@ screen reader mode at every start; steamos-manager presses Orca's key for it
 date"** (Valve's mock script). A stub that simply exits 0 makes Steam
 announce a dock update at every start.
 
+**`sv up` right after linking a service fails.** runsvdir notices a new
+link in `/var/service` only on its next scan (up to 5 s); until then the
+service has no `supervise/`, and `sv` gives up at once. `sv -w <n> up` on a
+service whose `run` takes itself down (`sv down .`) waits the full timeout.
+Linking is enough to start a service; check the link, not `sv status`, for
+"on".
+
+**A USB over-current can be simulated with a temporary udev rule.** The
+kernel adds `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` to a USB
+interface's `change` event only when a port really trips. A rule in
+`/run/udev/rules.d` that sets both on `ACTION=="change"`, followed by
+`udevadm control --reload` and `udevadm trigger --action=change` on one
+interface, produces the same event for `UdevEvents1` without touching the
+hardware; remove the rule afterwards.
+
 **SteamOS does not offer `WifiDebug1`** on the Deck (3.8.4 and 3.9.2),
 although Valve's interface file describes it. On 3.9.2 neither
 `FirmwareDebug1`, `PerformanceProfile1` nor `GameStreaming1` is exported
