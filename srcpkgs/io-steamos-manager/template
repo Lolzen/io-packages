@@ -1,12 +1,12 @@
 # Template file for 'io-steamos-manager'
 pkgname=io-steamos-manager
-version=0.14.0
+version=0.15.0
 revision=1
 python_version=3
 depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void xbps util-linux
  steamos-networking-tools scx
  orca speech-dispatcher espeak-ng python3-evdev gsettings-desktop-schemas dconf glib
- at-spi2-core"
+ at-spi2-core python3-pyudev"
 conf_files="/etc/default/scx"
 short_desc="SteamOS Manager D-Bus service for Io (root and session half)"
 maintainer="Georg <funer@gmx.at>"

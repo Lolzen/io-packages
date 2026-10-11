@@ -186,8 +186,9 @@ SPID=$(pgrep -o -x steam)
 if [ -n "$SPID" ]; then
     SBUS=$(tr '\0' '\n' < /proc/$SPID/environ | grep '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
     check "session half: Storage1 for Steam" sh -c "setpriv --reuid $(id -u $U) --regid $(id -g $U) --init-groups env 'DBUS_SESSION_BUS_ADDRESS=$SBUS' busctl --user introspect $SM $SMP | grep -q Storage1"
+    check "session half: UdevEvents1 (USB over-current)" sh -c "setpriv --reuid $(id -u $U) --regid $(id -g $U) --init-groups env 'DBUS_SESSION_BUS_ADDRESS=$SBUS' busctl --user introspect $SM $SMP | grep -q UdevEvents1"
 else
-    info "Steam not running: Storage1 not checked"
+    info "Steam not running: Storage1, UdevEvents1 not checked"
 fi
 
 echo "== package database"

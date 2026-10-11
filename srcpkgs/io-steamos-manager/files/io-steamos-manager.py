@@ -35,8 +35,11 @@ The root daemon also owns com.steampowered.Atomupd1 (atomupd-daemon's
 update API, xbps behind it through /usr/libexec/io/io-update, the helper
 Steam's /usr/bin/steamos-update uses as well).
 
-Not implemented (Io lacks the backing pieces): UdevEvents1, UpdateBios1,
-UpdateDock1, FactoryReset1.
+UdevEvents1 (USB over-current) runs in the user daemon, as Valve's udev
+monitor does, with pyudev.
+
+Not implemented (Io lacks the backing pieces): UpdateBios1, UpdateDock1,
+FactoryReset1.
 """
 
 import asyncio
@@ -2059,6 +2062,58 @@ class Storage1(ServiceInterface):
         return await self._job("FormatDevice", "ssb", [device, label, validate])
 
 
+class UdevEvents1(ServiceInterface):
+    """USB over-current events for Steam, as steamos-manager's udev monitor
+    (user daemon, src/udev.rs): a "change" event of a USB interface that
+    carries OVER_CURRENT_PORT and OVER_CURRENT_COUNT (the kernel's hub
+    driver adds them when a port trips) becomes the signal
+    UsbOverCurrent(devpath, port, count). No methods, no properties."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.UdevEvents1")
+        self.monitor = None
+
+    @dbus_signal()
+    def UsbOverCurrent(self, devpath, port, count) -> "sst":
+        return [devpath, port, count]
+
+    def start(self):
+        """Listen to udev's processed events; without pyudev the interface
+        stays exported but silent."""
+        try:
+            import pyudev
+        except ImportError:
+            log("UdevEvents1: python3-pyudev missing, no over-current events")
+            return
+        monitor = pyudev.Monitor.from_netlink(pyudev.Context(), source="udev")
+        monitor.filter_by(subsystem="usb", device_type="usb_interface")
+        monitor.start()
+        self.monitor = monitor
+        asyncio.get_running_loop().add_reader(monitor.fileno(), self._read)
+
+    def _read(self):
+        while True:
+            try:
+                dev = self.monitor.poll(timeout=0)
+            except Exception as err:  # noqa: BLE001 - keep the daemon up
+                log(f"UdevEvents1: {err}")
+                return
+            if dev is None:
+                return
+            if dev.action != "change":
+                continue
+            port = dev.properties.get("OVER_CURRENT_PORT")
+            count = dev.properties.get("OVER_CURRENT_COUNT")
+            if port is None or count is None:
+                continue
+            try:
+                count = int(count)
+            except ValueError:
+                continue
+            log(f"USB over-current: {dev.device_path} port {port} count {count}")
+            self.UsbOverCurrent(dev.device_path, port, count)
+
+
 class ObjectManager(ServiceInterface):
     """Steam calls GetManagedObjects at '/' first (seen in both captures)."""
 
@@ -2103,6 +2158,7 @@ USER_INTERFACES = (
     ScreenReader0,
     ScreenReader1,
     Storage1,
+    UdevEvents1,
 )
 
 
@@ -2132,6 +2188,11 @@ async def run_user():
     for inst in instances:
         if isinstance(inst, Storage1):
             inst.jobs = jobs
+        if isinstance(inst, UdevEvents1):
+            try:
+                inst.start()
+            except Exception as err:  # noqa: BLE001 - signal only, optional
+                log(f"UdevEvents1 monitor failed: {err}")
 
     session.export("/", ObjectManager(instances))
     await session.request_name(BUSNAME)
