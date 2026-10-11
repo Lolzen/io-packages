@@ -101,13 +101,15 @@ someone with the hardware.
   untested
 - **Other handhelds** (Legion Go, ROG Ally, MSI Claw, Zotac Zone): only
   Steam's performance profile (`PerformanceProfile1`, ACPI platform
-  profile); their TDP, charge limit and InputPlumber are not ported, so Io
-  is not usable on them as a system
+  profile); their TDP, charge limit and InputPlumber (where Valve's device
+  files define them) are not ported, so Io is not usable on them as a
+  system
 - **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`), waking from
   the TV through the embedded controller, Valve's audio profile (HDMI, AC3
   for ARC), fan control. Not ported: CEC volume control (needs Valve's
   PipeWire and WirePlumber patches), BIOS updates (`fremont-hw-support`,
-  fwupd), Valve's own USB Bluetooth firmware
+  fwupd), Valve's own USB Bluetooth firmware, the regulatory domain helper
+  (`wireless-domain-setter`, on the OLED branch)
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
   and the display quirks

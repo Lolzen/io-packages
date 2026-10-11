@@ -558,9 +558,10 @@ once (`cannot set PortConfig param: node already started`), later ones
 work.
 
 **`WIREPLUMBER_CONFIG_DIR` replaces WirePlumber's search path.** With it
-set, only the listed directories are read (no `/etc/wireplumber`), and a
-fragment in a higher-priority directory hides a lower one of the same file
-name instead of being added to it. Io uses both on the Steam Machine: the
+set, only the listed directories are read (no `/etc/wireplumber`). As
+always, a fragment in a higher-priority directory hides a lower one of the
+same file name instead of being added to it. Io uses both on the Steam
+Machine: the
 Deck's fragments in `/etc` are left out, and an empty
 `91-io-sink-loopback.conf` hides Io's sink loopback rule. WirePlumber gets
 the variable from PipeWire, which starts it (`context.exec`).

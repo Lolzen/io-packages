@@ -30,7 +30,7 @@ its reason.
 | Void Linux with runit | Arch Linux with systemd | The point of the project |
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
-| Steam Deck LCD (Jupiter) only | LCD and OLED (Galileo) | No OLED hardware to test with |
+| Built and tested on the Steam Deck LCD (Jupiter); the Steam Machine gets Valve's packages and settings for it, untested, with gaps (see [Milestones](Milestones)) | LCD, OLED (Galileo) and the Steam Machine | No hardware other than the LCD to test with |
 | Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
@@ -143,13 +143,18 @@ the session bus that Steam talks to.
   `FirmwareDebug1`, EC logging, on the Steam Machine, through Valve's
   `ec-log` as a runit service that is linked only while Steam turns it on
   and is off again after a reboot (its log goes to socklog; Valve: its own
-  journal namespace). On these devices the Deck's own interfaces are not
-  exported (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
-  `BatteryChargeLimit1`; `FanControl1` stays where `jupiter-fan-control` has
-  a configuration for the board, i.e. on the Steam Machine): Valve drives their TDP through
-  firmware attributes and their charge limit through ACPI, which Io does
-  not implement, nor InputPlumber for their controllers. Io stays a Steam
-  Deck system.
+  journal namespace). The GPU interfaces (`GpuPerformanceLevel1`,
+  `GpuPowerProfile1`) follow the device file as on SteamOS, so the Steam
+  Machine and the MSI Claw with Intel graphics have none (Io reads amdgpu
+  only). The Deck's own interfaces are not exported on these devices
+  (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
+  `BatteryChargeLimit1`, and `FanControl1` except on the Steam Machine,
+  for which `jupiter-fan-control` has a configuration; SteamOS offers it
+  wherever `jupiter-fan-control` is installed). What Valve's device files
+  define for the handhelds beyond that, Io does not implement: their TDP
+  (firmware attributes; amdgpu hwmon on the ROG Xbox Ally), their charge
+  limit (ACPI) and InputPlumber for their controllers. Io is not usable as
+  a system on the handhelds.
 - **Not implemented**, for lack of a counterpart on Io: `UpdateBios1`,
   `UpdateDock1`, `FactoryReset1`.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
