@@ -1,0 +1,42 @@
+[[device]]
+dmi.sys_vendor = "ASUSTeK COMPUTER INC."
+dmi.board_name = "RC71L"
+device = "rog_ally"
+variant = "RC71L"
+friendly_name = "ROG Ally"
+
+[[device]]
+dmi.sys_vendor = "ASUSTeK COMPUTER INC."
+dmi.board_name = "RC72LA"
+device = "rog_ally_x"
+variant = "RC72LA"
+friendly_name = "ROG Ally"
+
+[[device]]
+dmi.sys_vendor = "ASUSTeK COMPUTER INC."
+dmi.board_name = "RC73XA"
+device = "rog_xbox_ally_x"
+variant = "RC73XA"
+friendly_name = "ROG Xbox Ally"
+
+[gpu_performance]
+driver = "amdgpu"
+
+[gpu_power_profile]
+driver = "amdgpu"
+
+[performance_profile]
+platform_profile_name = "asus-wmi"
+# until custom mode is added
+suggested_default = "performance"
+
+[tdp_limit]
+method = "firmware_attribute"
+
+[tdp_limit.firmware_attribute]
+attribute = "asus-armoury"
+# until custom mode is added
+performance_profile = "performance"
+
+[battery_charge_limit]
+method = "acpi_sb"
