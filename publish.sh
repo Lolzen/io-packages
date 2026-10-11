@@ -26,7 +26,12 @@
 #                             is already published (test builds): every other
 #                             version of them is removed from the publish dir
 #                             and from binpkgs, the index entry is replaced
-#                             and the file is uploaded again
+#                             and the file is uploaded again. xbps-install
+#                             -u neither downgrades nor reinstalls the same
+#                             version; on the Deck: xbps-install -S, then
+#                             xbps-remove -O (drops a cached file of the same
+#                             name, which -f would install again), then
+#                             xbps-install -f <pkg> (also downgrades)
 #   ./publish.sh --testing io-base ...
 #                             publish to the testing channel instead (release
 #                             "testing", publish dir ~/io-repo-test, created
