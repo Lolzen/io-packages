@@ -1,6 +1,6 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.7.2
+version=0.7.3
 revision=1
 # The desktop session (steamos-session-select plasma) needs kde-plasma,
 # which io-desktop pulls in.

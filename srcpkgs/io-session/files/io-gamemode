@@ -29,7 +29,10 @@ fi
 # malloc arena - settings that would be wrong for the main daemon. prlimit
 # raises this process's memlock soft limit to the hard limit set at login
 # (/etc/security/limits.d/90-io-memlock.conf); MALLOC_ARENA_MAX matches Valve's drop-in.
+#
+# The Steam Machine (Fremont) has no filter chain in Valve's profile.
 start_filter_chain() {
+    [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Fremont ] && return
     pgrep -f "pipewire -c filter-chain.conf" > /dev/null && return
     # Wait for the main daemon's socket in the background: a PipeWire client
     # started before it exits instead of retrying. Valve gets the ordering
@@ -93,6 +96,12 @@ start_ibus() {
     ) > /dev/null 2>&1 &
 }
 
+# The Steam Machine (Fremont): WirePlumber reads Valve's profile for it
+# (steamdeck-dsp) instead of the Deck's in /etc/wireplumber; it inherits
+# this from PipeWire, which starts it (context.exec).
+if [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Fremont ]; then
+    export WIREPLUMBER_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wireplumber:/usr/share/io/wireplumber-fremont:/usr/share/wireplumber"
+fi
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &

@@ -217,6 +217,49 @@ def firmware_debug_available():
     return bool(fd) and os.path.isdir(EC_LOG_SERVICE_DIR)
 
 
+def fan_control_supported():
+    """jupiter-fan-control has a configuration for this board (Jupiter,
+    Galileo, Fremont): Valve exports FanControl1 wherever its service runs."""
+    board = _board().lower()
+    return os.path.exists(f"/usr/share/jupiter-fan-control/{board}-config.yaml")
+
+
+# HDMI-CEC wake through the embedded controller (steamos-manager cec.rs,
+# CrosEcHwController; device file [cec_hw.hardware.cros_ec], the Steam
+# Machine): the EC listens for the TV's wake-up while the machine sleeps.
+# Its sysfs files hold one "<port> <value>" line per CEC port.
+CROS_EC_DIR = "/sys/class/chromeos/cros_ec"
+
+
+def cros_ec_cec_port():
+    hw = ((device_config() or {}).get("cec_hw") or {}).get("hardware") or {}
+    ec = hw.get("cros_ec") if isinstance(hw, dict) else None
+    port = ec.get("port") if isinstance(ec, dict) else None
+    return port if isinstance(port, int) else None
+
+
+def _cros_ec_value(name):
+    port = cros_ec_cec_port()
+    if port is None:
+        return None
+    for line in _read_file(os.path.join(CROS_EC_DIR, name), "").splitlines():
+        parts = line.split(" ", 1)
+        if len(parts) == 2 and parts[0].strip().isdigit() and int(parts[0]) == port:
+            return parts[1].strip()
+    return None
+
+
+def _cros_ec_write(name, value):
+    port = cros_ec_cec_port()
+    if port is None:
+        _fail("No HDMI CEC hardware configured")
+    try:
+        with open(os.path.join(CROS_EC_DIR, name), "w") as f:
+            f.write(f"{port} {value}\n")
+    except OSError as err:
+        _fail(f"Error writing to sysfs: {err}")
+
+
 def _int(text, default=0):
     try:
         return int(text)
@@ -653,6 +696,33 @@ class RootManager(ServiceInterface):
                                 capture_output=True, text=True, check=False)
         if result.returncode != 0:
             _fail(f"steamos-wifi-set-backend failed: {result.stderr.strip()}")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def HdmiCecCanAwaken(self) -> "b":
+        return _cros_ec_value("cec_wake_enable") is not None
+
+    @dbus_property()
+    def HdmiCecAwaken(self) -> "b":
+        # Valve answers an error without the hardware; a failing getter would
+        # break GetAll on the Deck, so Io answers false there
+        return _cros_ec_value("cec_wake_enable") == "1"
+
+    @HdmiCecAwaken.setter
+    def HdmiCecAwaken(self, value: "b"):
+        if _cros_ec_value("cec_wake_enable") is None:
+            _fail("No HDMI CEC hardware configured")
+        _cros_ec_write("cec_wake_enable", 1 if value else 0)
+
+    @dbus_property()
+    def HdmiCecPhysAddr(self) -> "q":
+        value = _cros_ec_value("cec_phys_addr")
+        return int(value) if value is not None and value.isdigit() else 0xFFFF
+
+    @HdmiCecPhysAddr.setter
+    def HdmiCecPhysAddr(self, value: "q"):
+        if _cros_ec_value("cec_phys_addr") is None:
+            _fail("No HDMI CEC hardware configured")
+        _cros_ec_write("cec_phys_addr", value)
 
     @method()
     def SetPerformanceProfile(self, profile: "s"):
@@ -1674,6 +1744,10 @@ class HdmiCec2(ServiceInterface):
 
     def __init__(self, root):
         super().__init__(f"{IFACE}.HdmiCec2")
+        self.root = root
+        # Steam Machine: CEC wake through the EC (root daemon); set at start
+        self.can_awaken = False
+        self.awaken = False
 
     def _set(self, key, value, prop):
         config = read_cec_config()
@@ -1715,15 +1789,30 @@ class HdmiCec2(ServiceInterface):
 
     @dbus_property()
     def WakeDevice(self) -> "b":
-        return False
+        return self.awaken if self.can_awaken else False
 
     @WakeDevice.setter
     def WakeDevice(self, value: "b"):
-        raise DBusError(ERR, "HDMI CEC hardware not configured")
+        if not self.can_awaken:
+            raise DBusError(ERR, "HDMI CEC hardware not configured")
+
+        async def job():
+            try:
+                await self.root.call_raise(
+                    "Set", "ssv", [ROOT_IFACE, "HdmiCecAwaken", Variant("b", value)],
+                    iface="org.freedesktop.DBus.Properties")
+            except DBusError as err:
+                log(f"WakeDevice failed: {err}")
+            state = await self.root.get_prop("HdmiCecAwaken")
+            self.awaken = bool(state) if state is not None else self.awaken
+            self.emit_properties_changed({"WakeDevice": self.awaken})
+        task = asyncio.ensure_future(job())
+        self.root.tasks.add(task)
+        task.add_done_callback(self.root.tasks.discard)
 
     @dbus_property(access=PropertyAccess.READ)
     def WakeDeviceSupported(self) -> "b":
-        return False
+        return self.can_awaken
 
     @method()
     async def MakeActive(self):
@@ -2357,6 +2446,65 @@ USER_INTERFACES = (
 )
 
 
+async def cec_phys_addr_sync(root, session):
+    """As steamos-manager's CecdService (cec.rs): the EC needs the machine's
+    CEC physical address to recognise the TV's wake-up, so cecd's device
+    address (0xFFFF without one) is handed to the root daemon whenever cecd
+    adds or removes its device or the address changes."""
+    om_path = "/com/steampowered/CecDaemon1"
+    dev_prefix = om_path + "/Devices"
+    dev_iface = f"{CECD_BUSNAME}.CecDevice1"
+    busy = asyncio.Lock()
+
+    async def reconfigure():
+        async with busy:
+            addr = 0xFFFF
+            reply = await session.call(Message(
+                destination=CECD_BUSNAME, path=om_path,
+                interface="org.freedesktop.DBus.ObjectManager",
+                member="GetManagedObjects"))
+            if reply.message_type == MessageType.ERROR:
+                log(f"cecd objects: {reply.body}")
+                return
+            for path, ifaces in sorted(reply.body[0].items()):
+                if path.startswith(dev_prefix) and dev_iface in ifaces:
+                    pa = ifaces[dev_iface].get("PhysicalAddress")
+                    if pa is not None:
+                        addr = pa.value
+                    break
+            old = await root.get_prop("HdmiCecPhysAddr")
+            if old != addr:
+                await root._call("Set", "ssv",
+                                 [ROOT_IFACE, "HdmiCecPhysAddr", Variant("q", addr)],
+                                 iface="org.freedesktop.DBus.Properties")
+
+    def schedule():
+        task = asyncio.ensure_future(reconfigure())
+        root.tasks.add(task)
+        task.add_done_callback(root.tasks.discard)
+
+    for rule in (
+            f"type='signal',sender='{CECD_BUSNAME}',interface='org.freedesktop.DBus.ObjectManager'",
+            f"type='signal',sender='{CECD_BUSNAME}',interface='org.freedesktop.DBus.Properties',"
+            f"member='PropertiesChanged',path_namespace='{dev_prefix}'"):
+        await session.call(Message(
+            destination="org.freedesktop.DBus", path="/org/freedesktop/DBus",
+            interface="org.freedesktop.DBus", member="AddMatch",
+            signature="s", body=[rule]))
+
+    def handler(msg):
+        if msg.sender is None or msg.message_type != MessageType.SIGNAL:
+            return
+        if msg.member in ("InterfacesAdded", "InterfacesRemoved") and msg.path == om_path:
+            schedule()
+        elif (msg.member == "PropertiesChanged" and msg.path
+              and msg.path.startswith(dev_prefix) and msg.body
+              and msg.body[0] == dev_iface and "PhysicalAddress" in msg.body[1]):
+            schedule()
+    session.add_message_handler(handler)
+    schedule()
+
+
 async def run_user():
     system = await MessageBus(bus_type=BusType.SYSTEM).connect()
     # Unix fds: LowPowerMode1.EnterDownloadMode returns one.
@@ -2375,10 +2523,13 @@ async def run_user():
     # 3-15 W; Valve drives these devices' TDP through firmware attributes,
     # tied to the performance profile), AmbientLightSensor1 (Valve:
     # steam_deck only), BatteryChargeLimit1 (Io reads steamdeck_hwmon; Valve
-    # uses ACPI on these devices) and FanControl1 (jupiter-fan-control).
+    # uses ACPI on these devices) and FanControl1 (jupiter-fan-control,
+    # which has configurations for the Deck and the Steam Machine only).
     if device_config() is not None:
         deck_only = (TdpLimit1, LowPowerMode1, AmbientLightSensor1,
-                     BatteryChargeLimit1, FanControl1)
+                     BatteryChargeLimit1)
+        if not fan_control_supported():
+            deck_only += (FanControl1,)
         classes = tuple(c for c in classes if c not in deck_only)
     if available_platform_profiles():
         classes += (PerformanceProfile1,)
@@ -2392,7 +2543,11 @@ async def run_user():
         except Exception as err:  # noqa: BLE001 - one bad interface must not
             log(f"{cls.__name__} failed: {err}")  # take the service down
 
+    can_awaken = bool(await root.get_prop("HdmiCecCanAwaken"))
     for inst in instances:
+        if isinstance(inst, HdmiCec2) and can_awaken:
+            inst.can_awaken = True
+            inst.awaken = bool(await root.get_prop("HdmiCecAwaken"))
         if isinstance(inst, FirmwareDebug1):
             state = await root.get_prop("EcLogging")
             inst.state = state if state is not None else 0
@@ -2409,6 +2564,12 @@ async def run_user():
                 inst.start()
             except Exception as err:  # noqa: BLE001 - signal only, optional
                 log(f"UdevEvents1 monitor failed: {err}")
+
+    if can_awaken:
+        try:
+            await cec_phys_addr_sync(root, session)
+        except Exception as err:  # noqa: BLE001 - CEC wake is optional
+            log(f"CEC physical address sync failed: {err}")
 
     session.export("/", ObjectManager(instances))
     await session.request_name(BUSNAME)
