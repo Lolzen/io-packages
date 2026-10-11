@@ -141,6 +141,16 @@ _DEVICE_CONFIG = []
 def device_config():
     if _DEVICE_CONFIG:
         return _DEVICE_CONFIG[0]
+    try:
+        found = _find_device_config()
+    except Exception as err:  # noqa: BLE001 - never take the daemon down
+        log(f"device configuration: {err}")
+        found = None
+    _DEVICE_CONFIG.append(found)
+    return found
+
+
+def _find_device_config():
     import tomllib
     vendor = _read_file("/sys/class/dmi/id/sys_vendor", "")
     board = _read_file("/sys/class/dmi/id/board_name", None)
@@ -153,9 +163,10 @@ def device_config():
         except (OSError, ValueError) as err:
             log(f"could not read {path}: {err}")
             continue
-        for dev in config.get("device", []):
-            dmi = dev.get("dmi") or {}
-            if dmi.get("sys_vendor") != vendor:
+        devices = config.get("device", [])
+        for dev in devices if isinstance(devices, list) else []:
+            dmi = dev.get("dmi") if isinstance(dev, dict) else None
+            if not isinstance(dmi, dict) or dmi.get("sys_vendor") != vendor:
                 continue
             if (board is not None and board == dmi.get("board_name")) or (
                     product is not None and product == dmi.get("product_name")):
@@ -163,7 +174,6 @@ def device_config():
                 break
         if found:
             break
-    _DEVICE_CONFIG.append(found)
     return found
 
 
@@ -191,6 +201,15 @@ def available_platform_profiles():
 # steamos-manager starts and stops the systemd unit.
 EC_LOG_SERVICE_DIR = "/etc/sv/ec-log"
 EC_LOG_SERVICE_LINK = "/var/service/ec-log"
+# Valve starts the unit without enabling it, so EC logging is off after a
+# reboot; the marker in /run tells the root daemon at start whether the link
+# was made in this boot.
+EC_LOG_MARK = "/run/io/ec-log"
+
+
+def ec_log_reset():
+    if os.path.islink(EC_LOG_SERVICE_LINK) and not os.path.exists(EC_LOG_MARK):
+        os.remove(EC_LOG_SERVICE_LINK)
 
 
 def firmware_debug_available():
@@ -652,24 +671,23 @@ class RootManager(ServiceInterface):
 
     @dbus_property()
     def EcLogging(self) -> "u":
-        # as steamos-manager for a systemd service: 1 while it is active
+        # 1 while the ec-log service is linked (runsvdir starts it within a
+        # few seconds), as for the scx service of the CPU scheduler
         if not firmware_debug_available():
             return 0
-        result = subprocess.run(["sv", "status", EC_LOG_SERVICE_LINK],
-                                capture_output=True, text=True, check=False)
-        return 1 if result.stdout.startswith("run:") else 0
+        return 1 if os.path.islink(EC_LOG_SERVICE_LINK) else 0
 
     @EcLogging.setter
     def EcLogging(self, state: "u"):
         if not firmware_debug_available():
             _fail("Firmware debug not configured")
         if state > 0:
+            os.makedirs(os.path.dirname(EC_LOG_MARK), exist_ok=True)
+            open(EC_LOG_MARK, "w").close()
             if not os.path.islink(EC_LOG_SERVICE_LINK):
                 os.symlink(EC_LOG_SERVICE_DIR, EC_LOG_SERVICE_LINK)
-            subprocess.run(["sv", "-w", "10", "up", EC_LOG_SERVICE_LINK], check=False,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif os.path.islink(EC_LOG_SERVICE_LINK):
-            subprocess.run(["sv", "-w", "10", "down", EC_LOG_SERVICE_LINK], check=False,
+            subprocess.run(["sv", "-w", "5", "down", EC_LOG_SERVICE_LINK], check=False,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             os.remove(EC_LOG_SERVICE_LINK)
 
@@ -1026,6 +1044,10 @@ class Atomupd1(ServiceInterface):
 
 
 async def run_root():
+    try:
+        ec_log_reset()
+    except OSError as err:
+        log(f"ec-log: {err}")
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
     bus.export(OBJPATH, RootManager(Jobs(bus, first=int(time.time()))))
     bus.export(ATOMUPD_PATH, Atomupd1())
@@ -2347,7 +2369,12 @@ async def run_user():
     classes = USER_INTERFACES
     # Hardware other than the Steam Deck, as steamos-manager's
     # create_device_interfaces: only where the device file and the hardware
-    # have them.
+    # have them. TdpLimit1 and LowPowerMode1 are the Deck's (amdgpu power
+    # cap, 3-15 W); Valve drives these devices' TDP differently (firmware
+    # attributes, tied to the performance profile), which Io does not
+    # implement, so they are left out there.
+    if device_config() is not None:
+        classes = tuple(c for c in classes if c not in (TdpLimit1, LowPowerMode1))
     if available_platform_profiles():
         classes += (PerformanceProfile1,)
     if firmware_debug_available():

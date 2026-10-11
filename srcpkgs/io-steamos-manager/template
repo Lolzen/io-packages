@@ -35,4 +35,5 @@ do_install() {
 	vmkdir usr/share/io/steamos-manager/devices
 	vcopy "${FILESDIR}/devices/*.toml" usr/share/io/steamos-manager/devices
 	vsv ec-log
+	vlicense ${FILESDIR}/devices/LICENSE.steamos-manager
 }

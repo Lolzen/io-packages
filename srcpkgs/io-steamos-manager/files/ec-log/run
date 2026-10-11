@@ -5,9 +5,11 @@
 # hardware, debugfs not mounted) the service takes itself down, as Valve's
 # ConditionPathExists skips the unit.
 exec 2>&1
+# Valve's unit pulls in the debugfs mount; runit does not mount it.
+mountpoint -q /sys/kernel/debug || mount -t debugfs debugfs /sys/kernel/debug
 log=/sys/kernel/debug/cros_ec/console_log
 if [ ! -r "$log" ]; then
 	echo "ec-log: $log not available"
-	exec sv down "$PWD"
+	exec sv down .
 fi
 exec logger --tag ec-log --file "$log"
