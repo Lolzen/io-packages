@@ -38,6 +38,9 @@ Steam's /usr/bin/steamos-update uses as well).
 UdevEvents1 (USB over-current) runs in the user daemon, as Valve's udev
 monitor does, with pyudev.
 
+WifiDebug1 and WifiDebugDump1 are exported on Galileo (Steam Deck OLED)
+only, as by Valve; their work is done by the root daemon.
+
 Not implemented (Io lacks the backing pieces): UpdateBios1, UpdateDock1,
 FactoryReset1.
 """
@@ -217,6 +220,90 @@ WIFI_POWERSAVE_CONF = "/etc/NetworkManager/conf.d/99-io-wifi-powersave.conf"
 # NetworkManager only applies wifi.powersave through wpa_supplicant; iwd
 # takes it from its own configuration and has no config fragments.
 IWD_MAIN_CONF = "/etc/iwd/main.conf"
+
+# Wi-Fi debugging (steamos-manager wifi.rs): iwd runs with -d while it is on
+# (Valve: a systemd drop-in; here the OPTS of Void's iwd run script), and on
+# Galileo the ath11k firmware's diagnostics are traced with trace-cmd. The
+# dump makes ath11k's firmware crash on purpose (debugfs) and copies the
+# devcoredump the kernel then offers. The PCI address is Galileo's Wi-Fi
+# card, as in Valve's code.
+IWD_SV_CONF = "/etc/sv/iwd/conf"
+IWD_SV_MARK = "# io-steamos-manager: Wi-Fi debug mode"
+IWD_SERVICE = "/var/service/iwd"
+TRACE_CMD = "/usr/bin/trace-cmd"
+ATH11K_CRASH = "/sys/kernel/debug/ath11k/pci-0000:03:00.0/simulate_fw_crash"
+WIFI_TRACE_MIN_BUFFER = 100
+WIFI_TRACE_DEFAULT_BUFFER = 20000
+
+
+def _tempfile_0666(prefix):
+    """World-readable file in /tmp for Steam to pick up, as Valve's
+    make_tempfile (permissions 0666)."""
+    import tempfile
+    fd, path = tempfile.mkstemp(prefix=prefix, dir="/tmp")
+    os.fchmod(fd, 0o666)
+    return fd, path
+
+
+def _setup_iwd_debug(on):
+    if on:
+        os.makedirs(os.path.dirname(IWD_SV_CONF), exist_ok=True)
+        with open(IWD_SV_CONF, "w", encoding="utf-8") as f:
+            f.write(f"{IWD_SV_MARK}\nOPTS=\"-d\"\n")
+    elif _read_file(IWD_SV_CONF).startswith(IWD_SV_MARK):
+        os.remove(IWD_SV_CONF)
+
+
+def _restart_iwd():
+    if not os.path.exists(IWD_SERVICE):
+        _fail("iwd is not running")
+    result = subprocess.run(["sv", "-w", "15", "restart", IWD_SERVICE],
+                            capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        _fail(f"restarting iwd failed: {result.stdout.strip()}")
+
+
+def _trace_cmd(*args):
+    result = subprocess.run([TRACE_CMD, *args], capture_output=True, text=True,
+                            check=False)
+    if result.returncode != 0:
+        _fail(f"trace-cmd {args[0]} failed: {result.stderr.strip()}")
+
+
+def _wifi_dump():
+    """Blocking: crash ath11k's firmware and copy the devcoredump."""
+    import pyudev
+    monitor = pyudev.Monitor.from_netlink(pyudev.Context(), source="udev")
+    monitor.filter_by(subsystem="devcoredump")
+    monitor.start()
+    with open(ATH11K_CRASH, "w") as f:
+        f.write("mhi-rddm\n")
+    deadline = time.monotonic() + 5
+    dev = None
+    while time.monotonic() < deadline:
+        ev = monitor.poll(timeout=max(0.1, deadline - time.monotonic()))
+        if ev is None or ev.action != "add":
+            continue
+        try:
+            drv = os.readlink(os.path.join(ev.sys_path, "failing_device", "driver"))
+        except OSError:
+            continue
+        if os.path.basename(drv) == "ath11k_pci":
+            dev = ev
+            break
+    if dev is None:
+        raise RuntimeError("no devcoredump from ath11k_pci within 5 s")
+    data = os.path.join(dev.sys_path, "data")
+    fd, path = _tempfile_0666("wifi-dump-")
+    with os.fdopen(fd, "wb") as out, open(data, "rb") as dump:
+        while True:
+            buf = dump.read(65536)
+            if not buf:
+                break
+            out.write(buf)
+    with open(data, "w") as f:
+        f.write("1\n")
+    return path
 
 
 def _write_iwd_powersave(enabled):
@@ -419,6 +506,7 @@ class RootManager(ServiceInterface):
     def __init__(self, jobs=None):
         super().__init__(ROOT_IFACE)
         self.jobs = jobs
+        self.wifi_debug_mode = 0
 
     @method()
     async def TrimDevices(self) -> "o":
@@ -554,12 +642,61 @@ class RootManager(ServiceInterface):
     def SetWifiBackend(self, backend: "s"):
         # Valve's tool writes the override and restarts NetworkManager with
         # the new backend (Io's copy uses runit).
+        if self.wifi_debug_mode == 1:
+            _fail("operation not supported when wifi_debug_mode=tracing")
         if backend not in ("iwd", "wpa_supplicant"):
             _fail(f"unknown Wi-Fi backend: {backend}")
         result = subprocess.run(["/usr/bin/steamos-wifi-set-backend", backend],
                                 capture_output=True, text=True, check=False)
         if result.returncode != 0:
             _fail(f"steamos-wifi-set-backend failed: {result.stderr.strip()}")
+
+    @dbus_property(access=PropertyAccess.READ)
+    def WifiDebugModeState(self) -> "u":
+        return self.wifi_debug_mode
+
+    @method()
+    def SetWifiDebugMode(self, mode: "u", options: "a{sv}"):
+        # As steamos-manager: 0 = off, 1 = tracing; only with iwd as backend
+        if mode not in (0, 1):
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs",
+                            f"invalid Wi-Fi debug mode {mode}")
+        if mode == self.wifi_debug_mode:
+            return
+        size = options.get("buffer_size")
+        size = WIFI_TRACE_DEFAULT_BUFFER if size is None else size.value
+        if read_wifi_backend() != "iwd":
+            _fail(f"Setting Wi-Fi debug mode not supported with backend {read_wifi_backend()}")
+        trace = _board() == "Galileo"
+        if mode == 0:
+            if trace:
+                _trace_cmd("stop")
+            _setup_iwd_debug(False)
+            _restart_iwd()
+        else:
+            if size <= WIFI_TRACE_MIN_BUFFER:
+                _fail("Buffer size too small")
+            _setup_iwd_debug(True)
+            _restart_iwd()
+            if trace:
+                _trace_cmd("start", "-e", "ath11k_wmi_diag", "-b", str(size))
+        self.wifi_debug_mode = mode
+        self.emit_properties_changed({"WifiDebugModeState": mode})
+
+    @method()
+    def CaptureDebugTraceOutput(self) -> "s":
+        fd, path = _tempfile_0666("wifi-trace-")
+        os.close(fd)
+        _trace_cmd("extract", "-o", path)
+        return path
+
+    @method()
+    async def GenerateDebugDump(self) -> "s":
+        try:
+            return await asyncio.to_thread(_wifi_dump)
+        except Exception as err:  # noqa: BLE001 - reported to the caller
+            log(f"Wi-Fi dump failed: {err}")
+            _fail(f"Wi-Fi dump failed: {err}")
 
     @method()
     def SetWifiPowerManagementState(self, state: "u"):
@@ -2062,6 +2199,51 @@ class Storage1(ServiceInterface):
         return await self._job("FormatDevice", "ssb", [device, label, validate])
 
 
+class WifiDebug1(ServiceInterface):
+    """Galileo only, as steamos-manager exports it (user.rs): Wi-Fi debug
+    mode and its trace, handled by the root daemon."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.WifiDebug1")
+        self.root = root
+        self.mode = 0
+
+    @dbus_property(access=PropertyAccess.READ)
+    def WifiDebugModeState(self) -> "u":
+        return self.mode
+
+    @method()
+    async def SetWifiDebugMode(self, mode: "u", options: "a{sv}"):
+        await self.root.call_raise("SetWifiDebugMode", "ua{sv}", [mode, options])
+        state = await self.root.get_prop("WifiDebugModeState")
+        self.mode = state if state is not None else self.mode
+        self.emit_properties_changed({"WifiDebugModeState": self.mode})
+
+    @dbus_property()
+    def WifiBackend(self) -> "s":
+        return read_wifi_backend()
+
+    @WifiBackend.setter
+    def WifiBackend(self, value: "s"):
+        self.root.write("SetWifiBackend", "s", [value], self, ["WifiBackend"])
+
+    @method()
+    async def CaptureDebugTraceOutput(self) -> "s":
+        return (await self.root.call_raise("CaptureDebugTraceOutput", "", []))[0]
+
+
+class WifiDebugDump1(ServiceInterface):
+    """Galileo only, as steamos-manager: an ath11k firmware dump."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.WifiDebugDump1")
+        self.root = root
+
+    @method()
+    async def GenerateDebugDump(self) -> "s":
+        return (await self.root.call_raise("GenerateDebugDump", "", []))[0]
+
+
 class UdevEvents1(ServiceInterface):
     """USB over-current events for Steam, as steamos-manager's udev monitor
     (user daemon, src/udev.rs): a "change" event of a USB interface that
@@ -2161,6 +2343,12 @@ USER_INTERFACES = (
     UdevEvents1,
 )
 
+# Exported only on Galileo, as steamos-manager does.
+GALILEO_INTERFACES = (
+    WifiDebug1,
+    WifiDebugDump1,
+)
+
 
 async def run_user():
     system = await MessageBus(bus_type=BusType.SYSTEM).connect()
@@ -2171,7 +2359,10 @@ async def run_user():
     SESSION_BUS = session
 
     instances = []
-    for cls in USER_INTERFACES:
+    classes = USER_INTERFACES
+    if _board() == "Galileo":
+        classes += GALILEO_INTERFACES
+    for cls in classes:
         try:
             inst = cls(root)
             session.export(OBJPATH, inst)
@@ -2180,6 +2371,9 @@ async def run_user():
             log(f"{cls.__name__} failed: {err}")  # take the service down
 
     for inst in instances:
+        if isinstance(inst, WifiDebug1):
+            state = await root.get_prop("WifiDebugModeState")
+            inst.mode = state if state is not None else 0
         if isinstance(inst, AmbientLightSensor1):
             gain = await root.get_prop("AlsCalibrationGain")
             inst.gain = list(gain) if gain else []
