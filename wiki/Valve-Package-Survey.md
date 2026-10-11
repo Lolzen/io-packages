@@ -47,9 +47,10 @@ and sources of Io's packages are on [Packages](Packages).
 | `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
 | `steamos-tweak-mtu-probing` | in `steamos-tuning` | |
 | `lib32-gamescope` 3.16.30 (3.16.15) | `gamescope-wsi-32bit` 3.16.30 | Only gamescope's WSI layer for 32-bit Vulkan games (frame limiter, bypass, HDR), built for i686 from gamescope's source |
+| `ttf-twemoji-default` 13.1.0-2.5 | `ttf-twemoji-default` 13.1.0 | Built as Valve builds it: Fedora's Twemoji with the same glyphs removed and the same fontconfig file |
 | `jupiter-legacy-support` | parts | `KillUserProcesses` (in `io-session`), `steam-web-debug-portforward`, and `steamos-update` (Io's own, with xbps behind it); Valve's own header calls the rest leftovers to be removed |
 | `ibus-pinyin` 1.5.1, `pyzy` 1.1, `ibus-table-cangjie-lite` 1.8.8, `ibus-anthy` 1.5.14 (Valve's fork), `ibus-table` 1.17.19 (Arch), `ibus-hangul` (Arch) | `ibus-pinyin`, `pyzy`, `ibus-table-cangjie-lite`, `ibus-anthy-holo`, `ibus-table`, Void's `ibus-hangul` | Input methods for Steam's keyboard; same sources and versions |
-| `mangohud` (Valve's build with `2c1dc52`), `networkmanager`, `bluez` (Valve's builds) | `MangoHud-holo`, `NetworkManager-holo`, `bluez-holo` | Void's packages with Valve's patches that matter on the LCD, through Io's overlay, see [Deviations](Deviations) |
+| `mangohud` (Valve's build with `2c1dc52`), `networkmanager`, `bluez`, `kwin`, `xorg-xwayland`, `wpa_supplicant`, `iwd` (Valve's builds) | `MangoHud-holo`, `NetworkManager-holo`, `bluez-holo`, `kwin-holo`, `xorg-server-xwayland-holo`, `wpa_supplicant-holo`, `iwd-holo` | Void's packages with Valve's patches (and, for wpa_supplicant, some of its build options), through Io's overlay, see [Deviations](Deviations); some matter only on other hardware or with iwd as backend |
 
 ## Replaced by Io's own or Void's
 
@@ -174,8 +175,8 @@ Void's `ibus-hangul`), Valve's `libva.sh` (`LIBVA_DRIVER_NAME=radeonsi`,
 from `steamos-customizations-jupiter`; `holo-libva-config` is its successor
 on Valve's main branch, not installed on 3.9.2), `plasma-keyboard` instead
 of Maliit. Io already had a colour emoji font
-(`Noto Color Emoji`); SteamOS's Twemoji look (`ttf-twemoji-default`) is left
-for some day.
+(`Noto Color Emoji`); SteamOS's Twemoji (`ttf-twemoji-default`) followed
+in Alpha 7.
 
 **Skipped:** `fremont-hw-support` (Steam Machine BIOS only),
 `usbhid-gadget-passthru` (USB device mode, developer tool),
@@ -204,13 +205,14 @@ packages of Valve's main branch (`holo-plymouth-config`,
 
 **Arch packages Valve rebuilds with patches:** taken in Alpha 6, without
 patching where possible: Valve's Bluetooth settings (a configuration file),
-the desktop keeping the brightness set in game mode (Valve's kwin patch,
-KDE bug 508163; Io does it before kwin starts). Through the overlay
+the desktop keeping the brightness set in game mode (Io did it before kwin
+started; since Alpha 7 Valve's kwin patch does it). Through the overlay
 (`-holo` packages): mangoapp drawing once per game frame (MangoHud, fixed
 upstream after 0.8.4), NetworkManager's scan of the last channel after
-resume, bluez's fixes for re-pairing and the Switch Pro Controller.
-Left for later (candidates in io-packages' `overlay/README.md`): Steam's
-keyboard in the desktop (kwin and Xwayland patches), Valve's Mesa, iwd and
-wpa_supplicant fixes. Watched: PipeWire's next major release (Bluetooth
-profiles, dock HDMI fixes), and Void's `wpa_supplicant`, built without the
-roaming features (WNM, MBO) Arch enables.
+resume, bluez's fixes for re-pairing and the Switch Pro Controller; in
+Alpha 7 kwin's and Xwayland's patches for Steam's keyboard in the desktop
+(and kwin's brightness and mode filter), wpa_supplicant's and iwd's fixes,
+and wpa_supplicant's roaming options (WNM, MBO) that Void's build leaves
+out. Left for later (in io-packages' `overlay/README.md`): Valve's Mesa.
+Watched: PipeWire's next major release (Bluetooth profiles, dock HDMI
+fixes).

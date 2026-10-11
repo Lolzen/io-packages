@@ -11,7 +11,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 |---|---|
 | `io-desktop` | Metapackage: the whole system. It stands in for Void's `base-system`, which would pull in Void's own kernel next to `linux-neptune-72` (that kernel does not boot the Deck), and lists base-system's other packages itself. Plus Steam, gamescope, PipeWire with `wireplumber-elogind`, KDE Plasma with `plasma-keyboard`, vim and nano, `wireless-regdb`, `gstreamer1-pipewire`, IBus with the engines for Steam's keyboard and the Noto CJK fonts, and all packages below, including the overlay packages in place of Void's |
 | `io-base` | Repository configuration (and keeping elogind's D-Bus activation file out on updates), elogind drop-in (the power key is left to `steamos-powerbuttond`), dracut configuration (SD card modules and amdgpu, Plymouth), ALSA routed through PipeWire, `timedatectl` replacement, `/usr/share/i18n/SUPPORTED`, shutdown hook closing SSH sessions, SteamOS's Bluetooth settings (`/usr/share/io/bluetooth/main.conf`, read by `bluetoothd`), GRUB without its menu (`/etc/default/grub`, set by `INSTALL`), `io-bootnext` (*Restart* starts Io again, see [Architecture](Architecture)) |
-| `io-session` | Login and sessions: SDDM service `io-sddm` and its settings, session files, `io-start`, `io-gamemode`, `io-plasma`, `steamos-session-select`, memlock limit, session logs (`io-devmode`), `io-grow-storage` and its desktop entry, capability core service (gamescope, kwin), `KillUserProcesses` for elogind. Game mode as Valve's session: Valve's `steam-launcher` and short-session tracker, the low-disk check before start, the HDMI-CEC daemons, Steam's notification daemon, `ibus-daemon` for Steam's keyboard, `drm_janitor` when gamescope exits. The desktop keeps game mode's brightness |
+| `io-session` | Login and sessions: SDDM service `io-sddm` and its settings, session files, `io-start`, `io-gamemode`, `io-plasma`, `steamos-session-select`, memlock limit, session logs (`io-devmode`), `io-grow-storage` and its desktop entry, capability core service (gamescope, kwin), `KillUserProcesses` for elogind. Game mode as Valve's session: Valve's `steam-launcher` and short-session tracker, the low-disk check before start, the HDMI-CEC daemons, Steam's notification daemon, `ibus-daemon` for Steam's keyboard, `drm_janitor` when gamescope exits |
 | `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half, including the screen reader (Orca), HDMI-CEC (`HdmiCec1`, `HdmiCec2`), download mode with Valve's fan speed and storage trimming as jobs (`Storage1`); runit service `scx` for the LAVD scheduler. System updates: `/usr/bin/steamos-update`, `/usr/libexec/io/io-update` and `com.steampowered.Atomupd1` on the root half, with xbps behind them |
 | `io-branding` | Logo, Plymouth boot splash theme, the picture for Steam's update screen, fastfetch configuration |
 | `io-release` | `os-release` and `lsb_release`, which Steam shows under Settings → System; kept in place after `base-files` updates |
@@ -53,6 +53,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `ibus-table-cangjie-lite` | `ibus-table-cangjie-lite` 1.8.8 (Valve's fork of ibus-table-chinese) | CangJie and Quick tables for Steam's keyboard, trimmed to the characters Noto Sans CJK can show |
 | `ibus-anthy-holo` | `ibus-anthy` 1.5.14 (Valve's fork) | Japanese input for Steam's keyboard, with the settings Steam writes; replaces Void's `ibus-anthy` |
 | `gamescope-wsi` (published as `gamescope-wsi-32bit`) | gamescope 3.16.30 (SteamOS: `lib32-gamescope`) | gamescope's Vulkan WSI layer for 32-bit games (frame limiter, bypass, HDR), built for i686; only the layer, not gamescope |
+| `ttf-twemoji-default` | `ttf-twemoji-default` 13.1.0 (Valve's build of Fedora's Twemoji) | SteamOS's emoji font: colour bitmaps, without the glyphs for digits, `#`, `*`, space, © and ® (so plain text never falls back to emoji), and a fontconfig file that makes it the emoji font for everything |
 
 ## From elsewhere
 
@@ -76,6 +77,10 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `MangoHud-holo`, `MangoHud-mangoapp-holo` | `MangoHud`, `MangoHud-mangoapp` | mangoapp draws once per game frame |
 | `NetworkManager-holo`, `libnm-holo`, `NetworkManager-devel-holo` | Void's NetworkManager packages | Wi-Fi after resume scans the last frequency only |
 | `bluez-holo`, `libbluetooth-holo`, ... | Void's bluez packages | LE resolving list fix, Switch Pro Controller |
+| `kwin-holo`, `kwin-devel-holo` | `kwin`, `kwin-devel` | Current brightness at start, Steam's keyboard past the input method, libei 1.6, no modes below 480p |
+| `xorg-server-xwayland-holo` | `xorg-server-xwayland` | Text from Steam's keyboard as keysyms over libei |
+| `wpa_supplicant-holo` | `wpa_supplicant` | WPA3 wrong-password detection, fewer rescans after resume, WNM/MBO and some of Valve's other build options |
+| `iwd-holo` | `iwd` | Valve's scanning and connecting fixes |
 
 ## Upstream sources
 

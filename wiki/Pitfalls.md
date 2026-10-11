@@ -62,6 +62,12 @@ converters) in `streaming_log.txt`.
 *Trying to create an encoder* line in `streaming_log.txt` means no frame
 ever came — look at PipeWire, not at VA-API.
 
+**The question before switching to the desktop is Steam's.** Whether
+*Switch to Desktop* asks "Are you sure?" depends on the client: on Io the
+stable client of October 2026 switches after a two-second countdown
+without asking, the beta client asks. Compare clients on the same branch
+before looking for a system difference.
+
 ## runit, D-Bus and sessions
 
 **With SDDM, the previous session is still on its way out when the next one
@@ -201,12 +207,6 @@ settings. The current Steam beta sets them through `HdmiCec2`.
 **SDDM ignores `InputMethod=qtvirtualkeyboard` on a Wayland greeter.**
 SDDM 0.21 drops it there (the compositor has to provide the keyboard), and
 it is SDDM's default anyway; Valve's `holo.conf` setting it changes nothing.
-
-**kwin restores the brightness it saved, not the current one.** At start
-kwin sets the panel to the value in `~/.config/kwinoutputconfig.json`
-(`brightness`, 0–1, for the `eDP` output), so the desktop jumped away from
-the level set in game mode. `io-plasma` writes the current backlight there
-first, in kwin's scale: (raw − 1) / (max − 1).
 
 **Void's `sddm` run script needs elogind's D-Bus activation file.** It asks
 D-Bus to start `org.freedesktop.login1` (`dbus-send ... StartServiceByName`)
@@ -354,6 +354,12 @@ package Void also ships would be ignored, unless Io's repository is
 declared in `/etc/xbps.d`. Io therefore builds such packages under their
 own name (`<name>-holo`) with `replaces` and `provides` (the overlay, see
 [Building](Building)).
+
+**Void's templates use `${pkgname}` in their build functions too**
+(`wpa_supplicant`: `${FILESDIR}/${pkgname}.conf` in `post_install`). In a
+generated `<name>-holo` template it would name the overlay package, and
+the file would not be found; `holo.sh` therefore replaces it with Void's
+name everywhere except inside a subpackage's `*_package()` function.
 
 **Building for 32-bit needs its own masterdir.** `xbps-src -A i686`
 builds natively for i686 in `masterdir-i686`; the 32-bit hook
@@ -669,6 +675,15 @@ packages (`-headers`, `-debug`) and a few others (`steamfs-git`) appear
 only in the binary repositories' databases
 (`archlinux-mirror/<repo>/os/x86_64/<repo>.db`). A name check should read
 those.
+
+**Valve's Xwayland reverts for a seamless start cause a black flash on
+Io.** Valve's `xorg-xwayland` reverts two upstream commits (only the
+window manager may set `_XWAYLAND_ALLOW_COMMITS`; Present flips honour
+that property) so that `steamwebhelper` shows its first picture under gamescope
+without a black interval. With them, returning from the desktop to game
+mode on Io flashed black; without them the desktop's last picture stays
+until Steam's boot animation, as on SteamOS. `xorg-server-xwayland-holo`
+leaves them out.
 
 ---
 

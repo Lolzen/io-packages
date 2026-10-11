@@ -25,7 +25,8 @@ mode showed a black flash with them (io_revision 1) and none without them
 desktop's last picture stays on screen until Steam's boot animation, as on
 SteamOS.
 
-The patch applies to the 24.1.13 sources (Valve's release tarball; Void
-builds from the same tag, same checksum).
+The patch applies to the 24.1.13 sources: Valve builds from the release
+tarball, Void from GitLab's archive of the `xwayland-24.1.13` tag (a
+different tarball of the same release).
 
 Way back: drop it once it is in an xwayland release Void ships.

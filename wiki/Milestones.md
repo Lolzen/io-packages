@@ -10,26 +10,29 @@ has changed since is on [Alpha 7](Alpha-7).
 
 - **Done:** *Restart* from Io starts Io again (`io-base` 0.6.0); GRUB
   boots without its menu (`io-base` 0.7.0); the image scripts bring the
-  repository keys along. See [Alpha 7](Alpha-7)
+  repository keys along; Steam's keyboard in the desktop, the brightness
+  through Valve's kwin patch and no black flash when returning to game mode
+  (`kwin-holo`, `xorg-server-xwayland-holo`); Valve's Wi-Fi fixes (`wpa_supplicant-holo`,
+  `iwd-holo`); Twemoji. See [Alpha 7](Alpha-7)
 - **Checked against SteamOS:** `zenity` (same behaviour, no `zenity-gtk3`
   needed), `inputattach-cec-units` (no USB-CEC adapter, not needed),
   Steam's patch notes for updates (Valve's; they stay, see
   [Deviations](Deviations)), the screen sharing prompt (the permission
   store looks as on SteamOS apart from the app ID; a fresh user is still to
-  be tried, see *Tests pending*)
+  be tried, see *Tests pending*), the question before switching to the
+  desktop (comes with Steam's beta client)
+- **Decided:** `void-artwork` stays (`plymouth-data` depends on it)
 - **Open:** a capture with Steam's experimental SteamRT3 client
 
 ---
 
 ## Next (no theme yet)
 
-- **Overlay candidates** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
-  kwin's patches for Steam's keyboard in the desktop (only if it
-  misbehaves there), Valve's Mesa (decided against on 2026-10-03; to
-  revisit only if an OpenGL game ignores Steam's frame limit), iwd and
-  wpa_supplicant fixes (no effect on the LCD today)
+- **Valve's Mesa as an overlay** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
+  looked at again on 2026-10-11 (the OpenGL frame limiter applies to
+  Void's 26.2.4, 6 of Valve's 14 RADV patches do not); to revisit with
+  Void's next Mesa update
 - **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
-- **Twemoji**, SteamOS's emoji look: some day
 
 ---
 
@@ -37,8 +40,8 @@ has changed since is on [Alpha 7](Alpha-7).
 
 - **Roaming** between router and repeater with the same network name: the
   Deck held on to the weak connection (seen with iwd, before
-  `wireless-regdb`). Compare with wpa_supplicant; note that Void builds
-  `wpa_supplicant` without the roaming features Arch enables (WNM, MBO)
+  `wireless-regdb`). Compare with wpa_supplicant, which since Alpha 7 is
+  built with WNM and MBO (`wpa_supplicant-holo`), as on SteamOS
 - **Desktop responsiveness:** SteamOS 3.9.2's desktop felt more responsive
   than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
   the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
@@ -52,6 +55,17 @@ has changed since is on [Alpha 7](Alpha-7).
   general; ip route`
 - **Touch only with the dock on SteamOS:** SteamOS switches the trackpads
   off while the dock is attached; Io does not (see [Deviations](Deviations))
+- **`€` from Steam's keyboard in the desktop** does not arrive (the AltGr
+  level); German letters and emoji do. On SteamOS 3.9.2 the keyboard
+  typed no umlauts or ß in the desktop at all (2026-10-04, see
+  [Deviations](Deviations)); `€` there is not checked
+- **Steam hung in its boot animation** on the first start after switching
+  to the beta client (the bootstrapper had installed the update;
+  steamwebhelper logged "SteamClient globals not available" and a
+  timeout waiting for `RegisterForStartupFinished`). A reboot fixed it.
+  If it happens again, copy the logs in `~/.local/share/Steam/logs`
+  (`bootstrap_log.txt`, `console_log.txt`, `cef_log.txt`,
+  `webhelper.txt`, `webhelper_js.txt`) over SSH before restarting
 
 ---
 
@@ -93,10 +107,9 @@ someone with the hardware.
 
 ## Polish
 
-- Designed boot splash; the black gap while Steam loads inside gamescope
+- Designed boot splash
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
   inside game mode)
-- **Theming:** whether `void-artwork` still belongs in `io-desktop`
 
 ---
 

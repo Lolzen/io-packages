@@ -113,6 +113,8 @@ session to log in next and ends the running one:
   D-Bus. Plasma is logged out through its own session manager
   (`org.kde.Shutdown.logout`), which closes every program in order — ending
   kwin alone would not end the session, `kwin_wayland_wrapper` restarts it.
+  The desktop's last picture stays on screen until Steam's boot animation,
+  as on SteamOS.
 - **Default login mode:** `DefaultLoginMode` writes
   `/etc/sddm.conf.d/zz-steamos-autologin.conf` for a desktop default
   (`steamos-session-select plasma-wayland-persistent`) and removes it for

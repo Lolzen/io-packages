@@ -23,9 +23,12 @@ Why:
 configuration enables and Void's does not: WNM (802.11v BSS transition) and
 MBO, which access points use to steer a client between them (roaming with
 the same network name), OCV, FILS, the learning background scan, autoscan
-and 802.11be. Valve's other configuration differences stay out (PC/SC and
-SIM/AKA authentication would need pcsclite; Valve disables WEP, Void keeps
-it).
+and 802.11be. Valve's other configuration differences stay out (among
+them PC/SC and SIM/AKA authentication, which would need pcsclite; Valve's
+build leaves WEP off, Void's enables it), and so do the Arch patches in
+Valve's build (0001-0008: TLS 1.0 by default, no -Werror for eapol_test,
+legacy renegotiation, systemd unit changes, nl80211 extra IEs, a brcmfmac
+revert).
 
 All three patches apply to the 2.12 release (Void's source) after Void's
 own patch; Void's configuration with the added options builds.

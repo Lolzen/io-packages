@@ -86,10 +86,6 @@ its reason.
   always runs).
 - **The text console stays on tty1** with a login prompt. SteamOS moves it
   to tty4–6 (`fbcon=vc:4-6`). The sessions run on tty7 either way.
-- **The desktop keeps the brightness set in game mode.** `io-plasma` writes
-  the current backlight into the internal panel's entry of kwin's
-  `kwinoutputconfig.json` before kwin starts. Valve patches kwin for the
-  same result (KDE bug 508163); Io gets it without a kwin build.
 - **On-screen keyboard in the desktop:** `plasma-keyboard`, as SteamOS 3.9.2
   (it replaced Maliit there). As on SteamOS it is not set as kwin's input
   method by default; System Settings → Keyboard → Virtual Keyboard turns it
@@ -404,9 +400,10 @@ the session bus that Steam talks to.
   Differences: `ibus-anthy-holo` is built against Void's `anthy-unicode`
   (Valve: the older `anthy`); `ibus-pinyin` and `pyzy` are built with
   `autoreconf` instead of GNOME's `autogen.sh`.
-- **Umlauts in game mode:** Steam's keyboard types them on Io, but not on
-  SteamOS 3.9.2 (system language English, German keyboard); why was not
-  looked into.
+- **Umlauts from Steam's keyboard:** it types them on Io, in game mode and
+  (since Alpha 7) in the desktop, but on SteamOS 3.9.2 in neither (system
+  language English, German keyboard; tested with Steam's beta client of
+  2026-10-04); why was not looked into.
 
 ---
 
@@ -424,11 +421,22 @@ Void's `-32bit` packages of these stay Void's.
 | `NetworkManager-holo` | `NetworkManager`, `libnm`, `NetworkManager-devel` | after resume, scan only the last-associated frequency (MR 2514, not merged) |
 | `bluez-holo` | `bluez`, `libbluetooth` and the other bluez packages | a re-paired device's old entry with the same key is removed (Steam Controller and suspend); the Switch Pro Controller's link may use sniff mode. Built with `-std=gnu17`: Void's autoconf 2.73 makes bluez 5.86 compile as C23, where it fails |
 | `ibus-anthy-holo` | `ibus-anthy` | Valve's fork of 1.5.14 (Void: 1.5.16, Valve's changes do not apply to it); not generated from Void's template |
+| `kwin-holo` | `kwin`, `kwin-devel` | the desktop takes the panel's current brightness instead of the saved one (KDE bug 508163); text from Steam's keyboard over libei goes past an input method that grabs the keyboard; libei 1.6 keysym and text events (kwin 6.8); no modes below 480p (kwin 6.8) |
+| `xorg-server-xwayland-holo` | `xorg-server-xwayland` | text typed through XTEST (Steam's keyboard in the desktop) goes to the compositor as keysyms over libei, so letters outside the first layout group and CJK text arrive |
+| `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume; built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
+| `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting |
 
 Valve's other patches to these packages are left out: for bluez, the
 `main.conf` settings (Io sets them in its own file), the wake-policy
 plugin and LL privacy (no effect on SteamOS 3.9.2), test changes; for
-NetworkManager, the iwd backend patches (wpa_supplicant is the backend).
+NetworkManager, the iwd backend patches (wpa_supplicant is the backend);
+for kwin, the `WM_TAKE_FOCUS` fix (already in 6.7.5); for Xwayland, the two
+reverts Valve carries for a seamless start of Steam (on Io they caused a
+black flash when returning to game mode; without them the desktop's last
+picture stays until Steam's boot animation, as on SteamOS); for
+wpa_supplicant, Arch's patches in Valve's build and the rest of Valve's
+build options (among them PC/SC and SIM authentication, which would need
+`pcsclite`); WEP stays enabled as in Void's build (Valve's leaves it off).
 
 ---
 
