@@ -83,7 +83,7 @@ one release, so the update removes the overlay package and installs Void's.
 | [iwd](iwd/README.md) | iwd | 3.12 | 3 station fixes (BSS cache, pending BSS, stale scans) | not in iwd | 2026-10-11 |
 | [kwin](kwin/README.md) | kwin, kwin-devel | 6.7.5 | brightness from the device; Steam keyboard input from libei past a grabbing input method; libei 1.6 keysyms and text; no modes below 480p | 0002/0006 not upstream; 0011/0013 in 6.8 | 2026-10-11 |
 | [wpa_supplicant](wpa_supplicant/README.md) | wpa_supplicant | 2.12 | SAE wrong-password detection; 2 rescan fixes (6 GHz); WNM, MBO and other options from Valve's configuration | not in hostap | 2026-10-11 |
-| [xorg-server-xwayland](xorg-server-xwayland/README.md) | xorg-server-xwayland | 24.1.13 | Valve's two reverts for a seamless Steam start under gamescope; libei: text as keysyms (Steam keyboard in the desktop, with kwin-holo) | reverts: Valve only; keysyms: not in 24.1.13 | 2026-10-11 |
+| [xorg-server-xwayland](xorg-server-xwayland/README.md) | xorg-server-xwayland | 24.1.13 | libei: text as keysyms (Steam keyboard in the desktop, with kwin-holo); Valve's two seamless-start reverts left out (black flash on Io) | not in 24.1.13 | 2026-10-11 |
 
 ## Hand-written stand-ins
 
