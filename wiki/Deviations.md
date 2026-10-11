@@ -135,6 +135,20 @@ the session bus that Steam talks to.
   (pyudev) for a USB interface's `change` event carrying
   `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a
   port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
+- **Hardware other than the Steam Deck** (untested): as steamos-manager,
+  Valve's device files decide (Io ships the eight that define one of these
+  interfaces, matched by `sys_vendor` and `board_name` or `product_name`):
+  `PerformanceProfile1`, the ACPI platform profile, on the Legion Go
+  (also S and 2), ROG Ally (also X and Xbox Ally), MSI Claw and Zotac Zone;
+  `FirmwareDebug1`, EC logging, on the Steam Machine, through Valve's
+  `ec-log` as a runit service that is linked only while Steam turns it on
+  and is off again after a reboot (its log goes to socklog; Valve: its own
+  journal namespace). On these devices the Deck's own interfaces are not
+  exported (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
+  `BatteryChargeLimit1`, `FanControl1`): Valve drives their TDP through
+  firmware attributes and their charge limit through ACPI, which Io does
+  not implement, nor InputPlumber for their controllers. Io stays a Steam
+  Deck system.
 - **Not implemented**, for lack of a counterpart on Io: `UpdateBios1`,
   `UpdateDock1`, `FactoryReset1`.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4

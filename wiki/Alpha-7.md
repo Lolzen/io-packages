@@ -49,6 +49,15 @@
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
 
+### Other hardware (untested, no hardware)
+
+- `io-steamos-manager` takes Valve's device files for hardware other than
+  the Steam Deck: the performance profile (`PerformanceProfile1`) on Legion
+  Go, ROG Ally, MSI Claw and Zotac Zone, EC logging (`FirmwareDebug1`,
+  Valve's `ec-log`) on the Steam Machine. The Deck's own interfaces (TDP,
+  download mode, light sensor, charge limit, fan control) are not offered
+  on those devices. Nothing changes on the Deck.
+
 ### Image build
 
 - The image scripts put the repository keys (Void's and Io's) into each
