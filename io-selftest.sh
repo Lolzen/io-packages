@@ -30,7 +30,11 @@ fi
 echo "== system"
 info "kernel $(uname -r)"
 check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
-check "Valve's Bluetooth firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "RTL: fw version 0x3d7679d7"'
+if [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ]; then
+    info "Steam Deck OLED: Bluetooth is Qualcomm (upstream firmware), Valve's Realtek firmware not used"
+else
+    check "Valve's Bluetooth firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "RTL: fw version 0x3d7679d7"'
+fi
 check "Valve's VCN firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "Found VCN firmware Version ENC: 1.27 DEC: 2"'
 check "kernel.pid_max = 4194304" sh -c '[ "$(sysctl -n kernel.pid_max)" = 4194304 ]'
 # systemd's defaults (50-io-inherited.conf); ufw must not override them
@@ -51,7 +55,7 @@ P2="socklog-void kde-plasma steam-jupiter steam-im-modules steamdeck-kde-presets
 P2="$P2 steamos-networking-tools steamos-systemreport sddm scx wireless-regdb gstreamer1-pipewire"
 P2="$P2 pipewire-32bit libspa-videoconvert-32bit libspa-audioconvert-32bit"
 P2="$P2 holo-sudo jupiter-firewall cecd cec-audio-control steamos-devkit-service steam-web-debug-portforward"
-P2="$P2 gpu-trace holo-realtek-firmware-toggles io-release"
+P2="$P2 gpu-trace holo-realtek-firmware-toggles io-release galileo-mura wireless-domain-setter"
 P2="$P2 drm_janitor steam_notif_daemon xdg-desktop-portal-holo gamescope-wsi-32bit"
 for p in $P1 $P2; do
     check "installed: $p" xbps-query "$p"
@@ -61,7 +65,7 @@ for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptun
 done
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace; do
+for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace wireless-domain-setter; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent
