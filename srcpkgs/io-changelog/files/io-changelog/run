@@ -1,0 +1,11 @@
+#!/bin/sh
+exec 2>&1
+
+# Io's game-mode launcher must stay free of feature startup hooks. This
+# supervised service runs as deck and starts at boot before Steam.
+export HOME=/home/deck USER=deck LOGNAME=deck
+export XDG_STATE_HOME=/home/deck/.local/state
+# Clean up a background observer from the previous package implementation.
+/usr/bin/io-steam-changelog legacy-stop
+
+exec chpst -u deck:deck /usr/bin/io-steam-changelog service

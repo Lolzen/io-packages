@@ -74,10 +74,56 @@ pending() {
 
 count() { grep -c . "$TMP/pending"; }
 dlsize() { awk '{ s += $6 } END { printf "%d\n", s }' "$TMP/pending"; }
+
 buildid() { echo "$(date -u +%Y%m%d).$(count)"; }
+
+# Publish the exact pending transaction for the CEF patch-notes adapter.
+write_changelog_summary() {
+    python3 - "$TMP/pending" "${IO_UPDATE_CHANGELOG_STATE:-/run/io-update-changelog.json}" "$(buildid)" "$(count)" "$(dlsize)" <<'PY'
+import json, os, re, subprocess, sys, tempfile
+pending, output, build_id, count, download_bytes = sys.argv[1:]
+rx = re.compile(r"^(.*)-([0-9].*)$")
+def split_pkgver(value):
+    match = rx.match(value)
+    return (match.group(1), match.group(2)) if match else (value, "")
+installed = {}
+query = subprocess.run(["xbps-query", "-l"], text=True, capture_output=True, check=False)
+if query.returncode == 0:
+    for line in query.stdout.splitlines():
+        fields = line.split(maxsplit=2)
+        if len(fields) >= 2 and fields[0] == "ii":
+            name, version = split_pkgver(fields[1])
+            installed[name] = version
+packages = []
+with open(pending, encoding="utf-8") as stream:
+    for line in stream:
+        fields = line.split()
+        if len(fields) < 2:
+            continue
+        name, new_version = split_pkgver(fields[0])
+        old_version = installed.get(name) if fields[1] in ("update", "reinstall") else None
+        packages.append({"name": name, "from": old_version,
+                         "to": new_version, "action": fields[1]})
+summary = {"build_id": build_id, "package_count": int(count),
+           "download_bytes": int(download_bytes), "packages": packages}
+directory = os.path.dirname(output)
+fd, temp = tempfile.mkstemp(prefix="io-update-changelog.", dir=directory)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        json.dump(summary, stream, ensure_ascii=False, separators=(",", ":"))
+        stream.write("\n")
+    os.chmod(temp, 0o644)
+    os.replace(temp, output)
+finally:
+    try: os.unlink(temp)
+    except FileNotFoundError: pass
+PY
+}
+
 
 cmd_check() {
     lock
+    rm -f "${IO_UPDATE_CHANGELOG_STATE:-/run/io-update-changelog.json}" 2>> "$LOG"
     sync_repos
     pending
     if [ "$(count)" -eq 0 ]; then
@@ -85,6 +131,9 @@ cmd_check() {
         exit 7
     fi
     log "check: $(count) package(s): $(awk '{ printf "%s ", $1 }' "$TMP/pending")"
+    if ! write_changelog_summary >> "$LOG" 2>&1; then
+        log "check: could not write the patch-notes summary; continuing update check"
+    fi
     echo "$(buildid) $(count) $(dlsize)"
 }
 
