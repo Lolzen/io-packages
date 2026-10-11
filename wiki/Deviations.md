@@ -143,12 +143,17 @@ the session bus that Steam talks to.
   `FirmwareDebug1`, EC logging, on the Steam Machine, through Valve's
   `ec-log` as a runit service that is linked only while Steam turns it on
   and is off again after a reboot (its log goes to socklog; Valve: its own
-  journal namespace). On these devices the Deck's own interfaces are not
-  exported (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
-  `BatteryChargeLimit1`, `FanControl1`): Valve drives their TDP through
-  firmware attributes and their charge limit through ACPI, which Io does
-  not implement, nor InputPlumber for their controllers. Io stays a Steam
-  Deck system.
+  journal namespace). The GPU interfaces (`GpuPerformanceLevel1`,
+  `GpuPowerProfile1`) follow the device file as on SteamOS, so the Steam
+  Machine and the MSI Claw with Intel graphics have none (Io reads amdgpu
+  only). The Deck's own interfaces are not exported on these devices
+  (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
+  `BatteryChargeLimit1`, and `FanControl1`, which SteamOS offers wherever
+  `jupiter-fan-control` is installed). What Valve's device files define for
+  the handhelds beyond that, Io does not implement: their TDP (firmware
+  attributes; amdgpu hwmon on the ROG Xbox Ally), their charge limit
+  (ACPI) and InputPlumber for their controllers. Io is not usable as a
+  system on them.
 - **Not implemented**, for lack of a counterpart on Io: `UpdateBios1`,
   `UpdateDock1`, `FactoryReset1`.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4

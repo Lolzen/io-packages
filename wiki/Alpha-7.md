@@ -56,7 +56,8 @@
   Go, ROG Ally, MSI Claw and Zotac Zone, EC logging (`FirmwareDebug1`,
   Valve's `ec-log`) on the Steam Machine. The Deck's own interfaces (TDP,
   download mode, light sensor, charge limit, fan control) are not offered
-  on those devices. Nothing changes on the Deck.
+  on those devices, the GPU interfaces only where the device file has them.
+  Nothing changes on the Deck.
 
 ### Image build
 

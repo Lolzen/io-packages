@@ -101,8 +101,9 @@ someone with the hardware.
   untested
 - **Other handhelds** (Legion Go, ROG Ally, MSI Claw, Zotac Zone): only
   Steam's performance profile (`PerformanceProfile1`, ACPI platform
-  profile); their TDP, charge limit and InputPlumber are not ported, so Io
-  is not usable on them as a system
+  profile); their TDP, charge limit and InputPlumber (where Valve's device
+  files define them) are not ported, so Io is not usable on them as a
+  system
 - **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`)
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
