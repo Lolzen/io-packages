@@ -58,9 +58,10 @@
   port.
 - **`inputattach-cec-units`:** only for Pulse-Eight and RainShadow USB-CEC
   adapters; not needed.
-- **Steam's patch notes for system updates** are Valve's latest SteamOS
-  notes for the update channel, on Io as well; they stay (see
-  [Deviations](Deviations)).
+- **Steam's patch notes for system updates** show Io's package summary and
+  release notes through the `io-changelog` CEF service; Steam's client and
+  installed files are not changed. The service runs by default. It disables
+  Io's CEF LAN port forward while active; see [Deviations](Deviations).
 - **The screen sharing prompt** when Steam starts in the desktop: the
   permission store looks as on SteamOS apart from the app ID, and neither
   grants it in advance. A fresh user is still to be tried.

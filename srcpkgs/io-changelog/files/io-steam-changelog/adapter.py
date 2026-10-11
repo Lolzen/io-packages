@@ -1,10 +1,9 @@
 #!/usr/bin/python3
-"""Io's opt-in CEF patch-notes adapter. Uses only localhost CEF CDP."""
+"""Io's CEF patch-notes adapter. Uses only localhost CEF CDP."""
 import base64
 import hashlib
 import json
 import os
-import pwd
 import re
 import socket
 import struct
@@ -52,23 +51,6 @@ def cleanup_debug_flag():
         log("removed CEF remote debugging flag created by this package")
     else:
         log("left pre-existing CEF remote debugging flag untouched")
-    return 0
-
-
-def stop_legacy_monitor():
-    """Stop the pre-runit background observer when upgrading this package."""
-    try:
-        legacy_pidfile = Path(f"/run/user/{pwd.getpwnam('deck').pw_uid}/io-steam-changelog.pid")
-    except KeyError:
-        return 0
-    try:
-        pid = int(legacy_pidfile.read_text(encoding="ascii").strip())
-        command = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode(errors="ignore")
-        if "io-steam-changelog" in command and "monitor" in command:
-            os.kill(pid, 15)
-    except (OSError, ValueError, KeyError):
-        pass
-    legacy_pidfile.unlink(missing_ok=True)
     return 0
 
 
@@ -425,9 +407,7 @@ def main(argv):
         service()
     if command == "cleanup":
         return cleanup_debug_flag()
-    if command == "legacy-stop":
-        return stop_legacy_monitor()
-    print("usage: io-steam-changelog [service|cleanup|legacy-stop]", file=sys.stderr)
+    print("usage: io-steam-changelog [service|cleanup]", file=sys.stderr)
     return 2
 
 

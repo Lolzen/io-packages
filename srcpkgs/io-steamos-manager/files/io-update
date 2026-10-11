@@ -24,10 +24,20 @@ XBPS_INSTALL="${IO_UPDATE_XBPS_INSTALL:-xbps-install}"
 XBPS_OPTS="${IO_UPDATE_XBPS_OPTS:-}"
 STATE="${IO_UPDATE_STATE:-/run/io-update}"
 LOG="${IO_UPDATE_LOG:-/var/log/io-update.log}"
+CHANGELOG_SUMMARY="${IO_UPDATE_CHANGELOG_STATE:-/run/io-update-changelog.json}"
+CLEAN_CHANGELOG_SUMMARY=0
 
 mkdir -p "$STATE"
 TMP=$(mktemp -d "$STATE/tmp.XXXXXX") || exit 1
-trap 'rm -rf "$TMP"' EXIT INT TERM
+cleanup() {
+    rm -rf "$TMP"
+    if [ "$CLEAN_CHANGELOG_SUMMARY" -eq 1 ]; then
+        rm -f "$CHANGELOG_SUMMARY"
+    fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 say() { echo "io-update: $*" >&2; log "$*"; }
@@ -79,12 +89,19 @@ buildid() { echo "$(date -u +%Y%m%d).$(count)"; }
 
 # Publish the exact pending transaction for the CEF patch-notes adapter.
 write_changelog_summary() {
-    python3 - "$TMP/pending" "${IO_UPDATE_CHANGELOG_STATE:-/run/io-update-changelog.json}" "$(buildid)" "$(count)" "$(dlsize)" <<'PY'
+    python3 - "$TMP/pending" "$CHANGELOG_SUMMARY" "$(buildid)" "$(count)" "$(dlsize)" <<'PY'
 import json, os, re, subprocess, sys, tempfile
 pending, output, build_id, count, download_bytes = sys.argv[1:]
-rx = re.compile(r"^(.*)-([0-9].*)$")
-def split_pkgver(value):
-    match = rx.match(value)
+def split_pending_pkgver(value):
+    name = subprocess.run(["xbps-uhelper", "getpkgname", value], text=True,
+                          capture_output=True, check=True).stdout.strip()
+    version = subprocess.run(["xbps-uhelper", "getpkgversion", value], text=True,
+                             capture_output=True, check=True).stdout.strip()
+    return name, version
+def split_installed_pkgver(value):
+    # xbps-query -l is one listing operation; don't spawn two helpers for
+    # every installed package just to find the old versions.
+    match = re.match(r"^(.*)-([0-9].*)$", value)
     return (match.group(1), match.group(2)) if match else (value, "")
 installed = {}
 query = subprocess.run(["xbps-query", "-l"], text=True, capture_output=True, check=False)
@@ -92,7 +109,7 @@ if query.returncode == 0:
     for line in query.stdout.splitlines():
         fields = line.split(maxsplit=2)
         if len(fields) >= 2 and fields[0] == "ii":
-            name, version = split_pkgver(fields[1])
+            name, version = split_installed_pkgver(fields[1])
             installed[name] = version
 packages = []
 with open(pending, encoding="utf-8") as stream:
@@ -100,7 +117,7 @@ with open(pending, encoding="utf-8") as stream:
         fields = line.split()
         if len(fields) < 2:
             continue
-        name, new_version = split_pkgver(fields[0])
+        name, new_version = split_pending_pkgver(fields[0])
         old_version = installed.get(name) if fields[1] in ("update", "reinstall") else None
         packages.append({"name": name, "from": old_version,
                          "to": new_version, "action": fields[1]})
@@ -187,6 +204,9 @@ progress_filter() {
 
 cmd_apply() {
     lock
+    # Clear the pending transaction after apply exits, on success or failure.
+    # Do not clear it when lock() fails: another check may own the summary.
+    CLEAN_CHANGELOG_SUMMARY=1
     sync_repos
     pending
     # xbps refuses to update anything else while it is outdated itself

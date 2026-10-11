@@ -461,12 +461,19 @@ interfaces Steam uses:
   SteamOS Manager (Valve: anyone, with polkit per method).
 - Every update is logged to `/var/log/io-update.log`. An update does not
   restart running services; the reboot Steam asks for does.
-- **Patch notes are Valve's.** When an update is offered, Steam shows the
-  newest patch notes event of Valve's Steam Deck app (1675200) for the
-  update channel (stable, beta or preview, from the OS branch and the
-  client's beta), not notes that belong to the update. So Io's updates come
-  with SteamOS's latest notes. Only Valve can post there, and Io does not
-  change Steam's client.
+- **Patch notes use Io's update summary.** The `io-changelog` runit service
+  uses Steam's CEF remote debugging endpoint on localhost to replace only
+  the SteamOS event for app 1675200 with Io's package summary and release
+  notes. It does not edit Steam's files or change the client. The service
+  is linked by default in images and on first package install; remove
+  `/var/service/io-changelog` to opt out. While it runs, it stops
+  `steam-web-debug-portforward` so the adapter's debugging session is not
+  exposed on the LAN. If the observer is unavailable, Steam falls back to
+  Valve's notes. When the service is stopped, the separate port-forward
+  service can expose CEF on port 8081 if Steam's remote-debugging flag is
+  present; this is intended for developer use on a trusted network. A flag
+  created by the service is removed when it stops; a pre-existing developer
+  flag is left untouched.
 
 ---
 

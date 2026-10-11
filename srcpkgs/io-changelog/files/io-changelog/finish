@@ -3,4 +3,5 @@
 # only the CEF flag created by this package, leaving a pre-existing flag alone.
 export HOME=/home/deck USER=deck LOGNAME=deck
 export XDG_STATE_HOME=/home/deck/.local/state
-exec /usr/bin/io-steam-changelog cleanup
+/usr/bin/io-steam-changelog cleanup
+rm -f /run/io-changelog/active

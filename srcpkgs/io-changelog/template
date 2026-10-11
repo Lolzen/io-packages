@@ -1,29 +1,17 @@
 # Template file for 'io-changelog'
 pkgname=io-changelog
 version=0.1.0
-revision=3
+revision=4
 depends="python3 runit-void"
 short_desc="Io's SteamOS patch notes adapter"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://github.com/Lolzen/io-packages"
+INSTALL="${FILESDIR}/INSTALL"
 
 do_install() {
 	vbin ${FILESDIR}/io-steam-changelog/adapter.py io-steam-changelog
 	vmkdir usr/share/io/changelog
 	vinstall ${FILESDIR}/steam.json 644 usr/share/io/changelog
 	vsv io-changelog
-}
-
-post_install() {
-	# Default-enable once, including upgrades from earlier revisions. The
-	# marker preserves an admin's later choice to remove the service link.
-	if [ ! -e var/lib/io-changelog/service-default-initialized ]; then
-		mkdir -p var/lib/io-changelog || return 1
-		if [ ! -e var/service/io-changelog ] &&
-		   [ ! -L var/service/io-changelog ]; then
-			ln -s /etc/sv/io-changelog var/service/io-changelog || return 1
-		fi
-		: > var/lib/io-changelog/service-default-initialized
-	fi
 }
