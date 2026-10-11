@@ -133,7 +133,7 @@ halves, like Valve's daemon:
 |---|---|---|
 | Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `SetFanSpeed`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs`; also `com.steampowered.Atomupd1` at `/com/steampowered/Atomupd1` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, ...), and the root half's jobs it started, mirrored |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `SetFanSpeed`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs`; also `com.steampowered.Atomupd1` at `/com/steampowered/Atomupd1` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, `UdevEvents1`, ...), and the root half's jobs it started, mirrored |
 | Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
 
 Access to the root half is limited to root and `wheel`
