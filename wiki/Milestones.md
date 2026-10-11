@@ -99,9 +99,13 @@ someone with the hardware.
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
-- **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
-  Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
-  and the display quirks
+- **Steam Deck OLED:** supported as SteamOS 3.9.2 supports it, untested:
+  Valve's audio profile differences and SOF firmware, the mura correction,
+  the 45–90 Hz refresh range and HDR default, Wi-Fi debugging
+  (`WifiDebug1`, `WifiDebugDump1`), the regulatory domain of its ath11k card.
+  The kernel (Valve's tree) and fan control already covered it. Valve's
+  `modules-reload.sh` (reloading ath11k around hibernation) follows with
+  suspend-then-hibernate
 
 ---
 

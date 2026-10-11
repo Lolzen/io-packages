@@ -49,6 +49,19 @@
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
 
+### Steam Deck OLED (untested, no hardware)
+
+- **Audio:** Valve's SOF firmware for the OLED's audio DSP, its own filter
+  chain configuration and Valve's speaker filter graph (`steamdeck-dsp`).
+- **Display:** Valve's mura correction (`galileo-mura`, new), the 45–90 Hz
+  refresh range and HDR on by default, as Valve's game mode session sets
+  them for the OLED.
+- **Wi-Fi:** Steam's Wi-Fi debug options (`WifiDebug1`, `WifiDebugDump1`)
+  and Valve's `wireless-domain-setter` (new), which hands the ath11k card's
+  regulatory domain to the kernel.
+- The selftest skips the check for the LCD's Realtek Bluetooth firmware on
+  the OLED.
+
 ### Image build
 
 - The image scripts put the repository keys (Void's and Io's) into each

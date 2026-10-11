@@ -133,7 +133,7 @@ halves, like Valve's daemon:
 |---|---|---|
 | Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `SetFanSpeed`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs`; also `com.steampowered.Atomupd1` at `/com/steampowered/Atomupd1` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, `UdevEvents1`, ...), and the root half's jobs it started, mirrored |
+| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `SetFanSpeed`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs`; also `com.steampowered.Atomupd1` at `/com/steampowered/Atomupd1` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, `UdevEvents1`, on the OLED also `WifiDebug1` and `WifiDebugDump1`, ...), and the root half's jobs it started, mirrored |
 | Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
 
 Access to the root half is limited to root and `wheel`
@@ -254,7 +254,8 @@ that identity to recognize the built-in devices and shows its own localized
 names for them.
 
 The filter chain runs in a second PipeWire instance
-(`pipewire -c filter-chain.conf`), started per session, with Valve's own
+(`pipewire -c filter-chain.conf`; on the OLED `filter-chain-galileo.conf`),
+started per session, with Valve's own
 settings: fixed quantum, `mem.mlock-all` within a 100 MB memlock limit, and
 a single malloc arena. Volume keys are handled by Steam itself.
 Plain ALSA clients reach PipeWire through `alsa-pipewire`, linked in

@@ -30,7 +30,7 @@ its reason.
 | Void Linux with runit | Arch Linux with systemd | The point of the project |
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
-| Steam Deck LCD (Jupiter) only | LCD and OLED (Galileo) | No OLED hardware to test with |
+| Built and tested on the Steam Deck LCD (Jupiter); the OLED (Galileo) is supported as SteamOS supports it, untested | LCD and OLED (Galileo) | No OLED hardware to test with |
 | Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
@@ -84,6 +84,11 @@ its reason.
   script in a loop tied to gamescope (Valve: a user service with
   `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
   always runs).
+- **Galileo's mura correction** (`galileo-mura-setup`) is started by
+  `io-gamemode` on the OLED once gamescope has set its
+  `GAMESCOPE_XWAYLAND_SERVER_ID` root property, the sign that it listens
+  for the correction's X property. SteamOS starts it as a user service after
+  `gamescope-session.service` is ready.
 - **The text console stays on tty1** with a login prompt. SteamOS moves it
   to tty4–6 (`fbcon=vc:4-6`). The sessions run on tty7 either way.
 - **On-screen keyboard in the desktop:** `plasma-keyboard`, as SteamOS 3.9.2
@@ -137,8 +142,12 @@ the session bus that Steam talks to.
   port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
 - **Not implemented**, for lack of a counterpart on Io: `UpdateBios1`,
   `UpdateDock1`, `FactoryReset1`.
-  `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
-  and 3.9.2).
+- **`WifiDebug1` and `WifiDebugDump1`** only on Galileo, as by Valve (the
+  LCD under SteamOS has neither): Wi-Fi debug mode needs iwd as backend;
+  iwd then runs with `-d`, set through `OPTS` in `/etc/sv/iwd/conf`
+  (Valve: a systemd drop-in), and the ath11k firmware's diagnostics are
+  traced with `trace-cmd`. The dump makes ath11k's firmware crash on purpose
+  through debugfs and copies the devcoredump the kernel then offers.
 - **HDMI-CEC (`HdmiCec1`, `HdmiCec2`)** as in steamos-manager 26.4.1: the
   switches Steam sets go into `cecd`'s configuration, and `cecd` reloads it
   through its own D-Bus interface (`Config1.Reload`). Io keeps its own copy
@@ -182,6 +191,10 @@ the session bus that Steam talks to.
   instead of systemd's `zram-generator`, with Valve's values: half of RAM,
   zstd, priority 100, zswap off. Valve's 1 GiB swap file is switched on by
   a core service instead of `swapfile.service` and `home-swapfile.swap`.
+- **`wireless-domain-setter`** (Valve's, copies a self-managed Wi-Fi card's
+  regulatory domain to the kernel) runs once at boot as a runit service
+  that then idles; SteamOS runs it as a systemd service. On the LCD it ends
+  at once.
 - **Hibernation is allowed only with `/` on the internal NVMe and `resume=`
   on the kernel command line** (Io's own core service writes elogind's
   `sleep.conf.d`); without a resume path a hibernated session would be
@@ -292,9 +305,15 @@ the session bus that Steam talks to.
   headphone sink), as on SteamOS. Void's `alsa-ucm-conf` also ships
   `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM would pick first by the
   card's long name; `steamdeck-dsp` keeps it out (`noextract`).
-- **No hardware profile switching.** SteamOS picks the audio profile for the
-  Deck model at boot through symlinks in `/run`. Io only supports Jupiter and
-  installs its configuration directly into the standard search paths.
+- **No hardware profile switching at boot.** SteamOS picks the audio profile
+  for the Deck model at boot through symlinks in `/run`. Io installs
+  Jupiter's configuration directly into the standard search paths. Valve's
+  Galileo profile differs from it in two places, which Io adds: the filter
+  chain's target card (`sof-nau8821-max`), as its own configuration
+  `filter-chain-galileo.conf` that the session starts instead on the OLED,
+  and Valve's speaker filter graph (`92-io-galileo-speakers.conf`, upstream
+  WirePlumber's `node.filter-graph.rules`; it matches only the OLED's
+  speaker).
 - **ALSA loopbacks** are created by an Io WirePlumber script that rebuilds
   Valve's `CreateLoopback()`, which only exists in Valve's patched
   WirePlumber. The result matches SteamOS, including the card identity the
@@ -306,8 +325,9 @@ the session bus that Steam talks to.
   loopback keeps applications from seeing the speaker rebuilt: with Steam's
   *Mono audio*, a stream on the bare speaker saw the channel count change,
   and Steam's interface sound closed for good when switching back.
-- **OLED (Galileo) firmware removed**, its UCM profile kept (two small files,
-  a head start for anyone porting Io to that model).
+- **Galileo's SOF firmware** (`amd/sof`, `amd/sof-tplg`) is installed as on
+  SteamOS; the kernel loads it only on the OLED, whose audio DSP runs SOF.
+  Both UCM profiles (`acp5x`, `sof-nau8821-max`) are Valve's.
 
 ---
 
