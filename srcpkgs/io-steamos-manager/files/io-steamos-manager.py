@@ -2372,13 +2372,21 @@ async def run_user():
     # have them. Some of Io's interfaces are the Steam Deck's own and are
     # left out on these devices, as Valve exports them only where the
     # hardware has them: TdpLimit1 and LowPowerMode1 (amdgpu power cap,
-    # 3-15 W; Valve drives these devices' TDP through firmware attributes,
-    # tied to the performance profile), AmbientLightSensor1 (Valve:
-    # steam_deck only), BatteryChargeLimit1 (Io reads steamdeck_hwmon; Valve
-    # uses ACPI on these devices) and FanControl1 (jupiter-fan-control).
-    if device_config() is not None:
+    # 3-15 W with the Deck's limits; Valve drives these devices' TDP mostly
+    # through firmware attributes, tied to the performance profile),
+    # AmbientLightSensor1 (Valve: steam_deck only), BatteryChargeLimit1 (Io
+    # reads steamdeck_hwmon; Valve uses ACPI on these devices) and
+    # FanControl1 (jupiter-fan-control). The GPU interfaces follow the
+    # device file as Valve's (gpu_performance, gpu_power_profile), and only
+    # for amdgpu, the only driver Io reads.
+    config = device_config()
+    if config is not None:
         deck_only = (TdpLimit1, LowPowerMode1, AmbientLightSensor1,
                      BatteryChargeLimit1, FanControl1)
+        if (config.get("gpu_performance") or {}).get("driver") != "amdgpu":
+            deck_only += (GpuPerformanceLevel1,)
+        if (config.get("gpu_power_profile") or {}).get("driver") != "amdgpu":
+            deck_only += (GpuPowerProfile1,)
         classes = tuple(c for c in classes if c not in deck_only)
     if available_platform_profiles():
         classes += (PerformanceProfile1,)
