@@ -10,6 +10,12 @@
 #                                      generated from Void's MangoHud first
 #   ./build.sh -p --overlays           every overlay whose current build is
 #                                      missing (after a Void update, say)
+#   ./build.sh --testing io-session    build and publish to the testing
+#                                      channel (publish.sh --testing)
+#   ./build.sh --replace io-session    build and publish this build even if
+#                                      the same or a higher version is
+#                                      published (publish.sh --replace);
+#                                      combinable: --testing --replace
 #
 # Overlays (overlay/README.md): <name>-holo is generated from Void's <name>
 # by overlay/holo.sh after void-packages is pulled. If Void's version is not
@@ -36,13 +42,18 @@ IO_DIR="${IO_DIR:-$HOME/io-packages}"
 VP_DIR="${VP_DIR:-$HOME/void-packages}"
 
 PUBLISH=0
-if [ "${1:-}" = "-p" ]; then
-    PUBLISH=1
+PUBOPTS=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -p) PUBLISH=1 ;;
+        --testing|--replace) PUBLISH=1; PUBOPTS="$PUBOPTS $1" ;;
+        *) break ;;
+    esac
     shift
-fi
+done
 
 if [ $# -eq 0 ]; then
-    echo "usage: build.sh [-p] <pkgname|name-holo|--overlays> [more...]" >&2
+    echo "usage: build.sh [-p] [--testing] [--replace] <pkgname|name-holo|--overlays> [more...]" >&2
     exit 1
 fi
 
@@ -142,7 +153,7 @@ if [ "$PUBLISH" = 1 ] && [ -n "$BUILD" ]; then
         fi
     done
     # shellcheck disable=SC2086
-    "$IO_DIR/publish.sh" $PUB
+    "$IO_DIR/publish.sh" $PUBOPTS $PUB
 fi
 
 if [ "$REVIEW" = 1 ]; then
