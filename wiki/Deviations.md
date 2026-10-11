@@ -131,8 +131,12 @@ the session bus that Steam talks to.
   half numbers its jobs from the time it started, so a number is not
   reused after a restart. `FormatDevice` answers `NotSupported` until
   formatting is ported and tested (see *Storage*).
-- **Not implemented**, for lack of a counterpart on Io: `UdevEvents1`,
-  `UpdateBios1`, `UpdateDock1`, `FactoryReset1`.
+- **`UdevEvents1`** as in steamos-manager: the session half watches udev
+  (pyudev) for a USB interface's `change` event carrying
+  `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a
+  port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
+- **Not implemented**, for lack of a counterpart on Io: `UpdateBios1`,
+  `UpdateDock1`, `FactoryReset1`.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
   and 3.9.2).
 - **HDMI-CEC (`HdmiCec1`, `HdmiCec2`)** as in steamos-manager 26.4.1: the

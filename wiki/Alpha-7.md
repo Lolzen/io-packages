@@ -32,6 +32,15 @@
   builds it), the emoji font for the whole system through its fontconfig
   file.
 
+### Steam
+
+- **USB over-current warning** (`io-steamos-manager` 0.15.0): the session
+  half emits steamos-manager's `UdevEvents1.UsbOverCurrent` signal when the
+  kernel reports that a USB port tripped; Steam's client knows the signal.
+  Tested with a simulated event (a made-up port name): the signal arrives;
+  Steam showed nothing for it in game mode. A real over-current is
+  untested.
+
 ### Wi-Fi
 
 - **`wpa_supplicant-holo`:** Valve's patches (a wrong WPA3 password is
