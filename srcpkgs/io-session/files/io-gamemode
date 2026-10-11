@@ -101,20 +101,25 @@ start_ibus() {
 # Galileo's mura correction (SteamOS: galileo-mura-setup.service, a user
 # service wanted by gamescope-session.target, only on Valve/Galileo): reads
 # the panel's correction data (or downloads it once, as Valve's script
-# does) and hands it to gamescope through an X property. Started once
-# gamescope's X server is up, like mangoapp; a failure leaves the panel
+# does) and hands it to gamescope through an X property. gamescope only
+# notices the property when it changes, so the script has to run after
+# gamescope listens for it (Valve: after gamescope-session.service is
+# ready). The X socket alone is no sign of that (the previous session's
+# survives in /tmp); gamescope sets GAMESCOPE_XWAYLAND_SERVER_ID on the root
+# window just before it starts listening. A failure leaves the panel
 # uncorrected, nothing else.
 start_mura() {
     [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ] || return
     command -v galileo-mura-setup > /dev/null 2>&1 || return
     (
+        export DISPLAY=:0
         i=0
-        while ! pgrep -x gamescope-wl > /dev/null || [ ! -S /tmp/.X11-unix/X0 ]; do
-            [ "$i" -ge 30 ] && exit 0
+        until pgrep -x gamescope-wl > /dev/null && xprop -root GAMESCOPE_XWAYLAND_SERVER_ID 2> /dev/null | grep -q '= 0'; do
+            [ "$i" -ge 60 ] && exit 0
             sleep 1
             i=$((i + 1))
         done
-        export DISPLAY=:0
+        sleep 1
         exec galileo-mura-setup
     ) 2>&1 &
 }
