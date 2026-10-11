@@ -61,7 +61,7 @@ for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptun
 done
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace; do
+for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace io-changelog; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent

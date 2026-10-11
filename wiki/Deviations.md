@@ -473,11 +473,13 @@ interfaces Steam uses:
   `/var/service/io-changelog` to opt out. While it runs, it stops
   `steam-web-debug-portforward` so the adapter's debugging session is not
   exposed on the LAN. If the observer is unavailable, Steam falls back to
-  Valve's notes. When the service is stopped, the separate port-forward
-  service can expose CEF on port 8081 if Steam's remote-debugging flag is
-  present; this is intended for developer use on a trusted network. A flag
-  created by the service is removed when it stops; a pre-existing developer
-  flag is left untouched.
+  Valve's notes. A flag created by the service is removed when it stops; a
+  pre-existing developer flag is left untouched. Steam reads the flag only
+  when it starts, so after the service stops (also between a crash and its
+  restart) the port forward stays paused until the Steam that was started
+  with the service's flag has exited. With a pre-existing developer flag the
+  port forward resumes at once and exposes CEF on port 8081, as on SteamOS;
+  this is meant for developer use on a trusted network.
 
 ---
 

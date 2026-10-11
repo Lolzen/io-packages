@@ -1,7 +1,7 @@
 # Template file for 'io-changelog'
 pkgname=io-changelog
 version=0.1.0
-revision=4
+revision=5
 depends="python3 runit-void"
 short_desc="Io's SteamOS patch notes adapter"
 maintainer="Georg <funer@gmx.at>"

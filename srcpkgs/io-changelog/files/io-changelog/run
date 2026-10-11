@@ -11,5 +11,8 @@ mkdir -p /run/io-changelog || exit 1
 : > /run/io-changelog/active || exit 1
 # Don't let a supervisor timeout delay Steam's startup if sv is unresponsive.
 sv term steam-web-debug-portforward >/dev/null 2>&1 &
+# sv term reaches only socat's listening process; connections it forked
+# earlier (the boot race) would stay open.
+pkill -u nobody -f 'TCP-LISTEN:8081' >/dev/null 2>&1
 
 exec chpst -u deck:deck /usr/bin/io-steam-changelog service

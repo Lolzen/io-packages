@@ -40,6 +40,11 @@
   Tested with a simulated event (a made-up port name): the signal arrives;
   Steam showed nothing for it in game mode. A real over-current is
   untested.
+- **Io's own patch notes** for system updates (`io-changelog`): Steam shows
+  Io's package summary and release notes instead of Valve's latest SteamOS
+  notes. Steam's client and installed files are not changed. The service
+  runs by default and pauses Io's CEF port forward to the network while it
+  runs; see [Deviations](Deviations).
 
 ### Wi-Fi
 
@@ -67,10 +72,6 @@
   port.
 - **`inputattach-cec-units`:** only for Pulse-Eight and RainShadow USB-CEC
   adapters; not needed.
-- **Steam's patch notes for system updates** show Io's package summary and
-  release notes through the `io-changelog` CEF service; Steam's client and
-  installed files are not changed. The service runs by default. It disables
-  Io's CEF LAN port forward while active; see [Deviations](Deviations).
 - **The screen sharing prompt** when Steam starts in the desktop: the
   permission store looks as on SteamOS apart from the app ID, and neither
   grants it in advance. A fresh user is still to be tried.
