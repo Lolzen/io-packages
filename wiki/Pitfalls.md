@@ -623,8 +623,9 @@ interface's `change` event only when a port really trips. A rule in
 interface, produces the same event for `UdevEvents1` without touching the
 hardware; remove the rule afterwards.
 
-**SteamOS does not offer `WifiDebug1`** on the Deck (3.8.4 and 3.9.2),
-although Valve's interface file describes it. On 3.9.2 neither
+**SteamOS does not offer `WifiDebug1`** on the LCD (3.8.4 and 3.9.2),
+although Valve's interface file describes it; steamos-manager exports it
+on Galileo only. On 3.9.2 neither
 `FirmwareDebug1`, `PerformanceProfile1` nor `GameStreaming1` is exported
 on the LCD.
 

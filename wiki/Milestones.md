@@ -99,7 +99,7 @@ someone with the hardware.
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
-- **Steam Deck OLED:** supported as SteamOS 3.9.2 supports it, untested:
+- **Steam Deck OLED** (untested): Valve's packages and settings for it:
   Valve's audio profile differences and SOF firmware, the mura correction,
   the 45–90 Hz refresh range and HDR default, Wi-Fi debugging
   (`WifiDebug1`, `WifiDebugDump1`), the regulatory domain of its ath11k card.

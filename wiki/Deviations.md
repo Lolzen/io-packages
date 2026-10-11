@@ -30,7 +30,7 @@ its reason.
 | Void Linux with runit | Arch Linux with systemd | The point of the project |
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
-| Built and tested on the Steam Deck LCD (Jupiter); the OLED (Galileo) is supported as SteamOS supports it, untested | LCD and OLED (Galileo) | No OLED hardware to test with |
+| Built and tested on the Steam Deck LCD (Jupiter); the OLED (Galileo) gets Valve's packages and settings for it, untested, with gaps (see [Milestones](Milestones)) | LCD and OLED (Galileo) | No OLED hardware to test with |
 | Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
@@ -193,8 +193,10 @@ the session bus that Steam talks to.
   a core service instead of `swapfile.service` and `home-swapfile.swap`.
 - **`wireless-domain-setter`** (Valve's, copies a self-managed Wi-Fi card's
   regulatory domain to the kernel) runs once at boot as a runit service
-  that then idles; SteamOS runs it as a systemd service. On the LCD it ends
-  at once.
+  that then idles, on every model as on SteamOS (there a systemd service).
+  On the LCD it ends at once, as its card is not self-managed; with Valve's
+  USB streaming dongle plugged in it also reloads that dongle's driver
+  (`rtw89_8852cu`), as on SteamOS.
 - **Hibernation is allowed only with `/` on the internal NVMe and `resume=`
   on the kernel command line** (Io's own core service writes elogind's
   `sleep.conf.d`); without a resume path a hibernated session would be
