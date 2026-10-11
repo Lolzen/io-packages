@@ -104,7 +104,7 @@ fork is cheap; these deserve a second look:
 
 | Package | Valve patch | Earlier verdict |
 |---|---|---|
-| mesa (Void 26.2) | DRI3 frame limiter for OpenGL (`GAMESCOPE_LIMITER_FILE`), RADV game fixes | decided 2026-10-03: stay with Void's Mesa; large build, needs 32-bit too |
+| mesa (Void 26.2.4) | radeonsi 26.1.2: one Valve commit, the DRI3 frame limiter for OpenGL (`GAMESCOPE_LIMITER_FILE`; applies to 26.2.4). RADV (Valve's 26.2-devel branch): 14 `STEAMOS:` commits (Forza fixes, explicit sync for VM operations, pageable device-local memory, BO list for gamescope, invariant outputs), 6 of them conflict with 26.2.4 | 2026-10-11: not now; look again at Void's next Mesa update. Needs 32-bit builds of the overlay (build.sh) |
 
 Not candidates (upstream already, Steam Machine/OLED only, or systemd
 only): see the evaluation report.
