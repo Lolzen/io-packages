@@ -20,6 +20,25 @@
 #   ./publish.sh io-base ...  collect only these (index and release are
 #                             still brought fully up to date)
 #   ./publish.sh --full       re-index and re-upload everything
+#   ./publish.sh --replace io-base ...
+#                             publish the latest *built* file of these
+#                             packages even if a higher or the same version
+#                             is already published (test builds): every other
+#                             version of them is removed from the publish dir
+#                             and from binpkgs, the index entry is replaced
+#                             and the file is uploaded again
+#   ./publish.sh --testing io-base ...
+#                             publish to the testing channel instead (release
+#                             "testing", publish dir ~/io-repo-test, created
+#                             on first use). Only the named packages go
+#                             there; packages that the main repository has
+#                             in the same or a higher version are dropped
+#                             from it on every --testing run. A Deck uses it
+#                             with /etc/xbps.d/10-io-testing.conf containing
+#                             repository=https://github.com/Lolzen/io-repo/releases/download/testing
+#                             (sorted before Io's 20-io.conf, so a test build
+#                             wins over the same version in the main repo)
+#   Options can be combined: --testing --replace io-base
 #
 # gh output goes to a log file instead of the terminal: when gh writes to a
 # terminal it queries the background colour, and the late reply shows up as
@@ -28,13 +47,37 @@
 set -eu
 
 BINPKGS="${BINPKGS:-$HOME/void-packages/hostdir/binpkgs}"
-PUBDIR="${PUBDIR:-$HOME/io-repo-pub}"
+MAIN_PUBDIR="${PUBDIR:-$HOME/io-repo-pub}"
 SRCPKGS="${SRCPKGS:-$HOME/io-packages/srcpkgs}"
 PRIVKEY="${PRIVKEY:-$HOME/io-packages/privkey.pem}"
 SIGNEDBY="${SIGNEDBY:-Io}"
 GHREPO="${GHREPO:-Lolzen/io-repo}"
 GHTAG="${GHTAG:-current}"
 ARCH=x86_64
+
+FULL=0
+REPLACE=0
+TESTING=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --full) FULL=1 ;;
+        --replace) REPLACE=1 ;;
+        --testing) TESTING=1 ;;
+        -*) echo "publish: unknown option $1" >&2; exit 1 ;;
+        *) break ;;
+    esac
+    shift
+done
+if [ "$TESTING" = 1 ]; then
+    PUBDIR="${TEST_PUBDIR:-$HOME/io-repo-test}"
+    GHTAG="${TEST_GHTAG:-testing}"
+else
+    PUBDIR=$MAIN_PUBDIR
+fi
+if [ "$REPLACE" = 1 ] && [ $# -eq 0 ]; then
+    echo "publish: --replace needs package names" >&2
+    exit 1
+fi
 
 export NO_COLOR=1 GH_NO_UPDATE_NOTIFIER=1 GH_PROMPT_DISABLED=1
 
@@ -76,11 +119,36 @@ newest_in() {
     done | sort -V | tail -1
 }
 
-FULL=0
-if [ "${1:-}" = "--full" ]; then
-    FULL=1
-    shift
-fi
+# most recently built file of package $2 in directory $1 (for --replace)
+latest_built_in() {
+    best=""
+    for f in "$1/$2"-[0-9]*.xbps; do
+        [ -f "$f" ] || continue
+        [ "$(pkgname_of "$f")" = "$2" ] || continue
+        if [ -z "$best" ] || [ "$f" -nt "$best" ]; then
+            best=$f
+        fi
+    done
+    echo "$best"
+}
+
+# remove every file of package $2 in directory $1 except $3 (a file name)
+drop_others() {
+    for f in "$1/$2"-[0-9]*.xbps; do
+        [ -f "$f" ] || continue
+        [ "$(pkgname_of "$f")" = "$2" ] || continue
+        [ "${f##*/}" = "$3" ] && continue
+        rm -f "$f" "$f.sig2"
+        echo "  $f: removed (replaced)"
+    done
+}
+
+# "io-base-0.3.0_1.x86_64.xbps" -> "io-base-0.3.0_1"
+pkgver_of() {
+    b=${1##*/}
+    b=${b%.xbps}
+    echo "${b%.*}"
+}
 
 # Overlay packages (overlay/holo.sh: MangoHud-holo, MangoHud-mangoapp-holo,
 # ...) belong to Io as well. Their names come from Void's templates, so a
@@ -96,6 +164,8 @@ fi
 ALL="$(ls "$SRCPKGS") $HOLONAMES"
 if [ $# -gt 0 ]; then
     COLLECT="$*"
+elif [ "$TESTING" = 1 ]; then
+    COLLECT=""    # the testing channel only gets what is named
 else
     COLLECT=$ALL
 fi
@@ -103,14 +173,34 @@ fi
 # ------------------------------------------------------------- collect
 echo "== collecting"
 : > "$TMP/new.txt"
+: > "$TMP/forced.txt"
+CLEANBIN=""
 for pkg in $COLLECT; do
-    src=$(newest_in "$(bindir "$pkg")" "$(pubname "$pkg")")
+    name=$(pubname "$pkg")
+    dir=$(bindir "$pkg")
+    if [ "$REPLACE" = 1 ]; then
+        src=$(latest_built_in "$dir" "$name")
+    else
+        src=$(newest_in "$dir" "$name")
+    fi
     if [ -z "$src" ]; then
         echo "  $pkg: not built, skipping"
         continue
     fi
     base=${src##*/}
-    if [ -f "$PUBDIR/$base" ]; then
+    if [ "$REPLACE" = 1 ]; then
+        # Other builds of it go from binpkgs too, or a later run without
+        # --replace would pick a higher test build again.
+        drop_others "$PUBDIR" "$name" "$base"
+        drop_others "$dir" "$name" "$base"
+        case " $CLEANBIN " in *" $dir "*) ;; *) CLEANBIN="$CLEANBIN $dir" ;; esac
+        cp -f "$src" "$PUBDIR/"
+        rm -f "$PUBDIR/$base.sig2"
+        echo "$PUBDIR/$base" >> "$TMP/new.txt"
+        echo "$base" >> "$TMP/forced.txt"
+        echo "$base.sig2" >> "$TMP/forced.txt"
+        echo "  $base: copied (replace)"
+    elif [ -f "$PUBDIR/$base" ]; then
         echo "  $base: already present"
     else
         cp "$src" "$PUBDIR/"
@@ -133,22 +223,62 @@ for f in "$PUBDIR"/*.xbps; do
         echo "  ${f##*/}: removed"
     fi
 done
+# The testing channel drops what the main repository has caught up with
+# (merged and published there), except what is named in this run.
+if [ "$TESTING" = 1 ]; then
+    for f in "$PUBDIR"/*.xbps; do
+        [ -f "$f" ] || continue
+        name=$(pkgname_of "$f")
+        named=0
+        for pkg in $COLLECT; do
+            [ "$(pubname "$pkg")" = "$name" ] && named=1
+        done
+        [ "$named" = 1 ] && continue
+        m=$(newest_in "$MAIN_PUBDIR" "$name")
+        [ -n "$m" ] || continue
+        rc=0
+        xbps-uhelper cmpver "$(pkgver_of "$m")" "$(pkgver_of "$f")" || rc=$?
+        if [ "$rc" != 255 ]; then
+            rm -f "$f" "$f.sig2"
+            echo "  ${f##*/}: removed (main has $(pkgver_of "$m"))"
+        fi
+    done
+fi
+# binpkgs is xbps-src's local repository: drop the index entries of the
+# builds --replace removed.
+for dir in $CLEANBIN; do
+    xbps-rindex -c "$dir" > /dev/null
+done
 
 # ------------------------------------------------------ index and sign
 echo "== indexing"
 if [ "$FULL" = 1 ]; then
     xbps-rindex -a "$PUBDIR"/*.xbps
 elif [ -s "$TMP/new.txt" ]; then
-    xargs xbps-rindex -a < "$TMP/new.txt"
+    if [ "$REPLACE" = 1 ]; then
+        # -f: replace the entry of an already registered (same or higher) version
+        xargs xbps-rindex -f -a < "$TMP/new.txt"
+    else
+        xargs xbps-rindex -a < "$TMP/new.txt"
+    fi
 fi
 xbps-rindex -c "$PUBDIR"
+if [ ! -f "$PUBDIR/$ARCH-repodata" ]; then
+    echo "publish: nothing in $PUBDIR to publish" >&2
+    exit 1
+fi
 
 echo "== signing"
 # Returns 0 when the repodata already carries this key; anything else is a
 # real error (wrong key file, broken repodata) and stops the upload.
-xbps-rindex --sign --signedby "$SIGNEDBY" --privkey "$PRIVKEY" "$PUBDIR" > /dev/null
+# xbps-rindex refuses an index without packages (an emptied testing
+# channel); that index keeps the key from before, so clients accept it.
+if ls "$PUBDIR"/*.xbps > /dev/null 2>&1; then
+    xbps-rindex --sign --signedby "$SIGNEDBY" --privkey "$PRIVKEY" "$PUBDIR" > /dev/null
+fi
 : > "$TMP/unsigned.txt"
 for f in "$PUBDIR"/*.xbps; do
+    [ -f "$f" ] || continue
     if [ "$FULL" = 1 ] || [ ! -f "$f.sig2" ]; then
         echo "$f" >> "$TMP/unsigned.txt"
     fi
@@ -158,16 +288,23 @@ if [ -s "$TMP/unsigned.txt" ]; then
 fi
 
 # --------------------------------------------------------------- upload
+if [ "$TESTING" = 1 ] && ! gh release view "$GHTAG" --repo "$GHREPO" > "$GHLOG" 2>&1; then
+    echo "== creating release $GHTAG"
+    gh_run release create "$GHTAG" --repo "$GHREPO" --prerelease --title "Io testing" --notes "Test builds that are not merged yet, for testing on a Deck only."
+fi
+
 echo "== comparing with release"
 gh_run release view "$GHTAG" --repo "$GHREPO" --json assets --jq '.assets[].name'
 sort "$GHLOG" > "$TMP/remote.txt"
 
-(cd "$PUBDIR" && ls *.xbps *.xbps.sig2 "$ARCH-repodata") | sort > "$TMP/local.txt"
+(cd "$PUBDIR" && ls *.xbps *.xbps.sig2 "$ARCH-repodata" 2> /dev/null) | sort > "$TMP/local.txt"
 
 if [ "$FULL" = 1 ]; then
     grep -vx "$ARCH-repodata" "$TMP/local.txt" > "$TMP/upload.txt" || true
 else
-    comm -23 "$TMP/local.txt" "$TMP/remote.txt" | grep -vx "$ARCH-repodata" > "$TMP/upload.txt" || true
+    # new names, plus what --replace changed under an existing name
+    { comm -23 "$TMP/local.txt" "$TMP/remote.txt"; cat "$TMP/forced.txt"; } |
+        grep -vx "$ARCH-repodata" | sort -u > "$TMP/upload.txt" || true
 fi
 
 # packages first, index last: clients never see an index entry whose file
@@ -199,3 +336,7 @@ fi
 
 echo
 echo "published to https://github.com/$GHREPO/releases/tag/$GHTAG"
+if [ "$TESTING" = 1 ]; then
+    echo "Deck: /etc/xbps.d/10-io-testing.conf with"
+    echo "  repository=https://github.com/$GHREPO/releases/download/$GHTAG"
+fi
