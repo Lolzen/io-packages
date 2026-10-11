@@ -145,7 +145,8 @@ the session bus that Steam talks to.
   and is off again after a reboot (its log goes to socklog; Valve: its own
   journal namespace). On these devices the Deck's own interfaces are not
   exported (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
-  `BatteryChargeLimit1`, `FanControl1`): Valve drives their TDP through
+  `BatteryChargeLimit1`; `FanControl1` stays where `jupiter-fan-control` has
+  a configuration for the board, i.e. on the Steam Machine): Valve drives their TDP through
   firmware attributes and their charge limit through ACPI, which Io does
   not implement, nor InputPlumber for their controllers. Io stays a Steam
   Deck system.
@@ -159,6 +160,11 @@ the session bus that Steam talks to.
   of the four settings in `99-steamos-manager.toml` instead of rebuilding
   the file from a cache, as Valve does. `WakeDevice` is unsupported (false),
   as on the LCD under SteamOS. `MakeActive` asks `cecd` to wake the TV.
+  On the Steam Machine (untested), as steamos-manager: waking from the TV
+  goes through the ChromeOS embedded controller (`cec_wake_enable`,
+  `cec_phys_addr` under `/sys/class/chromeos/cros_ec`), the session half
+  hands cecd's physical address to it, and cecd tells the TV the device
+  file's name ("Steam Machine") instead of "Steam Deck".
 - **Download mode** stops the OS fan control through runit, sets the fan to
   2000 rpm (`fan1_target`) and starts fan control again afterwards, in
   Valve's order; the root half waits until runit has really stopped the fan
@@ -320,6 +326,16 @@ the session bus that Steam talks to.
   loopback keeps applications from seeing the speaker rebuilt: with Steam's
   *Mono audio*, a stream on the bare speaker saw the channel count change,
   and Steam's interface sound closed for good when switching back.
+- **The Steam Machine** (untested) gets Valve's WirePlumber profile for it
+  (HDMI/DisplayPort, the AC3 profile set for ARC, full volume on HDMI),
+  installed under `/usr/share/io/wireplumber-fremont`. The session points
+  WirePlumber at it with `WIREPLUMBER_CONFIG_DIR` there, which replaces the
+  Deck's fragments in `/etc/wireplumber`; Io's sink loopback rule is
+  shadowed (Valve's profile loops back sources only), and no filter chain
+  runs, as in Valve's profile. Its CEC volume control needs Valve's
+  PipeWire and WirePlumber patches, which Void's builds lack; volume stays
+  on the machine. AC3 needs the ALSA a52 plugin (`alsa-plugins-ffmpeg`,
+  installed with `steamdeck-dsp`).
 - **OLED (Galileo) firmware removed**, its UCM profile kept (two small files,
   a head start for anyone porting Io to that model).
 

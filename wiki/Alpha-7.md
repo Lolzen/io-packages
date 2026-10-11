@@ -58,6 +58,15 @@
   download mode, light sensor, charge limit, fan control) are not offered
   on those devices. Nothing changes on the Deck.
 
+### Steam Machine (untested, no hardware)
+
+- **HDMI-CEC:** waking the machine from the TV through its embedded
+  controller, as steamos-manager; the TV sees it as "Steam Machine".
+- **Audio:** Valve's WirePlumber profile for it (HDMI/DisplayPort, AC3 for
+  ARC), chosen by the session on that machine only; no filter chain.
+- **Fan control** stays available there (`jupiter-fan-control` has its
+  configuration).
+
 ### Image build
 
 - The image scripts put the repository keys (Void's and Io's) into each

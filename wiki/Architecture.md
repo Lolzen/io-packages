@@ -151,7 +151,9 @@ Some session-half interfaces drive other programs, as steamos-manager does:
   `suspend_tv`, `uinput`, `allow_standby`) to
   `~/.config/cecd/config.d/99-steamos-manager.toml` (identity in `00-`),
   then have cecd reload them over D-Bus (`Config1.Reload`); `MakeActive`
-  calls cecd's `Daemon1.Wake`
+  calls cecd's `Daemon1.Wake`. On the Steam Machine `WakeDevice` switches
+  the embedded controller's CEC wake (root half), and the session half
+  keeps the EC's CEC physical address in step with cecd's device
 - **`LowPowerMode1`:** hands out the write end of a pipe; while any is
   open, the TDP is 6 W and the fan runs at a fixed 2000 rpm (OS fan control
   is stopped meanwhile and started again afterwards)
