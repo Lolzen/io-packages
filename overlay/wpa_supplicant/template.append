@@ -1,0 +1,9 @@
+# Io: wireless options Valve's (Arch's) build configuration enables and
+# Void's does not: 802.11v BSS transition (WNM) and Multi-Band Operation
+# (MBO) - roaming between access points with the same network name -,
+# operating channel validation, FILS fast initial link setup, the learning
+# background scan, autoscan and 802.11be. Given to make, which takes them
+# over the values in .config (Void's files/config).
+_io_config="CONFIG_WNM=y CONFIG_MBO=y CONFIG_OCV=y CONFIG_FILS=y CONFIG_FILS_SK_PFS=y CONFIG_BGSCAN_LEARN=y CONFIG_AUTOSCAN_EXPONENTIAL=y CONFIG_AUTOSCAN_PERIODIC=y CONFIG_IEEE80211BE=y"
+make_build_args+=" ${_io_config}"
+make_install_args+=" ${_io_config}"

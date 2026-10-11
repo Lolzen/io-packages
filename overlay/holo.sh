@@ -25,8 +25,10 @@
 #     after a revision bump in Void
 #   - revision = Void's revision * 100 + io_revision, so both a rebuild in
 #     Void (revision bump) and a change of Io's patches give a newer package
-#   - ${pkgname} outside functions (distfiles, wrksrc, ...) keeps meaning
-#     the Void name
+#   - ${pkgname} keeps meaning the Void name outside functions (distfiles,
+#     wrksrc, ...) and in the build functions (do_install, post_install:
+#     paths such as ${FILESDIR}/${pkgname}.conf); only inside a subpackage's
+#     *_package() function it is left alone
 # It stops (exit 2) when Void's version is not base_version: the patches
 # have to be checked against the new version by hand, then base_version
 # raised. A revision bump in Void only gives a new build.
@@ -207,11 +209,13 @@ cmd_gen() {
             for (sp in issub) sib[sp] = 1
             sib[name] = 1
             vr = "${version}_${revision}"
-            infunc = 0; cursub = ""
+            infunc = 0; inpkg = 0; cursub = ""
         }
         # start of a top-level function: "name() {"
         /^[A-Za-z0-9._+-]+\(\) *\{/ {
             fn = $0; sub(/\(\).*/, "", fn)
+            # in a build function, ${pkgname} means the Void name as well
+            if (fn !~ /_package$/) $0 = bare(lit($0, "${pkgname}", name))
             if (fn ~ /_package$/) {
                 sp = fn; sub(/_package$/, "", sp)
                 if (sp in issub) {
@@ -220,7 +224,7 @@ cmd_gen() {
                 }
             }
             # a one-line function closes on the same line
-            if ($0 !~ /\}[ \t]*$/) infunc = 1
+            if ($0 !~ /\}[ \t]*$/) { infunc = 1; inpkg = (fn ~ /_package$/) }
             print; next
         }
         /^\}/ {
@@ -230,7 +234,7 @@ cmd_gen() {
                 print "\tprovides=\"${provides:+$provides }" cursub "-${version}_${revision}\""
                 cursub = ""
             }
-            infunc = 0
+            infunc = 0; inpkg = 0
             print; next
         }
         # dependencies between the packages of this template, at the exact
@@ -243,7 +247,7 @@ cmd_gen() {
         }
         !infunc && /^pkgname=/ { print "pkgname=" name "-holo"; next }
         !infunc && /^revision=/ { print "revision=" newrev; next }
-        !infunc { $0 = bare(lit($0, "${pkgname}", name)) }
+        !inpkg { $0 = bare(lit($0, "${pkgname}", name)) }
         { print }
         END {
             print ""
