@@ -4,6 +4,15 @@ if pgrep -x kwin_wayland > /dev/null; then
     exit 1
 fi
 
+# The Steam Machine, as Valve's audio profile selection (wireplumber-hwconfig
+# in steamdeck-dsp) recognises it: sys_vendor-product_name "valve-fremont",
+# or "oem-f7f" on early units.
+io_is_fremont() {
+    v=$(tr 'A-Z' 'a-z' < /sys/class/dmi/id/sys_vendor 2>/dev/null)
+    p=$(tr 'A-Z' 'a-z' < /sys/class/dmi/id/product_name 2>/dev/null)
+    [ "$v-$p" = valve-fremont ] || [ "$v-$p" = oem-f7f ]
+}
+
 # Valve runs the filter chain as its own PipeWire instance
 # (filter-chain.service), with a fixed quantum, locked memory and a single
 # malloc arena - settings that would be wrong for the main daemon. prlimit
@@ -12,7 +21,7 @@ fi
 #
 # The Steam Machine (Fremont) has no filter chain in Valve's profile.
 start_filter_chain() {
-    [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Fremont ] && return
+    io_is_fremont && return
     pgrep -f "pipewire -c filter-chain.conf" > /dev/null && return
     # Wait for the main daemon's socket in the background: a PipeWire client
     # started before it exits instead of retrying. Valve gets the ordering
@@ -59,7 +68,7 @@ steam_dpi_scaling_off() {
 # The Steam Machine (Fremont): WirePlumber reads Valve's profile for it
 # (steamdeck-dsp) instead of the Deck's in /etc/wireplumber; it inherits
 # this from PipeWire, which starts it (context.exec).
-if [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Fremont ]; then
+if io_is_fremont; then
     export WIREPLUMBER_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wireplumber:/usr/share/io/wireplumber-fremont:/usr/share/wireplumber"
 fi
 pgrep -x pipewire > /dev/null || pipewire &

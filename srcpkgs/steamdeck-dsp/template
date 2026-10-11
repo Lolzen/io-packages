@@ -5,7 +5,7 @@ revision=16
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
-depends="pipewire wireplumber rnnoise-ladspa"
+depends="pipewire wireplumber rnnoise-ladspa alsa-plugins-ffmpeg"
 short_desc="Valve's Steam Deck speaker/microphone DSP (Faust LV2 plugins, UCM, hardware profiles)"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
@@ -13,9 +13,9 @@ homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupi
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
 checksum=33cbb5fe073c69db2fb061258f3212a2b60143513446efb2dcf9cfc86fcd1712
 
-# Jupiter/LCD only. Galileo (OLED) needs a different soundcard
-# (sof-nau8821-max) and its own SOF firmware build - out of scope until
-# Io supports that model.
+# Built for Jupiter (LCD). The Steam Machine's WirePlumber profile is
+# installed aside (see below; untested, no hardware). Galileo (OLED) needs a
+# different soundcard (sof-nau8821-max) and its own SOF firmware build.
 archs="x86_64*"
 
 post_extract() {
@@ -118,8 +118,14 @@ do_install() {
 	# control (external-volume-control, support.varlink) needs Valve's
 	# PipeWire and WirePlumber patches, which Void's builds do not have;
 	# those keys are inert. pipewire.conf.d is the same as the Deck's.
+	# Io's sink loopbacks (91-io-sink-loopback.conf, a 3.8.4 behaviour) are
+	# shadowed there by an empty file of the same name, since Valve's Fremont
+	# profile loops back sources only and hides looped-back nodes: the HDMI
+	# sinks (AC3 for ARC) must stay visible. AC3 needs the ALSA a52 plugin
+	# (alsa-plugins-ffmpeg).
 	vmkdir usr/share/io/wireplumber-fremont/wireplumber.conf.d
 	for f in wireplumber/hardware-profiles/valve-fremont/wireplumber.conf.d/*.conf; do
 		vinstall "$f" 644 usr/share/io/wireplumber-fremont/wireplumber.conf.d
 	done
+	vinstall ${FILESDIR}/91-io-sink-loopback-fremont.conf 644 usr/share/io/wireplumber-fremont/wireplumber.conf.d 91-io-sink-loopback.conf
 }

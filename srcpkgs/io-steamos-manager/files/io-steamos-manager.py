@@ -56,7 +56,7 @@ import subprocess
 import sys
 import time
 
-from dbus_fast import BusType, Message, MessageType, PropertyAccess, Variant
+from dbus_fast import BusType, Message, MessageFlag, MessageType, PropertyAccess, Variant
 from dbus_fast.aio import MessageBus
 from dbus_fast.errors import DBusError
 from dbus_fast.service import ServiceInterface, dbus_property, method
@@ -177,6 +177,24 @@ def _find_device_config():
     return found
 
 
+def device_match():
+    """The [[device]] entry of the matched device file (friendly_name, oui)."""
+    config = device_config()
+    if not config:
+        return None
+    vendor = _read_file("/sys/class/dmi/id/sys_vendor", "")
+    board = _read_file("/sys/class/dmi/id/board_name", None)
+    product = _read_file("/sys/class/dmi/id/product_name", None)
+    for dev in config.get("device", []):
+        dmi = dev.get("dmi") if isinstance(dev, dict) else None
+        if not isinstance(dmi, dict) or dmi.get("sys_vendor") != vendor:
+            continue
+        if (board is not None and board == dmi.get("board_name")) or (
+                product is not None and product == dmi.get("product_name")):
+            return dev
+    return None
+
+
 def _platform_profile_dir():
     """The platform-profile directory steamos-manager uses (find_sysdir: the
     one whose name is the configured platform_profile_name)."""
@@ -235,7 +253,7 @@ def cros_ec_cec_port():
     hw = ((device_config() or {}).get("cec_hw") or {}).get("hardware") or {}
     ec = hw.get("cros_ec") if isinstance(hw, dict) else None
     port = ec.get("port") if isinstance(ec, dict) else None
-    return port if isinstance(port, int) else None
+    return port if type(port) is int and 0 <= port <= 255 else None
 
 
 def _cros_ec_value(name):
@@ -1694,10 +1712,36 @@ async def _cecd_reload():
         log(f"cecd reload failed: {err.text}")
 
 
+def cecd_identity():
+    """What cecd tells the TV, as steamos-manager's configure_cecd: the
+    device file's friendly_name and oui (Steam Machine: "Steam Machine");
+    the Steam Deck's on the Deck (Valve's steam-deck.toml, not shipped)."""
+    try:
+        dev = device_match()
+    except Exception:  # noqa: BLE001 - fall back to the Deck's
+        dev = None
+    if dev is None:
+        return CECD_IDENTITY
+    text = ""
+    if dev.get("friendly_name"):
+        text += f'osd_name = "{dev["friendly_name"]}"\n'
+    if dev.get("oui"):
+        text += f'vendor_id = "{dev["oui"]}"\n'
+    return text
+
+
 def write_cec_config(config):
     """Write both files; ask cecd to reload when something changed."""
     text = "".join(f"{k} = {'true' if config[k] else 'false'}\n" for k in CECD_KEYS)
-    changed = _cecd_write("00-steamos-manager.toml", CECD_IDENTITY)
+    identity = cecd_identity()
+    if identity:
+        changed = _cecd_write("00-steamos-manager.toml", identity)
+    else:
+        # Valve removes the file when the device file names neither
+        path = os.path.join(CECD_CONF, "00-steamos-manager.toml")
+        changed = os.path.exists(path)
+        if changed:
+            os.remove(path)
     changed |= _cecd_write(CECD_RUNTIME, text)
     if changed and SESSION_BUS is not None:
         task = asyncio.ensure_future(_cecd_reload())
@@ -1745,9 +1789,6 @@ class HdmiCec2(ServiceInterface):
     def __init__(self, root):
         super().__init__(f"{IFACE}.HdmiCec2")
         self.root = root
-        # Steam Machine: CEC wake through the EC (root daemon); set at start
-        self.can_awaken = False
-        self.awaken = False
 
     def _set(self, key, value, prop):
         config = read_cec_config()
@@ -1789,11 +1830,13 @@ class HdmiCec2(ServiceInterface):
 
     @dbus_property()
     def WakeDevice(self) -> "b":
-        return self.awaken if self.can_awaken else False
+        # the EC's file is world-readable: read live, as Valve reads the root
+        # property on every get; False where there is no EC wake
+        return _cros_ec_value("cec_wake_enable") == "1"
 
     @WakeDevice.setter
     def WakeDevice(self, value: "b"):
-        if not self.can_awaken:
+        if _cros_ec_value("cec_wake_enable") is None:
             raise DBusError(ERR, "HDMI CEC hardware not configured")
 
         async def job():
@@ -1803,16 +1846,14 @@ class HdmiCec2(ServiceInterface):
                     iface="org.freedesktop.DBus.Properties")
             except DBusError as err:
                 log(f"WakeDevice failed: {err}")
-            state = await self.root.get_prop("HdmiCecAwaken")
-            self.awaken = bool(state) if state is not None else self.awaken
-            self.emit_properties_changed({"WakeDevice": self.awaken})
+            self.emit_properties_changed({"WakeDevice": self.WakeDevice})
         task = asyncio.ensure_future(job())
         self.root.tasks.add(task)
         task.add_done_callback(self.root.tasks.discard)
 
     @dbus_property(access=PropertyAccess.READ)
     def WakeDeviceSupported(self) -> "b":
-        return self.can_awaken
+        return _cros_ec_value("cec_wake_enable") is not None
 
     @method()
     async def MakeActive(self):
@@ -2459,14 +2500,18 @@ async def cec_phys_addr_sync(root, session):
     async def reconfigure():
         async with busy:
             addr = 0xFFFF
+            # no D-Bus activation: a crashing cecd must not be restarted
+            # over and over by its own exit signal
             reply = await session.call(Message(
                 destination=CECD_BUSNAME, path=om_path,
                 interface="org.freedesktop.DBus.ObjectManager",
-                member="GetManagedObjects"))
+                member="GetManagedObjects", flags=MessageFlag.NO_AUTOSTART))
+            objects = {}
             if reply.message_type == MessageType.ERROR:
                 log(f"cecd objects: {reply.body}")
-                return
-            for path, ifaces in sorted(reply.body[0].items()):
+            else:
+                objects = reply.body[0]
+            for path, ifaces in sorted(objects.items()):
                 if path.startswith(dev_prefix) and dev_iface in ifaces:
                     pa = ifaces[dev_iface].get("PhysicalAddress")
                     if pa is not None:
@@ -2484,6 +2529,8 @@ async def cec_phys_addr_sync(root, session):
         task.add_done_callback(root.tasks.discard)
 
     for rule in (
+            "type='signal',sender='org.freedesktop.DBus',member='NameOwnerChanged',"
+            f"arg0='{CECD_BUSNAME}'",
             f"type='signal',sender='{CECD_BUSNAME}',interface='org.freedesktop.DBus.ObjectManager'",
             f"type='signal',sender='{CECD_BUSNAME}',interface='org.freedesktop.DBus.Properties',"
             f"member='PropertiesChanged',path_namespace='{dev_prefix}'"):
@@ -2495,7 +2542,12 @@ async def cec_phys_addr_sync(root, session):
     def handler(msg):
         if msg.sender is None or msg.message_type != MessageType.SIGNAL:
             return
-        if msg.member in ("InterfacesAdded", "InterfacesRemoved") and msg.path == om_path:
+        if (msg.member == "NameOwnerChanged" and msg.body
+                and msg.body[0] == CECD_BUSNAME):
+            # cecd (re)started or ended: it registers its devices before it
+            # owns its name, so those signals were not seen
+            schedule()
+        elif msg.member in ("InterfacesAdded", "InterfacesRemoved") and msg.path == om_path:
             schedule()
         elif (msg.member == "PropertiesChanged" and msg.path
               and msg.path.startswith(dev_prefix) and msg.body
@@ -2543,11 +2595,8 @@ async def run_user():
         except Exception as err:  # noqa: BLE001 - one bad interface must not
             log(f"{cls.__name__} failed: {err}")  # take the service down
 
-    can_awaken = bool(await root.get_prop("HdmiCecCanAwaken"))
+    can_awaken = _cros_ec_value("cec_wake_enable") is not None
     for inst in instances:
-        if isinstance(inst, HdmiCec2) and can_awaken:
-            inst.can_awaken = True
-            inst.awaken = bool(await root.get_prop("HdmiCecAwaken"))
         if isinstance(inst, FirmwareDebug1):
             state = await root.get_prop("EcLogging")
             inst.state = state if state is not None else 0
