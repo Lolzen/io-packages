@@ -270,6 +270,29 @@ def _trace_cmd(*args):
         _fail(f"trace-cmd {args[0]} failed: {result.stderr.strip()}")
 
 
+def _set_wifi_debug(mode, size, trace):
+    """Blocking part of SetWifiDebugMode, in Valve's order (wifi.rs)."""
+    if mode == 0:
+        if trace:
+            _trace_cmd("stop")
+        _setup_iwd_debug(False)
+        _restart_iwd()
+    else:
+        if size <= WIFI_TRACE_MIN_BUFFER:
+            _fail("Buffer size too small")
+        _setup_iwd_debug(True)
+        _restart_iwd()
+        if trace:
+            _trace_cmd("start", "-e", "ath11k_wmi_diag", "-b", str(size))
+
+
+def _capture_wifi_trace():
+    fd, path = _tempfile_0666("wifi-trace-")
+    os.close(fd)
+    _trace_cmd("extract", "-o", path)
+    return path
+
+
 def _wifi_dump():
     """Blocking: crash ath11k's firmware and copy the devcoredump."""
     import pyudev
@@ -507,6 +530,7 @@ class RootManager(ServiceInterface):
         super().__init__(ROOT_IFACE)
         self.jobs = jobs
         self.wifi_debug_mode = 0
+        self.wifi_debug_lock = asyncio.Lock()
 
     @method()
     async def TrimDevices(self) -> "o":
@@ -656,39 +680,31 @@ class RootManager(ServiceInterface):
         return self.wifi_debug_mode
 
     @method()
-    def SetWifiDebugMode(self, mode: "u", options: "a{sv}"):
-        # As steamos-manager: 0 = off, 1 = tracing; only with iwd as backend
+    async def SetWifiDebugMode(self, mode: "u", options: "a{sv}"):
+        # As steamos-manager: 0 = off, 1 = tracing; only with iwd as backend.
+        # The work (iwd restart, trace-cmd) runs in a thread, so the daemon
+        # keeps answering meanwhile; one change at a time.
         if mode not in (0, 1):
             raise DBusError("org.freedesktop.DBus.Error.InvalidArgs",
                             f"invalid Wi-Fi debug mode {mode}")
         if mode == self.wifi_debug_mode:
             return
         size = options.get("buffer_size")
+        if size is not None and size.signature != "u":
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs",
+                            "buffer_size must be of type u")
         size = WIFI_TRACE_DEFAULT_BUFFER if size is None else size.value
         if read_wifi_backend() != "iwd":
             _fail(f"Setting Wi-Fi debug mode not supported with backend {read_wifi_backend()}")
-        trace = _board() == "Galileo"
-        if mode == 0:
-            if trace:
-                _trace_cmd("stop")
-            _setup_iwd_debug(False)
-            _restart_iwd()
-        else:
-            if size <= WIFI_TRACE_MIN_BUFFER:
-                _fail("Buffer size too small")
-            _setup_iwd_debug(True)
-            _restart_iwd()
-            if trace:
-                _trace_cmd("start", "-e", "ath11k_wmi_diag", "-b", str(size))
-        self.wifi_debug_mode = mode
+        async with self.wifi_debug_lock:
+            await asyncio.to_thread(_set_wifi_debug, mode, size, _board() == "Galileo")
+            self.wifi_debug_mode = mode
         self.emit_properties_changed({"WifiDebugModeState": mode})
 
     @method()
-    def CaptureDebugTraceOutput(self) -> "s":
-        fd, path = _tempfile_0666("wifi-trace-")
-        os.close(fd)
-        _trace_cmd("extract", "-o", path)
-        return path
+    async def CaptureDebugTraceOutput(self) -> "s":
+        async with self.wifi_debug_lock:
+            return await asyncio.to_thread(_capture_wifi_trace)
 
     @method()
     async def GenerateDebugDump(self) -> "s":
@@ -1071,6 +1087,33 @@ class Root:
     def __init__(self, bus):
         self.bus = bus
         self.tasks = set()
+        # Wi-Fi debug mode of the root daemon (WifiDebugModeState): the
+        # backend setters refuse while it traces, as steamos-manager's root
+        # does - checked here because their writes run in the background.
+        self.wifi_debug_mode = 0
+
+    async def watch_wifi_debug(self, on_change):
+        """Follow the root daemon's WifiDebugModeState."""
+        reply = await self.bus.call(Message(
+            destination="org.freedesktop.DBus", path="/org/freedesktop/DBus",
+            interface="org.freedesktop.DBus", member="AddMatch", signature="s",
+            body=[f"type='signal',sender='{BUSNAME}',path='{OBJPATH}',"
+                  "interface='org.freedesktop.DBus.Properties',"
+                  f"member='PropertiesChanged',arg0='{ROOT_IFACE}'"]))
+        if reply.message_type == MessageType.ERROR:
+            log(f"AddMatch failed: {reply.body}")
+
+        def handler(msg):
+            if (msg.member == "PropertiesChanged" and msg.path == OBJPATH
+                    and msg.body and msg.body[0] == ROOT_IFACE
+                    and "WifiDebugModeState" in msg.body[1]):
+                self.wifi_debug_mode = msg.body[1]["WifiDebugModeState"].value
+                on_change()
+        self.bus.add_message_handler(handler)
+
+    def refuse_while_tracing(self):
+        if self.wifi_debug_mode == 1:
+            raise DBusError(ERR, "operation not supported when wifi_debug_mode=tracing")
 
     async def _call(self, member, signature, body, iface=ROOT_IFACE):
         reply = await self.bus.call(Message(
@@ -2137,6 +2180,7 @@ class WifiBackend1(ServiceInterface):
 
     @WifiBackend.setter
     def WifiBackend(self, value: "s"):
+        self.root.refuse_while_tracing()
         self.root.write("SetWifiBackend", "s", [value], self, ["WifiBackend"])
 
 
@@ -2201,23 +2245,24 @@ class Storage1(ServiceInterface):
 
 class WifiDebug1(ServiceInterface):
     """Galileo only, as steamos-manager exports it (user.rs): Wi-Fi debug
-    mode and its trace, handled by the root daemon."""
+    mode and its trace, handled by the root daemon. The mode is the root
+    daemon's, followed through its PropertiesChanged signal."""
 
     def __init__(self, root):
         super().__init__(f"{IFACE}.WifiDebug1")
         self.root = root
-        self.mode = 0
 
     @dbus_property(access=PropertyAccess.READ)
     def WifiDebugModeState(self) -> "u":
-        return self.mode
+        return self.root.wifi_debug_mode
 
     @method()
     async def SetWifiDebugMode(self, mode: "u", options: "a{sv}"):
         await self.root.call_raise("SetWifiDebugMode", "ua{sv}", [mode, options])
         state = await self.root.get_prop("WifiDebugModeState")
-        self.mode = state if state is not None else self.mode
-        self.emit_properties_changed({"WifiDebugModeState": self.mode})
+        if state is not None:
+            self.root.wifi_debug_mode = state
+        self.emit_properties_changed({"WifiDebugModeState": self.root.wifi_debug_mode})
 
     @dbus_property()
     def WifiBackend(self) -> "s":
@@ -2225,6 +2270,7 @@ class WifiDebug1(ServiceInterface):
 
     @WifiBackend.setter
     def WifiBackend(self, value: "s"):
+        self.root.refuse_while_tracing()
         self.root.write("SetWifiBackend", "s", [value], self, ["WifiBackend"])
 
     @method()
@@ -2370,10 +2416,14 @@ async def run_user():
         except Exception as err:  # noqa: BLE001 - one bad interface must not
             log(f"{cls.__name__} failed: {err}")  # take the service down
 
+    state = await root.get_prop("WifiDebugModeState")
+    root.wifi_debug_mode = state if state is not None else 0
+    wifi_debug = [i for i in instances if isinstance(i, WifiDebug1)]
+    await root.watch_wifi_debug(lambda: [
+        i.emit_properties_changed({"WifiDebugModeState": root.wifi_debug_mode})
+        for i in wifi_debug])
+
     for inst in instances:
-        if isinstance(inst, WifiDebug1):
-            state = await root.get_prop("WifiDebugModeState")
-            inst.mode = state if state is not None else 0
         if isinstance(inst, AmbientLightSensor1):
             gain = await root.get_prop("AlsCalibrationGain")
             inst.gain = list(gain) if gain else []
