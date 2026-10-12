@@ -55,11 +55,6 @@
   not, among them WNM and MBO for roaming between access points.
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
-- **`wireless-domain-setter`** (Valve's, new; runit service on every
-  model): copies the regulatory domain of a self-managed card (the OLED's
-  ath11k) to the kernel, for cards that follow the global domain such as
-  Valve's USB streaming dongle, whose driver it also reloads at boot. On
-  the LCD it ends at once.
 
 ### Steam Deck OLED (untested, no hardware)
 
@@ -68,9 +63,9 @@
 - **Display:** Valve's mura correction (`galileo-mura`, new), the 45–90 Hz
   refresh range and HDR on by default, as Valve's game mode session sets
   them for the OLED.
-- **Wi-Fi:** Steam's Wi-Fi debug options (`WifiDebug1`, `WifiDebugDump1`)
-  and the ath11k card's regulatory domain handed to the kernel (see
-  *Wi-Fi* above).
+- **Wi-Fi:** Steam's Wi-Fi debug options (`WifiDebug1`, `WifiDebugDump1`).
+  The ath11k card's regulatory domain reaches the kernel through
+  `wireless-domain-setter`, which runs on every model.
 - The selftest skips the check for the LCD's Realtek Bluetooth firmware on
   the OLED.
 

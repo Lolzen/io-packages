@@ -1,9 +1,0 @@
-#!/bin/sh
-# Io: Valve's wireless-domain-setter.service (Type=simple, after
-# network.target): run once at boot, then idle so runit does not repeat it.
-exec 2>&1
-/usr/lib/steamos/wireless-domain-setter
-if command -v pause > /dev/null; then
-	exec pause
-fi
-exec sleep infinity
