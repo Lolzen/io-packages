@@ -1,0 +1,9 @@
+# Enabled on SteamOS (multi-user.target.wants): linked on first install on a
+# running system. New images link it through build/config/system.conf.
+case "${ACTION}" in
+post)
+	if [ "${UPDATE}" = no ] && [ -d var/service ] && [ ! -e var/service/wireless-domain-setter ]; then
+		ln -sf /etc/sv/wireless-domain-setter var/service/
+	fi
+	;;
+esac
