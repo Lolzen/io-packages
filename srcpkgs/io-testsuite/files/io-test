@@ -1,0 +1,36 @@
+#!/bin/sh
+# io-test - runs one of Io's test scripts (package io-testsuite, branch
+# testsuite only: a development aid, not part of Io).
+#
+#   io-test                 lists the scripts and what each does
+#   io-test NAME [ARGS...]  runs one (most need sudo: sudo io-test NAME)
+#
+# Results go to ~deck/io-test-logs/; fetch that folder with scp.
+D=/usr/libexec/io-testsuite
+IO_TEST_LOGS=/home/deck/io-test-logs
+export IO_TEST_LOGS
+
+if [ $# -eq 0 ]; then
+    echo "io-test NAME [ARGS]  (results: $IO_TEST_LOGS)"
+    echo
+    for f in "$D"/*; do
+        [ -f "$f" ] || continue
+        n=${f##*/}
+        printf '  %-14s %s\n' "$n" "$(sed -n "2s/^# $n - //p" "$f")"
+    done
+    exit 0
+fi
+
+name=$1
+shift
+case "$name" in
+    */* | .*) echo "io-test: no such test: $name" >&2; exit 1 ;;
+esac
+[ -x "$D/$name" ] || { echo "io-test: no such test: $name (io-test lists them)" >&2; exit 1; }
+
+# The results folder belongs to deck, whoever runs the test
+if [ ! -d "$IO_TEST_LOGS" ]; then
+    mkdir -p "$IO_TEST_LOGS"
+    [ "$(id -u)" -eq 0 ] && chown deck: "$IO_TEST_LOGS"
+fi
+exec "$D/$name" "$@"

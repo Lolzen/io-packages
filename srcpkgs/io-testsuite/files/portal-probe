@@ -1,0 +1,42 @@
+#!/bin/sh
+# portal-probe - part 4 of io-alpha7-probe.sh only: the portal
+# permission store (screen sharing prompt when Steam starts in desktop mode).
+# Run as deck (no sudo) in DESKTOP mode with Steam running:  io-test portal-probe
+# Writes ~/io-test-logs/portal-probe-<host>-<date>.txt. Reads only.
+
+L=${IO_TEST_LOGS:-$HOME/io-test-logs}
+mkdir -p "$L"
+OUT="$L/portal-probe-$(cat /etc/hostname)-$(date +%Y%m%d-%H%M).txt"
+exec > "$OUT" 2>&1
+sec() { echo; echo "### $*"; }
+SPID=$(pgrep -u "$(id -u)" -x steam | head -n 1)
+if [ -n "$SPID" ]; then
+    DBUS_SESSION_BUS_ADDRESS=$(tr '\0' '\n' < "/proc/$SPID/environ" | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p')
+    export DBUS_SESSION_BUS_ADDRESS
+fi
+echo "steam pid: ${SPID:-not running}"
+echo "session bus: ${DBUS_SESSION_BUS_ADDRESS:-none}"
+pgrep -a xdg-desktop-portal
+pgrep -a xdg-permission-store
+sec "4. portal permission store"
+ls -la "$HOME/.local/share/flatpak/db" 2> /dev/null || echo "no ~/.local/share/flatpak/db"
+PS_DEST=org.freedesktop.impl.portal.PermissionStore
+PS_PATH=/org/freedesktop/impl/portal/PermissionStore
+for t in screencast kde-authorized remote-desktop devices background notifications realtime; do
+    echo "--- table $t"
+    raw=$(dbus-send --session --print-reply --dest=$PS_DEST $PS_PATH $PS_DEST.List "string:$t" 2>&1)
+    echo "$raw" | grep -v "^method return"
+    ids=$(echo "$raw" | sed -n 's/^ *string "\(.*\)"$/\1/p')
+    [ -n "$ids" ] || { echo "(empty or missing)"; continue; }
+    for id in $ids; do
+        echo "id: $id"
+        dbus-send --session --print-reply --dest=$PS_DEST $PS_PATH $PS_DEST.Lookup "string:$t" "string:$id" 2> /dev/null | grep -v "^ *byte\|^ *[0-9a-f][0-9a-f] " | head -n 30
+    done
+done
+if command -v flatpak > /dev/null; then
+    echo "--- flatpak permissions"
+    flatpak permissions 2> /dev/null | head -n 40
+fi
+
+echo
+echo "done: $OUT" > /dev/tty 2> /dev/null

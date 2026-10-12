@@ -1,0 +1,59 @@
+#!/bin/sh
+# nav-capture - records the system state right after a game mode boot,
+# to compare a boot with blocked controller navigation against a good one.
+# Run per SSH, BEFORE pressing the Steam button:
+#   sudo io-test nav-capture blocked    (navigation blocked)
+#   sudo io-test nav-capture ok         (navigation works)
+# Result: ~deck/io-test-logs/nav-<label>-<date>.txt
+
+U=deck
+H=/home/$U
+LABEL=${1:-capture}
+L=${IO_TEST_LOGS:-/home/deck/io-test-logs}
+mkdir -p "$L"
+OUT=$L/nav-$LABEL-$(date +%Y%m%d-%H%M).txt
+SL=$H/.local/share/Steam/logs
+
+exec > "$OUT" 2>&1
+
+echo "== $LABEL $(date '+%F %T')"
+echo "uptime: $(cut -d' ' -f1 /proc/uptime) s"
+
+echo "== services"
+sv status io-changelog steam-web-debug-portforward io-steamos-manager io-sddm
+ls /run/io-changelog 2> /dev/null
+ls -la $H/.steam/steam/.cef-enable-remote-debugging 2> /dev/null
+
+echo "== start order (seconds since start of the process)"
+ps -eo pid,etimes,lstart,comm,args --sort=-etimes | grep -E "gamescope|steam|io-steam|io-steamos|python3|socat" | grep -v grep | cut -c1-200
+
+echo "== CPU (top 15)"
+ps -eo pid,etimes,time,pcpu,comm --sort=-pcpu | head -n 16
+
+echo "== connections to CEF (8080)"
+ss -tnp | grep -E ":8080 " || echo "none"
+
+echo "== Steam controller log (last 40)"
+tail -n 40 "$SL/controller.txt" 2> /dev/null || echo "no controller.txt"
+
+echo "== Steam console log: input, focus, controller (last 40)"
+grep -i -E "focus|controller|steaminput|gamepad|input" "$SL/console_log.txt" 2> /dev/null | tail -n 40
+
+echo "== game mode session log (last 40)"
+tail -n 40 $H/.local/state/io/log-gamemode/current 2> /dev/null
+
+echo "== logins (elogind)"
+loginctl list-sessions 2> /dev/null
+loginctl show-user $U 2> /dev/null | grep -E "^(State|Sessions|Display|RuntimePath|Timestamp)="
+
+echo "== network"
+ip -br addr 2> /dev/null | grep -v "^lo"
+for w in /sys/class/net/wl*; do [ -e "$w" ] && iw dev "${w##*/}" get power_save; done
+echo "-- NetworkManager this boot (last 25)"
+grep -h -i "networkmanager" /var/log/socklog/everything/current 2> /dev/null | grep -i -E "state change|activated|connectivity|dhcp4|policy" | tail -n 25
+
+echo "== Steam UI log after the start page (last 30)"
+cat "$SL/webhelper.txt" "$SL/steamui_steamos.txt" 2> /dev/null | grep -a "$(date '+%Y-%m-%d %H')" | grep -a -v "X Error\|Major opcode\|Serial number\|Resource id\|AcquirePixmap" | tail -n 30
+
+chown $U: "$OUT"
+echo "written: $OUT" > /dev/tty 2> /dev/null

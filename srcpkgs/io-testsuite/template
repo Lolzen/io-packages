@@ -1,0 +1,25 @@
+# Template file for 'io-testsuite'
+pkgname=io-testsuite
+version=20261012.1
+revision=1
+archs=noarch
+short_desc="Io's test scripts for the Deck (development only)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+
+# Lives only on the branch "testsuite", which is never merged: a temporary
+# development aid, published to the testing channel, installed by hand
+# (sudo xbps-install io-testsuite), not part of io-desktop or the images.
+# No dependencies on purpose; scripts come and go as tests need them.
+# The version is the date (YYYYMMDD.N), so every change of a script is an
+# update. Run them with io-test (io-test alone lists them); results go to
+# ~deck/io-test-logs/.
+do_install() {
+	vbin ${FILESDIR}/io-test
+	vmkdir usr/libexec/io-testsuite
+	for f in ${FILESDIR}/*; do
+		[ "${f##*/}" = io-test ] && continue
+		vinstall "$f" 755 usr/libexec/io-testsuite
+	done
+}

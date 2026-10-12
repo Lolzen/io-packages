@@ -1,0 +1,23 @@
+#!/bin/sh
+# nav-logs - packs Steam's text logs and the game mode session log
+# right after a boot, to compare a blocked boot with a good one.
+# Run per SSH, before pressing the Steam button:
+#   sudo io-test nav-logs blocked     or     sudo io-test nav-logs ok
+# Result: ~deck/io-test-logs/navlogs-<label>-<date>.tar.gz
+
+U=deck
+H=/home/$U
+LABEL=${1:-capture}
+L=${IO_TEST_LOGS:-/home/deck/io-test-logs}
+mkdir -p "$L"
+OUT=$L/navlogs-$LABEL-$(date +%Y%m%d-%H%M).tar.gz
+T=$(mktemp -d)
+mkdir -p "$T/steam" "$T/io"
+cp "$H"/.local/share/Steam/logs/*.txt "$T/steam/" 2> /dev/null
+cp "$H"/.local/state/io/log-gamemode/current "$T/io/gamemode.log" 2> /dev/null
+cat /proc/uptime > "$T/uptime.txt"
+date '+%F %T' > "$T/date.txt"
+tar -czf "$OUT" -C "$T" .
+chown $U: "$OUT"
+rm -rf "$T"
+ls -la "$OUT"

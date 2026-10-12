@@ -1,0 +1,72 @@
+#!/bin/sh
+# udev-test - checks io-steamos-manager's UdevEvents1 (USB over-current
+# signal for Steam) on the Deck, in game mode with Steam running.
+# Run: sudo io-test udev-test     (result: ~deck/io-test-logs/udev-test-<date>.txt)
+#
+# A real over-current cannot be caused safely, so a temporary udev rule in
+# /run (gone after a reboot anyway) adds the two properties the kernel's hub
+# driver would add, and one "change" event is triggered for one USB
+# interface. Nothing on the device changes. Watch the screen: Steam may show
+# a warning about the USB port.
+
+U=deck
+L=${IO_TEST_LOGS:-/home/deck/io-test-logs}
+mkdir -p "$L"
+OUT=$L/udev-test-$(date +%Y%m%d-%H%M).txt
+RULE=/run/udev/rules.d/99-io-overcurrent-test.rules
+SM=com.steampowered.SteamOSManager1
+SMP=/com/steampowered/SteamOSManager1
+
+exec > "$OUT" 2>&1
+echo "== $(date)"
+xbps-query -p pkgver io-steamos-manager
+xbps-query -p pkgver python3-pyudev
+
+SPID=$(pgrep -o -x steam)
+if [ -z "$SPID" ]; then
+    echo "Steam is not running - start game mode first"
+    exit 1
+fi
+SBUS=$(tr '\0' '\n' < /proc/$SPID/environ | grep '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
+asuser() {
+    setpriv --reuid "$(id -u $U)" --regid "$(id -g $U)" --init-groups env "DBUS_SESSION_BUS_ADDRESS=$SBUS" "$@"
+}
+
+echo "== interface on the session bus"
+asuser busctl --user introspect $SM $SMP | grep -A3 UdevEvents1 || echo "UdevEvents1 MISSING"
+
+IFACE=$(ls -d /sys/bus/usb/devices/*-*:* 2> /dev/null | head -n 1)
+echo "== test interface: $IFACE"
+if [ -z "$IFACE" ]; then
+    echo "no USB interface found"
+    exit 1
+fi
+
+asuser dbus-monitor --session "type='signal',interface='$SM.UdevEvents1'" > /tmp/io-oc-monitor.txt 2>&1 &
+MON=$!
+sleep 1
+
+mkdir -p /run/udev/rules.d
+echo 'ACTION=="change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ENV{OVER_CURRENT_PORT}="io-test", ENV{OVER_CURRENT_COUNT}="1"' > "$RULE"
+udevadm control --reload
+udevadm trigger --action=change "$IFACE"
+udevadm settle
+sleep 2
+
+rm -f "$RULE"
+udevadm control --reload
+kill "$MON" 2> /dev/null
+sleep 1
+
+echo "== signal seen on the session bus"
+cat /tmp/io-oc-monitor.txt
+if grep -q "member=UsbOverCurrent" /tmp/io-oc-monitor.txt; then
+    echo "RESULT: UsbOverCurrent emitted"
+else
+    echo "RESULT: no UsbOverCurrent signal"
+fi
+rm -f /tmp/io-oc-monitor.txt
+
+echo "== manager log (session)"
+grep -h "over-current\|UdevEvents1" /home/$U/.local/state/io/log-gamemode/current | tail -n 5
+chown $U: "$OUT"

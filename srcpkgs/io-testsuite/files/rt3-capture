@@ -1,0 +1,48 @@
+#!/bin/sh
+# rt3-capture - after a game mode session with Steam's experimental
+# SteamRT3 client: does Steam run in its own container, and did calls out
+# of the client (helpers, pkexec, D-Bus) fail?
+# Run per SSH, after clicking through the functions:
+#   sudo io-test rt3-capture
+# Result: ~deck/io-test-logs/rt3-capture-<date>.txt
+
+U=deck
+H=/home/$U
+L=${IO_TEST_LOGS:-/home/deck/io-test-logs}
+mkdir -p "$L"
+OUT=$L/rt3-capture-$(date +%Y%m%d-%H%M).txt
+SL=$H/.local/share/Steam/logs
+PAT='pkexec|polkit-helpers|steamos-update|steamos-priv-write|steamos-select-branch|steamos-session-select|SteamOSManager|Atomupd|portal|launch-client|flatpak-spawn'
+ERR='fail|error|denied|not found|no such|not permitted|timeout'
+
+exec > "$OUT" 2>&1
+
+echo "== $(date '+%F %T'), uptime $(cut -d' ' -f1 /proc/uptime) s"
+
+echo "== client branch (package/beta)"
+cat $H/.local/share/Steam/package/beta 2> /dev/null || echo "no beta file"
+
+echo "== Steam processes: mount namespace (host: $(readlink /proc/1/ns/mnt))"
+for p in $(pgrep -u $U -f steam); do
+    ns=$(readlink /proc/$p/ns/mnt 2> /dev/null)
+    args=$(tr '\0' ' ' < /proc/$p/cmdline 2> /dev/null | cut -c1-150)
+    echo "$p $ns $args"
+done
+
+echo "== container tools"
+ps -eo pid,user,args | grep -E "pressure-vessel|bwrap|srt-|steam-runtime" | grep -v grep | cut -c1-200
+
+echo "== Steam logs: calls out of the client (last 80)"
+grep -a -i -E "$PAT" $SL/*.txt 2> /dev/null | grep -v "previous" | tail -n 80
+
+echo "== Steam logs: those calls with errors (last 40)"
+grep -a -i -E "$PAT" $SL/*.txt 2> /dev/null | grep -v "previous" | grep -i -E "$ERR" | tail -n 40
+
+echo "== system log: pkexec, polkit, io-steamos-manager (last 60)"
+grep -h -i -E "pkexec|polkit|io-steamos-manager" /var/log/socklog/everything/current 2> /dev/null | tail -n 60
+
+echo "== game mode session log: errors (last 40)"
+grep -i -E "$ERR" $H/.local/state/io/log-gamemode/current 2> /dev/null | tail -n 40
+
+chown $U: "$OUT"
+echo "written: $OUT" > /dev/tty 2> /dev/null

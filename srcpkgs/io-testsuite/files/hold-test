@@ -1,0 +1,99 @@
+#!/bin/sh
+# hold-test - checks that io-changelog keeps the CEF port forward (8081)
+# paused until the Steam started with its flag has exited.
+# Run in game mode, in three steps:
+#   sudo io-test hold-test down    stops io-changelog, checks hold and 8081
+#   (restart Steam: power menu -> Restart Steam)
+#   sudo io-test hold-test after   8081 open again, hold and flag gone
+#   sudo io-test hold-test up      starts io-changelog, 8081 closed again
+# Afterwards restart Steam once more: Steam reads the new CEF flag only at
+# its start, which the patch notes need.
+# Exit status: 0 when every check of the step passed, 1 at the first failure.
+
+FLAG=/home/deck/.steam/steam/.cef-enable-remote-debugging
+HOLD=/run/io-changelog/hold
+CREATED=/home/deck/.local/state/io-steam-changelog/created-debug-flag
+
+ok() { echo "OK: $*"; }
+fail() { echo "FAIL: $*"; exit 1; }
+
+listening() { ss -ltn | grep -q ':8081 '; }
+
+# wait up to $2 seconds until "listening" equals $1 (yes/no); the last
+# check comes after the last second
+wait_for() {
+    i=0
+    while :; do
+        if listening; then now=yes; else now=no; fi
+        [ "$now" = "$1" ] && return 0
+        [ "$i" -ge "$2" ] && return 1
+        sleep 1
+        i=$((i + 1))
+    done
+}
+
+# PID of the running io-changelog service, empty when it does not run
+svc_pid() {
+    sv status io-changelog | sed -n 's/^run: [^(]*(pid \([0-9]*\)).*/\1/p'
+}
+
+# wait up to $3 seconds until "test $1 $2" holds (-s: file has content,
+# -e: file exists)
+wait_file() {
+    i=0
+    while :; do
+        [ "$1" "$2" ] && return 0
+        [ "$i" -ge "$3" ] && return 1
+        sleep 1
+        i=$((i + 1))
+    done
+}
+
+case "$1" in
+down)
+    spid=$(pgrep -o -x -u deck steam)
+    [ -n "$spid" ] || fail "Steam is not running"
+    # The test needs the flag io-changelog created; with an own flag from
+    # before, finish leaves no hold and the forward resumes on purpose.
+    [ -e "$CREATED" ] || fail "CEF flag not created by io-changelog (own flag from before?)"
+    sv down io-changelog || fail "sv down io-changelog"
+    wait_file -s "$HOLD" 15 || fail "no PID in $HOLD after 15 s"
+    hpid=$(cat "$HOLD")
+    [ "$hpid" = "$spid" ] || fail "hold has $hpid, Steam is $spid"
+    ok "hold has Steam's PID $spid"
+    wait_for no 5 || fail "8081 is open"
+    ok "8081 closed"
+    ;;
+after)
+    wait_for yes 15 || fail "8081 still closed after 15 s"
+    ok "8081 open again"
+    [ ! -e "$HOLD" ] || fail "$HOLD still there"
+    ok "hold gone"
+    # A developer's own flag from before would stay on purpose.
+    [ ! -e "$FLAG" ] || fail "CEF flag still there (a pre-existing one of yours?)"
+    ok "CEF flag gone"
+    ;;
+up)
+    sv up io-changelog || fail "sv up io-changelog"
+    wait_file -e /run/io-changelog/active 15 || fail "no /run/io-changelog/active after 15 s"
+    ok "active marker set"
+    pid1=$(svc_pid)
+    [ -n "$pid1" ] || fail "io-changelog does not run"
+    wait_for no 15 || fail "8081 still open after 15 s"
+    ok "8081 closed"
+    # a service that fails right after its start would be restarted by
+    # runit under a new PID, or be down
+    sleep 5
+    pid2=$(svc_pid)
+    [ "$pid2" = "$pid1" ] || fail "io-changelog restarted or stopped (PID $pid1 -> ${pid2:-none})"
+    [ -e /run/io-changelog/active ] || fail "active marker gone"
+    listening && fail "8081 open again"
+    ok "io-changelog still running (PID $pid1), 8081 still closed"
+    echo "Now restart Steam once more for the patch notes."
+    ;;
+*)
+    echo "usage: sudo io-test hold-test down|after|up"
+    exit 1
+    ;;
+esac
+exit 0

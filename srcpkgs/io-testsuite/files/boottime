@@ -1,0 +1,39 @@
+#!/bin/sh
+# boottime - seconds after kernel start at which each boot stage began.
+# Run right after a cold boot, before switching sessions:
+#   sudo io-test boottime
+# Prints the table and keeps it in ~deck/io-test-logs/boottime-<date>.txt
+L=${IO_TEST_LOGS:-/home/deck/io-test-logs}
+mkdir -p "$L"
+OUT=$L/boottime-$(date +%Y%m%d-%H%M).txt
+
+report() {
+    UP=$(cut -d. -f1 /proc/uptime)
+    show() {
+        if [ -z "$2" ]; then
+            printf "%-24s -\n" "$1"
+            return
+        fi
+        E=$(ps -o etimes= -p "$2" | tr -d ' ')
+        printf "%-24s %4ss\n" "$1" $((UP - E))
+    }
+    echo "== kernel"
+    dmesg | grep -m1 "Run /init"
+    dmesg | grep -m1 "Switching root"
+    echo "== system"
+    show "runsvdir" "$(pgrep -o -x runsvdir)"
+    show "dbus (system)" "$(pgrep -o -f 'dbus-daemon --system')"
+    show "NetworkManager" "$(pgrep -o -x NetworkManager)"
+    show "io-steamos-manager -r" "$(pgrep -o -f 'io-steamos-manager -r')"
+    show "sddm" "$(pgrep -o -x sddm)"
+    echo "== session"
+    show "io-start (deck)" "$(pgrep -o -u deck -f /usr/bin/io-start)"
+    show "dbus-run-session" "$(pgrep -o -f '^dbus-run-session')"
+    show "pipewire" "$(pgrep -o -x pipewire)"
+    show "gamescope" "$(pgrep -o -x gamescope-wl)"
+    show "steam" "$(pgrep -o -x steam)"
+    show "steamwebhelper" "$(pgrep -o -f steamwebhelper)"
+}
+
+report | tee "$OUT"
+chown deck: "$OUT" 2> /dev/null
