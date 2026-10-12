@@ -22,15 +22,19 @@ stubs.
 | `steamos-restart-sddm` | `sv restart io-sddm` (Valve: `systemctl restart sddm`); ends any session, SDDM logs in fresh |
 | `steamos-update` | Valve's wrapper (re-runs itself through pkexec) around Io's `/usr/bin/steamos-update`, which answers as Valve's script with xbps behind it: `--supports-duplicate-detection` 0; `check` 0 with a build id, 7 for no update, 8 for an update waiting for a reboot (with `--enable-duplicate-detection`), 1 on errors; applying prints `atomupd-manager`'s progress lines and *Update completed*. Steam checks as `steamos-update --enable-duplicate-detection check` and reads stdout with stderr included. See [Architecture](Architecture), *System updates* |
 | `steamos-select-branch` | One branch: `-c` and `-l` print `rel` (SteamOS's name for stable), `rel` and `stable` are accepted, other branches refused |
+| `steamos-format-sdcard`, `steamos-format-device` | Valve's helpers (re-run through pkexec with `--owner`) and scripts: `format-sdcard.sh` and `format-device.sh` (parted, `mkfs.ext4`; `f3probe` and `mkfs.exfat` to validate a card). Io's check in `format-device.sh` refuses the disk Io runs from. `Storage1.FormatDevice` runs the same script as a job. **Not tested on hardware yet** (it erases the card) |
+| `jupiter-biosupdate` | Valve's helper: runs `steamos-firmware-update` (`deck-firmware-updaters`), which hands the Steam Deck to Valve's `jupiter-biosupdate` (BIOS images and Insyde's flasher `h2offt`). `check` exits 7 and prints `BIOS <version>` when an update is due; it only updates the BIOS versions in Valve's table. Exits 0 without `deck-firmware-updaters`. `UpdateBios1` runs `jupiter-biosupdate --auto`. **Not tested on hardware yet** |
+| `jupiter-dock-updater` | Valve's helper: runs Valve's `jupiter-dock-updater.sh` (`jupiter-dock-updater-bin`, `hub_update`). `--check`: 0 = update available, 7 = up to date. Without the package `--check` answers 7 and an update is refused. `UpdateDock1` runs the same script. **Not tested on hardware yet** (needs Valve's dock) |
 
 Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 (Valve's script; exits at once on Jupiter).
 
-## Stubs worth implementing
-
-| Helper | Would do |
-|---|---|
-| `steamos-format-sdcard`, `steamos-format-device` | Formatting from Steam. Automount works and Valve's `format-device.sh` is in place, with Io's check that refuses the disk Io runs from; left for later because testing it destroys data |
+At boot, before the login manager, `97-io-firmware-update.sh`
+(`deck-firmware-updaters`) runs `jupiter-biosupdate --auto` and the
+controller update with its splash, as SteamOS's
+`jupiter-biosupdate.service` and `jupiter-controller-update.service` do
+(log: `/var/log/io-firmware-update.log`). The controller updater does not
+flash a controller whose firmware is newer than Io's copy.
 
 ## Stubs, not applicable to Io
 
@@ -38,8 +42,6 @@ Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
 |---|---|
 | `jupiter-amp-control` | Target script is in none of Valve's published packages and missing on SteamOS too (3.8.4 and 3.9.2); audio works without it |
 | `steamos-reboot-other` | A/B slot switching |
-| `jupiter-biosupdate` | BIOS updates, left to SteamOS, which runs them at boot on the same Deck. A check-only mode is deferred: it needs Valve's BIOS files and flash tool (`h2offt`) |
-| `jupiter-dock-updater` | Dock firmware (Valve's `hub_update`). `--check` answers 7, "up to date": Valve's codes are 0 = update available, 7 = up to date, and answering 0 made Steam announce a dock update at every start. Needs Valve's dock to port and test |
 | `steamos-factory-reset-config` | Records Valve's A/B partitions for a reset; an Io reset would be its own design |
 
 Steam also looks for `steamos-update` and `steamos-select-branch` in

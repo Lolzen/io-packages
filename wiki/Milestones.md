@@ -96,8 +96,8 @@ Parts that can be built, but not tested without hardware Georg does not
 have. They are to become issues and draft pull requests, marked as needing
 someone with the hardware.
 
-- **Valve's Docking Station:** its firmware updater (`hub_update`, today a
-  stub that reports "up to date"), and HDMI-CEC with a dock that passes it
+- **Valve's Docking Station:** its firmware updater (`hub_update`, Valve's
+  package on the branch `destructive`), and HDMI-CEC with a dock that passes it
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
@@ -121,26 +121,34 @@ someone with the hardware.
 - **Installing to the internal NVMe**, once SteamOS on it is no longer needed
   as the reference, with the recovery stick (built and booting; its
   installer is tested with this move, see [Installation](Installation));
-  suspend-then-hibernate comes with it (Valve's resume path keeps the swap
-  file's position in an EFI variable through systemd; Valve's newer
-  configuration allows suspend-then-hibernate again, 20 minutes on battery)
-- **Formatting drives from Steam** (from Alpha 5): Valve's `format-device.sh`
-  is in place with Io's check against formatting the disk Io runs from;
-  `FormatDevice` and the format helpers still refuse. Tested together with
-  the move to the NVMe: first against the internal SSD while Io runs from
-  the card (its SteamOS is wiped then anyway; Valve's device list must
-  refuse it), then, with Io on the NVMe, against SD cards and USB drives
-- **Firmware updaters** (from Alpha 5): a check mode for `jupiter-biosupdate`,
-  `jupiter-controller-update` and `jupiter-dock-updater`, so Steam can show
-  whether an update is due, and flashing last, if at all. The BIOS updater
-  needs Valve's BIOS files and flash tool (`h2offt`); until then SteamOS on
-  the same Deck keeps the firmware current
+  suspend-then-hibernate is tested with it (implemented on the branch
+  `destructive`: Valve's settings and swap helper, Io's sleep hook writes
+  the image location to an EFI variable of its own, the dracut module
+  `io-resume` reads it; see [Deviations](Deviations))
+- **Formatting drives from Steam** (implemented on the branch
+  `destructive`): Valve's helpers and `format-device.sh` with Io's check
+  against formatting the disk Io runs from, `FormatDevice` as a job. Tested
+  together with the move to the NVMe: first against the internal SSD while
+  Io runs from the card (its SteamOS is wiped then anyway; Valve's device
+  list must refuse it), then, with Io on the NVMe, against SD cards and USB
+  drives
+- **Firmware updaters** (implemented on the branch `destructive`): Valve's
+  BIOS updater (`h2offt` and the BIOS images), controller updater and dock
+  updater (`deck-firmware-updaters`, `jupiter-dock-updater-bin`), the
+  helpers, `UpdateBios1`/`UpdateDock1` and the updates at boot. Test order:
+  the check modes first (`jupiter-biosupdate check`,
+  `jupiter-controller-update --check`, `jupiter-dock-updater --check`), then
+  a controller update, a BIOS update last, if at all. Open: whether Valve's
+  binaries (BIOS images, `h2offt`, `hub_update`, controller firmware) may be
+  redistributed in Io's repository
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
   once for 3.9.2 in October 2026
-- **Repair Io** on the recovery stick: today a placeholder that lists the
-  disks ([Installation](Installation)); real repair tools to come
+- **Repair Io** on the recovery stick (implemented on the branch
+  `destructive`): filesystem check, initramfs, boot loader, forgetting a
+  hibernated session that does not resume, package check, root shell.
+  Tested with the move to the NVMe
 - **A factory reset of Io's own** (fresh home directory): a design decision,
   and destructive
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot

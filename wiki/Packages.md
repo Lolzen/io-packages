@@ -12,8 +12,8 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `io-desktop` | Metapackage: the whole system. It stands in for Void's `base-system`, which would pull in Void's own kernel next to `linux-neptune-72` (that kernel does not boot the Deck), and lists base-system's other packages itself. Plus Steam, gamescope, PipeWire with `wireplumber-elogind`, KDE Plasma with `plasma-keyboard`, vim and nano, `wireless-regdb`, `gstreamer1-pipewire`, IBus with the engines for Steam's keyboard and the Noto CJK fonts, and all packages below, including the overlay packages in place of Void's |
 | `io-base` | Repository configuration (and keeping elogind's D-Bus activation file out on updates), elogind drop-in (the power key is left to `steamos-powerbuttond`), dracut configuration (SD card modules and amdgpu, Plymouth), ALSA routed through PipeWire, `timedatectl` replacement, `/usr/share/i18n/SUPPORTED`, shutdown hook closing SSH sessions, SteamOS's Bluetooth settings (`/usr/share/io/bluetooth/main.conf`, read by `bluetoothd`), GRUB without its menu (`/etc/default/grub`, set by `INSTALL`), `io-bootnext` (*Restart* starts Io again, see [Architecture](Architecture)) |
 | `io-session` | Login and sessions: SDDM service `io-sddm` and its settings, session files, `io-start`, `io-gamemode`, `io-plasma`, `steamos-session-select`, memlock limit, session logs (`io-devmode`), `io-grow-storage` and its desktop entry, capability core service (gamescope, kwin), `KillUserProcesses` for elogind. Game mode as Valve's session: Valve's `steam-launcher` and short-session tracker, the low-disk check before start, the HDMI-CEC daemons, Steam's notification daemon, `ibus-daemon` for Steam's keyboard, `drm_janitor` when gamescope exits |
-| `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half, including the screen reader (Orca), HDMI-CEC (`HdmiCec1`, `HdmiCec2`), download mode with Valve's fan speed and storage trimming as jobs (`Storage1`); runit service `scx` for the LAVD scheduler. System updates: `/usr/bin/steamos-update`, `/usr/libexec/io/io-update` and `com.steampowered.Atomupd1` on the root half, with xbps behind them |
-| `io-branding` | Logo, Plymouth boot splash theme, the picture for Steam's update screen, fastfetch configuration |
+| `io-steamos-manager` | Io's implementation of Valve's SteamOS Manager D-Bus service, root and session half, including the screen reader (Orca), HDMI-CEC (`HdmiCec1`, `HdmiCec2`), download mode with Valve's fan speed, storage trimming and formatting as jobs (`Storage1`), BIOS and dock updates (`UpdateBios1`, `UpdateDock1`, where the updaters are installed); runit service `scx` for the LAVD scheduler. System updates: `/usr/bin/steamos-update`, `/usr/libexec/io/io-update` and `com.steampowered.Atomupd1` on the root half, with xbps behind them |
+| `io-branding` | Logo, Plymouth boot splash theme (with title and progress for the firmware update splash), the picture for Steam's update screen, fastfetch configuration |
 | `io-release` | `os-release` and `lsb_release`, which Steam shows under Settings → System; kept in place after `base-files` updates |
 
 ## Ported from Valve
@@ -22,7 +22,9 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 |---|---|---|
 | `linux-neptune-72` | `linux-integration` (7.2.7) | Steam Deck kernel: the kernel.org tarball with one patch generated from Valve's tree; configuration in layers (Void, the configuration Valve's package builds from, `config-neptune`, Io's overrides), see [Kernel](Kernel) |
 | `deck-firmware` | `linux-firmware-neptune` (files) | Valve's older `amdgpu/vangogh_vcn.bin` and Valve's Realtek Bluetooth firmware, in `/usr/lib/firmware/updates` (the rest comes from Void's `linux-firmware`) |
-| `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers (the `steamos-update` helper calls `io-steamos-manager`'s script), udev rules, hwsupport scripts, Valve's cursor theme; automount through `io-detach`, Io's rule hiding the internal SSD, `io-root-disk`; pulls in `udisks2` |
+| `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers (the `steamos-update` helper calls `io-steamos-manager`'s script), udev rules, hwsupport scripts (automount, trimming, formatting), Valve's cursor theme; automount through `io-detach`, Io's rule hiding the internal SSD, `io-root-disk`; pulls in `udisks2` and the formatting tools |
+| `deck-firmware-updaters` | `jupiter-hw-support` 20260807.1 | Valve's BIOS updater (`jupiter-biosupdate`, BIOS images, Insyde's `h2offt`) and controller updater (firmware, flashing scripts, update splash), `steamos-firmware-update`, `plymouth-wrap`; both run at boot. The controller updater never flashes older firmware over newer |
+| `jupiter-dock-updater-bin` | `jupiter-dock-updater-bin` 20260811.01 | Valve's dock firmware updater (`hub_update`) and the dock firmware |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
 | `steamos-powerbuttond` | `steamos-powerbuttond` 4.2 | Power button daemon |
 | `steamos-systemreport` | `steamos-systemreport` 1.23 | System report for bug reports (socklog, session logs, xbps) |
@@ -35,7 +37,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `gpu-trace` | `gpu-trace` 2.16 ([lostgoat/gpu-trace](https://github.com/lostgoat/gpu-trace)) | Steam's system tracing (developer settings), runit service |
 | `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
 | `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |
-| `steamos-tuning` | `steamos-customizations-jupiter` 20260827.2 | Sysctls, early HID drivers, NTSync loaded at boot, the Deck's initramfs modules (dracut configuration; the initramfs is rebuilt when they change), Valve's scheduler tunings (debugfs), 1 GiB swap file, X11 virtual display size, Proton's nice limit, `EDITOR=vim`, `LIBVA_DRIVER_NAME=radeonsi`; Io's own: the hibernation guard and the open-file limit SteamOS gets from systemd |
+| `steamos-tuning` | `steamos-customizations-jupiter` 20260827.2 | Sysctls, early HID drivers, NTSync loaded at boot, the Deck's initramfs modules (dracut configuration; the initramfs is rebuilt when they change), Valve's scheduler tunings (debugfs), 1 GiB swap file, suspend-then-hibernate (settings and swap helper), X11 virtual display size, Proton's nice limit, `EDITOR=vim`, `LIBVA_DRIVER_NAME=radeonsi`; Io's own: the hibernation guard, the sleep hook and dracut module for resuming (`io-hibernate`, `io-resume`), and the open-file limit SteamOS gets from systemd |
 | `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
 | `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |
@@ -64,6 +66,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `pyzy` | [openSUSE/pyzy](https://github.com/openSUSE/pyzy) 1.1 (Valve's source archive) | Pinyin and Bopomofo conversion library for `ibus-pinyin` |
 | `ibus-pinyin` | [ibus/ibus-pinyin](https://github.com/ibus/ibus-pinyin) 1.5.1 | The *pinyin* and *bopomofo* engines Steam's keyboard asks for (Void's `ibus-libpinyin` has other engine names) |
 | `ibus-table` | [kaio/ibus-table](https://github.com/kaio/ibus-table) 1.17.19 | Engine for table-based input methods (CangJie, Quick) |
+| `python3-progressbar2` | [progressbar2](https://pypi.org/project/progressbar2/) 4.6.0 | Progress bars for Valve's controller updater (Void only has the old `progressbar` 2.5) |
 
 ## Overlay packages
 
@@ -81,6 +84,8 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | Text from Steam's keyboard as keysyms over libei |
 | `wpa_supplicant-holo` | `wpa_supplicant` | WPA3 wrong-password detection, fewer rescans after resume, WNM/MBO and some of Valve's other build options |
 | `iwd-holo` | `iwd` | Valve's scanning and connecting fixes |
+| `python3-hid-holo` | `python3-hid` | pyhidapi 1.0.6 (`BusType`), as Valve's controller updater needs |
+| `elogind-holo`, `libelogind-holo`, `elogind-devel-holo` | Void's elogind packages | No patch: the runit service skips logind's swap size check for hibernation, as Valve's logind drop-in does |
 
 ## Upstream sources
 

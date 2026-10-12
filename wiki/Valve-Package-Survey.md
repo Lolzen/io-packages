@@ -44,7 +44,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `holo-upower-config` 1.0 (not on 3.8.4) | 1.0 | With a fix for Valve's `yes`/`true` bug |
 | `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.3-3 | |
 | `jupiter-firewall` 0.1 | 0.1 | ufw instead of firewalld |
-| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, the initramfs modules of the `steam-deck` hook (as a dracut configuration), scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
+| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, the initramfs modules of the `steam-deck` hook (as a dracut configuration), scheduler tunings, swap file; the A/B parts are not ported (see below). Valve's suspend-then-hibernate settings and swap helper; the hibernation guard, sleep hook and resume module next to them are Io's own |
 | `steamos-tweak-mtu-probing` | in `steamos-tuning` | |
 | `lib32-gamescope` 3.16.30 (3.16.15) | `gamescope-wsi-32bit` 3.16.30 | Only gamescope's WSI layer for 32-bit Vulkan games (frame limiter, bypass, HDR), built for i686 from gamescope's source |
 | `ttf-twemoji-default` 13.1.0-2.5 | `ttf-twemoji-default` 13.1.0 | Built as Valve builds it: Fedora's Twemoji with the same glyphs removed and the same fontconfig file |
@@ -74,7 +74,6 @@ and sources of Io's packages are on [Packages](Packages).
 | `dmemcg-booster`, `kcgroups`, `plasma-foreground-booster` | Driven by systemd's units and slices (`org.freedesktop.systemd1`); decided not to implement, see [Deviations](Deviations) |
 | `steamos-log-submitter`, `jupiter-steamos-log-submitter` | Sends crash logs to Valve; would have to be retargeted first |
 | `kdumpst`, `steamos-kdumpst-layer` | Kernel crash dumps, developer-facing; parked |
-| `jupiter-dock-updater-bin` | Needs Valve's dock; the updater is a stub that reports "up to date" |
 | `inputplumber` | Installed but not running on the Deck (3.8.4 and 3.9.2) |
 | `galileo-mura` | Steam Deck OLED only |
 | `dirlock` | Home directory encryption, filed with the A/B notes below (decided 2026-10-03) |
@@ -111,8 +110,8 @@ Valve's choices and is the starting point if Io ever gets A/B updates.
   Not needed with a writable root.
 - **Hibernation hooks** — `hibernate-post.sh` resets the A/B boot counter
   after resuming from hibernation (`steamos-bootconf`); its other step,
-  `hibernate-swap-helper.sh cleanup`, belongs to the resume path Io will
-  need with suspend-then-hibernate. The rest of the
+  `hibernate-swap-helper.sh cleanup`, is part of Io's sleep hook
+  `io-hibernate` (`steamos-tuning`). The rest of the
   sleep setup is on [Deviations](Deviations) (*System services*);
   `modules-reload.sh` only concerns the OLED's Wi-Fi (`ath11k`).
 - **Valve's newer `steamos-customizations`** (after 3.8.4) is mostly A/B

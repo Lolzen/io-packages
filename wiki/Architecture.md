@@ -24,10 +24,13 @@ behind each difference, see [Deviations](Deviations).
    - `20-fstab-repair.sh` — comments out invalid SD card lines in fstab
    - `60-io-swapfile.sh` — Valve's 1 GiB swap file in `/home`
    - `61-io-hibernate-guard.sh` — hibernation allowed only with `/` on the
-     internal NVMe and `resume=` on the kernel command line
+     internal NVMe
    - `70-io-cfs-tunings.sh` — mounts debugfs, applies Valve's scheduler tunings
    - `90-io-caps.sh` — `CAP_SYS_NICE` file capability on gamescope and
      `kwin_wayland`
+   - `97-io-firmware-update.sh` — Valve's BIOS update (`--auto`) and
+     controller update with its splash, as SteamOS runs them before the
+     login manager
 4. **runit stage 2** starts the services linked in `/var/service`, among them
    `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
    `jupiter-fan-control`, `socklog-unix` and `nanoklogd`,
@@ -159,7 +162,9 @@ Some session-half interfaces drive other programs, as steamos-manager does:
   `trim-devices.sh` as a job and returns the session-bus path of a `Job1`
   object that mirrors it; the caller can wait on it, pause, resume or
   cancel it there (`SIGSTOP`, `SIGCONT`, `SIGTERM`/`SIGKILL`) and read the
-  exit code. `FormatDevice` is refused for now
+  exit code. `FormatDevice` runs Valve's `format-device.sh` the same way
+- **`UpdateBios1`, `UpdateDock1`:** exported only where Valve's updaters are
+  installed; each runs the updater as a job, as `Storage1` does
 
 Steam does not use D-Bus for everything. Some features are enabled by
 environment variables alone (the adaptive brightness toggle, fan control,

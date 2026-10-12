@@ -62,7 +62,13 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
     is **erased** and Io installed on it (`io-install` → `io-restore`). The
     disk the stick runs from, and disks with a mounted partition or active
     swap, are refused.
-  - *Repair Io* — a placeholder for now; it lists the disks.
+  - *Repair Io* — pick an Io installation (internal NVMe, SD card or USB
+    drive; found by its `IOROOT` partition) and the repairs: check and
+    repair the filesystems, rebuild the initramfs, reinstall the boot
+    loader, forget a hibernated session that does not resume (the session
+    is lost), check the installed packages, open a root shell in the
+    installation. Nothing else on the disk is changed (`io-repair`). Not
+    tested on hardware yet.
 - **Everything works by touch or with the trackpad.** The dialogs need no
   keyboard.
 - **The on-screen keyboard opens only on touch.** To type into the

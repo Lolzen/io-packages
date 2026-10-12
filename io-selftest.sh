@@ -90,8 +90,10 @@ check "zswap disabled" sh -c 'grep -q N /sys/module/zswap/parameters/enabled'
 check "swap file active" grep -q '^/home/swapfile' /proc/swaps
 if findmnt -no SOURCE / | grep -q '^/dev/nvme'; then
     info "/ on the NVMe: hibernation allowed"
+    check "elogind skips the swap size check (hibernation)" sh -c 'tr "\0" "\n" < /proc/$(pgrep -x elogind)/environ | grep -q "^SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1"'
+    check "initramfs has io-resume" sh -c 'lsinitrd "/boot/initramfs-$(uname -r).img" | grep -q "pre-mount/09-io-resume.sh"'
 else
-    check "hibernation blocked (/ not on the NVMe)" grep -q "AllowHibernation=no" /etc/elogind/sleep.conf.d/10-io-hibernate.conf
+    check "hibernation blocked (/ not on the NVMe)" grep -q "AllowHibernation=no" /etc/elogind/sleep.conf.d/zz-io-hibernate.conf
 fi
 check "earlyoom runs with Valve arguments" sh -c 'tr "\0" " " < /proc/$(pgrep -x earlyoom)/cmdline | grep -q -- "-S 409600,307200 -r 3600 -n --avoid"'
 
@@ -155,6 +157,20 @@ check "$U can read syslog (group socklog)" sh -c "id -nG $U | grep -qw socklog"
 echo "== desktop"
 check "startplasma-wayland present" test -x /usr/bin/startplasma-wayland
 check "storage expansion menu entry" test -r /usr/share/applications/io-grow-storage.desktop
+
+echo "== firmware (check modes only, nothing is flashed)"
+check "BIOS updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-biosupdate
+check "controller updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-controller-update
+check "dock updater installed (jupiter-dock-updater-bin)" test -x /usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh
+BIOSOUT=$(/usr/bin/jupiter-biosupdate check 2>&1)
+BIOSRC=$?
+info "jupiter-biosupdate check: exit $BIOSRC (0 = nothing to do, 7 = update available): $(echo "$BIOSOUT" | tr '\n' ' ' | cut -c1-160)"
+check "BIOS check runs (exit 0 or 7)" sh -c "[ $BIOSRC = 0 ] || [ $BIOSRC = 7 ]"
+CTRLOUT=$(/usr/bin/jupiter-controller-update --check 2> /dev/null)
+info "controller: $(echo "$CTRLOUT" | tr '\n' ' ')"
+case "$CTRLOUT" in *needs_update=*) CTRLOK=yes ;; *) CTRLOK=no ;; esac
+check "controller check runs" test "$CTRLOK" = yes
+info "last firmware run at boot: $(grep '^==' /var/log/io-firmware-update.log 2> /dev/null | tail -n 1)"
 
 echo "== storage"
 HW=/usr/lib/hwsupport
