@@ -38,10 +38,6 @@ has changed since is on [Alpha 7](Alpha-7).
 
 ## Open observations
 
-- **Roaming** between router and repeater with the same network name: the
-  Deck held on to the weak connection (seen with iwd, before
-  `wireless-regdb`). Compare with wpa_supplicant, which since Alpha 7 is
-  built with WNM and MBO (`wpa_supplicant-holo`), as on SteamOS
 - **Desktop responsiveness:** SteamOS 3.9.2's desktop felt more responsive
   than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
   the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
