@@ -136,8 +136,9 @@ the session bus that Steam talks to.
   `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a
   port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
 - **Hardware other than the Steam Deck** (untested): as steamos-manager,
-  Valve's device files decide (Io ships the eight that define one of these
-  interfaces, matched by `sys_vendor` and `board_name` or `product_name`):
+  Valve's device files decide (Io ships the nine that define one of these
+  interfaces, matched by `sys_vendor` and `board_name` or `product_name`;
+  26.4.1's, plus the MSI Claw 8 EX from steamos-manager's main branch):
   `PerformanceProfile1`, the ACPI platform profile, on the Legion Go
   (also S and 2), ROG Ally (also X and Xbox Ally), MSI Claw and Zotac Zone;
   `FirmwareDebug1`, EC logging, on the Steam Machine, through Valve's
@@ -145,7 +146,7 @@ the session bus that Steam talks to.
   and is off again after a reboot (its log goes to socklog; Valve: its own
   journal namespace). The GPU interfaces (`GpuPerformanceLevel1`,
   `GpuPowerProfile1`) follow the device file as on SteamOS, so the Steam
-  Machine and the MSI Claw with Intel graphics have none (Io reads amdgpu
+  Machine and the MSI Claws with Intel graphics have none (Io reads amdgpu
   only). The Deck's own interfaces are not exported on these devices
   (`TdpLimit1`, `LowPowerMode1`, `AmbientLightSensor1`,
   `BatteryChargeLimit1`, and `FanControl1` except on the Steam Machine,

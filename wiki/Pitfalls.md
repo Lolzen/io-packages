@@ -622,13 +622,6 @@ announce a dock update at every start.
 that matches on `sender='com.steampowered.CecDaemon1'` misses those first
 signals; after a cecd restart it has to rescan on `NameOwnerChanged`.
 
-**`sv up` right after linking a service fails.** runsvdir notices a new
-link in `/var/service` only on its next scan (up to 5 s); until then the
-service has no `supervise/`, and `sv` gives up at once. `sv -w <n> up` on a
-service whose `run` takes itself down (`sv down .`) waits the full timeout.
-Linking is enough to start a service; check the link, not `sv status`, for
-"on".
-
 **A USB over-current can be simulated with a temporary udev rule.** The
 kernel adds `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` to a USB
 interface's `change` event only when a port really trips. A rule in
