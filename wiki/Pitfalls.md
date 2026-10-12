@@ -45,12 +45,6 @@ start. Without it, a Deck gets the generic Linux client.
 to the raw `node.name` — which is also why it shows the node name and not the
 description for such sources.
 
-**Adaptive brightness looks dead with the slider low or in a dark room.**
-The slider sets the level Steam adjusts around; near the bottom, or at a few
-lux, there is nothing visible left to change. Test with bright light on the
-sensor (top edge of the screen) and the slider in the upper half, and watch
-`/sys/class/backlight/*/brightness`.
-
 **Steam's 32-bit client needs PipeWire's 32-bit plugins, not only the
 library.** Arch's `lib32-pipewire` ships both; Void splits them into
 `libpipewire-32bit`, `pipewire-32bit` and `libspa-*-32bit`. With the library

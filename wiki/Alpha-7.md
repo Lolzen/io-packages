@@ -46,11 +46,10 @@
   Tested with a simulated event (a made-up port name): the signal arrives;
   Steam showed nothing for it in game mode. A real over-current is
   untested.
-- **Adaptive brightness moves Steam's brightness slider** along with the
-  adjustment (seen on 2026-10-12, on Steam's beta client, after
-  `steamos-tuning` 1.4); before, the slider stayed where it was set and
-  only the backlight changed. Cause not determined: the light sensor
-  (`ltrf216a`) and its driver are unchanged.
+- **Adaptive brightness moves Steam's brightness slider** with the
+  adjustment, as on SteamOS. It started right after `steamos-tuning` 1.4
+  rebuilt the initramfs with Valve's Deck modules (see *Boot*); before,
+  only the backlight followed and the slider stayed where it was set.
 
 ### Wi-Fi
 
