@@ -174,7 +174,8 @@ Steam's binaries), and writes the backlight
 directly (`steamos-priv-write` hands the file to `wheel` once). No sensor
 daemon is involved. The brightness slider stays active: it sets the level
 the automatic adjustment works around, so with the slider near the bottom
-there is little left to adjust.
+there is little left to adjust. Since October 2026 the slider also moves
+with the adjustment (see [Alpha 7](Alpha-7)).
 
 ---
 
