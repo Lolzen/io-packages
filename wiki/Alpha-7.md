@@ -13,6 +13,12 @@
   and on still starts SteamOS. See [Architecture](Architecture).
 - **GRUB without its menu** (`io-base` 0.7.0): Io starts at once, as SteamOS
   does. The recovery stick keeps its menu.
+- **Valve's Deck modules in the initramfs** (`steamos-tuning` 1.4), as
+  SteamOS's initramfs hook has them on both models: the Deck's own drivers
+  (`steamdeck` with its hwmon, LED and extcon parts) and the USB dual-role
+  stack (DWC3), which Valve adds for the OLED's USB. dracut leaves them out
+  on x86. The package rebuilds the existing initramfs once when the list
+  changes. The recovery stick has them too.
 
 ### Desktop
 

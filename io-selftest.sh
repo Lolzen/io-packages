@@ -30,6 +30,7 @@ fi
 echo "== system"
 info "kernel $(uname -r)"
 check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
+check "Valve's Deck modules in the initramfs (steamos-tuning)" sh -c 'lsinitrd /boot/initramfs-$(uname -r).img | grep -q "steamdeck-hwmon.ko"'
 check "Valve's Bluetooth firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "RTL: fw version 0x3d7679d7"'
 check "Valve's VCN firmware loaded (deck-firmware)" sh -c 'dmesg | grep -q "Found VCN firmware Version ENC: 1.27 DEC: 2"'
 check "kernel.pid_max = 4194304" sh -c '[ "$(sysctl -n kernel.pid_max)" = 4194304 ]'

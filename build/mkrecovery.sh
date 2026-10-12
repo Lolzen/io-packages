@@ -47,9 +47,12 @@ build_recovery_rootfs() {
   verify_passwords "$REC_ROOTFS" "$REC_USER"
 
   # amdgpu in the initramfs, as io-base does for Io: the Deck's display
-  # needs it from the start.
+  # needs it from the start. Valve's Deck modules as well (steamos-tuning's
+  # 20-steam-deck.conf has the reason), as the stick boots from USB.
   mkdir -p "$REC_ROOTFS/etc/dracut.conf.d"
+  DECK_DRIVERS='add_drivers+=" xhci_plat_hcd dwc3 dwc3_pci roles ulpi udc_core xhci_pci_renesas uas steamdeck steamdeck_hwmon leds_steamdeck extcon_steamdeck "'
   printf '%s\n' 'hostonly=no' 'force_drivers+=" amdgpu "' > "$REC_ROOTFS/etc/dracut.conf.d/10-io-recovery.conf"
+  printf '%s\n' "$DECK_DRIVERS" >> "$REC_ROOTFS/etc/dracut.conf.d/10-io-recovery.conf"
 
   if [ -n "$REC_WIFI_SSID" ]; then
     log "adding Wi-Fi network $REC_WIFI_SSID"
