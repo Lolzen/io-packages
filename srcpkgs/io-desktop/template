@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=42
+revision=45
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to linux-neptune-72 and does not
@@ -26,6 +26,7 @@ depends="
 
  io-base io-branding io-session io-steamos-manager
  linux-neptune-72 linux-firmware deck-firmware deck-hw-support
+ deck-firmware-updaters jupiter-dock-updater-bin
  jupiter-fan-control steamos-powerbuttond
 
  steamdeck-dsp holo-zram-swap holo-earlyoom steamos-tuning
@@ -41,7 +42,7 @@ depends="
  mesa-vaapi mesa-vaapi-32bit
  pipewire wireplumber wireplumber-elogind alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
 
- NetworkManager-holo elogind polkit dbus
+ NetworkManager-holo elogind-holo polkit dbus
  xdg-desktop-portal xdg-desktop-portal-gamescope xdg-desktop-portal-holo
  xorg-server-xwayland-holo kwin-holo
 

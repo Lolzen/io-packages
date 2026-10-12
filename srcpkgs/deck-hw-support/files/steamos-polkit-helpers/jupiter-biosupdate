@@ -1,2 +1,19 @@
-#!/bin/sh
-exit 0
+#!/bin/bash
+# Valve's helper (jupiter-hw-support 20260807.1): Steam's "jupiter-biosupdate"
+# runs the whole firmware update logic, steamos-firmware-update, which hands
+# the Steam Deck to /usr/bin/jupiter-biosupdate (deck-firmware-updaters).
+
+set -eu
+
+if [[ $EUID -ne 0 ]];
+then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+# Io: without deck-firmware-updaters there is nothing to update with.
+if [[ ! -x /usr/bin/steamos-firmware-update ]]; then
+    echo "No firmware updater installed" >&2
+    exit 0
+fi
+
+exec /usr/bin/steamos-firmware-update "$@"

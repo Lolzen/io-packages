@@ -1,15 +1,24 @@
-# The Deck modules in 20-steam-deck.conf only reach the initramfs when it
-# is rebuilt. SteamOS's pacman rebuilds it whenever a mkinitcpio hook
-# changes; here the existing initramfs images are rebuilt once when the
-# list differs from the one they were last built with. A kernel installed
-# later builds its own initramfs with the list anyway, so a missing image
-# is left to the kernel's hook.
+# The Deck modules in 20-steam-deck.conf and the dracut module io-resume only
+# reach the initramfs when it is rebuilt. SteamOS's pacman rebuilds it
+# whenever a mkinitcpio hook changes; here the existing initramfs images are
+# rebuilt once when these files differ from the ones they were last built
+# with. A kernel installed later builds its own initramfs with them anyway,
+# so a missing image is left to the kernel's hook.
+#
+# The hibernation guard's file was renamed in 1.5 (it has to sort after
+# Valve's sleep.conf.d file); renamed here as well, so the new name holds
+# before the next boot writes it.
 case "${ACTION}" in
 post)
-	_conf=usr/lib/dracut/dracut.conf.d/20-steam-deck.conf
+	if [ -f etc/elogind/sleep.conf.d/10-io-hibernate.conf ]; then
+		mv -f etc/elogind/sleep.conf.d/10-io-hibernate.conf etc/elogind/sleep.conf.d/zz-io-hibernate.conf
+	fi
 	_sum=var/lib/steamos-tuning/initramfs-modules.sum
 	_hook=etc/kernel.d/post-install/20-initramfs
-	_new=$(cksum < "${_conf}")
+	_new=$(cat usr/lib/dracut/dracut.conf.d/20-steam-deck.conf \
+		usr/lib/dracut/dracut.conf.d/21-io-resume.conf \
+		usr/lib/dracut/modules.d/90io-resume/module-setup.sh \
+		usr/lib/dracut/modules.d/90io-resume/io-resume.sh | cksum)
 	_old=$(cat "${_sum}" 2>/dev/null)
 	if [ "${_new}" != "${_old}" ]; then
 		for _dir in usr/lib/modules/*/; do
@@ -17,7 +26,7 @@ post)
 			_ver=${_ver##*/}
 			[ -f "boot/initramfs-${_ver}.img" ] || continue
 			[ -x "${_hook}" ] || continue
-			echo "Rebuilding the initramfs for ${_ver} (Deck modules changed)"
+			echo "Rebuilding the initramfs for ${_ver} (Deck modules or io-resume changed)"
 			"${_hook}" ${PKGNAME} "${_ver}"
 		done
 		mkdir -p var/lib/steamos-tuning

@@ -10,3 +10,118 @@ sprite = Sprite(image);
 sprite.SetX(Window.GetWidth() / 2 - image.GetWidth() / 2);
 sprite.SetY(Window.GetHeight() / 2 - image.GetHeight() / 2);
 sprite.SetZ(1);
+
+# Firmware updates at boot (plymouth-wrap, from Valve's holo theme): a
+# title, the updater's last log line and its progress in percent, centred
+# under the logo. plymouth-wrap sends "<!command>argument" messages:
+# set-title, and set-ttl (the expected duration in seconds), from which the
+# progress is counted here, as Valve's theme does; spin-logo and fade-out
+# are Valve's theme effects and are ignored.
+text_y = sprite.GetY() + image.GetHeight() + 40;
+title_sprite = Sprite();
+mesg_sprite = Sprite();
+prog_sprite = Sprite();
+ttl_ticks = 0;
+ticks = 0;
+
+fun strlen (s)
+{
+    local.l = 0;
+    while (String(s).CharAt(l)) l++;
+    return l;
+}
+
+# Plymouth's script language has no string-to-number conversion; Valve's
+# theme parses numbers itself (Float()). Whole seconds are enough here:
+# the digits up to the first other character.
+DIGIT = [ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ];
+digit = [];
+for (d = 0; d < 10; d++)
+    digit[d] = d;
+
+fun to_int (s)
+{
+    local.raw = String(s);
+    local.n = 0;
+    local.i = 0;
+    local.chr = "";
+    while (raw.CharAt(i))
+    {
+        chr = raw.CharAt(i);
+        if (!DIGIT[chr])
+            break;
+        n = n * 10 + global.digit[chr];
+        i++;
+    }
+    return n;
+}
+
+fun place (spr, img, y)
+{
+    spr.SetImage(img);
+    spr.SetX(Window.GetWidth() / 2 - img.GetWidth() / 2);
+    spr.SetY(y);
+    spr.SetZ(2);
+    spr.SetOpacity(1);
+}
+
+fun progress (prog)
+{
+    place(prog_sprite, Image.Text(Math.Int(Math.Clamp(prog, 0, 100)) + " %", 1, 1, 1), text_y + 60);
+}
+
+fun show_message (text)
+{
+    local.t = String(text);
+    local.len = strlen(t);
+    local.idx = 2;
+    local.cmd = "";
+    local.arg = "";
+    if (len >= 3 && t.CharAt(0) == "<" && t.CharAt(1) == "!")
+    {
+        while (idx < len && t.CharAt(idx) != ">") idx++;
+        cmd = t.SubString(2, idx);
+        if (idx < len - 1) arg = t.SubString(idx + 1, len);
+        if (cmd == "set-title")
+        {
+            if (arg) place(title_sprite, Image.Text(arg, 1, 1, 1), text_y);
+            else title_sprite.SetOpacity(0);
+        }
+        if (cmd == "set-ttl" && arg)
+        {
+            global.ttl_ticks = to_int(arg) * 50;
+            global.ticks = 0;
+        }
+        return;
+    }
+    place(mesg_sprite, Image.Text(t, 0.6, 0.6, 0.6), text_y + 30);
+}
+
+fun hide_message (text)
+{
+    mesg_sprite.SetOpacity(0);
+}
+
+# plymouth system-update --progress=N: the updater's own figure wins over
+# the estimate from set-ttl
+fun system_update (prog)
+{
+    global.ttl_ticks = 0;
+    progress(prog);
+}
+
+# 50 refreshes a second
+fun refresh ()
+{
+    if (global.ttl_ticks > 0)
+    {
+        global.ticks++;
+        if (global.ticks % 25 == 0)
+            progress(Math.Min(global.ticks * 100 / global.ttl_ticks, 99));
+    }
+}
+
+Plymouth.SetDisplayMessageFunction(show_message);
+Plymouth.SetHideMessageFunction(hide_message);
+Plymouth.SetSystemUpdateFunction(system_update);
+Plymouth.SetRefreshFunction(refresh);

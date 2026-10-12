@@ -1,0 +1,97 @@
+# Template file for 'deck-firmware-updaters'
+pkgname=deck-firmware-updaters
+version=20260807.1
+revision=1
+_pkgrel=1
+archs="x86_64"
+wrksrc="jupiter-hw-support"
+hostmakedepends="git tar"
+depends="bash jq dmidecode python3 python3-click python3-crcmod python3-progressbar2
+ python3-hid-holo plymouth deck-hw-support>=20260807.1_15"
+short_desc="Steam Deck BIOS and controller firmware updaters from jupiter-hw-support"
+maintainer="Georg <funer@gmx.at>"
+license="MIT, custom:Proprietary"
+homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/jupiter-hw-support-${version}-${_pkgrel}.src.tar.gz"
+checksum=dbad78592a308230efe9b7cc5fd3c4c6aa5447f5e07c3ca81d3a748882582eaf
+# Valve's prebuilt flasher (h2offt) breaks when stripped, as Valve's
+# PKGBUILD notes (!strip).
+nostrip=yes
+# h2offt, h2osde-lx64 and BatCtrl are executables; Valve's updater expects
+# them in this directory (it runs h2offt from there).
+ignore_elf_dirs="/usr/share/jupiter_bios_updater"
+
+# The firmware half of Valve's jupiter-hw-support (SteamOS 3.9.2): the BIOS
+# images and Insyde's flasher h2offt behind jupiter-biosupdate, the
+# controller firmware and Valve's flashing scripts behind
+# jupiter-controller-update. deck-hw-support carries the rest of that package
+# and the pkexec helpers Steam calls (steamos-polkit-helpers/
+# jupiter-biosupdate exits 0 without this package).
+#
+# Left out, as in Valve's PKGBUILD: h2offt-g and H2OFFTx64-G.sh (GTK 2) and
+# the phy_alloc driver source (does not build). Left out by Io:
+# RA_bootloader_updater (Renesas tools; jupiter-controller-update does not
+# call them) and H2OFFTx64.sh (builds the driver; jupiter-biosupdate runs
+# h2offt itself).
+#
+# Io's changes:
+#   io-no-downgrade.patch - jupiter-controller-update does not flash a
+#     controller whose firmware is newer than Io's copy (SteamOS on the same
+#     Deck may have brought a newer one). jupiter-biosupdate needs no such
+#     patch: it only updates the BIOS versions listed in its table, which
+#     ends at the version it carries.
+#   io-splash-theme.patch - the update splash uses Io's Plymouth theme
+#     (io-branding 0.3.0 draws the title and progress).
+#   steamos-firmware-update - the dispatcher of steamos-customizations
+#     (Steam's helper calls it) without the fwupd branch for Legion Go and
+#     Steam Machine (fwupd is not part of Io yet).
+#   plymouth-wrap - Valve's, from holo-plymouth-themes 0.7.
+#   97-io-firmware-update.sh - runs both updaters once at boot, as SteamOS's
+#     jupiter-biosupdate.service and jupiter-controller-update.service do.
+#
+# The scripts are MIT (Valve's PKGBUILD; the source has no licence file).
+# The BIOS images, h2offt, BatCtrl, h2osde-lx64 and the controller firmware
+# are Valve's and Insyde's binaries; Valve publishes them in its source
+# mirror, but no licence states whether others may redistribute them.
+
+post_extract() {
+	git --git-dir=jupiter-hw-support archive --format=tar "jupiter-${version}" | tar -x
+}
+
+do_install() {
+	local f
+
+	vmkdir usr/share/jupiter_bios
+	for f in usr/share/jupiter_bios/*.fd; do
+		vinstall "$f" 644 usr/share/jupiter_bios
+	done
+
+	vmkdir usr/share/jupiter_bios_updater
+	for f in h2offt h2osde-lx64 BatCtrl; do
+		vinstall usr/share/jupiter_bios_updater/$f 755 usr/share/jupiter_bios_updater
+	done
+	for f in Logo.png msg_cht.ini msg_eng.ini platform.ini; do
+		vinstall usr/share/jupiter_bios_updater/$f 644 usr/share/jupiter_bios_updater
+	done
+
+	vmkdir usr/share/jupiter_controller_fw_updater
+	for f in usr/share/jupiter_controller_fw_updater/*.bin; do
+		vinstall "$f" 644 usr/share/jupiter_controller_fw_updater
+	done
+	vinstall usr/share/jupiter_controller_fw_updater/d21bootloader16.py 755 \
+		usr/share/jupiter_controller_fw_updater
+	vinstall usr/share/jupiter_controller_fw_updater/d20bootloader.py 755 \
+		usr/share/jupiter_controller_fw_updater
+
+	vbin usr/bin/jupiter-biosupdate
+	vbin usr/bin/jupiter-controller-update
+	vbin ${FILESDIR}/plymouth-wrap
+	vbin ${FILESDIR}/steamos-firmware-update
+
+	vmkdir usr/lib/hwsupport
+	vinstall usr/lib/hwsupport/jupiter-controller-update-with-splash 755 usr/lib/hwsupport
+	vinstall usr/lib/hwsupport/jupiter-controller-fake-update 755 usr/lib/hwsupport
+
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/97-io-firmware-update.sh 644 etc/runit/core-services
+}

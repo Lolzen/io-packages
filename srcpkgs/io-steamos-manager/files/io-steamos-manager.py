@@ -28,8 +28,11 @@ actually in effect afterwards, read back from sysfs, not the requested one.
 Storage1 runs Valve's scripts as jobs, as steamos-manager does: the root
 daemon starts the process and exports it as a Job1 object on the system
 bus, the user daemon mirrors that object on the session bus (JobManager1
-announces it). TrimDevices is real; FormatDevice is refused until
-formatting is ported and tested.
+announces it). TrimDevices and FormatDevice run Valve's trim-devices.sh
+and format-device.sh (with Io's check against formatting the disk Io runs
+from). UpdateBios1 and UpdateDock1 run Valve's BIOS and dock updaters the
+same way, exported only where the updater is installed, as steamos-manager
+does (platform.toml's [update_bios] and [update_dock]).
 
 The root daemon also owns com.steampowered.Atomupd1 (atomupd-daemon's
 update API, xbps behind it through /usr/libexec/io/io-update, the helper
@@ -38,8 +41,7 @@ Steam's /usr/bin/steamos-update uses as well).
 UdevEvents1 (USB over-current) runs in the user daemon, as Valve's udev
 monitor does, with pyudev.
 
-Not implemented (Io lacks the backing pieces): UpdateBios1, UpdateDock1,
-FactoryReset1.
+Not implemented yet: FactoryReset1 (an Io reset is its own design).
 """
 
 import asyncio
@@ -317,8 +319,19 @@ JOB_PREFIX = f"{OBJPATH}/Jobs"
 JOB_IFACE = f"{IFACE}.Job1"
 JOBMANAGER_IFACE = f"{IFACE}.JobManager1"
 NOT_SUPPORTED = "org.freedesktop.DBus.Error.NotSupported"
-# Valve's platform.toml: [storage.trim_devices]
+# Valve's platform.toml: [storage.trim_devices], [storage.format_device],
+# [update_bios], [update_dock]
 TRIM_SCRIPT = "/usr/lib/hwsupport/trim-devices.sh"
+FORMAT_SCRIPT = "/usr/lib/hwsupport/format-device.sh"
+UPDATE_BIOS_SCRIPT = "/usr/bin/jupiter-biosupdate"
+UPDATE_BIOS_ARGS = ["--auto"]
+UPDATE_DOCK_SCRIPT = "/usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh"
+
+
+def script_available(path):
+    """As steamos-manager's ScriptConfig::is_valid: the script exists and
+    can be run."""
+    return os.path.isfile(path) and os.access(path, os.X_OK)
 
 
 class JobManager1(ServiceInterface):
@@ -425,11 +438,33 @@ class RootManager(ServiceInterface):
         return await self.jobs.run([TRIM_SCRIPT], "trimming devices")
 
     @method()
-    def FormatDevice(self, device: "s", label: "s", validate: "b") -> "o":
-        # Formatting is destructive and not ported yet (Alpha 5): refused
-        # the way steamos-manager refuses it on a platform without it.
-        log(f"FormatDevice {device} refused: not available on Io yet")
-        raise DBusError(NOT_SUPPORTED, "FormatDevice is not available on Io yet")
+    async def FormatDevice(self, device: "s", label: "s", validate: "b") -> "o":
+        # As steamos-manager (root.rs, format_device, platform.toml): the
+        # label, then --skip-validation unless validating, then the device.
+        # format-device.sh accepts only SD cards and USB drives and refuses
+        # the disk Io runs from (Io's check); no --owner, as Valve's root
+        # daemon passes none (the script's default is deck's 1000:1000).
+        if not script_available(FORMAT_SCRIPT):
+            raise DBusError(NOT_SUPPORTED, "FormatDevice is not supported on this platform")
+        argv = [FORMAT_SCRIPT, "--label", label]
+        if not validate:
+            argv.append("--skip-validation")
+        argv += ["--device", device]
+        return await self.jobs.run(argv, f"formatting {device}")
+
+    @method()
+    async def UpdateBios(self) -> "o":
+        # steamos-manager root.rs update_bios: platform.toml's [update_bios]
+        if not script_available(UPDATE_BIOS_SCRIPT):
+            raise DBusError(NOT_SUPPORTED, "UpdateBios is not supported on this platform")
+        return await self.jobs.run([UPDATE_BIOS_SCRIPT, *UPDATE_BIOS_ARGS], "updating BIOS")
+
+    @method()
+    async def UpdateDock(self) -> "o":
+        # steamos-manager root.rs update_dock: platform.toml's [update_dock]
+        if not script_available(UPDATE_DOCK_SCRIPT):
+            raise DBusError(NOT_SUPPORTED, "UpdateDock is not supported on this platform")
+        return await self.jobs.run([UPDATE_DOCK_SCRIPT], "updating dock")
 
     @method()
     def ReloadConfig(self):
@@ -2037,11 +2072,16 @@ class MirroredJob(ServiceInterface):
         return (await self._fwd("ExitCode"))[0]
 
 
-class Storage1(ServiceInterface):
-    """Steam's storage actions, run by the root daemon as jobs."""
+class OptionalInterfaceMissing(Exception):
+    """An optional interface whose backing piece is not installed: left
+    out quietly, as steamos-manager leaves out an invalid script config."""
 
-    def __init__(self, root):
-        super().__init__(f"{IFACE}.Storage1")
+
+class JobMirror:
+    """For the interfaces whose methods start root daemon jobs: mirrors
+    each root job on the session bus once."""
+
+    def init_jobs(self, root):
         self.root = root
         self.jobs = None  # set in run_user, once the session bus is there
         self.mirrors = {}  # root job path -> session job path
@@ -2053,6 +2093,14 @@ class Storage1(ServiceInterface):
             self.mirrors[root_path] = self.jobs.add(MirroredJob(self.root, root_path))
         return self.mirrors[root_path]
 
+
+class Storage1(ServiceInterface, JobMirror):
+    """Steam's storage actions, run by the root daemon as jobs."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.Storage1")
+        self.init_jobs(root)
+
     @method()
     async def TrimDevices(self) -> "o":
         return await self._job("TrimDevices")
@@ -2060,6 +2108,36 @@ class Storage1(ServiceInterface):
     @method()
     async def FormatDevice(self, device: "s", label: "s", validate: "b") -> "o":
         return await self._job("FormatDevice", "ssb", [device, label, validate])
+
+
+class UpdateBios1(ServiceInterface, JobMirror):
+    """steamos-manager's UpdateBios1: Valve's BIOS updater as a job,
+    exported only where it is installed (deck-firmware-updaters)."""
+
+    def __init__(self, root):
+        if not script_available(UPDATE_BIOS_SCRIPT):
+            raise OptionalInterfaceMissing("no BIOS updater installed")
+        super().__init__(f"{IFACE}.UpdateBios1")
+        self.init_jobs(root)
+
+    @method()
+    async def UpdateBios(self) -> "o":
+        return await self._job("UpdateBios")
+
+
+class UpdateDock1(ServiceInterface, JobMirror):
+    """steamos-manager's UpdateDock1: Valve's dock updater as a job,
+    exported only where it is installed (jupiter-dock-updater-bin)."""
+
+    def __init__(self, root):
+        if not script_available(UPDATE_DOCK_SCRIPT):
+            raise OptionalInterfaceMissing("no dock updater installed")
+        super().__init__(f"{IFACE}.UpdateDock1")
+        self.init_jobs(root)
+
+    @method()
+    async def UpdateDock(self) -> "o":
+        return await self._job("UpdateDock")
 
 
 class UdevEvents1(ServiceInterface):
@@ -2158,6 +2236,8 @@ USER_INTERFACES = (
     ScreenReader0,
     ScreenReader1,
     Storage1,
+    UpdateBios1,
+    UpdateDock1,
     UdevEvents1,
 )
 
@@ -2176,6 +2256,8 @@ async def run_user():
             inst = cls(root)
             session.export(OBJPATH, inst)
             instances.append(inst)
+        except OptionalInterfaceMissing as err:
+            log(f"{cls.__name__} not exported: {err}")
         except Exception as err:  # noqa: BLE001 - one bad interface must not
             log(f"{cls.__name__} failed: {err}")  # take the service down
 
@@ -2186,7 +2268,7 @@ async def run_user():
 
     jobs = Jobs(session)
     for inst in instances:
-        if isinstance(inst, Storage1):
+        if isinstance(inst, JobMirror):
             inst.jobs = jobs
         if isinstance(inst, UdevEvents1):
             try:

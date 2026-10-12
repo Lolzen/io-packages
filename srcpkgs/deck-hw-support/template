@@ -1,9 +1,9 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=14
+revision=15
 hostmakedepends="xcursorgen"
-depends="polkit jq alsa-utils dmidecode elogind udisks2"
+depends="polkit jq alsa-utils dmidecode elogind-holo udisks2 parted e2fsprogs exfatprogs f3"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -24,6 +24,11 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # that is unsafe to trim: on Io they may be on that card.
 # While Io runs from the SD card, the internal SSD (SteamOS) is hidden from
 # udisks, so neither Steam nor Plasma offers it (90-io-hide-internal-disk).
+# Formatting from Steam runs Valve's format-device.sh (parted, mkfs.ext4,
+# and f3probe and mkfs.exfat for validating a card), which refuses the disk
+# Io runs from. The firmware helpers hand over to deck-firmware-updaters
+# (BIOS, controller) and jupiter-dock-updater-bin (Valve's dock), which
+# carry Valve's updaters and firmware files.
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers
@@ -49,9 +54,8 @@ do_install() {
 
 	# /usr/bin/steamos-update is the real script (io-steamos-manager); the
 	# helper above re-runs itself through pkexec and calls it, as Valve's.
-	for f in steamos-select-branch jupiter-biosupdate; do
-		ln -sf steamos-polkit-helpers/$f ${DESTDIR}/usr/bin/$f
-	done
+	# /usr/bin/jupiter-biosupdate is Valve's updater (deck-firmware-updaters).
+	ln -sf steamos-polkit-helpers/steamos-select-branch ${DESTDIR}/usr/bin/steamos-select-branch
 
 	vbin ${FILESDIR}/bin/jupiter-check-support
 	# Steam asks it whether a "day one firmware update" screen is needed. Only
