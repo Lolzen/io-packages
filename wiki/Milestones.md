@@ -109,7 +109,7 @@ someone with the hardware.
   for ARC), fan control. Not ported: CEC volume control (needs Valve's
   PipeWire and WirePlumber patches), BIOS updates (`fremont-hw-support`,
   fwupd), Valve's own USB Bluetooth firmware, the regulatory domain helper
-  (`wireless-domain-setter`, on the OLED branch)
+  (`wireless-domain-setter`, on the branch `pending`)
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
   and the display quirks
