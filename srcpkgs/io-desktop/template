@@ -42,7 +42,7 @@ depends="
  mesa-vaapi mesa-vaapi-32bit
  pipewire wireplumber wireplumber-elogind alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
 
- NetworkManager-holo elogind-holo polkit dbus
+ NetworkManager-holo elogind-holo polkit dbus io-factory-reset
  xdg-desktop-portal xdg-desktop-portal-gamescope xdg-desktop-portal-holo
  xorg-server-xwayland-holo kwin-holo
 

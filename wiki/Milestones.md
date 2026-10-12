@@ -147,10 +147,13 @@ someone with the hardware.
   once for 3.9.2 in October 2026
 - **Repair Io** on the recovery stick (implemented on the branch
   `destructive`): filesystem check, initramfs, boot loader, forgetting a
-  hibernated session that does not resume, package check, root shell.
-  Tested with the move to the NVMe
-- **A factory reset of Io's own** (fresh home directory): a design decision,
-  and destructive
+  hibernated session that does not resume, package check, factory reset,
+  root shell. To be tested with the move to the NVMe
+- **A factory reset of Io's own** (implemented on the branch
+  `destructive`, `io-factory-reset`): user data erased at the next start,
+  OS repaired in place with xbps, through Steam (`FactoryReset1`, the
+  helper), a terminal or *Repair Io*. To be tested with the move to the
+  NVMe
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
   (they drop to dracut's emergency shell, cause not found yet); the
   recovery stick covers installing in the meantime. After it,

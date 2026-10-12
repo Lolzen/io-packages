@@ -41,7 +41,8 @@ Steam's /usr/bin/steamos-update uses as well).
 UdevEvents1 (USB over-current) runs in the user daemon, as Valve's udev
 monitor does, with pyudev.
 
-Not implemented yet: FactoryReset1 (an Io reset is its own design).
+FactoryReset1 runs Io's own io-factory-reset in the root daemon (Valve's
+runs steamos-reset-tool); it is exported only where that is installed.
 """
 
 import asyncio
@@ -326,6 +327,13 @@ FORMAT_SCRIPT = "/usr/lib/hwsupport/format-device.sh"
 UPDATE_BIOS_SCRIPT = "/usr/bin/jupiter-biosupdate"
 UPDATE_BIOS_ARGS = ["--auto"]
 UPDATE_DOCK_SCRIPT = "/usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh"
+# Valve's platform.toml: [factory_reset.user|os|all], steamos-reset-tool
+# factory-reset --reset-user-data|--reset-os|--reset-all. Io: its own
+# io-factory-reset (see there for what each part does on Io).
+FACTORY_RESET_SCRIPT = "/usr/bin/io-factory-reset"
+# steamos-manager hardware.rs FactoryResetKind
+FACTORY_RESET_KINDS = {1: "user", 2: "os", 3: "all"}
+# PrepareFactoryResetResult: 0 = Unknown (failed), 1 = RebootRequired
 
 
 def script_available(path):
@@ -465,6 +473,25 @@ class RootManager(ServiceInterface):
         if not script_available(UPDATE_DOCK_SCRIPT):
             raise DBusError(NOT_SUPPORTED, "UpdateDock is not supported on this platform")
         return await self.jobs.run([UPDATE_DOCK_SCRIPT], "updating dock")
+
+    @method()
+    async def PrepareFactoryReset(self, kind: "u") -> "u":
+        # steamos-manager root.rs prepare_factory_reset: runs the reset
+        # script for the kind and waits for it; 1 (RebootRequired) when it
+        # succeeded, 0 (Unknown) when not or for an unknown kind. Steam
+        # restarts the Deck afterwards. Not a job: Valve's is a plain call.
+        if not script_available(FACTORY_RESET_SCRIPT):
+            raise DBusError(NOT_SUPPORTED, "PrepareFactoryReset is not supported on this platform")
+        part = FACTORY_RESET_KINDS.get(kind)
+        if part is None:
+            log(f"PrepareFactoryReset: unknown kind {kind}")
+            return 0
+        log(f"PrepareFactoryReset: {part}")
+        proc = await asyncio.create_subprocess_exec(
+            FACTORY_RESET_SCRIPT, "--prepare", part, stdin=subprocess.DEVNULL)
+        rc = await proc.wait()
+        log(f"PrepareFactoryReset: {part} exited {rc}")
+        return 1 if rc == 0 else 0
 
     @method()
     def ReloadConfig(self):
@@ -2140,6 +2167,23 @@ class UpdateDock1(ServiceInterface, JobMirror):
         return await self._job("UpdateDock")
 
 
+class FactoryReset1(ServiceInterface):
+    """steamos-manager's FactoryReset1, relayed to the root daemon:
+    exported only where io-factory-reset is installed, as steamos-manager
+    exports it only with a [factory_reset] configuration."""
+
+    def __init__(self, root):
+        if not script_available(FACTORY_RESET_SCRIPT):
+            raise OptionalInterfaceMissing("io-factory-reset not installed")
+        super().__init__(f"{IFACE}.FactoryReset1")
+        self.root = root
+
+    @method()
+    async def PrepareFactoryReset(self, kind: "u") -> "u":
+        body = await self.root.call_raise("PrepareFactoryReset", "u", [kind])
+        return body[0]
+
+
 class UdevEvents1(ServiceInterface):
     """USB over-current events for Steam, as steamos-manager's udev monitor
     (user daemon, src/udev.rs): a "change" event of a USB interface that
@@ -2238,6 +2282,7 @@ USER_INTERFACES = (
     Storage1,
     UpdateBios1,
     UpdateDock1,
+    FactoryReset1,
     UdevEvents1,
 )
 

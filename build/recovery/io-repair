@@ -16,6 +16,8 @@
 #               the EFI variable IoHibernateLocation and the hibernation
 #               swap file. The hibernated session is lost.
 #   packages    check the installed packages (xbps-pkgdb -a; reports only)
+#   reset       factory reset: Io erases all user data at its next start
+#               (io-factory-reset --prepare user, in the installation)
 #   shell       a root shell in the installed system, with everything
 #               mounted (terminal only), last
 #
@@ -29,7 +31,7 @@ set -eu
 
 MNT=/mnt/io-repair
 IO_HIBERNATE_VAR=/sys/firmware/efi/efivars/IoHibernateLocation-00693127-9e1a-4740-b3c3-13fdd5f0df56
-ALL_REPAIRS="fsck initramfs bootloader hibernation packages shell"
+ALL_REPAIRS="fsck initramfs bootloader hibernation packages reset shell"
 
 die() { printf 'io-repair: %s\n' "$*" >&2; exit 1; }
 gui() { [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] && command -v kdialog > /dev/null; }
@@ -127,6 +129,12 @@ do_packages() {
   fi
 }
 
+do_reset() {
+  echo "== factory reset at the next start of Io"
+  [ -x "$MNT/usr/bin/io-factory-reset" ] || die "this Io has no io-factory-reset (too old); update it first"
+  chroot "$MNT" /usr/bin/io-factory-reset --prepare user
+}
+
 do_shell() {
   echo "== root shell in the installation; leave it with exit"
   chroot "$MNT" /bin/bash -l || true
@@ -166,7 +174,7 @@ run_repairs() {
       ;;
   esac
   case " $* " in *" fsck "*) do_fsck ;; esac
-  for r in initramfs bootloader hibernation packages shell; do
+  for r in initramfs bootloader hibernation packages reset shell; do
     case " $* " in
       *" $r "*) mount_system; "do_$r" ;;
     esac
@@ -214,6 +222,7 @@ if gui; then
     bootloader "Reinstall the boot loader (GRUB)" on \
     hibernation "Forget a hibernated session that does not resume (the session is lost)" off \
     packages "Check the installed packages (report only)" on \
+    reset "Factory reset: erase ALL user data at Io's next start" off \
     shell "Open a root shell in the installation (needs the keyboard)" off) || { echo "aborted"; exit 1; }
   REPAIRS=$(echo $REPAIRS)
   [ -n "$REPAIRS" ] || { echo "no repair selected"; exit 1; }

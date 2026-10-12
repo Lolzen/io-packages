@@ -24,6 +24,7 @@ stubs.
 | `steamos-select-branch` | One branch: `-c` and `-l` print `rel` (SteamOS's name for stable), `rel` and `stable` are accepted, other branches refused |
 | `steamos-format-sdcard`, `steamos-format-device` | Valve's helpers (re-run through pkexec with `--owner`) and scripts: `format-sdcard.sh` and `format-device.sh` (parted, `mkfs.ext4`; `f3probe` and `mkfs.exfat` to validate a card). Io's check in `format-device.sh` refuses the disk Io runs from. `Storage1.FormatDevice` runs the same script as a job. **Not tested on hardware yet** (it erases the card) |
 | `jupiter-biosupdate` | Valve's helper: runs `steamos-firmware-update` (`deck-firmware-updaters`), which hands the Steam Deck to Valve's `jupiter-biosupdate` (BIOS images and Insyde's flasher `h2offt`). `check` exits 7 and prints `BIOS <version>` when an update is due; it only updates the BIOS versions in Valve's table. Exits 0 without `deck-firmware-updaters`. `UpdateBios1` runs `jupiter-biosupdate --auto`. **Not tested on hardware yet** |
+| `steamos-factory-reset-config` | Valve's helper (re-runs itself through pkexec): requests a reset of the user data, which `io-factory-reset` carries out at the next start (Valve's records the partitions its initramfs formats). Without a password only from the active local session (Steam); Valve's policy allows any caller. See [Deviations](Deviations), *Factory reset*. **Not tested on hardware yet** |
 | `jupiter-dock-updater` | Valve's helper: runs Valve's `jupiter-dock-updater.sh` (`jupiter-dock-updater-bin`, `hub_update`). `--check`: 0 = update available, 7 = up to date. Without the package `--check` answers 7 and an update is refused. `UpdateDock1` runs the same script. **Not tested on hardware yet** (needs Valve's dock) |
 
 Not a helper, but also called by Steam: `jupiter-initial-firmware-update`
@@ -42,7 +43,6 @@ flash a controller whose firmware is newer than Io's copy.
 |---|---|
 | `jupiter-amp-control` | Target script is in none of Valve's published packages and missing on SteamOS too (3.8.4 and 3.9.2); audio works without it |
 | `steamos-reboot-other` | A/B slot switching |
-| `steamos-factory-reset-config` | Records Valve's A/B partitions for a reset; an Io reset would be its own design |
 
 Steam also looks for `steamos-update` and `steamos-select-branch` in
 `/usr/bin`: `/usr/bin/steamos-update` is Io's script itself (from

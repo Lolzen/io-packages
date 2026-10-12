@@ -28,7 +28,8 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # and f3probe and mkfs.exfat for validating a card), which refuses the disk
 # Io runs from. The firmware helpers hand over to deck-firmware-updaters
 # (BIOS, controller) and jupiter-dock-updater-bin (Valve's dock), which
-# carry Valve's updaters and firmware files.
+# carry Valve's updaters and firmware files. steamos-factory-reset-config
+# requests a reset of the user data from io-factory-reset.
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers

@@ -1,0 +1,335 @@
+#!/bin/bash
+# io-factory-reset - Io's factory reset, in place of SteamOS's
+# steamos-reset-tool and holo-factory-reset.
+#
+# SteamOS resets in two parts, which Steam (FactoryReset1.PrepareFactoryReset)
+# asks for separately or together:
+#   user data  SteamOS formats its /home and /var partitions at the next boot
+#              (the initramfs, from the partition list that
+#              holo-factory-reset-config wrote). /etc lives in /var there, so
+#              every setting goes with it.
+#   OS         SteamOS installs a fresh OS image from its update server into
+#              the other A/B slot.
+# Io has one root filesystem and no A/B slots, so:
+#   user data  is erased at the next boot, before any service starts (core
+#              service 04-io-factory-reset.sh): /home and /root emptied and
+#              deck's home made new from /etc/skel; other users removed;
+#              the user's state in /var (Wi-Fi and Bluetooth pairings,
+#              Flatpaks, logs, caches) deleted; the settings Steam and the
+#              user change in /etc set back to the image's: hostname, time
+#              zone, language, passwords and deck's groups (from
+#              /var/lib/io/factory-defaults, written by mkrootfs.sh), Wi-Fi
+#              connections and backend, SDDM's login mode, SSH host keys,
+#              machine-id, the services Steam switches (SSH on, developer
+#              mode, iwd and the LAVD scheduler off); a hibernated session is
+#              dropped.
+#   OS         is reset right away, while the system runs (it needs the
+#              network): the system is updated, packages the user installed
+#              on top of Io are removed, every package whose files were
+#              changed or deleted (xbps-pkgdb -a) is installed again, and
+#              /usr/local is emptied. The repository settings (/etc/xbps.d)
+#              are kept, as SteamOS keeps its update channel.
+#
+# Usage (as root; the interactive form asks for root itself through sudo):
+#   io-factory-reset [--user-data|--os|--all]   asks, prepares, restarts
+#                                               (default --all)
+#   io-factory-reset --prepare user|os|all      no questions, no restart
+#                                               (io-steamos-manager, the
+#                                               Steam helper)
+#   io-factory-reset --status                   is a reset pending?
+#   io-factory-reset --cancel                   drop a pending reset
+#   io-factory-reset --apply                    erase the user data if a
+#                                               reset is pending (boot)
+#
+# Exit status: 0 done (a restart completes it), 1 failed or refused.
+
+set -u
+shopt -s nullglob dotglob
+
+STATE=/var/lib/io/factory-reset
+REQUEST=$STATE/request
+DEFAULTS=/var/lib/io/factory-defaults
+LOG=/var/log/io-factory-reset.log
+IO_HIBERNATE_VAR=/sys/firmware/efi/efivars/IoHibernateLocation-00693127-9e1a-4740-b3c3-13fdd5f0df56
+SV_DIR=/etc/runit/runsvdir/default
+# What mkrootfs.sh installs by name (build/packages/system); everything else
+# Io brings is a dependency of these. Keep in sync.
+BASE_PACKAGES="io-desktop void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree"
+
+# The image's settings (mkrootfs.sh writes the real ones to $DEFAULTS; these
+# are build/config/system.conf's defaults, for installations made before)
+IO_DEFAULT_USER=deck
+IO_DEFAULT_GROUPS=wheel,audio,video,input,storage,socklog
+IO_DEFAULT_HOSTNAME=io
+IO_DEFAULT_TIMEZONE=UTC
+IO_DEFAULT_LANG=en_US.UTF-8
+IO_DEFAULT_ROOTHASH=
+IO_DEFAULT_USERHASH=
+IO_DEFAULT_PASSWORD=deck
+
+say() { printf '%s\n' "$*" >&2; }
+die() { say "io-factory-reset: $*"; exit 1; }
+need_root() { [ "$(id -u)" -eq 0 ] || die "must run as root"; }
+
+# Progress on the boot splash, when there is one
+splash() {
+    if command -v plymouth > /dev/null && plymouth --ping 2> /dev/null; then
+        plymouth display-message --text="$*" 2> /dev/null
+    fi
+}
+
+################################################################################
+# User data (at boot)
+################################################################################
+
+drop_hibernation() {
+    if [ -e "$IO_HIBERNATE_VAR" ]; then
+        chattr -i "$IO_HIBERNATE_VAR" 2> /dev/null
+        rm -f "$IO_HIBERNATE_VAR"
+        say "hibernated session dropped"
+    fi
+}
+
+# People's accounts: UID 1000 and up with a home in /home (system
+# accounts have neither)
+remove_other_users() {
+    local name uid home
+    while IFS=: read -r name _ uid _ _ home _; do
+        [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || continue
+        case "$home" in /home/*) ;; *) continue ;; esac
+        [ "$name" = "$IO_DEFAULT_USER" ] && continue
+        userdel "$name" && say "user $name removed"
+    done < <(getent passwd)
+}
+
+empty_dir() {
+    # everything in $1 but lost+found, without following links
+    [ -d "$1" ] || return 0
+    # and not into other filesystems mounted below (a second drive in fstab)
+    find "$1" -mindepth 1 -maxdepth 1 ! -name lost+found -exec rm -rf --one-file-system -- {} +
+}
+
+new_home() {
+    local user=$IO_DEFAULT_USER home mode
+    home=$(getent passwd "$user" | cut -d: -f6)
+    [ -n "$home" ] || { say "no user $user"; return 1; }
+    mode=$(stat -c %a "$home" 2> /dev/null || echo 700)
+    splash "Factory reset: erasing user data"
+    say "erasing /home"
+    empty_dir /home
+    say "erasing /root"
+    empty_dir /root
+    mkdir -p "$home"
+    cp -a /etc/skel/. "$home/"
+    chown -R "$user:$(id -gn "$user")" "$home"
+    chmod "$mode" "$home"
+    say "$home made new from /etc/skel"
+}
+
+clear_var() {
+    local d
+    say "erasing the user's state in /var"
+    for d in /var/lib/bluetooth /var/lib/NetworkManager /var/lib/iwd /var/lib/flatpak \
+        /var/lib/sddm /var/lib/AccountsService/users /var/lib/AccountsService/icons \
+        /var/lib/upower /var/lib/udisks2 /var/tmp /var/cache/xbps; do
+        empty_dir "$d"
+    done
+    # socklog's filter files (config) belong to socklog-void
+    find /var/log -type f ! -name config -delete 2> /dev/null
+}
+
+reset_identity() {
+    local user=$IO_DEFAULT_USER g groups=""
+    say "settings back to the image's"
+    printf '%s\n' "$IO_DEFAULT_HOSTNAME" > /etc/hostname
+    ln -sf "/usr/share/zoneinfo/$IO_DEFAULT_TIMEZONE" /etc/localtime
+    printf 'LANG=%s\n' "$IO_DEFAULT_LANG" > /etc/locale.conf
+    if [ -n "$IO_DEFAULT_ROOTHASH" ] && [ -n "$IO_DEFAULT_USERHASH" ]; then
+        usermod -p "$IO_DEFAULT_ROOTHASH" root
+        usermod -p "$IO_DEFAULT_USERHASH" "$user"
+    else
+        printf 'root:%s\n%s:%s\n' "$IO_DEFAULT_PASSWORD" "$user" "$IO_DEFAULT_PASSWORD" | chpasswd
+    fi
+    # only groups that exist: usermod changes nothing if one is missing
+    for g in $(echo "$IO_DEFAULT_GROUPS" | tr ',' ' '); do
+        getent group "$g" > /dev/null && groups="${groups:+$groups,}$g"
+    done
+    [ -n "$groups" ] && usermod -G "$groups" "$user"
+
+    # Wi-Fi connections, Wi-Fi backend and power saving (Steam's switches)
+    rm -f /etc/NetworkManager/system-connections/*
+    rm -f /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf
+    rm -f /etc/NetworkManager/conf.d/99-io-wifi-powersave.conf
+    rm -f /etc/iwd/main.conf
+    # Login mode and temporary session (io-steamos-manager)
+    rm -f /etc/sddm.conf.d/zz-steamos-autologin.conf /etc/sddm.conf.d/zzt-steamos-temp-login.conf
+    # New SSH host keys (sshd's service makes them when they are missing)
+    rm -f /etc/ssh/ssh_host_*
+    # A machine-id of its own, as after installing (io-restore)
+    od -An -N16 -tx1 /dev/urandom | tr -d ' \n' > /etc/machine-id
+    printf '\n' >> /etc/machine-id
+    if [ -e /var/lib/dbus/machine-id ] || [ -L /var/lib/dbus/machine-id ]; then
+        rm -f /var/lib/dbus/machine-id
+        ln -s /etc/machine-id /var/lib/dbus/machine-id
+    fi
+
+    # The services Steam switches, as the image has them
+    [ -d /etc/sv/sshd ] && ln -sfn /etc/sv/sshd "$SV_DIR/sshd"
+    rm -f "$SV_DIR/avahi-daemon" "$SV_DIR/steamos-devkit-service" "$SV_DIR/iwd" \
+        "$SV_DIR/scx" "$SV_DIR/ec-log"
+}
+
+apply_user_reset() {
+    need_root
+    [ -f "$REQUEST" ] || return 0
+    # Only from the boot (04-io-factory-reset.sh): under a running session
+    # this would empty /home while it is in use.
+    [ "${IO_FACTORY_RESET_AT_BOOT:-}" = 1 ] || die "--apply runs at boot only"
+    # shellcheck disable=SC1090
+    [ -r "$DEFAULTS" ] && . "$DEFAULTS"
+    say "== factory reset: user data ($(date '+%F %T'))"
+    # The account itself first: everything below works on it, and without
+    # it nobody but root could log in.
+    if ! getent passwd "$IO_DEFAULT_USER" > /dev/null; then
+        say "no user $IO_DEFAULT_USER, creating it"
+        useradd -m -s /bin/bash "$IO_DEFAULT_USER" || return 1
+    fi
+    drop_hibernation
+    remove_other_users
+    new_home || return 1
+    clear_var
+    reset_identity
+    sync
+    # Only now: if the power goes in between, the next boot starts over.
+    rm -f "$REQUEST"
+    say "== factory reset done"
+    splash ""
+    return 0
+}
+
+################################################################################
+# OS (right away)
+################################################################################
+
+reset_os() {
+    local manual extra missing p broken pending
+    say "== factory reset: OS ($(date '+%F %T'))"
+    say "updating the system"
+    xbps-install -S > /dev/null || { say "cannot reach the repositories"; return 1; }
+    xbps-install -uy xbps >&2
+    xbps-install -uy >&2
+    # judged by what is left, not by xbps' exit status; a dry run that fails
+    # (unresolved dependencies, conflicts) counts as failed as well
+    if ! pending=$(xbps-install -un) || [ -n "$pending" ]; then
+        say "system update failed"
+        return 1
+    fi
+
+    # Io's own packages back where a user removed them
+    missing=""
+    for p in $BASE_PACKAGES; do
+        xbps-query "$p" > /dev/null 2>&1 || missing="$missing $p"
+    done
+    if [ -n "$missing" ]; then
+        say "installing Io's packages again:$missing"
+        # shellcheck disable=SC2086
+        xbps-install -y $missing >&2 || { say "installing Io's packages failed"; return 1; }
+    fi
+
+    say "checking every package's files"
+    broken=$(xbps-pkgdb -a 2>&1 | sed -n 's/^\(ERROR: \|WARNING: \)\{0,1\}\([^ :]*\): .*/\2/p' | sort -u |
+        while read -r p; do xbps-query "$p" > /dev/null 2>&1 && echo "$p"; done)
+    if [ -n "$broken" ]; then
+        say "installing again (changed or missing files):" $broken
+        # shellcheck disable=SC2086
+        xbps-install -fy $broken >&2 || return 1
+    fi
+
+    # Packages installed by name on top of Io become automatic: those that
+    # Io's packages need stay, the others go with the orphans.
+    manual=$(xbps-query -m | xargs -r -n1 xbps-uhelper getpkgname)
+    extra=""
+    for p in $manual; do
+        case " $BASE_PACKAGES " in *" $p "*) ;; *) extra="$extra $p" ;; esac
+    done
+    if [ -n "$extra" ]; then
+        say "packages installed on top of Io:$extra"
+        # shellcheck disable=SC2086
+        xbps-pkgdb -m auto $extra >&2 || return 1
+    fi
+    xbps-remove -oy >&2 || { say "removing packages failed"; return 1; }
+
+    say "emptying /usr/local"
+    find /usr/local -mindepth 1 ! -type d -delete 2> /dev/null
+    say "== OS reset done"
+    return 0
+}
+
+################################################################################
+# Commands
+################################################################################
+
+prepare() {
+    need_root
+    case "${1:-}" in
+        user | os | all) ;;
+        *) die "usage: io-factory-reset --prepare user|os|all" ;;
+    esac
+    mkdir -p "${LOG%/*}"
+    {
+        if [ "$1" != user ]; then
+            reset_os || { say "OS reset failed; user data left as it is"; exit 1; }
+        fi
+        if [ "$1" != os ]; then
+            mkdir -p "$STATE" || exit 1
+            echo "user" > "$REQUEST" || exit 1
+            say "user data will be erased at the next start ($REQUEST)"
+        fi
+    } 2>&1 | tee -a "$LOG" >&2
+    return "${PIPESTATUS[0]}"
+}
+
+interactive() {
+    local kind=all answer
+    case "${1:-}" in
+        --user-data) kind=user ;;
+        --os) kind=os ;;
+        --all | "") kind=all ;;
+        *) die "unknown option: $1" ;;
+    esac
+    if [ "$(id -u)" -ne 0 ]; then
+        exec sudo "$0" "$@"
+    fi
+    echo
+    case $kind in
+        user) echo "Factory reset of Io: ALL USER DATA will be erased at the next start" ;;
+        os) echo "Factory reset of Io: the system is updated and repaired, packages you installed are removed" ;;
+        all) echo "Factory reset of Io: the system is repaired and ALL USER DATA erased at the next start" ;;
+    esac
+    echo "(games, saves not in the cloud, Wi-Fi connections, settings, files in /home)."
+    printf 'Type yes to continue: '
+    read -r answer
+    [ "$answer" = yes ] || { echo "Nothing was changed."; exit 0; }
+    prepare "$kind" || exit 1
+    echo "Restarting ..."
+    reboot
+}
+
+case "${1:-}" in
+    --prepare) shift; prepare "${1:-}"; exit $? ;;
+    --apply)
+        # Logged to /run first: the reset deletes the logs in /var/log.
+        apply_user_reset > /run/io-factory-reset.log 2>&1
+        rc=$?
+        mkdir -p "${LOG%/*}"
+        cat /run/io-factory-reset.log >> "$LOG" 2> /dev/null
+        exit $rc
+        ;;
+    --status)
+        if [ -f "$REQUEST" ]; then echo "pending: user data is erased at the next start"; else echo "no reset pending"; fi
+        exit 0
+        ;;
+    --cancel) need_root; rm -f "$REQUEST"; echo "no reset pending"; exit 0 ;;
+    -h | --help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) interactive "$@" ;;
+esac

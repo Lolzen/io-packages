@@ -165,7 +165,10 @@ sudo build/mkrecovery.sh
   services and GRUB's defaults with Io's kernel command line, and packs it
   with every xattr and ACL (file capabilities included). What depends on
   the disk is left out of the tarball. The xbps cache and the root's shell
-  history are removed before packing.
+  history are removed before packing. The image's settings (user,
+  groups, hostname, time zone, language, password hashes) are recorded in
+  `/var/lib/io/factory-defaults` (root only), which a factory reset
+  returns to.
 - `mkrootfs.sh` and `mkrecovery.sh` put the repository keys from
   `build/keys/` (Void's two and Io's, named by fingerprint as xbps names
   them) into a root before installing into it, so a build never stops at xbps's question whether to import a

@@ -66,9 +66,9 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
     drive; found by its `IOROOT` partition) and the repairs: check and
     repair the filesystems, rebuild the initramfs, reinstall the boot
     loader, forget a hibernated session that does not resume (the session
-    is lost), check the installed packages, open a root shell in the
-    installation. Nothing else on the disk is changed (`io-repair`). Not
-    tested on hardware yet.
+    is lost), check the installed packages, request a factory reset (Io
+    erases all user data at its next start), open a root shell in the
+    installation (`io-repair`). Not tested on hardware yet.
 - **Everything works by touch or with the trackpad.** The dialogs need no
   keyboard.
 - **The on-screen keyboard opens only on touch.** To type into the

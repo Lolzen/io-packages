@@ -70,7 +70,7 @@ and sources of Io's packages are on [Packages](Packages).
 | SteamOS 3.9.2 | Why |
 |---|---|
 | `steamos-atomupd-client`, `atomupd-daemon`, `rauc`, `holo-desync`, `steamos-efi` | Atomic A/B system updates; Io updates with xbps behind Steam's `steamos-update` script and its own `Atomupd1` service, see [Deviations](Deviations), *System updates* |
-| `steamos-reset` | Factory reset of the A/B system; an Io reset would be its own design |
+| `steamos-reset` | Factory reset of the A/B system; Io has its own, `io-factory-reset` (see [Deviations](Deviations), *Factory reset*) |
 | `dmemcg-booster`, `kcgroups`, `plasma-foreground-booster` | Driven by systemd's units and slices (`org.freedesktop.systemd1`); decided not to implement, see [Deviations](Deviations) |
 | `steamos-log-submitter`, `jupiter-steamos-log-submitter` | Sends crash logs to Valve; would have to be retargeted first |
 | `kdumpst`, `steamos-kdumpst-layer` | Kernel crash dumps, developer-facing; parked |

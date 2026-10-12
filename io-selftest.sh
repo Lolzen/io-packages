@@ -172,6 +172,15 @@ case "$CTRLOUT" in *needs_update=*) CTRLOK=yes ;; *) CTRLOK=no ;; esac
 check "controller check runs" test "$CTRLOK" = yes
 info "last firmware run at boot: $(grep '^==' /var/log/io-firmware-update.log 2> /dev/null | tail -n 1)"
 
+echo "== factory reset (nothing is reset)"
+check "io-factory-reset installed" test -x /usr/bin/io-factory-reset
+check "no factory reset pending" sh -c '/usr/bin/io-factory-reset --status | grep -q "no reset pending"'
+if [ -s /var/lib/io/factory-defaults ]; then
+    info "image settings for a reset: /var/lib/io/factory-defaults"
+else
+    info "no /var/lib/io/factory-defaults (image older than io-factory-reset): a reset uses the build defaults"
+fi
+
 echo "== storage"
 HW=/usr/lib/hwsupport
 RULES=/usr/lib/udev/rules.d
@@ -204,6 +213,7 @@ if [ -n "$SPID" ]; then
     SBUS=$(tr '\0' '\n' < /proc/$SPID/environ | grep '^DBUS_SESSION_BUS_ADDRESS=' | cut -d= -f2-)
     check "session half: Storage1 for Steam" sh -c "setpriv --reuid $(id -u $U) --regid $(id -g $U) --init-groups env 'DBUS_SESSION_BUS_ADDRESS=$SBUS' busctl --user introspect $SM $SMP | grep -q Storage1"
     check "session half: UdevEvents1 (USB over-current)" sh -c "setpriv --reuid $(id -u $U) --regid $(id -g $U) --init-groups env 'DBUS_SESSION_BUS_ADDRESS=$SBUS' busctl --user introspect $SM $SMP | grep -q UdevEvents1"
+    check "session half: FactoryReset1 (io-factory-reset)" sh -c "setpriv --reuid $(id -u $U) --regid $(id -g $U) --init-groups env 'DBUS_SESSION_BUS_ADDRESS=$SBUS' busctl --user introspect $SM $SMP | grep -q FactoryReset1"
 else
     info "Steam not running: Storage1, UdevEvents1 not checked"
 fi

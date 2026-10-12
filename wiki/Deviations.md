@@ -139,8 +139,10 @@ the session bus that Steam talks to.
   (pyudev) for a USB interface's `change` event carrying
   `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a
   port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
-- **Not implemented yet:** `FactoryReset1` (an Io reset is its own
-  design).
+- **`FactoryReset1`** runs Io's own `io-factory-reset` in the root half
+  instead of Valve's `steamos-reset-tool` (see *Factory reset*); exported
+  only where it is installed. As in steamos-manager it is a plain call, not
+  a job: 1 (*reboot required*) on success, 0 otherwise.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
   and 3.9.2).
 - **HDMI-CEC (`HdmiCec1`, `HdmiCec2`)** as in steamos-manager 26.4.1: the
@@ -533,12 +535,57 @@ interfaces Steam uses:
 
 ---
 
+## Factory reset
+
+SteamOS resets an A/B system: for the user data its initramfs formats the
+`/home` and `/var` partitions at the next boot (`/etc` lives in `/var`
+there, so every setting goes too); for the OS, `steamos-reset-tool`
+installs a fresh image from Valve's update server into the other slot.
+Steam asks for either or both (`FactoryReset1.PrepareFactoryReset`: 1 user
+data, 2 OS, 3 both) or runs the helper `steamos-factory-reset-config` (user
+data), then restarts the Deck. Io has one root filesystem and no slots, so
+`io-factory-reset` does it in place:
+
+- **User data**, at the next start, before any service (core service
+  `04-io-factory-reset.sh`; SteamOS's initramfs runs at the same point):
+  `/home` and `/root` emptied, deck's home made new from `/etc/skel`, other
+  people's accounts removed; Wi-Fi and Bluetooth pairings, Flatpaks, logs
+  and caches in `/var` deleted; the settings Steam and the user change in
+  `/etc` set back to the image's (hostname, time zone, language, passwords,
+  deck's groups, Wi-Fi connections, backend and power saving, SDDM's login
+  mode, SSH host keys, machine-id, and the services Steam switches: SSH on;
+  developer mode, iwd and the LAVD scheduler off); a hibernated session is
+  dropped. The image's values come from `/var/lib/io/factory-defaults`,
+  written by `mkrootfs.sh`; older installations get the build defaults.
+  Everything else in `/etc` stays as it is: unlike SteamOS, Io cannot tell
+  a changed system file in `/etc` from one an update brought.
+- **OS**, right away while the system runs (it needs the network): the
+  system is updated, packages installed on top of Io are removed (those
+  Io's packages need stay), every package whose files were changed or
+  deleted is installed again (`xbps-pkgdb -a`), and `/usr/local` is
+  emptied. The update channel (`/etc/xbps.d`) is kept, as SteamOS keeps
+  its branch. Steam's call waits until this is done, as it waits for
+  Valve's download of the new image; whether Steam's client gives up
+  earlier is one of the things to test.
+- Steam's helper `steamos-factory-reset-config` needs no password only in
+  the active local session (Steam); Valve's policy lets any caller
+  schedule the wipe.
+- Like SteamOS, an interrupted user-data reset is started again at the
+  next start until it completes.
+- From a terminal: `io-factory-reset` asks first and restarts;
+  `--status` and `--cancel` for a pending reset. On the recovery stick,
+  *Repair Io* can request the same reset for an Io that does not start.
+
+**Not tested on hardware yet.**
+
+---
+
 ## Not present on Io
 
 Atomic A/B updates (`steamos-atomupd`, `rauc`, `holo-desync`,
-`steamos-efi`; Io updates with xbps, see *System updates*), factory reset
-(`steamos-reset`), the crash log submitter, Valve's nested desktop (Plasma
-inside game mode), and the VRAM
+`steamos-efi`; Io updates with xbps, see *System updates*), Valve's reset
+tool (`steamos-reset`; Io has its own, see *Factory reset*), the crash log
+submitter, Valve's nested desktop (Plasma inside game mode), and the VRAM
 priority for the foreground game (`dmemcg-booster`, `kcgroups`,
 `plasma-foreground-booster`: driven by systemd's units and slices; decided
 not to implement on 2026-10-03: `dmemcg-booster` protects the user's
