@@ -107,9 +107,15 @@ someone with the hardware.
 - **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`), waking from
   the TV through the embedded controller, Valve's audio profile (HDMI, AC3
   for ARC), fan control. Not ported: CEC volume control (needs Valve's
-  PipeWire and WirePlumber patches), BIOS updates (`fremont-hw-support`,
-  fwupd), Valve's own USB Bluetooth firmware, the regulatory domain helper
-  (`wireless-domain-setter`, on the branch `pending`)
+  PipeWire and WirePlumber patches), Valve's PipeWire HDMI fixes (ports
+  for the AC3 profiles, the HDMI profiles rechecked when the connected
+  display's ELD changes, limited to the connector that changed; from
+  PipeWire's master, not in the 1.6 series Void ships), BIOS updates
+  (`fremont-hw-support`, fwupd), Valve's own USB Bluetooth firmware, the
+  regulatory domain helper (`wireless-domain-setter`, on the branch
+  `pending`). The PipeWire fixes wait for a Void PipeWire update that
+  contains them, rather than an Io overlay, unless a Steam Machine user
+  needs them sooner
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
   and the display quirks
