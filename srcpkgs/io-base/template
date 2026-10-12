@@ -1,6 +1,6 @@
 # Template file for 'io-base'
 pkgname=io-base
-version=0.7.0
+version=0.7.1
 revision=1
 depends="polkit socklog-void plymouth alsa-pipewire efibootmgr util-linux
  grub-x86_64-efi"

@@ -65,6 +65,10 @@
 - **Wi-Fi:** Steam's Wi-Fi debug options (`WifiDebug1`, `WifiDebugDump1`)
   and the ath11k card's regulatory domain handed to the kernel (see
   *Wi-Fi* above).
+- **Initramfs:** Valve's Deck modules, which SteamOS puts into the initramfs
+  on both models: the Deck's own drivers and the USB dual-role stack (DWC3),
+  which Valve adds for the OLED's USB (`io-base` 0.7.1, and the recovery
+  stick).
 - The selftest skips the check for the LCD's Realtek Bluetooth firmware on
   the OLED.
 
