@@ -30,6 +30,7 @@ fi
 echo "== system"
 info "kernel $(uname -r)"
 check "kernel 7.2 (linux-neptune-72)" sh -c 'uname -r | grep -q "^7\.2"'
+check "Valve's Deck modules in the initramfs (steamos-tuning)" sh -c 'lsinitrd /boot/initramfs-$(uname -r).img | grep -q "steamdeck-hwmon.ko"'
 if [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ]; then
     info "Steam Deck OLED: Bluetooth is Qualcomm (upstream firmware), Valve's Realtek firmware not used"
 else

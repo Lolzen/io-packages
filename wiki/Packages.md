@@ -35,7 +35,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `gpu-trace` | `gpu-trace` 2.16 ([lostgoat/gpu-trace](https://github.com/lostgoat/gpu-trace)) | Steam's system tracing (developer settings), runit service |
 | `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
 | `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |
-| `steamos-tuning` | `steamos-customizations-jupiter` 20260827.2 | Sysctls, early HID drivers, NTSync loaded at boot, Valve's scheduler tunings (debugfs), 1 GiB swap file, X11 virtual display size, Proton's nice limit, `EDITOR=vim`, `LIBVA_DRIVER_NAME=radeonsi`; Io's own: the hibernation guard and the open-file limit SteamOS gets from systemd |
+| `steamos-tuning` | `steamos-customizations-jupiter` 20260827.2 | Sysctls, early HID drivers, NTSync loaded at boot, the Deck's initramfs modules (dracut configuration; the initramfs is rebuilt when they change), Valve's scheduler tunings (debugfs), 1 GiB swap file, X11 virtual display size, Proton's nice limit, `EDITOR=vim`, `LIBVA_DRIVER_NAME=radeonsi`; Io's own: the hibernation guard and the open-file limit SteamOS gets from systemd |
 | `holo-dmi-rules` | `holo-dmi-rules` 1.1 | DMI serial number permissions |
 | `holo-fstab-repair` | `holo-fstab-repair` 0.2 | Disables invalid SD card fstab lines ([SteamOS#1208](https://github.com/ValveSoftware/SteamOS/issues/1208)) |
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |

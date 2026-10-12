@@ -1,7 +1,7 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
-version=1.3
-revision=2
+version=1.4
+revision=1
 depends="util-linux"
 short_desc="Valve's SteamOS tuning: sysctls, limits, scheduler, HID preload, swap file"
 maintainer="Georg <funer@gmx.at>"
@@ -35,6 +35,10 @@ homepage="https://github.com/Lolzen/io-packages"
 #   libva.sh - LIBVA_DRIVER_NAME=radeonsi for every login (profile.d),
 #     written by Valve's PKGBUILD.
 #   holo.sh - EDITOR=vim (and VISUAL=gvim) unless set, as on SteamOS.
+#   20-steam-deck.conf - the Deck modules of Valve's mkinitcpio hook
+#     "steam-deck" as a dracut configuration (dracut is Void's initramfs
+#     generator). INSTALL rebuilds existing initramfs images once when the
+#     list changes, as pacman does for a changed mkinitcpio hook.
 # Everything ported here is identical in 20260827.2, the version of SteamOS
 # 3.9.2 (checked 2026-10-04). Not ported yet: Valve's suspend-then-hibernate
 # settings of 3.9.2 (sleep.conf.d, delay 20 minutes on battery); they only
@@ -68,6 +72,8 @@ do_install() {
 	vmkdir usr/lib/modules-load.d
 	vinstall ${FILESDIR}/hid-preload.conf 644 usr/lib/modules-load.d
 	vinstall ${FILESDIR}/ntsync.conf 644 usr/lib/modules-load.d
+	vmkdir usr/lib/dracut/dracut.conf.d
+	vinstall ${FILESDIR}/20-steam-deck.conf 644 usr/lib/dracut/dracut.conf.d
 	vinstall ${FILESDIR}/holo-cfs-debugfs-settings 755 usr/libexec
 	vmkdir etc/runit/core-services
 	vinstall ${FILESDIR}/holo-create-swapfile 755 usr/libexec

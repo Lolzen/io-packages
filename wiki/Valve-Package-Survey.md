@@ -44,7 +44,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `holo-upower-config` 1.0 (not on 3.8.4) | 1.0 | With a fix for Valve's `yes`/`true` bug |
 | `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.3-3 | |
 | `jupiter-firewall` 0.1 | 0.1 | ufw instead of firewalld |
-| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
+| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, the initramfs modules of the `steam-deck` hook (as a dracut configuration), scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
 | `steamos-tweak-mtu-probing` | in `steamos-tuning` | |
 | `lib32-gamescope` 3.16.30 (3.16.15) | `gamescope-wsi-32bit` 3.16.30 | Only gamescope's WSI layer for 32-bit Vulkan games (frame limiter, bypass, HDR), built for i686 from gamescope's source |
 | `ttf-twemoji-default` 13.1.0-2.5 | `ttf-twemoji-default` 13.1.0 | Built as Valve builds it: Fedora's Twemoji with the same glyphs removed and the same fontconfig file |

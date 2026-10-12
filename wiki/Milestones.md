@@ -38,10 +38,6 @@ has changed since is on [Alpha 7](Alpha-7).
 
 ## Open observations
 
-- **Roaming** between router and repeater with the same network name: the
-  Deck held on to the weak connection (seen with iwd, before
-  `wireless-regdb`). Compare with wpa_supplicant, which since Alpha 7 is
-  built with WNM and MBO (`wpa_supplicant-holo`), as on SteamOS
 - **Desktop responsiveness:** SteamOS 3.9.2's desktop felt more responsive
   than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
   the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
@@ -141,6 +137,8 @@ someone with the hardware.
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
   once for 3.9.2 in October 2026
+- **Repair Io** on the recovery stick: today a placeholder that lists the
+  disks ([Installation](Installation)); real repair tools to come
 - **A factory reset of Io's own** (fresh home directory): a design decision,
   and destructive
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
@@ -149,6 +147,10 @@ someone with the hardware.
   **flavours**: *Plasma* (today's image),
   *Base* (game mode only), *Slim* (a light desktop). The split is prepared:
   `io-base` is the core, `io-desktop` adds the desktop
+- **Automation, once Io changes less often:** GitHub Actions that build and
+  publish the packages; man pages; a version check that writes Valve's
+  newer versions to a file unless they are listed as already looked at
+  (`pkgcheck.sh` today reports what changed since its last run)
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
   default password on first boot. 1.0 is the beta (`beta1.img`,
   `beta1.iso`)
