@@ -59,6 +59,11 @@
   not, among them WNM and MBO for roaming between access points.
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
+- **`wireless-domain-setter`** (Valve's, new; runit service on every
+  model): copies the regulatory domain of a self-managed card (the OLED's
+  ath11k) to the kernel, for cards that follow the global domain such as
+  Valve's USB streaming dongle, whose driver it also reloads at boot. On
+  the LCD it ends at once.
 
 ### Image build
 

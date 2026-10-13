@@ -182,6 +182,12 @@ the session bus that Steam talks to.
   instead of systemd's `zram-generator`, with Valve's values: half of RAM,
   zstd, priority 100, zswap off. Valve's 1 GiB swap file is switched on by
   a core service instead of `swapfile.service` and `home-swapfile.swap`.
+- **`wireless-domain-setter`** (Valve's, copies a self-managed Wi-Fi card's
+  regulatory domain to the kernel) runs once at boot as a runit service
+  that then idles, on every model as on SteamOS (there a systemd service).
+  On the LCD it ends at once, as its card is not self-managed; with Valve's
+  USB streaming dongle plugged in it also reloads that dongle's driver
+  (`rtw89_8852cu`), as on SteamOS.
 - **Hibernation is allowed only with `/` on the internal NVMe and `resume=`
   on the kernel command line** (Io's own core service writes elogind's
   `sleep.conf.d`); without a resume path a hibernated session would be
