@@ -35,7 +35,7 @@ its reason.
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
 | GRUB boots Io without its menu; *Restart* from Io starts Io again (UEFI `BootNext`), switching on starts the firmware's default system | `steamcl` without a menu, SteamOS on the internal SSD is the firmware's default | Io on an SD card has no boot entry of its own (GRUB at the removable path), so a restart started the internal SteamOS. `BootNext` lasts one boot, so SteamOS stays the default. A boot that goes wrong ends in dracut's emergency shell; the recovery stick keeps its menu |
-| SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the test phase. Images for 1.0 will follow SteamOS |
+| SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the alpha and beta phases. Images for 1.0 will follow SteamOS |
 
 ---
 

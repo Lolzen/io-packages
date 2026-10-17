@@ -5,6 +5,51 @@ the [Changelog](Changelog). The latest release is [Alpha 7](Alpha-7).
 
 ---
 
+## Beta (next)
+
+With Alpha 7 the foundation is in place and Io is usable day to day; the
+beta is for making it good. Its release versions go on from Alpha 7's 0.7:
+0.0.1 steps for ordinary releases (0.7.1, 0.7.2, ...), a 0.1 step for a
+larger change (0.8, ...; the middle number goes on past 9, as in 0.10 or
+0.102.3). 1.0 is the first stable release. SSH stays enabled in the images
+throughout the beta. Whether a beta release comes with a new image is
+decided per release. As in the alpha phase, io-packages is public, but
+there is no call for testers yet (not even for the hardware pull
+requests).
+
+**First: the move to the NVMe**
+
+1. The last captures on SteamOS, among them its factory reset
+   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards
+2. The branch `destructive` on the Deck (see *In branches*): formatting
+   against the internal SSD while Io runs from the card, the move with the
+   recovery stick, suspend-then-hibernate, formatting SD cards and USB
+   drives, the firmware updaters' check modes, `io-repair`, Io's factory
+   reset (compared with SteamOS's capture)
+3. `destructive` to `main`; Valve's calibration tools follow as their own
+   pull request
+4. With Io on the NVMe: the desktop responsiveness again (*Open
+   observations*)
+
+**Then, release by release**
+
+- Pull request #1 (Io's changelog in Steam's patch notes): the check of
+  Steam's update page
+- *Tests pending* and *Open observations* below
+- Valve's newer versions (*Catching up with Valve*): `gpu-trace` 2.17 moves
+  its daemon log to `-l`, which Io's run script must pass; the kernel
+  7.2.7-valve2 with its configuration review ([Kernel](Kernel))
+- Void's side: NetworkManager 1.58.1 (*Next*), Mesa patches dropped as
+  Void's Mesa takes them (the three RADV fixes most likely with 26.2.6), and
+  the overlays rebuilt after Void updates (*Recurring*)
+- The image build: Python's byte-compiling fails for some modules because
+  `mkrootfs.sh` installs the packages before `/dev` is mounted in the root
+  (`compileall -j0` needs `/dev/shm`); mount the pseudo file systems first,
+  as void-mklive does
+- *Polish* below
+
+---
+
 ## In branches
 
 Work that is built but not on `main` yet, each on its own branch of
@@ -171,8 +216,9 @@ someone with the hardware.
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
   default password on first boot; a sweep of Io's packages for Valve's
   artwork and trademarks (`steamdeck-kde-presets`' wallpapers, avatars and
-  splash, the cursor in `deck-hw-support`). 1.0 is the beta (`beta1.img`,
-  `beta1.iso`)
+  splash, the cursor in `deck-hw-support`); whether Valve's binaries
+  (firmware, updaters, Steam's bootstrap) may be passed on. 1.0 is the
+  first stable release
 
 ---
 
