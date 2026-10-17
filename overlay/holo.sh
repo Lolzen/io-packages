@@ -306,6 +306,35 @@ cmd_gen() {
             cat "$OVERLAY/$o/template.append"
         } >> "$dst/template"
     fi
+    if is_lib32 "$o"; then
+        # xbps-src gives a -32bit package only the provides it reads from
+        # $XBPS_STATEDIR/<pkg>-32bit-provides (do-pkg/00-gen-pkg.sh), and
+        # no hook writes that file (pre-pkg/04-generate-provides.sh writes
+        # <pkg>-provides only). Without it libgbm-holo-32bit would not
+        # stand in for libgbm-32bit, and Void's -32bit packages depending
+        # on it (gst-plugins-base1-32bit) would be broken. The file is
+        # written here in the i686 build, before do-pkg reads it.
+        {
+            echo
+            echo "# Io overlay (lib32=yes, overlay/holo.sh): provides of the -32bit packages"
+            echo "_io_lib32_provides() {"
+            echo "	[ \"\$XBPS_TARGET_MACHINE\" = i686 ] || return 0"
+            echo "	local _n"
+            echo "	for _n in $o $subs; do"
+            echo "		echo \"\${_n}-32bit-\${version}_\${revision}\" > \"\${XBPS_STATEDIR}/\${_n}-holo-32bit-provides\""
+            echo "	done"
+            echo "}"
+            echo "if declare -f post_install > /dev/null; then"
+            echo "	eval \"_io_lib32_void_\$(declare -f post_install)\""
+            echo "else"
+            echo "	_io_lib32_void_post_install() { :; }"
+            echo "fi"
+            echo "post_install() {"
+            echo "	_io_lib32_void_post_install"
+            echo "	_io_lib32_provides"
+            echo "}"
+        } >> "$dst/template"
+    fi
     sed -i "1s/.*/# Template file for '$o-holo' (generated from Void's '$o')/" "$dst/template"
 
     for s in $subs; do

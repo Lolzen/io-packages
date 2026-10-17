@@ -66,6 +66,10 @@ builds the overlay for i686 too; xbps-src turns that build into
 `<sub>-holo-32bit` packages for the multilib repository, with `replaces`
 and `provides` of Void's `<sub>-32bit`, and publish.sh publishes them with
 the 64-bit ones. Io's templates then depend on the `-holo-32bit` names.
+xbps-src itself drops the `provides` of `-32bit` packages (it reads them
+from a state file no hook writes), so holo.sh adds a `post_install` step
+that writes that file in the i686 build; without it Void's `-32bit`
+packages that depend on, say, `libgbm-32bit` would be left broken.
 
 After a Void update, run `./build.sh -p --overlays` before updating the
 Deck: between a Void revision bump and Io's rebuild, Void's `-32bit`
