@@ -13,6 +13,12 @@
   and on still starts SteamOS. See [Architecture](Architecture).
 - **GRUB without its menu** (`io-base` 0.7.0): Io starts at once, as SteamOS
   does. The recovery stick keeps its menu.
+- **Valve's Deck modules in the initramfs** (`steamos-tuning` 1.4), as
+  SteamOS's initramfs hook has them on both models: the Deck's own drivers
+  (`steamdeck` with its hwmon, LED and extcon parts) and the USB dual-role
+  stack (DWC3), which Valve adds for the OLED's USB. dracut leaves them out
+  on x86. The package rebuilds the existing initramfs once when the list
+  changes. The recovery stick has them too.
 
 ### Desktop
 
@@ -40,6 +46,10 @@
   Tested with a simulated event (a made-up port name): the signal arrives;
   Steam showed nothing for it in game mode. A real over-current is
   untested.
+- **Adaptive brightness moves Steam's brightness slider** with the
+  adjustment, as on SteamOS. It started right after `steamos-tuning` 1.4
+  rebuilt the initramfs with Valve's Deck modules (see *Boot*); before,
+  only the backlight followed and the slider stayed where it was set.
 
 ### Wi-Fi
 
@@ -49,6 +59,11 @@
   not, among them WNM and MBO for roaming between access points.
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
+- **`wireless-domain-setter`** (Valve's, new; runit service on every
+  model): copies the regulatory domain of a self-managed card (the OLED's
+  ath11k) to the kernel, for cards that follow the global domain such as
+  Valve's USB streaming dongle, whose driver it also reloads at boot. On
+  the LCD it ends at once.
 
 ### Other hardware (untested, no hardware)
 

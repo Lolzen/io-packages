@@ -1,0 +1,31 @@
+# Template file for 'wireless-domain-setter'
+pkgname=wireless-domain-setter
+version=1.2
+revision=1
+_pkgrel=1
+wrksrc="${pkgname}"
+depends="bash iw kmod runit-void"
+short_desc="Copies the Wi-Fi regulatory domain of a self-managed card to the kernel (Valve)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-3.9/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
+checksum=9477be252c365ff79d30b218ce31789395c22b0c9cb55f566b173f451b7fd00d
+
+# Valve's script (SteamOS 3.9.2, enabled on every model): when the kernel's
+# global regulatory domain is unset and a self-managed Wi-Fi card knows its
+# country (the Steam Deck OLED's and Steam Machine's Qualcomm cards, ath11k),
+# it sets that country globally, so cards that are not self-managed (Valve's
+# USB streaming dongle for the Steam Frame, rtw89_8852cu) follow it; it also
+# reloads rtw89_8852cu once to work around a driver race at boot. On the
+# LCD (rtw88, not self-managed) it ends at once ("no self-managed phy's")
+# unless that dongle is plugged in. Not tested on Io with an OLED or the
+# dongle.
+#
+# SteamOS runs it as a systemd service at boot; here a runit service that
+# runs it once and then idles (as jupiter-firewall).
+
+do_install() {
+	vinstall wireless-domain-setter 755 usr/lib/steamos
+	vsv wireless-domain-setter
+}
