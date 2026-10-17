@@ -21,8 +21,6 @@ io-packages:
   other handhelds with a Valve device file (`other-devices`) and the Steam
   Machine (`steam-machine`); they need the hardware to be tested (see
   *Needs hardware to test*)
-- **`test-nested-desktop`:** Valve's nested desktop (Plasma inside game
-  mode); logging out of it does not end its session yet
 
 ---
 
@@ -118,7 +116,8 @@ someone with the hardware.
 
 - Designed boot splash
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
-  inside game mode, see *In branches*)
+  inside game mode; a first try with Valve's files: logging out of it did
+  not end its session)
 
 ---
 
