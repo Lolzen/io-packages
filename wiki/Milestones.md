@@ -101,6 +101,12 @@ someone with the hardware.
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
+- **Other handhelds** (Legion Go, ROG Ally, MSI Claw, Zotac Zone): only
+  Steam's performance profile (`PerformanceProfile1`, ACPI platform
+  profile); their TDP, charge limit and InputPlumber (where Valve's device
+  files define them) are not ported, so Io is not usable on them as a
+  system
+- **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`)
 - **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
   Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
   and the display quirks

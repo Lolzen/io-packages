@@ -38,6 +38,10 @@ Steam's /usr/bin/steamos-update uses as well).
 UdevEvents1 (USB over-current) runs in the user daemon, as Valve's udev
 monitor does, with pyudev.
 
+PerformanceProfile1 and FirmwareDebug1 are for hardware other than the
+Steam Deck and only appear where Valve's device files and the hardware have
+them (see device_config).
+
 Not implemented (Io lacks the backing pieces): UpdateBios1, UpdateDock1,
 FactoryReset1.
 """
@@ -122,6 +126,95 @@ def _wifi_iface():
 
 def _board():
     return _read_file("/sys/class/dmi/id/board_name", "unknown")
+
+
+# Device configuration for hardware other than the Steam Deck: Valve's device
+# files (steamos-manager data/devices/*.toml) for the devices that have a
+# PerformanceProfile1 (ACPI platform_profile) or a FirmwareDebug1 (EC log),
+# matched as steamos-manager does (hardware.rs device_match: sys_vendor
+# exactly, then board_name or product_name). None on the Steam Deck.
+DEVICE_CONFIG_DIR = "/usr/share/io/steamos-manager/devices"
+PLATFORM_PROFILE_DIR = "/sys/class/platform-profile"
+_DEVICE_CONFIG = []
+
+
+def device_config():
+    if _DEVICE_CONFIG:
+        return _DEVICE_CONFIG[0]
+    try:
+        found = _find_device_config()
+    except Exception as err:  # noqa: BLE001 - never take the daemon down
+        log(f"device configuration: {err}")
+        found = None
+    _DEVICE_CONFIG.append(found)
+    return found
+
+
+def _find_device_config():
+    import tomllib
+    vendor = _read_file("/sys/class/dmi/id/sys_vendor", "")
+    board = _read_file("/sys/class/dmi/id/board_name", None)
+    product = _read_file("/sys/class/dmi/id/product_name", None)
+    found = None
+    for path in sorted(glob.glob(os.path.join(DEVICE_CONFIG_DIR, "*.toml"))):
+        try:
+            with open(path, "rb") as f:
+                config = tomllib.load(f)
+        except (OSError, ValueError) as err:
+            log(f"could not read {path}: {err}")
+            continue
+        devices = config.get("device", [])
+        for dev in devices if isinstance(devices, list) else []:
+            dmi = dev.get("dmi") if isinstance(dev, dict) else None
+            if not isinstance(dmi, dict) or dmi.get("sys_vendor") != vendor:
+                continue
+            if (board is not None and board == dmi.get("board_name")) or (
+                    product is not None and product == dmi.get("product_name")):
+                found = config
+                break
+        if found:
+            break
+    return found
+
+
+def _platform_profile_dir():
+    """The platform-profile directory steamos-manager uses (find_sysdir: the
+    one whose name is the configured platform_profile_name)."""
+    pp = (device_config() or {}).get("performance_profile")
+    if not pp:
+        return None
+    for d in sorted(glob.glob(os.path.join(PLATFORM_PROFILE_DIR, "*"))):
+        if _read_file(os.path.join(d, "name"), "") == pp.get("platform_profile_name"):
+            return d
+    return None
+
+
+def available_platform_profiles():
+    d = _platform_profile_dir()
+    if not d:
+        return []
+    return [c for c in _read_file(os.path.join(d, "choices"), "").split(" ") if c]
+
+
+# Steam Machine's EC console log (Valve's ec-log 0.1, ec-log.service): a
+# runit service shipped here, linked only while EcLogging is on, as
+# steamos-manager starts and stops the systemd unit.
+EC_LOG_SERVICE_DIR = "/etc/sv/ec-log"
+EC_LOG_SERVICE_LINK = "/var/service/ec-log"
+# Valve starts the unit without enabling it, so EC logging is off after a
+# reboot; the marker in /run tells the root daemon at start whether the link
+# was made in this boot.
+EC_LOG_MARK = "/run/io/ec-log"
+
+
+def ec_log_reset():
+    if os.path.islink(EC_LOG_SERVICE_LINK) and not os.path.exists(EC_LOG_MARK):
+        os.remove(EC_LOG_SERVICE_LINK)
+
+
+def firmware_debug_available():
+    fd = (device_config() or {}).get("firmware_debug")
+    return bool(fd) and os.path.isdir(EC_LOG_SERVICE_DIR)
 
 
 def _int(text, default=0):
@@ -562,6 +655,43 @@ class RootManager(ServiceInterface):
             _fail(f"steamos-wifi-set-backend failed: {result.stderr.strip()}")
 
     @method()
+    def SetPerformanceProfile(self, profile: "s"):
+        # steamos-manager root.rs: write the configured platform profile
+        d = _platform_profile_dir()
+        if not d:
+            _fail("No performance platform-profile configured")
+        if profile not in available_platform_profiles():
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs",
+                            f"invalid performance profile {profile}")
+        try:
+            with open(os.path.join(d, "profile"), "w") as f:
+                f.write(profile)
+        except OSError as err:
+            _fail(f"Error writing to sysfs: {err}")
+
+    @dbus_property()
+    def EcLogging(self) -> "u":
+        # 1 while the ec-log service is linked (runsvdir starts it within a
+        # few seconds), as for the scx service of the CPU scheduler
+        if not firmware_debug_available():
+            return 0
+        return 1 if os.path.islink(EC_LOG_SERVICE_LINK) else 0
+
+    @EcLogging.setter
+    def EcLogging(self, state: "u"):
+        if not firmware_debug_available():
+            _fail("Firmware debug not configured")
+        if state > 0:
+            os.makedirs(os.path.dirname(EC_LOG_MARK), exist_ok=True)
+            open(EC_LOG_MARK, "w").close()
+            if not os.path.islink(EC_LOG_SERVICE_LINK):
+                os.symlink(EC_LOG_SERVICE_DIR, EC_LOG_SERVICE_LINK)
+        elif os.path.islink(EC_LOG_SERVICE_LINK):
+            subprocess.run(["sv", "-w", "5", "down", EC_LOG_SERVICE_LINK], check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            os.remove(EC_LOG_SERVICE_LINK)
+
+    @method()
     def SetWifiPowerManagementState(self, state: "u"):
         ifname = _wifi_iface()
         if not ifname:
@@ -914,6 +1044,10 @@ class Atomupd1(ServiceInterface):
 
 
 async def run_root():
+    try:
+        ec_log_reset()
+    except OSError as err:
+        log(f"ec-log: {err}")
     bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
     bus.export(OBJPATH, RootManager(Jobs(bus, first=int(time.time()))))
     bus.export(ATOMUPD_PATH, Atomupd1())
@@ -2062,6 +2196,67 @@ class Storage1(ServiceInterface):
         return await self._job("FormatDevice", "ssb", [device, label, validate])
 
 
+class PerformanceProfile1(ServiceInterface):
+    """Devices with an ACPI platform profile in Valve's device files (Legion
+    Go, ROG Ally, MSI Claw, Zotac Zone); never on the Steam Deck. Exported,
+    as by steamos-manager, only when that profile offers choices."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.PerformanceProfile1")
+        self.root = root
+
+    @dbus_property(access=PropertyAccess.READ)
+    def AvailablePerformanceProfiles(self) -> "as":
+        return available_platform_profiles()
+
+    @dbus_property()
+    def PerformanceProfile(self) -> "s":
+        d = _platform_profile_dir()
+        return _read_file(os.path.join(d, "profile"), "") if d else ""
+
+    @PerformanceProfile.setter
+    def PerformanceProfile(self, value: "s"):
+        if value not in available_platform_profiles():
+            raise DBusError("org.freedesktop.DBus.Error.InvalidArgs",
+                            f"invalid performance profile {value}")
+        self.root.write("SetPerformanceProfile", "s", [value], self, ["PerformanceProfile"])
+
+    @dbus_property(access=PropertyAccess.READ)
+    def SuggestedDefaultPerformanceProfile(self) -> "s":
+        pp = (device_config() or {}).get("performance_profile") or {}
+        return pp.get("suggested_default", "")
+
+
+class FirmwareDebug1(ServiceInterface):
+    """Steam Machine only (Valve's device file): EC logging, done by the root
+    daemon through the ec-log service."""
+
+    def __init__(self, root):
+        super().__init__(f"{IFACE}.FirmwareDebug1")
+        self.root = root
+        self.state = 0
+
+    @dbus_property()
+    def EcLogging(self) -> "u":
+        return self.state
+
+    @EcLogging.setter
+    def EcLogging(self, value: "u"):
+        async def job():
+            try:
+                await self.root.call_raise(
+                    "Set", "ssv", [ROOT_IFACE, "EcLogging", Variant("u", value)],
+                    iface="org.freedesktop.DBus.Properties")
+            except DBusError as err:
+                log(f"EcLogging failed: {err}")
+            state = await self.root.get_prop("EcLogging")
+            self.state = state if state is not None else self.state
+            self.emit_properties_changed({"EcLogging": self.state})
+        task = asyncio.ensure_future(job())
+        self.root.tasks.add(task)
+        task.add_done_callback(self.root.tasks.discard)
+
+
 class UdevEvents1(ServiceInterface):
     """USB over-current events for Steam, as steamos-manager's udev monitor
     (user daemon, src/udev.rs): a "change" event of a USB interface that
@@ -2171,7 +2366,33 @@ async def run_user():
     SESSION_BUS = session
 
     instances = []
-    for cls in USER_INTERFACES:
+    classes = USER_INTERFACES
+    # Hardware other than the Steam Deck, as steamos-manager's
+    # create_device_interfaces: only where the device file and the hardware
+    # have them. Some of Io's interfaces are the Steam Deck's own and are
+    # left out on these devices, as Valve exports them only where the
+    # hardware has them: TdpLimit1 and LowPowerMode1 (amdgpu power cap,
+    # 3-15 W with the Deck's limits; Valve drives these devices' TDP mostly
+    # through firmware attributes, tied to the performance profile),
+    # AmbientLightSensor1 (Valve: steam_deck only), BatteryChargeLimit1 (Io
+    # reads steamdeck_hwmon; Valve uses ACPI on these devices) and
+    # FanControl1 (jupiter-fan-control). The GPU interfaces follow the
+    # device file as Valve's (gpu_performance, gpu_power_profile), and only
+    # for amdgpu, the only driver Io reads.
+    config = device_config()
+    if config is not None:
+        deck_only = (TdpLimit1, LowPowerMode1, AmbientLightSensor1,
+                     BatteryChargeLimit1, FanControl1)
+        if (config.get("gpu_performance") or {}).get("driver") != "amdgpu":
+            deck_only += (GpuPerformanceLevel1,)
+        if (config.get("gpu_power_profile") or {}).get("driver") != "amdgpu":
+            deck_only += (GpuPowerProfile1,)
+        classes = tuple(c for c in classes if c not in deck_only)
+    if available_platform_profiles():
+        classes += (PerformanceProfile1,)
+    if firmware_debug_available():
+        classes += (FirmwareDebug1,)
+    for cls in classes:
         try:
             inst = cls(root)
             session.export(OBJPATH, inst)
@@ -2180,6 +2401,9 @@ async def run_user():
             log(f"{cls.__name__} failed: {err}")  # take the service down
 
     for inst in instances:
+        if isinstance(inst, FirmwareDebug1):
+            state = await root.get_prop("EcLogging")
+            inst.state = state if state is not None else 0
         if isinstance(inst, AmbientLightSensor1):
             gain = await root.get_prop("AlsCalibrationGain")
             inst.gain = list(gain) if gain else []

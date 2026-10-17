@@ -1,7 +1,7 @@
 # Template file for 'io-steamos-manager'
 pkgname=io-steamos-manager
-version=0.15.0
-revision=1
+version=0.16.0
+revision=2
 python_version=3
 depends="python3 python3-dbus-fast deck-hw-support dmidecode iw runit-void xbps util-linux
  steamos-networking-tools scx
@@ -28,4 +28,16 @@ do_install() {
 	vmkdir usr/libexec/io
 	vinstall ${FILESDIR}/io-update 755 usr/libexec/io
 	vinstall ${FILESDIR}/io-steamos-manager.desktop 644 etc/xdg/autostart
+	# Hardware other than the Steam Deck: Valve's device files (steamos-manager
+	# 26.4.1 data/devices, MIT) for the devices with a PerformanceProfile1 or
+	# a FirmwareDebug1; msi-claw-8ex.toml (new) and msi-claw-amd.toml (TDP
+	# added, which Io does not implement) as on steamos-manager's main branch
+	# after 26.4.1 (2026-10-07). Valve's steam-frame.toml there matches by
+	# device tree (an ARM device) and is left out. Also the Steam Machine's
+	# EC log service (Valve's ec-log
+	# 0.1), linked only while Steam turns EC logging on. Unused on the Deck.
+	vmkdir usr/share/io/steamos-manager/devices
+	vcopy "${FILESDIR}/devices/*.toml" usr/share/io/steamos-manager/devices
+	vsv ec-log
+	vlicense ${FILESDIR}/devices/LICENSE.steamos-manager
 }

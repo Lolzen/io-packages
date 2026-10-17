@@ -1,0 +1,13 @@
+[[device]]
+dmi.sys_vendor = "Valve"
+dmi.board_name = "Fremont"
+device = "steam_machine"
+variant = "Fremont"
+friendly_name = "Steam Machine"
+oui = "e0-31-9e"
+
+[cec_hw.hardware.cros_ec]
+port = 0
+
+[firmware_debug]
+systemd = "ec-log.service"
