@@ -71,9 +71,19 @@
   the Steam Deck: the performance profile (`PerformanceProfile1`) on Legion
   Go, ROG Ally, MSI Claw and Zotac Zone, EC logging (`FirmwareDebug1`,
   Valve's `ec-log`) on the Steam Machine. The Deck's own interfaces (TDP,
-  download mode, light sensor, charge limit, fan control) are not offered
-  on those devices, the GPU interfaces only where the device file has them.
+  download mode, light sensor, charge limit, and fan control except on the
+  Steam Machine) are not offered on those devices, the GPU interfaces only
+  where the device file has them.
   Nothing changes on the Deck.
+
+### Steam Machine (untested, no hardware)
+
+- **HDMI-CEC:** waking the machine from the TV through its embedded
+  controller, as steamos-manager; the TV sees it as "Steam Machine".
+- **Audio:** Valve's WirePlumber profile for it (HDMI/DisplayPort, AC3 for
+  ARC), chosen by the session on that machine only; no filter chain.
+- **Fan control** stays available there (`jupiter-fan-control` has its
+  configuration).
 
 ### Image build
 

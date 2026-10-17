@@ -551,6 +551,15 @@ applications. On SteamOS the first switch after boot trips the loopback
 once (`cannot set PortConfig param: node already started`), later ones
 work.
 
+**`WIREPLUMBER_CONFIG_DIR` replaces WirePlumber's search path.** With it
+set, only the listed directories are read (no `/etc/wireplumber`). As
+always, a fragment in a higher-priority directory hides a lower one of the
+same file name instead of being added to it. Io uses both on the Steam
+Machine: the
+Deck's fragments in `/etc` are left out, and an empty
+`91-io-sink-loopback.conf` hides Io's sink loopback rule. WirePlumber gets
+the variable from PipeWire, which starts it (`context.exec`).
+
 **Valve's `filter-chain.conf.d/` belongs to a second PipeWire instance.** It
 only takes effect when that instance runs (`pipewire -c filter-chain.conf`,
 `filter-chain.service` on SteamOS). Valve's two `context-properties` files are
@@ -602,6 +611,10 @@ screen reader mode at every start; steamos-manager presses Orca's key for it
 **`jupiter-dock-updater --check`: 0 means "update available", 7 "up to
 date"** (Valve's mock script). A stub that simply exits 0 makes Steam
 announce a dock update at every start.
+
+**cecd registers its devices before it owns its bus name.** A listener
+that matches on `sender='com.steampowered.CecDaemon1'` misses those first
+signals; after a cecd restart it has to rescan on `NameOwnerChanged`.
 
 **`sv up` right after linking a service fails.** runsvdir notices a new
 link in `/var/service` only on its next scan (up to 5 s); until then the
