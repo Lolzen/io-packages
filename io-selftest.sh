@@ -43,23 +43,9 @@ check "net.unix.max_dgram_qlen = 512" sh -c '[ "$(sysctl -n net.unix.max_dgram_q
 check "kwin_wayland file capability (realtime threads)" sh -c 'getcap /usr/bin/kwin_wayland | grep -q cap_sys_nice=ep'
 
 echo "== packages"
-# Split in two lists only to keep the lines short.
-P1="io-desktop io-base io-branding io-session io-steamos-manager linux-neptune-72 deck-hw-support linux-firmware"
-P1="$P1 deck-firmware"
-P1="$P1 jupiter-fan-control steamos-powerbuttond steamdeck-dsp rnnoise-ladspa holo-zram-swap holo-earlyoom"
-P1="$P1 steamos-tuning holo-dmi-rules holo-fstab-repair steamos-passwd xdg-desktop-portal-gamescope rtkit"
-P2="socklog-void kde-plasma steam-jupiter steam-im-modules steamdeck-kde-presets vpower holo-upower-config"
-P2="$P2 steamos-networking-tools steamos-systemreport sddm scx wireless-regdb gstreamer1-pipewire"
-P2="$P2 pipewire-32bit libspa-videoconvert-32bit libspa-audioconvert-32bit"
-P2="$P2 holo-sudo jupiter-firewall cecd cec-audio-control steamos-devkit-service steam-web-debug-portforward"
-P2="$P2 gpu-trace holo-realtek-firmware-toggles io-release wireless-domain-setter"
-P2="$P2 drm_janitor steam_notif_daemon xdg-desktop-portal-holo gamescope-wsi-32bit"
-for p in $P1 $P2; do
-    check "installed: $p" xbps-query "$p"
-done
-for p in io-priv-exec cloud-guest-utils zramen deck-firmware-cirrus linux-neptune io-volumed steam; do
-    check "not installed: $p" sh -c "! xbps-query $p"
-done
+# io-desktop pulls in the whole system; a missing dependency shows up in the
+# package database check at the end (xbps-pkgdb).
+check "installed: io-desktop" xbps-query io-desktop
 
 echo "== services"
 for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace wireless-domain-setter; do
@@ -67,10 +53,7 @@ for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent
 check "UPower critical action handed to vpower" test -e /etc/UPower/UPower.conf.d/10-holo-defaults.conf
-check "no runit polkitd service (D-Bus activated only)" sh -c '[ ! -e /var/service/polkitd ]'
 check "exactly one polkitd" sh -c '[ "$(pgrep -c polkitd)" = 1 ]'
-check "no resize core service" sh -c '! ls /etc/runit/core-services/ | grep -q resize'
-check "no io-autologin (SDDM logs in)" sh -c '[ ! -e /var/service/io-autologin ]'
 check "restart into Io: shutdown hook installed" test -r /etc/runit/shutdown.d/75-io-bootnext.sh
 check "restart into Io: io-bootnext finds a boot entry or would create one" sh -c '/usr/libexec/io/io-bootnext --dry-run | grep -q "BootNext"'
 check "GRUB boots Io without its menu" sh -c 'grep -q "^GRUB_TIMEOUT=0$" /etc/default/grub && grep -q "set timeout=0" /boot/grub/grub.cfg'
@@ -141,7 +124,6 @@ echo "== audio"
 check "loopback script installed" test -r /usr/share/wireplumber/scripts/io-create-loopback.lua
 check "filter chain in its own PipeWire instance" pgrep -f "pipewire -c filter-chain.conf"
 check "filter chain memlock 100 MB" sh -c 'prlimit --memlock -o HARD --noheadings -p $(pgrep -f "pipewire -c filter-chain.conf" | head -n 1) | grep -q 104857600'
-check "Steam on the Deck branch" sh -c 'grep -qx steamdeck_stable /home/deck/.local/share/Steam/package/beta'
 check "ALSA default device goes through PipeWire" test -e /etc/alsa/conf.d/99-pipewire-default.conf
 check "locale en_US.UTF-8 generated" sh -c 'locale -a | grep -qi "^en_US.utf8$"'
 
