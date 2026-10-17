@@ -2,6 +2,25 @@
 # Io: counterpart of SteamOS's steam-web-debug-portforward.socket/.service
 # (jupiter-legacy-support): port 8081 on the network forwards to Steam's CEF
 # remote debugging port 8080, which Steam only opens on localhost, and only
-# with CEF remote debugging switched on in its developer settings.
+# with CEF remote debugging switched on. It waits while io-changelog is
+# active; that service terminates any existing forwarder when it starts.
 exec 2>&1
+# io-changelog sets "active" before opening its local DevTools client.
+# Waiting here also closes the boot race between runit's supervised services.
+# When it stops while a Steam started with its CEF flag still runs (CEF keeps
+# port 8080 open until Steam exits), it leaves that Steam's PID in "hold".
+while :; do
+	if [ -e /run/io-changelog/active ]; then
+		sleep 1
+		continue
+	fi
+	pid=$(cat /run/io-changelog/hold 2> /dev/null)
+	if [ -n "$pid" ] && [ "$(cat /proc/$pid/comm 2> /dev/null)" = steam ]; then
+		sleep 1
+		continue
+	fi
+	break
+done
+rm -f /run/io-changelog/hold
+
 exec chpst -u nobody socat TCP-LISTEN:8081,reuseaddr,fork TCP:127.0.0.1:8080

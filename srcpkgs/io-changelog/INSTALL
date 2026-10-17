@@ -1,0 +1,23 @@
+case "${ACTION}" in
+post)
+	# Enable the service once by default, both in installed systems and in
+	# image roots. The marker preserves an administrator's later opt-out.
+	if [ ! -e var/lib/io-changelog/service-default-initialized ]; then
+		mkdir -p var/lib/io-changelog || exit 1
+		# Never create var/service: on Void it is runit-void's symlink.
+		# Without a service directory the image's SERVICES list links it.
+		service_dir=
+		if [ -d var/service ]; then
+			service_dir=var/service
+		elif [ -d etc/runit/runsvdir/default ]; then
+			service_dir=etc/runit/runsvdir/default
+		fi
+		if [ -n "$service_dir" ] &&
+		   [ ! -e "$service_dir/io-changelog" ] &&
+		   [ ! -L "$service_dir/io-changelog" ]; then
+			ln -s /etc/sv/io-changelog "$service_dir/io-changelog" || exit 1
+		fi
+		: > var/lib/io-changelog/service-default-initialized
+	fi
+	;;
+esac

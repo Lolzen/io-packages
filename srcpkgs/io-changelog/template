@@ -1,0 +1,17 @@
+# Template file for 'io-changelog'
+pkgname=io-changelog
+version=0.1.0
+revision=5
+depends="python3 runit-void"
+short_desc="Io's SteamOS patch notes adapter"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://github.com/Lolzen/io-packages"
+INSTALL="${FILESDIR}/INSTALL"
+
+do_install() {
+	vbin ${FILESDIR}/io-steam-changelog/adapter.py io-steam-changelog
+	vmkdir usr/share/io/changelog
+	vinstall ${FILESDIR}/steam.json 644 usr/share/io/changelog
+	vsv io-changelog
+}

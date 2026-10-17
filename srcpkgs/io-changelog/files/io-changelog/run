@@ -1,0 +1,18 @@
+#!/bin/sh
+exec 2>&1
+
+# Io's game-mode launcher must stay free of feature startup hooks. This
+# supervised service runs as deck and starts at boot before Steam.
+export HOME=/home/deck USER=deck LOGNAME=deck
+export XDG_STATE_HOME=/home/deck/.local/state
+# The CEF endpoint is intentionally available to the adapter, but never
+# through Io's LAN port forward while this service is active.
+mkdir -p /run/io-changelog || exit 1
+: > /run/io-changelog/active || exit 1
+# Don't let a supervisor timeout delay Steam's startup if sv is unresponsive.
+sv term steam-web-debug-portforward >/dev/null 2>&1 &
+# sv term reaches only socat's listening process; connections it forked
+# earlier (the boot race) would stay open.
+pkill -u nobody -f 'TCP-LISTEN:8081' >/dev/null 2>&1
+
+exec chpst -u deck:deck /usr/bin/io-steam-changelog service

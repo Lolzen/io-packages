@@ -46,6 +46,11 @@
   Tested with a simulated event (a made-up port name): the signal arrives;
   Steam showed nothing for it in game mode. A real over-current is
   untested.
+- **Io's own patch notes** for system updates (`io-changelog`): Steam shows
+  Io's package summary and release notes instead of Valve's latest SteamOS
+  notes. Steam's client and installed files are not changed. The service
+  runs by default and pauses Io's CEF port forward to the network while it
+  runs; see [Deviations](Deviations).
 - **Adaptive brightness moves Steam's brightness slider** with the
   adjustment, as on SteamOS. It started right after `steamos-tuning` 1.4
   rebuilt the initramfs with Valve's Deck modules (see *Boot*); before,
@@ -82,9 +87,6 @@
   port.
 - **`inputattach-cec-units`:** only for Pulse-Eight and RainShadow USB-CEC
   adapters; not needed.
-- **Steam's patch notes for system updates** are Valve's latest SteamOS
-  notes for the update channel, on Io as well; they stay (see
-  [Deviations](Deviations)).
 - **The screen sharing prompt** when Steam starts in the desktop: the
   permission store looks as on SteamOS apart from the app ID, and neither
   grants it in advance. A fresh user is still to be tried.

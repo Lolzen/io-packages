@@ -48,7 +48,7 @@ echo "== packages"
 check "installed: io-desktop" xbps-query io-desktop
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace wireless-domain-setter; do
+for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace wireless-domain-setter io-changelog; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent

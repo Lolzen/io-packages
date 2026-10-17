@@ -1,0 +1,18 @@
+#!/bin/sh
+# runsv runs finish after every stop of run, also before restarting it after
+# a crash. The marker ensures we remove only the CEF flag created by this
+# package, leaving a pre-existing flag alone.
+export HOME=/home/deck USER=deck LOGNAME=deck
+export XDG_STATE_HOME=/home/deck/.local/state
+RUN=/run/io-changelog
+CREATED=/home/deck/.local/state/io-steam-changelog/created-debug-flag
+
+# Steam reads the CEF flag only when it starts: a Steam started with the flag
+# this service created keeps port 8080 open after the flag is gone. Hold the
+# LAN port forward until that Steam has exited (steam-web-debug-portforward
+# reads the PID from hold).
+if [ -e "$CREATED" ]; then
+	pgrep -o -x -u deck steam > "$RUN/hold" 2> /dev/null || rm -f "$RUN/hold"
+fi
+/usr/bin/io-steam-changelog cleanup
+rm -f "$RUN/active"
