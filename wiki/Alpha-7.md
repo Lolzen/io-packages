@@ -1,8 +1,28 @@
-# Alpha 7
+# Alpha 7 — Valve's patches, restart into Io
 
-**Status:** in progress. What is still open is on [Milestones](Milestones).
+**Released:** [alpha7](https://github.com/Lolzen/io-packages/releases/tag/alpha7)
 
-## Changes so far
+**Goal:** after Alpha 6's SteamOS 3.9.2 parity, the gaps that showed in
+daily use: *Restart* starting Io again, Steam's keyboard in the desktop,
+and Valve's patches to the Void packages Io uses (kwin, Xwayland, Wi-Fi,
+Mesa), carried as overlay packages. What is open afterwards is on
+[Milestones](Milestones).
+
+## Highlights
+
+- ***Restart* from Io starts Io again**, and GRUB starts it without a menu.
+- **Valve's Mesa patches:** OpenGL games follow Steam's frame limit, and
+  RADV has Valve's fixes against stutter in game mode, for 64- and 32-bit
+  games.
+- **Steam's on-screen keyboard in the desktop** types German letters and
+  emoji.
+- **Five more overlay packages** with Valve's patches: kwin, Xwayland,
+  wpa_supplicant, iwd and Mesa.
+- **Valve's Deck modules in the initramfs**: adaptive brightness now moves
+  Steam's brightness slider, as on SteamOS.
+- **Twemoji**, SteamOS's emoji font.
+
+## Changes
 
 ### Boot
 
@@ -42,9 +62,9 @@
 
 - **Valve's Mesa patches** (`mesa-holo`, 64 and 32 bit): Void's Mesa 26.2.5
   with 14 of Valve's commits and three RADV fixes from Mesa main. OpenGL
-  games now follow Steam's frame limit: glxgears with V-Sync off renders
-  30.0 FPS at limit 30 and uncapped without it (with Void's Mesa the limit
-  was only shown; the game kept rendering behind it). RADV has Valve's
+  games now follow Steam's frame limit: Valve's patch turns V-Sync on while
+  a limit is set, so glxgears with V-Sync off renders 30.0 FPS at limit 30
+  and uncapped without a limit. RADV has Valve's
   fixes against stutter in game mode (per command buffer BO tracking, no
   global BO list for gamescope) and for *Forza Horizon* 4 to 6.
 
@@ -86,6 +106,20 @@
   in the build functions too (`post_install` and the like, as in Void's
   template), not only outside functions.
 
+### Packaging
+
+- **A testing channel** for builds that are not merged yet: `build.sh` and
+  `publish.sh` with `--testing` publish to the `testing` release of
+  `io-repo`, which a Deck uses through `/etc/xbps.d/10-io-testing.conf`;
+  `--replace` publishes the latest build even over the same or a higher
+  published version (see [Building](Building)).
+- **32-bit overlays:** an overlay with `lib32=yes` (Mesa) is built for
+  i686 as well and published as `-holo-32bit` packages. `holo.sh` keeps
+  their `provides`, which xbps-src drops for `-32bit` packages.
+- `io-selftest.sh` checks `io-desktop` instead of 53 single packages (the
+  package database check covers its dependencies) and no longer looks for
+  leftovers of early alphas.
+
 ## Checked against SteamOS 3.9.2
 
 - **`zenity`:** Void's version behaves as Valve's `zenity-gtk3`; nothing to
@@ -107,3 +141,17 @@
 
 - **`void-artwork`** stays: `plymouth-data` depends on it (Void builds
   Plymouth with its logo), and Io's GRUB uses none of it.
+
+## Known limitations
+
+- Controller navigation in game mode is sometimes dead after a boot until
+  the Steam button is pressed. A Steam client bug (Steam Input at start),
+  seen on SteamOS as well; reported as
+  [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921).
+- `€` (the AltGr level) from Steam's keyboard does not arrive in the
+  desktop.
+- The USB over-current signal is tested with a simulated event only.
+- Steam's patch notes for system updates are still Valve's SteamOS notes.
+- Formatting drives from Steam, the firmware updaters,
+  suspend-then-hibernate and a factory reset are not part of this release;
+  they are tested with the move to the NVMe (see [Milestones](Milestones)).

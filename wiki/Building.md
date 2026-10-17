@@ -20,6 +20,8 @@ Requirements: a working `xbps-src` setup, `gh` authenticated for the
 ~/io-packages/publish.sh io-session io-base     publish what is already built
 ~/io-packages/build.sh -p MangoHud-holo         an overlay package (see below)
 ~/io-packages/build.sh -p --overlays            every overlay whose build is missing
+~/io-packages/build.sh --testing io-session      build and publish to the testing channel
+~/io-packages/build.sh --replace io-session      publish this build over the published one
 ```
 
 `build.sh` first pulls `void-packages` (a stale checkout makes `xbps-src`
@@ -71,6 +73,30 @@ download, e.g. `steam-jupiter`'s 428 MB archive into
 `publish.sh --full` re-indexes and re-uploads everything. The overlay
 packages count as Io's (their names come from `overlay/holo.sh names`); if
 that list cannot be made, `publish.sh` stops instead of pruning them.
+
+### Testing channel
+
+Builds that are not merged yet (a branch, a pull request) go to the
+`testing` release of `io-repo` instead: `build.sh --testing` or
+`publish.sh --testing` with package names (only the named packages go
+there; the local copy is `~/io-repo-test`). Each `--testing` run drops the
+packages that the main repository has caught up with. A Deck uses the
+channel with
+
+```
+/etc/xbps.d/10-io-testing.conf:
+repository=https://github.com/Lolzen/io-repo/releases/download/testing
+```
+
+sorted before Io's `20-io.conf`, so a test build wins over the same
+version in the main repository; removing the file leaves the channel.
+
+`--replace` (combinable with `--testing`) publishes the latest build even
+if the same or a higher version is published, and drops the other builds
+of it. `xbps-install -u` neither downgrades nor reinstalls the same
+version, so a Deck takes a replaced build with `xbps-install -S`, then
+`xbps-remove -O` (drops a cached file of the same name), then
+`xbps-install -f <package>`.
 
 ## Overlay packages
 

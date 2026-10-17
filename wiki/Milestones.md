@@ -1,32 +1,35 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6); what
-has changed since is on [Alpha 7](Alpha-7).
+the [Changelog](Changelog). The latest release is [Alpha 7](Alpha-7).
 
 ---
 
-## Alpha 7 (in progress)
+## In branches
 
-- **Done:** *Restart* from Io starts Io again (`io-base` 0.6.0); GRUB
-  boots without its menu (`io-base` 0.7.0); the image scripts bring the
-  repository keys along; Steam's keyboard in the desktop, the brightness
-  through Valve's kwin patch and no black flash when returning to game mode
-  (`kwin-holo`, `xorg-server-xwayland-holo`); Valve's Wi-Fi fixes (`wpa_supplicant-holo`,
-  `iwd-holo`); Twemoji. See [Alpha 7](Alpha-7)
-- **Checked against SteamOS:** `zenity` (same behaviour, no `zenity-gtk3`
-  needed), `inputattach-cec-units` (no USB-CEC adapter, not needed),
-  Steam's patch notes for updates (Valve's; they stay, see
-  [Deviations](Deviations)), the screen sharing prompt (the permission
-  store looks as on SteamOS apart from the app ID; a fresh user is still to
-  be tried, see *Tests pending*), the question before switching to the
-  desktop (comes with Steam's beta client)
-- **Decided:** `void-artwork` stays (`plymouth-data` depends on it)
-- **Open:** a capture with Steam's experimental SteamRT3 client
+Work that is built but not on `main` yet, each on its own branch of
+io-packages:
+
+- **`destructive`:** what the move to the NVMe needs and can only be tested
+  with it: formatting drives from Steam, the firmware updaters (BIOS,
+  controller, dock), suspend-then-hibernate, *Repair Io*'s tools on the
+  recovery stick, and a factory reset of Io's own. None of it is tested on
+  hardware yet; Valve's calibration tools follow once it is merged
+- **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
+  Steam's patch notes for system updates
+- **Pull requests #2, #3 and #4:** the Steam Deck OLED (`galileo-oled`),
+  other handhelds with a Valve device file (`other-devices`) and the Steam
+  Machine (`steam-machine`); they need the hardware to be tested (see
+  *Needs hardware to test*)
+- **`test-nested-desktop`:** Valve's nested desktop (Plasma inside game
+  mode); logging out of it does not end its session yet
 
 ---
 
 ## Next (no theme yet)
+
+- **NetworkManager 1.58.1** for `NetworkManager-holo`, once Void's update
+  (void-packages pull request 62975) is merged; Valve's patch applies to it
 
 - **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
 - **steamos-manager refuses calls from games:** on Valve's main branch
@@ -57,6 +60,12 @@ has changed since is on [Alpha 7](Alpha-7).
   level); German letters and emoji do. On SteamOS 3.9.2 the keyboard
   typed no umlauts or ß in the desktop at all (2026-10-04, see
   [Deviations](Deviations)); `€` there is not checked
+- **Controller navigation dead after boot** until the Steam button is
+  pressed, now and then: Steam logs "Prevented loading a mapping that's
+  being deleted" in `console_log.txt` at start, and only in those boots.
+  The same line is in SteamOS's logs of a boot that hung the same way, so
+  it is Steam's (Steam Input at start); reported as
+  [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921)
 - **Steam hung in its boot animation** on the first start after switching
   to the beta client (the bootstrapper had installed the update;
   steamwebhelper logged "SteamClient globals not available" and a
@@ -69,6 +78,8 @@ has changed since is on [Alpha 7](Alpha-7).
 
 ## Tests pending
 
+- **Steam's experimental SteamRT3 client** on Io: a capture with
+  `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
   should take it over), and ejecting a drive from Steam
 - **Decky Loader**
@@ -107,7 +118,7 @@ someone with the hardware.
 
 - Designed boot splash
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
-  inside game mode)
+  inside game mode, see *In branches*)
 
 ---
 
@@ -119,26 +130,35 @@ someone with the hardware.
   installer is tested with this move, see [Installation](Installation));
   suspend-then-hibernate comes with it (Valve's resume path keeps the swap
   file's position in an EFI variable through systemd; Valve's newer
-  configuration allows suspend-then-hibernate again, 20 minutes on battery)
+  configuration allows suspend-then-hibernate again, 20 minutes on battery;
+  Io's version is on the branch `destructive`, see *In branches*)
 - **Formatting drives from Steam** (from Alpha 5): Valve's `format-device.sh`
   is in place with Io's check against formatting the disk Io runs from;
-  `FormatDevice` and the format helpers still refuse. Tested together with
+  on `main`, `FormatDevice` and the format helpers still refuse, the branch
+  `destructive` has them working. Tested together with
   the move to the NVMe: first against the internal SSD while Io runs from
   the card (its SteamOS is wiped then anyway; Valve's device list must
   refuse it), then, with Io on the NVMe, against SD cards and USB drives
-- **Firmware updaters** (from Alpha 5): a check mode for `jupiter-biosupdate`,
-  `jupiter-controller-update` and `jupiter-dock-updater`, so Steam can show
-  whether an update is due, and flashing last, if at all. The BIOS updater
-  needs Valve's BIOS files and flash tool (`h2offt`); until then SteamOS on
-  the same Deck keeps the firmware current
+- **Firmware updaters** (from Alpha 5): on the branch `destructive`,
+  Valve's BIOS, controller and dock updaters with their check modes, so
+  Steam can show whether an update is due; flashing is tested last, if at
+  all. Until then SteamOS on the same Deck keeps the firmware current
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
-  once for 3.9.2 in October 2026
-- **Repair Io** on the recovery stick: today a placeholder that lists the
-  disks ([Installation](Installation)); real repair tools to come
-- **A factory reset of Io's own** (fresh home directory): a design decision,
-  and destructive
+  once for 3.9.2 in October 2026. Valve's versions newer than Io's, seen on
+  2026-10-12 and not taken yet: `jupiter-hw-support` 20260930.1, `gpu-trace`
+  2.17, `linux-neptune-72` 7.2.7-valve2, `steamos-customizations-jupiter`
+  20260916.1, `holo-networking-tools` 1.4, `holo-systemreport` 1.24,
+  steamos-manager 26.4.1-3, NetworkManager 1.58.0, PipeWire 1.6.8,
+  WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
+- **Repair Io** on the recovery stick: in this release a placeholder that
+  lists the disks ([Installation](Installation)); `io-repair` on the
+  branch `destructive` checks the file system and repairs the initramfs,
+  the boot loader, hibernation and the packages
+- **A factory reset of Io's own**, as Steam offers it (user data, the
+  system, or both): on the branch `destructive`, to be compared with
+  SteamOS's own reset, which is recorded when SteamOS is wiped
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
   (they drop to dracut's emergency shell, cause not found yet); the
   recovery stick covers installing in the meantime. After it,
@@ -150,7 +170,9 @@ someone with the hardware.
   newer versions to a file unless they are listed as already looked at
   (`pkgcheck.sh` today reports what changed since its last run)
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
-  default password on first boot. 1.0 is the beta (`beta1.img`,
+  default password on first boot; a sweep of Io's packages for Valve's
+  artwork and trademarks (`steamdeck-kde-presets`' wallpapers, avatars and
+  splash, the cursor in `deck-hw-support`). 1.0 is the beta (`beta1.img`,
   `beta1.iso`)
 
 ---

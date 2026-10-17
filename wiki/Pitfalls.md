@@ -34,6 +34,12 @@ output.
 update check fails with a generic `http error 0` that reads like a network
 problem.
 
+**Steam's FPS counter shows the frames gamescope displays, not the frames
+a game renders.** An OpenGL game with V-Sync off under Steam's frame limit
+reads 30 FPS on any Mesa, whether or not it renders more frames that are
+never shown. To see what Mesa does, measure the game's own rate
+(`glxgears` prints it) or the power draw.
+
 **gamescope's process name is `gamescope-wl`**, not `gamescope`.
 
 **An empty `package/beta` means the desktop client's branch.** Steam on
