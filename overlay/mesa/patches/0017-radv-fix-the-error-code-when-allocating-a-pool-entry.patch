@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Sat, 17 Oct 2026 14:39:44 +0200
+Subject: [PATCH 17/17] radv: fix the error code when allocating a pool entry
+ failed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The previous allocator returned VK_ERROR_OUT_OF_POOL_MEMORY. But the
+Vulkan spec says:
+    "VK_ERROR_FRAGMENTED_POOL A pool allocation has failed due to
+     fragmentation of the pool’s memory. This must only be returned if
+     no attempt to allocate host or device memory was made to
+     accommodate the new allocation. This should be returned in
+     preference to VK_ERROR_OUT_OF_POOL_MEMORY, but only if the
+     implementation is certain that the pool allocation failure
+     was due to fragmentation."
+
+So, VK_ERROR_FRAGMENTED_POOL should be returned only when the VMA
+allocator can't allocate.
+
+Fixes: 849d41dbf83 ("radv: implement a new descriptor sets allocator")
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/45169>
+(cherry picked from commit 02e641812d7dbeaacea834b7c2365aac5d29459e)
+
+Io: from Mesa main (Valve picked it for steamos-26.05), not in 26.2.5
+yet; the .pick_status.json part left out.
+---
+ src/amd/vulkan/radv_descriptor_set.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/amd/vulkan/radv_descriptor_set.c b/src/amd/vulkan/radv_descriptor_set.c
+index 1a004757fc2..60c67e21842 100644
+--- a/src/amd/vulkan/radv_descriptor_set.c
++++ b/src/amd/vulkan/radv_descriptor_set.c
+@@ -381,7 +381,7 @@ radv_alloc_descriptor_pool_entry(struct radv_device *device, struct radv_descrip
+       if (set->header.size) {
+          uint64_t pool_vma_offset = util_vma_heap_alloc(&pool->bo_heap, set->header.size, 32);
+          if (!pool_vma_offset)
+-            return VK_ERROR_FRAGMENTED_POOL;
++            return pool->bo_heap.free_size < set->header.size ? VK_ERROR_OUT_OF_POOL_MEMORY : VK_ERROR_FRAGMENTED_POOL;
+ 
+          assert(pool_vma_offset >= RADV_POOL_HEAP_OFFSET && pool_vma_offset <= pool->size + RADV_POOL_HEAP_OFFSET);
+          set->header.offset = pool_vma_offset - RADV_POOL_HEAP_OFFSET;

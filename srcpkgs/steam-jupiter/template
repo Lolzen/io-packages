@@ -1,7 +1,7 @@
 # Template file for 'steam-jupiter'
 pkgname=steam-jupiter
 version=1.0.0.85
-revision=5
+revision=6
 _bootstrap=steam_jupiter_stable_bootstrapped_20251031.0.tar.xz
 wrksrc="steam-jupiter-stable"
 hostmakedepends="tar"
@@ -18,7 +18,7 @@ depends="zenity xz curl dbus freetype gdk-pixbuf hicolor-icon-theme
  desktop-file-utils liberation-fonts-ttf file tar bash coreutils lsof
  steam-udev-rules usbutils xrandr python3 xdg-user-dirs nss libxcrypt
  glibc-32bit libgcc-32bit libstdc++-32bit libdrm-32bit libglvnd-32bit
- mesa-dri-32bit vulkan-loader-32bit libcurl-32bit libnm-32bit libva-32bit
+ mesa-dri-holo-32bit vulkan-loader-32bit libcurl-32bit libnm-32bit libva-32bit
  fontconfig-32bit libX11-32bit libXinerama-32bit libXScrnSaver-32bit
  alsa-plugins-32bit alsa-pipewire-32bit libgpg-error-32bit nss-32bit
  libxcrypt-32bit libpipewire-32bit pipewire-32bit libspa-alsa-32bit

@@ -112,9 +112,16 @@ pkgname_of() {
 
 # Packages built for i686 only (archs="i686") are published as their
 # -32bit package from the multilib directory, never as the i686 package.
+# The -32bit packages of overlays with lib32=yes (mesa-dri-holo-32bit, ...)
+# come by that name from overlay/holo.sh and lie in multilib as well.
 is_lib32() { grep -q '^archs="i686"' "$SRCPKGS/$1/template" 2> /dev/null; }
 pubname() { if is_lib32 "$1"; then echo "$1-32bit"; else echo "$1"; fi; }
-bindir() { if is_lib32 "$1"; then echo "$BINPKGS/multilib"; else echo "$BINPKGS"; fi; }
+bindir() {
+    case "$1" in
+        *-holo-32bit) echo "$BINPKGS/multilib" ;;
+        *) if is_lib32 "$1"; then echo "$BINPKGS/multilib"; else echo "$BINPKGS"; fi ;;
+    esac
+}
 
 # newest file of package $2 in directory $1 (x86_64 or noarch)
 newest_in() {

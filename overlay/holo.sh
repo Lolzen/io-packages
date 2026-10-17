@@ -7,11 +7,15 @@
 #   overlay/holo.sh gen <name>   write srcpkgs/<name>-holo into void-packages
 #   overlay/holo.sh names [name] package names the overlays produce
 #   overlay/holo.sh tobuild      overlays whose current build is missing
+#   overlay/holo.sh lib32 <name> exit 0 if the overlay is built for i686 too
 #
 # An overlay is overlay/<name>/ with:
 #   overlay.conf   base_version=<Void version the patches are made for>
 #                  io_revision=<1..99, raised when Io's patches change>
 #   patches/       *.patch, applied after Void's own patches
+#                  lib32=yes  optional: also build for i686 and publish the
+#                  -32bit packages (<sub>-holo-32bit), which then replace
+#                  Void's <sub>-32bit as the 64-bit packages replace Void's
 #   template.append  optional: template lines added at the end (build
 #                  settings such as CFLAGS)
 #   README.md      what the patches do, where they come from, upstream state
@@ -25,6 +29,8 @@
 #     after a revision bump in Void
 #   - revision = Void's revision * 100 + io_revision, so both a rebuild in
 #     Void (revision bump) and a change of Io's patches give a newer package
+#   - a subpackage list set by the template itself (subpackages="...",
+#     subpackages+=" ...") gets the new names as well
 #   - ${pkgname} keeps meaning the Void name outside functions (distfiles,
 #     wrksrc, ...) and in the build functions (do_install, post_install:
 #     paths such as ${FILESDIR}/${pkgname}.conf); only inside a subpackage's
@@ -33,8 +39,10 @@
 # have to be checked against the new version by hand, then base_version
 # raised. A revision bump in Void only gives a new build.
 #
-# Void's -32bit package of an overlaid package stays Void's: overlays are
-# built for x86_64 only.
+# Void's -32bit package of an overlaid package stays Void's, unless the
+# overlay sets lib32=yes: then build.sh builds it for i686 as well, and
+# xbps-src turns that build into <sub>-holo-32bit for the multilib
+# repository, with replaces and provides of Void's <sub>-32bit.
 
 set -eu
 
@@ -82,6 +90,9 @@ subpkgs_of() {
     sed -n 's/^\([A-Za-z0-9._+-]*\)_package() *{.*$/\1/p' "$1"
 }
 
+# lib32=yes in overlay.conf: the overlay is built for i686 too
+is_lib32() { [ "$(conf_get "$OVERLAY/$1/overlay.conf" lib32)" = yes ]; }
+
 # Sets: base iorev vver vrev newrev state
 inspect() {
     conf="$OVERLAY/$1/overlay.conf"
@@ -103,7 +114,8 @@ inspect() {
     esac
     newrev=$((vrev * 100 + iorev))
     if vercmp "$vver" "$base"; then
-        if [ -f "$BINPKGS/$1-holo-${vver}_$newrev.x86_64.xbps" ]; then
+        if [ -f "$BINPKGS/$1-holo-${vver}_$newrev.x86_64.xbps" ] &&
+            { ! is_lib32 "$1" || [ -f "$BINPKGS/multilib/$1-holo-32bit-${vver}_$newrev.x86_64.xbps" ]; }; then
             state=built
         else
             state=build
@@ -150,6 +162,14 @@ cmd_names() {
         for s in $(subpkgs_of "$t"); do
             echo "$s-holo"
         done
+        # the -32bit packages xbps-src makes from the i686 build (those of
+        # subpackages it does not make are skipped by publish.sh as unbuilt)
+        if is_lib32 "$o"; then
+            echo "$o-holo-32bit"
+            for s in $(subpkgs_of "$t"); do
+                echo "$s-holo-32bit"
+            done
+        fi
     done
 }
 
@@ -245,6 +265,27 @@ cmd_gen() {
                 $0 = lit($0, nm "-" vr, nm "-holo-" vr)
             }
         }
+        # a subpackage list the template sets itself
+        !infunc && /^[ \t]*subpackages\+?="/ {
+            q1 = index($0, "\"")
+            rest = substr($0, q1 + 1)
+            q2 = index(rest, "\"")
+            if (q2 > 0) {
+                inner = substr(rest, 1, q2 - 1)
+                after = substr(rest, q2)
+                lead = (inner ~ /^[ \t]/) ? " " : ""
+                nw = split(inner, w, /[ \t]+/)
+                out = ""
+                for (k = 1; k <= nw; k++) {
+                    if (w[k] == "") continue
+                    t = w[k]
+                    if (t in issub) t = t "-holo"
+                    out = out (out == "" ? "" : " ") t
+                }
+                $0 = substr($0, 1, q1) lead out after
+            }
+            print; next
+        }
         !infunc && /^pkgname=/ { print "pkgname=" name "-holo"; next }
         !infunc && /^revision=/ { print "revision=" newrev; next }
         !inpkg { $0 = bare(lit($0, "${pkgname}", name)) }
@@ -278,6 +319,7 @@ case "${1:-}" in
     check) cmd_check ;;
     gen) [ $# -eq 2 ] || die "usage: holo.sh gen <name>"; cmd_gen "$2" ;;
     names) cmd_names "${2:-}" ;;
+    lib32) [ $# -eq 2 ] || die "usage: holo.sh lib32 <name>"; is_lib32 "$2" ;;
     tobuild) cmd_tobuild ;;
-    *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+    *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
