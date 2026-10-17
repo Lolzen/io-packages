@@ -49,6 +49,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `lib32-gamescope` 3.16.30 (3.16.15) | `gamescope-wsi-32bit` 3.16.30 | Only gamescope's WSI layer for 32-bit Vulkan games (frame limiter, bypass, HDR), built for i686 from gamescope's source |
 | `ttf-twemoji-default` 13.1.0-2.5 | `ttf-twemoji-default` 13.1.0 | Built as Valve builds it: Fedora's Twemoji with the same glyphs removed and the same fontconfig file |
 | `wireless-domain-setter` 1.2 (new) | `wireless-domain-setter` 1.2 | runit service instead of systemd; ends at once on the LCD ("no self-managed phy's"), apart from reloading `rtw89_8852cu` when Valve's USB streaming dongle is plugged in |
+| `galileo-mura` v0.10 | `galileo-mura` v0.10 | Started by the game mode session on the OLED (Valve: a user service) |
 | `jupiter-legacy-support` | parts | `KillUserProcesses` (in `io-session`), `steam-web-debug-portforward`, and `steamos-update` (Io's own, with xbps behind it); Valve's own header calls the rest leftovers to be removed |
 | `ibus-pinyin` 1.5.1, `pyzy` 1.1, `ibus-table-cangjie-lite` 1.8.8, `ibus-anthy` 1.5.14 (Valve's fork), `ibus-table` 1.17.19 (Arch), `ibus-hangul` (Arch) | `ibus-pinyin`, `pyzy`, `ibus-table-cangjie-lite`, `ibus-anthy-holo`, `ibus-table`, Void's `ibus-hangul` | Input methods for Steam's keyboard; same sources and versions |
 | `mangohud` (Valve's build with `2c1dc52`), `networkmanager`, `bluez`, `kwin`, `xorg-xwayland`, `wpa_supplicant`, `iwd` (Valve's builds) | `MangoHud-holo`, `NetworkManager-holo`, `bluez-holo`, `kwin-holo`, `xorg-server-xwayland-holo`, `wpa_supplicant-holo`, `iwd-holo` | Void's packages with Valve's patches (and, for wpa_supplicant, some of its build options), through Io's overlay, see [Deviations](Deviations); some matter only on other hardware or with iwd as backend |
@@ -77,7 +78,6 @@ and sources of Io's packages are on [Packages](Packages).
 | `kdumpst`, `steamos-kdumpst-layer` | Kernel crash dumps, developer-facing; parked |
 | `jupiter-dock-updater-bin` | Needs Valve's dock; the updater is a stub that reports "up to date" |
 | `inputplumber` | Installed but not running on the Deck (3.8.4 and 3.9.2) |
-| `galileo-mura` | Steam Deck OLED only |
 | `dirlock` | Home directory encryption, filed with the A/B notes below (decided 2026-10-03) |
 | `holo-keyring`, `holo-nix-offload`, `holo-nfs-utils-tmpfiles` | pacman keys, Nix store, NFS: nothing Io needs |
 | `steamos-alias` (new in 3.9.2) | A pacman hook linking `steamos-*` names to the renamed `holo-*` helpers; Io keeps the `steamos-*` names Steam calls |

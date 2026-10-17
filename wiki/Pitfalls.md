@@ -551,6 +551,12 @@ applications. On SteamOS the first switch after boot trips the loopback
 once (`cannot set PortConfig param: node already started`), later ones
 work.
 
+**PipeWire reads the drop-ins of the name given with `-c`.**
+`pipewire -c filter-chain-galileo.conf` loads `filter-chain-galileo.conf`
+(here a symlink to PipeWire's `filter-chain.conf`) and the fragments in
+`filter-chain-galileo.conf.d/`, not those of `filter-chain.conf.d/`. That
+gives a model its own filter chain without touching the other's.
+
 **Valve's `filter-chain.conf.d/` belongs to a second PipeWire instance.** It
 only takes effect when that instance runs (`pipewire -c filter-chain.conf`,
 `filter-chain.service` on SteamOS). Valve's two `context-properties` files are
@@ -618,8 +624,9 @@ interface's `change` event only when a port really trips. A rule in
 interface, produces the same event for `UdevEvents1` without touching the
 hardware; remove the rule afterwards.
 
-**SteamOS does not offer `WifiDebug1`** on the Deck (3.8.4 and 3.9.2),
-although Valve's interface file describes it. On 3.9.2 neither
+**SteamOS does not offer `WifiDebug1`** on the LCD (3.8.4 and 3.9.2),
+although Valve's interface file describes it; steamos-manager exports it
+on Galileo only. On 3.9.2 neither
 `FirmwareDebug1`, `PerformanceProfile1` nor `GameStreaming1` is exported
 on the LCD.
 
@@ -684,6 +691,13 @@ packages (`-headers`, `-debug`) and a few others (`steamfs-git`) appear
 only in the binary repositories' databases
 (`archlinux-mirror/<repo>/os/x86_64/<repo>.db`). A name check should read
 those.
+
+**gamescope only notices its mura property when it changes.** It reads
+`GAMESCOPE_COLOR_MURA_CORRECTION_IMAGE` from a PropertyNotify, and selects
+those events on the root window only during its X setup; a value set
+before that is never seen. The X socket is no sign of readiness (the
+previous session's survives in `/tmp`); `GAMESCOPE_XWAYLAND_SERVER_ID` on
+the root window, set right before gamescope starts listening, is.
 
 **Valve's Xwayland reverts for a seamless start cause a black flash on
 Io.** Valve's `xorg-xwayland` reverts two upstream commits (only the

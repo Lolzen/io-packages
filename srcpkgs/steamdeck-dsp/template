@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=15
+revision=16
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -13,9 +13,10 @@ homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupi
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
 checksum=33cbb5fe073c69db2fb061258f3212a2b60143513446efb2dcf9cfc86fcd1712
 
-# Jupiter/LCD only. Galileo (OLED) needs a different soundcard
-# (sof-nau8821-max) and its own SOF firmware build - out of scope until
-# Io supports that model.
+# Both Deck models. Jupiter (LCD, card acp5x) is what Io is built and tested
+# on. Galileo (OLED, card sof-nau8821-max, untested: no hardware) gets
+# Valve's SOF firmware, its own filter chain (io-session starts it there
+# instead of the LCD's) and Valve's speaker filter graph.
 archs="x86_64*"
 
 post_extract() {
@@ -25,7 +26,9 @@ post_extract() {
 	# actual plugin we build (rnnoise-ladspa package) is librnnoise_ladspa.so
 	# - that's upstream's own build output filename, not something we made
 	# up, matches Gentoo's packaging of the same project too.
-	sed -i 's|plugin = /usr/lib/ladspa/rnnoise_ladspa.so|plugin = /usr/lib/ladspa/librnnoise_ladspa.so|' pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf
+	for _m in jupiter galileo; do
+		sed -i 's|plugin = /usr/lib/ladspa/rnnoise_ladspa.so|plugin = /usr/lib/ladspa/librnnoise_ladspa.so|' pipewire-confs/hardware-profiles/valve-${_m}/filter-chain.conf.d/filter-chain.conf
+	done
 
 	# Valve's config also uses "nt-filter" as the LADSPA label, which is
 	# specific to NoiseTorch's own fork/build of the plugin. The upstream
@@ -34,7 +37,9 @@ post_extract() {
 	# - confirmed with listplugins against our own built .so. Both filter
 	# nodes here are per-channel (left/right), so the mono label is
 	# correct for both.
-	sed -i 's|label = nt-filter|label = noise_suppressor_mono|' pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf
+	for _m in jupiter galileo; do
+		sed -i 's|label = nt-filter|label = noise_suppressor_mono|' pipewire-confs/hardware-profiles/valve-${_m}/filter-chain.conf.d/filter-chain.conf
+	done
 }
 
 do_build() {
@@ -51,21 +56,24 @@ do_install() {
 	# ending in .dsp instead of .lv2, not .lv2 like the other two plugins.
 	# Kept exactly as upstream ships it, unpatched, on purpose.
 
-	# Galileo/OLED-only SOF firmware - Jupiter/LCD doesn't have that
-	# soundcard. setup_sof_fw.sh has no guard of its own, so remove what
-	# it wrote instead of patching the Makefile. The Galileo UCM profile
-	# (sof-nau8821-max) is two small files and stays in, as a head start
-	# for anyone porting Io to that model.
-	rm -rf ${DESTDIR}/usr/lib/firmware/amd
+	# setup_sof_fw.sh installs Valve's SOF firmware for Galileo's audio DSP
+	# (amd/sof/sof-vangogh-*, amd/sof-tplg/sof-vangogh-nau8821-max.tplg;
+	# Void's sof-firmware and linux-firmware have no AMD SOF files). The
+	# kernel loads it only on Galileo, where the ACP is driven by SOF; on
+	# Jupiter the acp5x driver binds and never asks for it. The UCM profiles
+	# for both cards (acp5x, sof-nau8821-max) come from setup_ucm2.sh.
 
 	# Upstream's whole /run-symlink, boot-time-model-switch mechanism (the
 	# hwconfig scripts, the hardware-profiles trees, the /etc/wireplumber
 	# symlink, the systemd units) exists so a read-only /usr on real
 	# SteamOS can still pick an audio profile at boot without writing
-	# there. Io's /etc is always writable and only ever supports Jupiter, so
-	# there is nothing to pick. Install the Jupiter fragments straight into
-	# the real, standard search paths instead, drop everything upstream
-	# installed for the mechanism we're not using.
+	# there. Io's /etc is always writable, so the fragments go straight into
+	# the real, standard search paths instead, and everything upstream
+	# installed for the mechanism is dropped. Jupiter's and Galileo's
+	# profiles differ only in the filter chain's target card and Galileo's
+	# speaker filter graph (pipewire.conf.d and the WirePlumber fragments are
+	# identical; Jupiter's card rules already list sof-nau8821-max), so the
+	# Jupiter set serves both and Galileo adds its two differences below.
 	rm -f ${DESTDIR}/etc/wireplumber
 	rm -rf ${DESTDIR}/usr/share/pipewire/hardware-profiles
 	rm -rf ${DESTDIR}/usr/share/wireplumber/hardware-profiles
@@ -86,6 +94,17 @@ do_install() {
 	vmkdir etc/pipewire/filter-chain.conf.d
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/context-properties.conf 644 etc/pipewire/filter-chain.conf.d 10-context-properties.conf
 	vinstall pipewire-confs/hardware-profiles/valve-jupiter/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/filter-chain.conf.d 20-filter-chain.conf
+
+	# Galileo's filter chain (noise suppression for sof-nau8821-max) is its
+	# own configuration, filter-chain-galileo.conf: PipeWire's filter-chain.conf
+	# under another name, so that its drop-ins come from
+	# filter-chain-galileo.conf.d. io-session starts it instead of
+	# filter-chain.conf on Galileo; Jupiter keeps exactly its configuration.
+	vmkdir usr/share/pipewire
+	ln -s filter-chain.conf ${DESTDIR}/usr/share/pipewire/filter-chain-galileo.conf
+	vmkdir etc/pipewire/filter-chain-galileo.conf.d
+	vinstall pipewire-confs/hardware-profiles/valve-galileo/filter-chain.conf.d/context-properties.conf 644 etc/pipewire/filter-chain-galileo.conf.d 10-context-properties.conf
+	vinstall pipewire-confs/hardware-profiles/valve-galileo/filter-chain.conf.d/filter-chain.conf 644 etc/pipewire/filter-chain-galileo.conf.d 20-filter-chain.conf
 
 	# Valve's patched WirePlumber creates the ALSA loopbacks applications
 	# talk to (CreateLoopback() in its alsa.lua, triggered by
@@ -108,4 +127,9 @@ do_install() {
 	for f in wireplumber/hardware-profiles/valve-jupiter/wireplumber.conf.d/*.conf; do
 		vinstall "$f" 644 etc/wireplumber/wireplumber.conf.d
 	done
+	# Galileo's speaker DSP: the filter-graph rule from Valve's Galileo
+	# alsa-card1.conf (upstream WirePlumber's node.filter-graph.rules). It
+	# matches only the speaker sink of sof-nau8821-max, so on Jupiter it
+	# does nothing.
+	vinstall ${FILESDIR}/92-io-galileo-speakers.conf 644 etc/wireplumber/wireplumber.conf.d
 }

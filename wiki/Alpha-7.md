@@ -65,6 +65,19 @@
   Valve's USB streaming dongle, whose driver it also reloads at boot. On
   the LCD it ends at once.
 
+### Steam Deck OLED (untested, no hardware)
+
+- **Audio:** Valve's SOF firmware for the OLED's audio DSP, its own filter
+  chain configuration and Valve's speaker filter graph (`steamdeck-dsp`).
+- **Display:** Valve's mura correction (`galileo-mura`, new), the 45–90 Hz
+  refresh range and HDR on by default, as Valve's game mode session sets
+  them for the OLED.
+- **Wi-Fi:** Steam's Wi-Fi debug options (`WifiDebug1`, `WifiDebugDump1`).
+  The ath11k card's regulatory domain reaches the kernel through
+  `wireless-domain-setter`, which runs on every model.
+- The selftest skips the check for the LCD's Realtek Bluetooth firmware on
+  the OLED.
+
 ### Image build
 
 - The image scripts put the repository keys (Void's and Io's) into each
