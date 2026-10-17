@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=43
+revision=47
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to linux-neptune-72 and does not
@@ -39,8 +39,10 @@ depends="
  holo-sudo holo-realtek-firmware-toggles steam-web-debug-portforward jupiter-firewall
  cecd cec-audio-control steamos-devkit-service gpu-trace io-release
  MangoHud-holo MangoHud-32bit MangoHud-mangoapp-holo
- mesa-dri mesa-dri-32bit mesa-vulkan-radeon mesa-vulkan-radeon-32bit libcurl-32bit
- mesa-vaapi mesa-vaapi-32bit
+ mesa-holo mesa-holo-32bit mesa-libgallium-holo mesa-libgallium-holo-32bit libgbm-holo libgbm-holo-32bit
+ mesa-dri-holo mesa-dri-holo-32bit
+ mesa-vulkan-radeon-holo mesa-vulkan-radeon-holo-32bit libcurl-32bit
+ mesa-vaapi-holo mesa-vaapi-holo-32bit
  pipewire wireplumber wireplumber-elogind alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
 
  NetworkManager-holo elogind polkit dbus
