@@ -172,9 +172,10 @@ VRR and tearing switches), and some are helper scripts Steam runs directly
 gets the calibration gain from `AmbientLightSensor1` (going by the names in
 Steam's binaries), and writes the backlight
 directly (`steamos-priv-write` hands the file to `wheel` once). No sensor
-daemon is involved. The brightness slider stays active: it sets the level
-the automatic adjustment works around, so with the slider near the bottom
-there is little left to adjust.
+daemon is involved. The brightness slider moves with the adjustment, as on
+SteamOS; this started on Io with Valve's Deck modules in the initramfs
+(`steamos-tuning` 1.4). Before, only the backlight followed and the slider
+stayed where it was set.
 
 ---
 

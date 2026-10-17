@@ -45,12 +45,6 @@ start. Without it, a Deck gets the generic Linux client.
 to the raw `node.name` — which is also why it shows the node name and not the
 description for such sources.
 
-**Adaptive brightness looks dead with the slider low or in a dark room.**
-The slider sets the level Steam adjusts around; near the bottom, or at a few
-lux, there is nothing visible left to change. Test with bright light on the
-sensor (top edge of the screen) and the slider in the upper half, and watch
-`/sys/class/backlight/*/brightness`.
-
 **Steam's 32-bit client needs PipeWire's 32-bit plugins, not only the
 library.** Arch's `lib32-pipewire` ships both; Void splits them into
 `libpipewire-32bit`, `pipewire-32bit` and `libspa-*-32bit`. With the library
@@ -608,6 +602,13 @@ screen reader mode at every start; steamos-manager presses Orca's key for it
 **`jupiter-dock-updater --check`: 0 means "update available", 7 "up to
 date"** (Valve's mock script). A stub that simply exits 0 makes Steam
 announce a dock update at every start.
+
+**`sv up` right after linking a service fails.** runsvdir notices a new
+link in `/var/service` only on its next scan (up to 5 s); until then the
+service has no `supervise/`, and `sv` gives up at once. `sv -w <n> up` on a
+service whose `run` takes itself down (`sv down .`) waits the full timeout.
+Linking is enough to start a service; check the link, not `sv status`, for
+"on".
 
 **A USB over-current can be simulated with a temporary udev rule.** The
 kernel adds `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` to a USB

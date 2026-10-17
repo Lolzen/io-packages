@@ -44,10 +44,11 @@ and sources of Io's packages are on [Packages](Packages).
 | `holo-upower-config` 1.0 (not on 3.8.4) | 1.0 | With a fix for Valve's `yes`/`true` bug |
 | `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.3-3 | |
 | `jupiter-firewall` 0.1 | 0.1 | ufw instead of firewalld |
-| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
+| `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, the initramfs modules of the `steam-deck` hook (as a dracut configuration), scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
 | `steamos-tweak-mtu-probing` | in `steamos-tuning` | |
 | `lib32-gamescope` 3.16.30 (3.16.15) | `gamescope-wsi-32bit` 3.16.30 | Only gamescope's WSI layer for 32-bit Vulkan games (frame limiter, bypass, HDR), built for i686 from gamescope's source |
 | `ttf-twemoji-default` 13.1.0-2.5 | `ttf-twemoji-default` 13.1.0 | Built as Valve builds it: Fedora's Twemoji with the same glyphs removed and the same fontconfig file |
+| `wireless-domain-setter` 1.2 (new) | `wireless-domain-setter` 1.2 | runit service instead of systemd; ends at once on the LCD ("no self-managed phy's"), apart from reloading `rtw89_8852cu` when Valve's USB streaming dongle is plugged in |
 | `jupiter-legacy-support` | parts | `KillUserProcesses` (in `io-session`), `steam-web-debug-portforward`, and `steamos-update` (Io's own, with xbps behind it); Valve's own header calls the rest leftovers to be removed |
 | `ibus-pinyin` 1.5.1, `pyzy` 1.1, `ibus-table-cangjie-lite` 1.8.8, `ibus-anthy` 1.5.14 (Valve's fork), `ibus-table` 1.17.19 (Arch), `ibus-hangul` (Arch) | `ibus-pinyin`, `pyzy`, `ibus-table-cangjie-lite`, `ibus-anthy-holo`, `ibus-table`, Void's `ibus-hangul` | Input methods for Steam's keyboard; same sources and versions |
 | `mangohud` (Valve's build with `2c1dc52`), `networkmanager`, `bluez`, `kwin`, `xorg-xwayland`, `wpa_supplicant`, `iwd` (Valve's builds) | `MangoHud-holo`, `NetworkManager-holo`, `bluez-holo`, `kwin-holo`, `xorg-server-xwayland-holo`, `wpa_supplicant-holo`, `iwd-holo` | Void's packages with Valve's patches (and, for wpa_supplicant, some of its build options), through Io's overlay, see [Deviations](Deviations); some matter only on other hardware or with iwd as backend |
@@ -80,7 +81,6 @@ and sources of Io's packages are on [Packages](Packages).
 | `dirlock` | Home directory encryption, filed with the A/B notes below (decided 2026-10-03) |
 | `holo-keyring`, `holo-nix-offload`, `holo-nfs-utils-tmpfiles` | pacman keys, Nix store, NFS: nothing Io needs |
 | `steamos-alias` (new in 3.9.2) | A pacman hook linking `steamos-*` names to the renamed `holo-*` helpers; Io keeps the `steamos-*` names Steam calls |
-| `wireless-domain-setter` (new) | Does nothing on the LCD ("no self-managed phy's"); for the OLED's and Steam Machine's Wi-Fi |
 | `ec-log`, `holo-debuginfod-config`, `holo-grant-cap-sys-nice` (new) | Embedded controller logging for other hardware (service disabled); debug symbols only for SteamOS builds; `cap_sys_nice` for SteamVR's compositor |
 | `holo-session-selection` (new) | `holo-session-select` and SDDM's `holo.conf`; Steam calls `steamos-session-select`, which Io has. `holo.conf`'s `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
 | `plasma-login-manager` (new) | Login manager installed but disabled (SDDM stays) |
