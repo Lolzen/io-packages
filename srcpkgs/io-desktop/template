@@ -15,6 +15,8 @@ replaces="base-system>=0"
 # one of the packages below. The IBus engines and the Noto CJK fonts at the
 # end serve the Chinese, Japanese and Korean layouts of Steam's on-screen
 # keyboard, as on SteamOS; ttf-twemoji-default is SteamOS's emoji font.
+# wireless-domain-setter is Valve's regulatory domain helper for
+# self-managed Wi-Fi cards, enabled on every model as on SteamOS.
 # galileo-mura is the Steam Deck OLED's panel correction (started on that
 # model only), installed on every model as on SteamOS.
 depends="
@@ -56,6 +58,7 @@ depends="
  ibus ibus-pinyin ibus-table-cangjie-lite ibus-anthy-holo ibus-hangul
  noto-fonts-cjk
  ttf-twemoji-default
+ wireless-domain-setter
  galileo-mura
 "
 short_desc="Io meta package: complete Steam Deck game mode system"

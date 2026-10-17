@@ -33,6 +33,12 @@ has changed since is on [Alpha 7](Alpha-7).
   Void's 26.2.4, 6 of Valve's 14 RADV patches do not); to revisit with
   Void's next Mesa update
 - **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
+- **steamos-manager refuses calls from games:** on Valve's main branch
+  after 26.4.1 (not in SteamOS 3.9.2), the session half rejects D-Bus calls
+  whose sender runs inside a game, recognised by the systemd cgroup
+  `/app-steam-app…` Steam starts games in. Io has no such cgroups, so it
+  needs its own way to tell a game's process; a larger change that can only
+  partly be tested. Left until Valve ships it
 
 ---
 

@@ -54,6 +54,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `ibus-anthy-holo` | `ibus-anthy` 1.5.14 (Valve's fork) | Japanese input for Steam's keyboard, with the settings Steam writes; replaces Void's `ibus-anthy` |
 | `gamescope-wsi` (published as `gamescope-wsi-32bit`) | gamescope 3.16.30 (SteamOS: `lib32-gamescope`) | gamescope's Vulkan WSI layer for 32-bit games (frame limiter, bypass, HDR), built for i686; only the layer, not gamescope |
 | `ttf-twemoji-default` | `ttf-twemoji-default` 13.1.0 (Valve's build of Fedora's Twemoji) | SteamOS's emoji font: colour bitmaps, without the glyphs for digits, `#`, `*`, space, © and ® (so plain text never falls back to emoji), and a fontconfig file that makes it the emoji font for everything |
+| `wireless-domain-setter` | `wireless-domain-setter` 1.2 (holo-3.9) | Copies a self-managed Wi-Fi card's regulatory domain (the OLED's ath11k) to the kernel, for cards that follow the global domain; runit service on every model; on the LCD it ends at once (only reloads the driver of Valve's USB streaming dongle if that is plugged in) |
 | `galileo-mura` | `galileo-mura` v0.10 (jupiter-3.9) | The Steam Deck OLED's mura correction: reads the panel's factory data (setuid extractor) or downloads it once and hands it to gamescope; started in game mode on the OLED only |
 
 ## From elsewhere

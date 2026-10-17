@@ -46,6 +46,10 @@
   Tested with a simulated event (a made-up port name): the signal arrives;
   Steam showed nothing for it in game mode. A real over-current is
   untested.
+- **Adaptive brightness moves Steam's brightness slider** with the
+  adjustment, as on SteamOS. It started right after `steamos-tuning` 1.4
+  rebuilt the initramfs with Valve's Deck modules (see *Boot*); before,
+  only the backlight followed and the slider stayed where it was set.
 
 ### Wi-Fi
 
@@ -55,6 +59,11 @@
   not, among them WNM and MBO for roaming between access points.
 - **`iwd-holo`**, for iwd as backend: Valve's three fixes to scanning and
   connecting.
+- **`wireless-domain-setter`** (Valve's, new; runit service on every
+  model): copies the regulatory domain of a self-managed card (the OLED's
+  ath11k) to the kernel, for cards that follow the global domain such as
+  Valve's USB streaming dongle, whose driver it also reloads at boot. On
+  the LCD it ends at once.
 
 ### Steam Deck OLED (untested, no hardware)
 
