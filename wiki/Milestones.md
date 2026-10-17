@@ -185,5 +185,3 @@ someone with the hardware.
 - Valve's kernel updates, with the configuration review described on
   [Kernel](Kernel)
 - Boot logs, for regressions and new warnings
-- After each gamescope update: *Use Legacy X11* in Steam's developer
-  settings
