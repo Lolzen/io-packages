@@ -284,6 +284,19 @@ resolves crates itself. Crates that generate bindings (`clang-sys`) also need
 `clang`, `llvm` and `clang21-devel`: the versioned `-devel` package is the only
 one shipping the unversioned `libclang.so` that `clang-sys` looks for.
 
+**xbps-src drops the `provides` of `-32bit` packages.** It reads them from
+`<pkg>-32bit-provides` in the state directory, which no hook writes;
+`replaces` survive. A package that stands in for one of Void's `-32bit`
+packages needs that file written (`overlay/holo.sh` does it for
+`lib32=yes`), or Void's packages that depend on it stay broken
+(`xbps-pkgdb`: dependency not satisfied).
+
+**Void rebuilds its own packages for a new soname, not Io's.** After Void's
+`libdisplay-info` 0.3.0, `kwin-holo` 6.7.5_201 still needed
+`libdisplay-info.so.2`, and every update aborted with an unresolvable
+shlib. Rebuild overlays with `build.sh -p --overlays`; Io's own packages
+that link the library need a revision bump.
+
 **xbps-src no longer builds `archs=noarch`.** A template with it stops
 with "this package cannot be built for x86_64"; leave `archs` out.
 

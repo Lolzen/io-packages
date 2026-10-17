@@ -38,6 +38,16 @@
   builds it), the emoji font for the whole system through its fontconfig
   file.
 
+### Graphics
+
+- **Valve's Mesa patches** (`mesa-holo`, 64 and 32 bit): Void's Mesa 26.2.5
+  with 14 of Valve's commits and three RADV fixes from Mesa main. OpenGL
+  games now follow Steam's frame limit: glxgears with V-Sync off renders
+  30.0 FPS at limit 30 and uncapped without it (with Void's Mesa the limit
+  was only shown; the game kept rendering behind it). RADV has Valve's
+  fixes against stutter in game mode (per command buffer BO tracking, no
+  global BO list for gamescope) and for *Forza Horizon* 4 to 6.
+
 ### Steam
 
 - **USB over-current warning** (`io-steamos-manager` 0.15.0): the session

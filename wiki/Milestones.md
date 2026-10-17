@@ -28,10 +28,6 @@ has changed since is on [Alpha 7](Alpha-7).
 
 ## Next (no theme yet)
 
-- **Valve's Mesa as an overlay** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
-  looked at again on 2026-10-11 (the OpenGL frame limiter applies to
-  Void's 26.2.4, 6 of Valve's 14 RADV patches do not); to revisit with
-  Void's next Mesa update
 - **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
 - **steamos-manager refuses calls from games:** on Valve's main branch
   after 26.4.1 (not in SteamOS 3.9.2), the session half rejects D-Bus calls

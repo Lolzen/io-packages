@@ -91,7 +91,12 @@ describes it in full.
   A revision bump in Void only means a new build.
 - `overlay/holo.sh check` shows each overlay's state without changing
   anything; `build.sh -p --overlays` builds what is missing. Run it after
-  Void updates, before updating the Deck.
+  Void updates, before updating the Deck; a library's new soname in Void
+  needs it too (Void's `libdisplay-info` 0.3.0 left `kwin-holo` 6.7.5_201
+  with an unresolvable shlib until it was rebuilt).
+- `lib32=yes` in `overlay.conf` (Mesa) builds the overlay for i686 as
+  well; xbps-src turns that build into `<sub>-holo-32bit` packages for the
+  multilib repository. The 32-bit build takes as long as the 64-bit one.
 - Io's own templates depend on the `-holo` names, so a fresh image never
   installs Void's package next to the stand-in.
 

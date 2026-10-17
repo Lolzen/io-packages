@@ -82,6 +82,7 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | Text from Steam's keyboard as keysyms over libei |
 | `wpa_supplicant-holo` | `wpa_supplicant` | WPA3 wrong-password detection, fewer rescans after resume, WNM/MBO and some of Valve's other build options |
 | `iwd-holo` | `iwd` | Valve's scanning and connecting fixes |
+| `mesa-holo`, `mesa-dri-holo`, `mesa-vulkan-radeon-holo`, ..., and their `-holo-32bit` packages | Void's Mesa packages, 64 and 32 bit | Steam's frame limit for OpenGL, RADV's explicit VM sync and per command buffer BO tracking for gamescope, game fixes, three RADV fixes from Mesa main |
 
 ## Upstream sources
 
