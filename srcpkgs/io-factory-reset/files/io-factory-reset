@@ -22,7 +22,9 @@
 #              connections and backend, SDDM's login mode, SSH host keys,
 #              machine-id, the services Steam switches (SSH on, developer
 #              mode, iwd and the LAVD scheduler off); a hibernated session is
-#              dropped; the update channel goes back to the image's: the
+#              dropped; shadow's backup files (/etc/passwd- and the like,
+#              with the old password hashes) and sudo's first-use marks
+#              are removed; the update channel goes back to the image's: the
 #              repository files in /etc/xbps.d (Io's testing channel and
 #              other additions) are removed - SteamOS keeps its branch in
 #              /var, which its reset formats, and falls back to stable.
@@ -137,6 +139,8 @@ new_home() {
 VAR_DIRS="/var/lib/bluetooth /var/lib/NetworkManager /var/lib/iwd /var/lib/flatpak"
 VAR_DIRS="$VAR_DIRS /var/lib/sddm /var/lib/AccountsService/users /var/lib/AccountsService/icons"
 VAR_DIRS="$VAR_DIRS /var/lib/upower /var/lib/udisks2 /var/tmp /var/cache/xbps"
+# sudo's "lectured" marks (who has seen sudo's first-use notice)
+VAR_DIRS="$VAR_DIRS /var/db/sudo/lectured"
 # The services Steam switches that the image has off
 SWITCHED_OFF="avahi-daemon steamos-devkit-service iwd scx ec-log"
 
@@ -167,6 +171,9 @@ reset_identity() {
         getent group "$g" > /dev/null && groups="${groups:+$groups,}$g"
     done
     [ -n "$groups" ] && usermod -G "$groups" "$user"
+    # shadow's backup copies (passwd-, shadow-, ...) hold the accounts and
+    # password hashes from before; the next change makes new ones
+    rm -f /etc/passwd- /etc/shadow- /etc/group- /etc/gshadow- /etc/subuid- /etc/subgid-
 
     # Wi-Fi connections, Wi-Fi backend and power saving (Steam's switches)
     rm -f /etc/NetworkManager/system-connections/*

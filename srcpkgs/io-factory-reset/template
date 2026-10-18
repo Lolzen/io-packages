@@ -1,6 +1,6 @@
 # Template file for 'io-factory-reset'
 pkgname=io-factory-reset
-version=0.2.0
+version=0.2.1
 revision=1
 depends="bash coreutils findutils util-linux shadow e2fsprogs xbps polkit"
 short_desc="Io's factory reset: user data, OS, or both (Steam's reset)"
