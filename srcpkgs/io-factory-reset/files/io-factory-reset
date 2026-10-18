@@ -22,13 +22,20 @@
 #              connections and backend, SDDM's login mode, SSH host keys,
 #              machine-id, the services Steam switches (SSH on, developer
 #              mode, iwd and the LAVD scheduler off); a hibernated session is
-#              dropped.
+#              dropped; the update channel goes back to the image's: the
+#              repository files in /etc/xbps.d (Io's testing channel and
+#              other additions) are removed - SteamOS keeps its branch in
+#              /var, which its reset formats, and falls back to stable.
 #   OS         is reset right away, while the system runs (it needs the
 #              network): the system is updated, packages the user installed
 #              on top of Io are removed, every package whose files were
 #              changed or deleted (xbps-pkgdb -a) is installed again, and
-#              /usr/local is emptied. The repository settings (/etc/xbps.d)
-#              are kept, as SteamOS keeps its update channel.
+#              /usr/local is emptied. With --all, /etc/xbps.d is reset
+#              first, so the system is brought to the default channel's
+#              versions (packages from another channel are installed again
+#              from it, even if that is older), as SteamOS installs the
+#              default branch's image after its reset. --os alone keeps the
+#              channel.
 #
 # Usage (as root; the interactive form asks for root itself through sudo):
 #   io-factory-reset [--user-data|--os|--all]   asks, prepares, restarts
@@ -126,12 +133,17 @@ new_home() {
     say "$home made new from /etc/skel"
 }
 
+# What clear_var empties
+VAR_DIRS="/var/lib/bluetooth /var/lib/NetworkManager /var/lib/iwd /var/lib/flatpak"
+VAR_DIRS="$VAR_DIRS /var/lib/sddm /var/lib/AccountsService/users /var/lib/AccountsService/icons"
+VAR_DIRS="$VAR_DIRS /var/lib/upower /var/lib/udisks2 /var/tmp /var/cache/xbps"
+# The services Steam switches that the image has off
+SWITCHED_OFF="avahi-daemon steamos-devkit-service iwd scx ec-log"
+
 clear_var() {
     local d
     say "erasing the user's state in /var"
-    for d in /var/lib/bluetooth /var/lib/NetworkManager /var/lib/iwd /var/lib/flatpak \
-        /var/lib/sddm /var/lib/AccountsService/users /var/lib/AccountsService/icons \
-        /var/lib/upower /var/lib/udisks2 /var/tmp /var/cache/xbps; do
+    for d in $VAR_DIRS; do
         empty_dir "$d"
     done
     # socklog's filter files (config) belong to socklog-void
@@ -139,7 +151,7 @@ clear_var() {
 }
 
 reset_identity() {
-    local user=$IO_DEFAULT_USER g groups=""
+    local user=$IO_DEFAULT_USER g s groups=""
     say "settings back to the image's"
     printf '%s\n' "$IO_DEFAULT_HOSTNAME" > /etc/hostname
     ln -sf "/usr/share/zoneinfo/$IO_DEFAULT_TIMEZONE" /etc/localtime
@@ -175,8 +187,40 @@ reset_identity() {
 
     # The services Steam switches, as the image has them
     [ -d /etc/sv/sshd ] && ln -sfn /etc/sv/sshd "$SV_DIR/sshd"
-    rm -f "$SV_DIR/avahi-daemon" "$SV_DIR/steamos-devkit-service" "$SV_DIR/iwd" \
-        "$SV_DIR/scx" "$SV_DIR/ec-log"
+    for s in $SWITCHED_OFF; do
+        rm -f "${SV_DIR:?}/$s"
+    done
+
+    # The update channel back to the image's (done already when the OS part
+    # ran first; then this finds nothing)
+    reset_repositories
+    rm -rf "$REPOS_SAVED"
+}
+
+# The image brings no files in /etc/xbps.d (Io's and Void's repositories
+# come from packages, in /usr/share/xbps.d): everything there was added
+# later, among it Io's testing channel (10-io-testing.conf). Moved aside
+# first, so a failed OS reset can put them back.
+REPOS_SAVED=$STATE/xbps.d-removed
+reset_repositories() {
+    local f
+    for f in /etc/xbps.d/*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        mkdir -p "$REPOS_SAVED" || return 1
+        say "update channel: removing $f"
+        mv -f "$f" "$REPOS_SAVED/" || return 1
+    done
+    return 0
+}
+
+restore_repositories() {
+    local f
+    for f in "$REPOS_SAVED"/*; do
+        [ -e "$f" ] || [ -L "$f" ] || continue
+        say "update channel: putting back ${f##*/}"
+        mv -f "$f" /etc/xbps.d/
+    done
+    rm -rf "$REPOS_SAVED"
 }
 
 apply_user_reset() {
@@ -212,7 +256,7 @@ apply_user_reset() {
 ################################################################################
 
 reset_os() {
-    local manual extra missing p broken pending
+    local manual extra missing p broken pending other
     say "== factory reset: OS ($(date '+%F %T'))"
     say "updating the system"
     xbps-install -S > /dev/null || { say "cannot reach the repositories"; return 1; }
@@ -223,6 +267,23 @@ reset_os() {
     if ! pending=$(xbps-install -un) || [ -n "$pending" ]; then
         say "system update failed"
         return 1
+    fi
+
+    # Packages whose installed version is not the repositories' (from
+    # another channel, e.g. testing, or built by hand): installed again from
+    # the repositories, even where that is older. Packages no repository
+    # has are left to the "installed on top" step below.
+    # One pass over both lists (one xbps-query per package would take
+    # minutes): name = pkgver without its last "-version_revision" part.
+    other=$({ xbps-query -Rs '' | awk '{ print "R", $2 }'; xbps-query -l | awk '{ print "I", $2 }'; } |
+        awk '{ n = $2; sub(/-[^-]*$/, "", n) }
+             $1 == "R" { repo[n] = repo[n] " " $2 " " }
+             $1 == "I" { inst[n] = $2 }
+             END { for (n in inst) if ((n in repo) && index(repo[n], " " inst[n] " ") == 0) printf " %s", n }')
+    if [ -n "$other" ]; then
+        say "back to the repositories' versions:$other"
+        # shellcheck disable=SC2086
+        xbps-install -fy $other >&2 || { say "installing the repositories' versions failed"; return 1; }
     fi
 
     # Io's own packages back where a user removed them
@@ -277,8 +338,16 @@ prepare() {
     esac
     mkdir -p "${LOG%/*}"
     {
+        if [ "$1" = all ]; then
+            mkdir -p "$STATE" || exit 1
+            reset_repositories || { restore_repositories; say "could not reset the update channel"; exit 1; }
+        fi
         if [ "$1" != user ]; then
-            reset_os || { say "OS reset failed; user data left as it is"; exit 1; }
+            if ! reset_os; then
+                [ "$1" = all ] && restore_repositories
+                say "OS reset failed; user data left as it is"
+                exit 1
+            fi
         fi
         if [ "$1" != os ]; then
             mkdir -p "$STATE" || exit 1
