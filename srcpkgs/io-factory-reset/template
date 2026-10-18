@@ -1,9 +1,9 @@
 # Template file for 'io-factory-reset'
 pkgname=io-factory-reset
-version=0.1.1
+version=0.2.0
 revision=1
-depends="bash coreutils findutils util-linux shadow e2fsprogs xbps"
-short_desc="Io's factory reset: user data, OS, or both (Steam's FactoryReset1)"
+depends="bash coreutils findutils util-linux shadow e2fsprogs xbps polkit"
+short_desc="Io's factory reset: user data, OS, or both (Steam's reset)"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://github.com/Lolzen/io-packages"
@@ -14,12 +14,17 @@ homepage="https://github.com/Lolzen/io-packages"
 # the other slot. Io has one root filesystem, so it erases the user data
 # file by file at the next boot (core service 04-io-factory-reset.sh) and
 # resets the OS in place with xbps; what each covers is in io-factory-reset.
-# Called by io-steamos-manager (FactoryReset1.PrepareFactoryReset) and by
-# Steam's helper steamos-factory-reset-config (deck-hw-support). The
+# Called by Steam through steamos-reset-tool (what SteamOS 3.9.3's Steam
+# runs: os-status, then factory-reset --reset-os --reset-user-data; root
+# through polkit, org.io.steamos-reset-tool.policy), by io-steamos-manager
+# (FactoryReset1.PrepareFactoryReset) and by Steam's helper
+# steamos-factory-reset-config (deck-hw-support). The
 # image's own settings come from /var/lib/io/factory-defaults, written by
 # mkrootfs.sh; installations made before fall back to the build defaults.
 do_install() {
 	vbin ${FILESDIR}/io-factory-reset
+	vbin ${FILESDIR}/steamos-reset-tool
+	vinstall ${FILESDIR}/org.io.steamos-reset-tool.policy 644 usr/share/polkit-1/actions
 	vmkdir etc/runit/core-services
 	vinstall ${FILESDIR}/04-io-factory-reset.sh 644 etc/runit/core-services
 }
