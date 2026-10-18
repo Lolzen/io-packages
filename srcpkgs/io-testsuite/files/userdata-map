@@ -2,7 +2,7 @@
 # userdata-map - inventory of the state on Io outside the packages (what a factory reset must reach).
 # Read-only. Lists every file in /var and /etc that no package owns, and
 # the configuration files packages own but that were changed, grouped by
-# folder, with size, newest change and what io-factory-reset (0.1.1,
+# folder, with size, newest change and what io-factory-reset (0.2.1,
 # branch destructive) does with it: RESET, KEEP (system state the reset
 # must not touch) or OPEN (not covered - to be decided). Also: the enabled
 # runit services and /home's size.
@@ -19,7 +19,7 @@ import time
 
 LOGS = os.environ.get("IO_TEST_LOGS", "/home/deck/io-test-logs")
 
-# What io-factory-reset 0.1.1 erases or sets back (prefix match)
+# What io-factory-reset 0.2.1 erases or sets back (prefix match)
 RESET = [
     "/var/lib/bluetooth", "/var/lib/NetworkManager", "/var/lib/iwd", "/var/lib/flatpak",
     "/var/lib/sddm", "/var/lib/AccountsService/users", "/var/lib/AccountsService/icons",
@@ -30,6 +30,8 @@ RESET = [
     "/etc/NetworkManager/conf.d/99-io-wifi-powersave.conf", "/etc/iwd/main.conf",
     "/etc/sddm.conf.d/zz-steamos-autologin.conf", "/etc/sddm.conf.d/zzt-steamos-temp-login.conf",
     "/etc/ssh/ssh_host_", "/etc/machine-id", "/etc/xbps.d",
+    "/etc/passwd-", "/etc/shadow-", "/etc/group-", "/etc/gshadow-", "/etc/subuid-", "/etc/subgid-",
+    "/var/db/sudo/lectured",
 ]
 # State of the system itself, which the reset must leave alone
 KEEP = [
