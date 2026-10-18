@@ -1,6 +1,6 @@
 --- a/usr/lib/hwsupport/jupiter-controller-update-with-splash
 +++ b/usr/lib/hwsupport/jupiter-controller-update-with-splash
-@@ -53,13 +53,13 @@
+@@ -65,13 +65,13 @@
  if fake_update_requested
  then
      # shellcheck disable=SC2086

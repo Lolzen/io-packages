@@ -1,6 +1,6 @@
 --- a/usr/bin/jupiter-controller-update
 +++ b/usr/bin/jupiter-controller-update
-@@ -129,6 +129,13 @@
+@@ -132,6 +132,13 @@
  ###############################################################################################################################
  needs_update=0
  
@@ -14,7 +14,7 @@
  # In OOBE builds, we only want to attempt to touch the firmware if it looks to be in the bootloader.
  # Else, leave everything be, and let the subsequent update do the first firmware-touching.
  if [[ $JUPITER_CONTROLLER_UPDATE_IN_OOBE -ne 1 && -e /etc/steamos-oobe-image && $bootloader != "true" ]]; then
-@@ -161,6 +168,8 @@
+@@ -164,6 +171,8 @@
  
      if [[ ${build_timestamp} == ${CURRENT_D21_FW_TS} ]]; then
        info "NO UPDATE: Type 1 device is running latest build $CURRENT_D21_FW_TS"
@@ -23,7 +23,7 @@
      else
        needs_update=1
        info "UPDATE: Type 1 device is running build $build_timestamp, updating to build $CURRENT_D21_FW_TS"
-@@ -171,6 +180,8 @@
+@@ -174,6 +183,8 @@
  
      if [[ $build_timestamp == $CURRENT_D21_FW_TS ]] && [[ $secondary_build_timestamp == $CURRENT_D21_FW_TS || $secondary_build_timestamp == $CURRENT_D20_FW_TS ]]; then
        info "NO UPDATE: Type 1/2 Device is running latest build $CURRENT_D21_FW_TS"
@@ -32,7 +32,7 @@
      else
        needs_update=1
        info "UPDATE: Type 1/2 Device is running builds $build_timestamp | $secondary_build_timestamp, updating to build ($CURRENT_D21_FW_TS | $CURRENT_D21_FW_TS or $CURRENT_D20_FW_TS)"
-@@ -180,6 +191,8 @@
+@@ -183,6 +194,8 @@
  elif [[ $bootloader_type -eq 3 ]]; then
      if [[ $build_timestamp == $CURRENT_RA4_FW_TS ]]; then
        info "NO UPDATE: Type 3 Device is running latest build $CURRENT_RA4_FW_TS"

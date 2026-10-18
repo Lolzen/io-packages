@@ -1,8 +1,13 @@
 # Template file for 'deck-firmware-updaters'
 pkgname=deck-firmware-updaters
-version=20260807.1
+version=20260930.1
 revision=1
 _pkgrel=1
+# Valve calls this release 3.9.20260930.1 (git tag jupiter-3.9-20260930.1,
+# SteamOS 3.9.3); Io keeps the date alone, which xbps orders after
+# 20260807.1 (3.9.x would sort before it).
+_srcver=3.9.${version}
+_srctag=jupiter-3.9-${version}
 archs="x86_64"
 wrksrc="jupiter-hw-support"
 hostmakedepends="git tar"
@@ -12,8 +17,8 @@ short_desc="Steam Deck BIOS and controller firmware updaters from jupiter-hw-sup
 maintainer="Georg <funer@gmx.at>"
 license="MIT, custom:Proprietary"
 homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
-distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/jupiter-hw-support-${version}-${_pkgrel}.src.tar.gz"
-checksum=dbad78592a308230efe9b7cc5fd3c4c6aa5447f5e07c3ca81d3a748882582eaf
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/jupiter-hw-support-${_srcver}-${_pkgrel}.src.tar.gz"
+checksum=38d025af2ddb22cfc3c94d23264bcc6136571f1c3ad585f4dc5cf3eb52fe3973
 # Valve's prebuilt flasher (h2offt) breaks when stripped, as Valve's
 # PKGBUILD notes (!strip).
 nostrip=yes
@@ -21,7 +26,11 @@ nostrip=yes
 # them in this directory (it runs h2offt from there).
 ignore_elf_dirs="/usr/share/jupiter_bios_updater"
 
-# The firmware half of Valve's jupiter-hw-support (SteamOS 3.9.2): the BIOS
+# The firmware half of Valve's jupiter-hw-support (SteamOS 3.9.3; no new
+# firmware against 3.9.2's 20260807.1, only two fixes to the controller
+# scripts: the EV2 serial check runs on Jupiter only and no longer lets bash
+# evaluate the serial, and the splash wrapper goes by --check's exit status,
+# so a failed check is an error instead of "no update"): the BIOS
 # images and Insyde's flasher h2offt behind jupiter-biosupdate, the
 # controller firmware and Valve's flashing scripts behind
 # jupiter-controller-update. deck-hw-support carries the rest of that package
@@ -55,7 +64,7 @@ ignore_elf_dirs="/usr/share/jupiter_bios_updater"
 # mirror, but no licence states whether others may redistribute them.
 
 post_extract() {
-	git --git-dir=jupiter-hw-support archive --format=tar "jupiter-${version}" | tar -x
+	git --git-dir=jupiter-hw-support archive --format=tar "${_srctag}" | tar -x
 }
 
 do_install() {
