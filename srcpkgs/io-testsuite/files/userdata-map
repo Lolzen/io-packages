@@ -1,0 +1,172 @@
+#!/usr/bin/python3
+# userdata-map - inventory of the state on Io outside the packages (what a factory reset must reach).
+# Read-only. Lists every file in /var and /etc that no package owns, and
+# the configuration files packages own but that were changed, grouped by
+# folder, with size, newest change and what io-factory-reset (0.1.1,
+# branch destructive) does with it: RESET, KEEP (system state the reset
+# must not touch) or OPEN (not covered - to be decided). Also: the enabled
+# runit services and /home's size.
+#   sudo io-test userdata-map
+# Result: ~deck/io-test-logs/userdata-map-<date>.txt
+import glob
+import hashlib
+import os
+import plistlib
+import stat
+import subprocess
+import sys
+import time
+
+LOGS = os.environ.get("IO_TEST_LOGS", "/home/deck/io-test-logs")
+
+# What io-factory-reset 0.1.1 erases or sets back (prefix match)
+RESET = [
+    "/var/lib/bluetooth", "/var/lib/NetworkManager", "/var/lib/iwd", "/var/lib/flatpak",
+    "/var/lib/sddm", "/var/lib/AccountsService/users", "/var/lib/AccountsService/icons",
+    "/var/lib/upower", "/var/lib/udisks2", "/var/tmp", "/var/cache/xbps", "/var/log",
+    "/etc/hostname", "/etc/localtime", "/etc/locale.conf", "/etc/shadow", "/etc/gshadow",
+    "/etc/passwd", "/etc/group",
+    "/etc/NetworkManager/system-connections", "/etc/NetworkManager/conf.d/99-valve-wifi-backend.conf",
+    "/etc/NetworkManager/conf.d/99-io-wifi-powersave.conf", "/etc/iwd/main.conf",
+    "/etc/sddm.conf.d/zz-steamos-autologin.conf", "/etc/sddm.conf.d/zzt-steamos-temp-login.conf",
+    "/etc/ssh/ssh_host_", "/etc/machine-id", "/etc/xbps.d",
+]
+# State of the system itself, which the reset must leave alone
+KEEP = [
+    "/var/db/xbps", "/var/lib/io", "/var/lib/dbus", "/var/lib/steamos-tuning",
+    "/var/service", "/etc/runit/runsvdir",
+]
+
+
+def verdict(path):
+    for p in RESET:
+        if path == p or path.startswith(p.rstrip("/") + "/") or (p.endswith("_") and path.startswith(p)):
+            return "RESET"
+    for p in KEEP:
+        if path == p or path.startswith(p + "/"):
+            return "KEEP"
+    return "OPEN"
+
+
+def owned():
+    """Paths the packages own, and sha256 of their configuration files."""
+    paths, conf = set(), {}
+    bad = 0
+    for f in glob.glob("/var/db/xbps/.*-files.plist"):
+        try:
+            with open(f, "rb") as fh:
+                pl = plistlib.load(fh)
+        except Exception:
+            bad += 1
+            continue
+        for key in ("files", "conf_files", "links", "dirs"):
+            for e in pl.get(key, []):
+                p = e.get("file")
+                if not p:
+                    continue
+                paths.add(p)
+                if key == "conf_files" and e.get("sha256"):
+                    conf[p] = e["sha256"]
+    return paths, conf, bad
+
+
+def group_of(path):
+    parts = path.split("/")
+    depth = 4 if path.startswith("/var/") else 3
+    return "/".join(parts[:depth])
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for b in iter(lambda: fh.read(1 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+def main():
+    if os.geteuid() != 0:
+        sys.exit("userdata-map: run it with sudo (sudo io-test userdata-map)")
+    os.makedirs(LOGS, exist_ok=True)
+    out_path = os.path.join(LOGS, "userdata-map-%s.txt" % time.strftime("%Y%m%d-%H%M"))
+    paths, conf, bad = owned()
+
+    # When the image was built: mkrootfs.sh writes factory-defaults
+    ref = None
+    for r in ("/var/lib/io/factory-defaults", "/etc/fstab"):
+        if os.path.exists(r):
+            ref = (r, os.lstat(r).st_mtime)
+            break
+
+    groups = {}
+    for top in ("/var", "/etc"):
+        for root, dirs, files in os.walk(top):
+            # stay on the root file system; the package database is the
+            # packages' own business
+            dirs[:] = [d for d in dirs if not os.path.ismount(os.path.join(root, d))
+                       and os.path.join(root, d) != "/var/db/xbps"]
+            for name in files:
+                p = os.path.join(root, name)
+                try:
+                    st = os.lstat(p)
+                except OSError:
+                    continue
+                if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
+                    continue
+                kind = None
+                if p not in paths:
+                    kind = "new"
+                elif p in conf and stat.S_ISREG(st.st_mode):
+                    try:
+                        if sha256(p) != conf[p]:
+                            kind = "changed"
+                    except OSError:
+                        pass
+                if not kind:
+                    continue
+                v = verdict(p)
+                g = groups.setdefault((v, group_of(p)), {"n": 0, "size": 0, "mtime": 0, "changed": [], "after": 0, "files": []})
+                g["n"] += 1
+                g["size"] += st.st_size
+                g["mtime"] = max(g["mtime"], st.st_mtime)
+                if kind == "changed":
+                    g["changed"].append(p)
+                if v == "OPEN":
+                    g["files"].append((st.st_size, st.st_mtime, kind, p))
+                if ref and st.st_mtime > ref[1] + 3600:
+                    g["after"] += 1
+
+    services = sorted(os.listdir("/etc/runit/runsvdir/default")) if os.path.isdir("/etc/runit/runsvdir/default") else []
+    home = subprocess.run(["du", "-sxh", "/home", "/root"], capture_output=True, text=True).stdout
+
+    with open(out_path, "w") as out:
+        w = out.write
+        w("== userdata-map %s\n" % time.strftime("%F %T"))
+        w("packages' file lists read: %d (unreadable: %d), owned paths: %d\n" % (
+            len(glob.glob("/var/db/xbps/.*-files.plist")), bad, len(paths)))
+        if ref:
+            w("image built (mtime of %s): %s; 'after' = files changed later\n" % (
+                ref[0], time.strftime("%F %T", time.localtime(ref[1]))))
+        w("\n%-6s %-48s %6s %6s %10s  %s\n" % ("", "folder", "files", "after", "size", "newest change"))
+        order = {"OPEN": 0, "RESET": 1, "KEEP": 2}
+        for (v, g) in sorted(groups, key=lambda k: (order[k[0]], k[1])):
+            d = groups[(v, g)]
+            w("%-6s %-48s %6d %6d %10d  %s\n" % (v, g, d["n"], d["after"], d["size"],
+                                                 time.strftime("%F %H:%M", time.localtime(d["mtime"]))))
+        w("\n== package configuration files that were changed\n")
+        for (v, g) in sorted(groups, key=lambda k: k[1]):
+            for p in groups[(v, g)]["changed"]:
+                w("%-6s %s\n" % (v, p))
+        w("\n== OPEN: every file (new = no package owns it; changed = a package's, edited)\n")
+        for (v, g) in sorted(k for k in groups if k[0] == "OPEN"):
+            for size, mtime, kind, p in sorted(groups[(v, g)]["files"], key=lambda e: e[3]):
+                w("  %-7s %10d %s %s\n" % (kind, size, time.strftime("%F %H:%M", time.localtime(mtime)), p))
+        w("\n== enabled runit services (/etc/runit/runsvdir/default)\n")
+        w("  " + " ".join(services) + "\n")
+        w("\n== /home and /root (the reset empties both)\n")
+        w(home)
+    os.chmod(out_path, 0o644)
+    print("done: %s" % out_path)
+
+
+main()

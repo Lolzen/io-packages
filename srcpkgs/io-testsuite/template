@@ -1,6 +1,6 @@
 # Template file for 'io-testsuite'
 pkgname=io-testsuite
-version=20261012.1
+version=20261018.1
 revision=1
 short_desc="Io's test scripts for the Deck (development only)"
 maintainer="Georg <funer@gmx.at>"
