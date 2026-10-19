@@ -35,6 +35,7 @@
 # A package with archs="i686" (gamescope-wsi) is built in an i686 masterdir
 # (xbps-src -A i686, created on first use); xbps-src turns it into
 # <name>-32bit for the x86_64 multilib repository, which publish.sh takes.
+# An overlay with lib32=yes in its overlay.conf (mesa) is built both ways.
 
 set -eu
 
@@ -138,6 +139,11 @@ for pkg in $BUILD; do
     else
         ./xbps-src clean "$pkg"
         ./xbps-src pkg "$pkg"
+    fi
+    # an overlay with lib32=yes also for i686 (its -32bit packages)
+    if is_overlay "$pkg" && sh "$HOLO" lib32 "${pkg%-holo}"; then
+        ./xbps-src -A i686 clean "$pkg"
+        ./xbps-src -A i686 pkg "$pkg"
     fi
 done
 

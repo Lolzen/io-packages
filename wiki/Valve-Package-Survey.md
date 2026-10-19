@@ -62,7 +62,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `gamescope` 3.16.30 (3.16.23) | Void's gamescope 3.16.30 |
 | `gamemode`, `orca`, `speech-dispatcher`, `espeak-ng`, `sof-firmware`, `sdl2-compat`, `sdl3`, `knighttime`, `plasma-keyboard`, `noto-fonts-cjk` | Void's packages |
 | `linux-firmware-neptune`, `amd-ucode-neptune` | Void's `linux-firmware` packages (the amplifier firmware, the Wi-Fi firmware and AMD's microcode are in them). Nothing the LCD needs is missing; Io's `deck-firmware` adds Valve's older `vangogh_vcn.bin` (AMD withdrew Void's) and Valve's Realtek Bluetooth firmware, see [Deviations](Deviations) |
-| `mesa`, `vulkan-radeon` (Valve's builds) | Void's Mesa, see [Deviations](Deviations) (*Graphics*) |
+| `mesa`, `vulkan-radeon` (Valve's builds) | `mesa-holo`: Void's Mesa 26.2.5 with Valve's patches, 64 and 32 bit, see [Deviations](Deviations) (*Graphics*, *Io overlay*) |
 | `scx-scheds` | Void's `scx`, switched through a runit service by `io-steamos-manager` |
 | `iio-sensor-proxy` (new in 3.9.2) | Not on Io: removed in Alpha 5, when SteamOS 3.8.4 did not have it either; Steam reads the light sensor itself. On 3.9.2 it runs, but nothing in game mode uses it |
 
@@ -212,6 +212,7 @@ resume, bluez's fixes for re-pairing and the Switch Pro Controller; in
 Alpha 7 kwin's and Xwayland's patches for Steam's keyboard in the desktop
 (and kwin's brightness and mode filter), wpa_supplicant's and iwd's fixes,
 and wpa_supplicant's roaming options (WNM, MBO) that Void's build leaves
-out. Left for later (in io-packages' `overlay/README.md`): Valve's Mesa.
+out, and Valve's Mesa patches (OpenGL frame limiter, RADV) on Void's Mesa
+26.2.5, for 32 bit as well.
 Watched: PipeWire's next major release (Bluetooth profiles, dock HDMI
 fixes).

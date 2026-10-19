@@ -34,6 +34,12 @@ output.
 update check fails with a generic `http error 0` that reads like a network
 problem.
 
+**Steam's FPS counter shows the frames gamescope displays, not the frames
+a game renders.** An OpenGL game with V-Sync off under Steam's frame limit
+reads 30 FPS on any Mesa, whether or not it renders more frames that are
+never shown. To see what Mesa does, measure the game's own rate
+(`glxgears` prints it) or the power draw.
+
 **gamescope's process name is `gamescope-wl`**, not `gamescope`.
 
 **An empty `package/beta` means the desktop client's branch.** Steam on
@@ -283,6 +289,19 @@ defaults in `/usr/lib/sysctl.d`.
 resolves crates itself. Crates that generate bindings (`clang-sys`) also need
 `clang`, `llvm` and `clang21-devel`: the versioned `-devel` package is the only
 one shipping the unversioned `libclang.so` that `clang-sys` looks for.
+
+**xbps-src drops the `provides` of `-32bit` packages.** It reads them from
+`<pkg>-32bit-provides` in the state directory, which no hook writes;
+`replaces` survive. A package that stands in for one of Void's `-32bit`
+packages needs that file written (`overlay/holo.sh` does it for
+`lib32=yes`), or Void's packages that depend on it stay broken
+(`xbps-pkgdb`: dependency not satisfied).
+
+**Void rebuilds its own packages for a new soname, not Io's.** After Void's
+`libdisplay-info` 0.3.0, `kwin-holo` 6.7.5_201 still needed
+`libdisplay-info.so.2`, and every update aborted with an unresolvable
+shlib. Rebuild overlays with `build.sh -p --overlays`; Io's own packages
+that link the library need a revision bump.
 
 **xbps-src no longer builds `archs=noarch`.** A template with it stops
 with "this package cannot be built for x86_64"; leave `archs` out.

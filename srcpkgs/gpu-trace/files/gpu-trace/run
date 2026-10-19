@@ -7,4 +7,6 @@ exec 2>&1
 # writes captures without -o relative to it (gpu-trace.zip).
 cd /
 export HOME=/root
-exec gpu-trace --daemon
+# The log as Valve's unit has it (gpu-trace 2.17 logs to ./gpu-trace.log
+# without -l)
+exec gpu-trace -l /var/log/gpu-trace-daemon.log --daemon

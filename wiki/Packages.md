@@ -88,6 +88,7 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `iwd-holo` | `iwd` | Valve's scanning and connecting fixes |
 | `python3-hid-holo` | `python3-hid` | pyhidapi 1.0.6 (`BusType`), as Valve's controller updater needs |
 | `elogind-holo`, `libelogind-holo`, `elogind-devel-holo` | Void's elogind packages | No patch: the runit service skips logind's swap size check for hibernation, as Valve's logind drop-in does |
+| `mesa-holo`, `mesa-dri-holo`, `mesa-vulkan-radeon-holo`, ..., and their `-holo-32bit` packages | Void's Mesa packages, 64 and 32 bit | Steam's frame limit for OpenGL, RADV's explicit VM sync and per command buffer BO tracking for gamescope, game fixes, three RADV fixes from Mesa main |
 
 ## Upstream sources
 

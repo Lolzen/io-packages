@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Natalie Vock <natalie.vock@gmx.de>
+Date: Fri, 29 May 2026 10:36:32 +0200
+Subject: [PATCH 04/17] STEAMOS: uapi: Import new explicit sync uapi
+
+So we can use AMDGPU_VM_EXPLICIT_SYNC.
+
+(cherry picked from commit 606f934e96e44d0048ed5fd700dd1cafc1751803)
+---
+ include/drm-uapi/amdgpu_drm.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/drm-uapi/amdgpu_drm.h b/include/drm-uapi/amdgpu_drm.h
+index 9f3090db2f1..1f70a3ff056 100644
+--- a/include/drm-uapi/amdgpu_drm.h
++++ b/include/drm-uapi/amdgpu_drm.h
+@@ -900,6 +900,8 @@ struct drm_amdgpu_gem_list_handles_entry {
+ #define AMDGPU_VM_MTYPE_RW		(5 << 5)
+ /* don't allocate MALL */
+ #define AMDGPU_VM_PAGE_NOALLOC		(1 << 9)
++/* Bypass implicit synchronization for VM updates*/
++#define AMDGPU_VM_EXPLICIT_SYNC		(1 << 10)
+ 
+ struct drm_amdgpu_gem_va {
+ 	/** GEM object handle */

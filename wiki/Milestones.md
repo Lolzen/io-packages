@@ -1,37 +1,79 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6); what
-has changed since is on [Alpha 7](Alpha-7).
+the [Changelog](Changelog). The latest release is [Alpha 7](Alpha-7).
 
 ---
 
-## Alpha 7 (in progress)
+## Beta (next)
 
-- **Done:** *Restart* from Io starts Io again (`io-base` 0.6.0); GRUB
-  boots without its menu (`io-base` 0.7.0); the image scripts bring the
-  repository keys along; Steam's keyboard in the desktop, the brightness
-  through Valve's kwin patch and no black flash when returning to game mode
-  (`kwin-holo`, `xorg-server-xwayland-holo`); Valve's Wi-Fi fixes (`wpa_supplicant-holo`,
-  `iwd-holo`); Twemoji. See [Alpha 7](Alpha-7)
-- **Checked against SteamOS:** `zenity` (same behaviour, no `zenity-gtk3`
-  needed), `inputattach-cec-units` (no USB-CEC adapter, not needed),
-  Steam's patch notes for updates (Valve's; they stay, see
-  [Deviations](Deviations)), the screen sharing prompt (the permission
-  store looks as on SteamOS apart from the app ID; a fresh user is still to
-  be tried, see *Tests pending*), the question before switching to the
-  desktop (comes with Steam's beta client)
-- **Decided:** `void-artwork` stays (`plymouth-data` depends on it)
-- **Open:** a capture with Steam's experimental SteamRT3 client
+With Alpha 7 the foundation is in place and Io is usable day to day; the
+beta is for making it good. Its release versions go on from Alpha 7's 0.7:
+0.0.1 steps for ordinary releases (0.7.1, 0.7.2, ...), a 0.1 step for a
+larger change (0.8, ...; the middle number goes on past 9, as in 0.10 or
+0.102.3). 1.0 is the first stable release. SSH stays enabled in the images
+throughout the beta. Whether a beta release comes with a new image is
+decided per release. As in the alpha phase, io-packages is public, but
+there is no call for testers yet (not even for the hardware pull
+requests).
+
+**First: the move to the NVMe**
+
+1. The last captures on SteamOS, among them its factory reset
+   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards
+2. The branch `destructive` on the Deck (see *In branches*): formatting
+   against the internal SSD while Io runs from the card, the move with the
+   recovery stick, suspend-then-hibernate, formatting SD cards and USB
+   drives, the firmware updaters' check modes, `io-repair`, Io's factory
+   reset (compared with SteamOS's capture)
+3. `destructive` to `main`; Valve's calibration tools follow as their own
+   pull request
+4. With Io on the NVMe: the desktop responsiveness again (*Open
+   observations*)
+
+**Then, release by release**
+
+- Pull request #1 (Io's changelog in Steam's patch notes): the check of
+  Steam's update page
+- *Tests pending* and *Open observations* below
+- Valve's newer versions (*Catching up with Valve*): `gpu-trace` 2.17 moves
+  its daemon log to `-l`, which Io's run script must pass; the kernel
+  7.2.7-valve2 with its configuration review ([Kernel](Kernel))
+- Void's side: NetworkManager 1.58.1 (*Next*), Mesa patches dropped as
+  Void's Mesa takes them (the three RADV fixes most likely with 26.2.6), and
+  the overlays rebuilt after Void updates (*Recurring*)
+- The image build: Python's byte-compiling fails for some modules because
+  `mkrootfs.sh` installs the packages before `/dev` is mounted in the root
+  (`compileall -j0` needs `/dev/shm`); mount the pseudo file systems first,
+  as void-mklive does
+- *Polish* below
+
+---
+
+## In branches
+
+Work that is built but not on `main` yet, each on its own branch of
+io-packages:
+
+- **`destructive`:** what the move to the NVMe needs and can only be tested
+  with it: formatting drives from Steam, the firmware updaters (BIOS,
+  controller, dock), suspend-then-hibernate, *Repair Io*'s tools on the
+  recovery stick, and a factory reset of Io's own. None of it is tested on
+  hardware yet; Valve's calibration tools follow once it is merged
+- **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
+  Steam's patch notes for system updates
+- **Pull requests #2, #3 and #4:** the Steam Deck OLED (`galileo-oled`),
+  other handhelds with a Valve device file (`other-devices`) and the Steam
+  Machine (`steam-machine`); they need the hardware to be tested (see
+  *Needs hardware to test*)
 
 ---
 
 ## Next (no theme yet)
 
-- **Valve's Mesa as an overlay** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
-  looked at again on 2026-10-11 (the OpenGL frame limiter applies to
-  Void's 26.2.4, 6 of Valve's 14 RADV patches do not); to revisit with
-  Void's next Mesa update
+- **NetworkManager 1.58.1** for `NetworkManager-holo`, once Void's update
+  (void-packages pull request 62975) is merged; Valve's patch applies to it
+
 - **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
 - **steamos-manager refuses calls from games:** on Valve's main branch
   after 26.4.1 (not in SteamOS 3.9.2), the session half rejects D-Bus calls
@@ -61,6 +103,12 @@ has changed since is on [Alpha 7](Alpha-7).
   level); German letters and emoji do. On SteamOS 3.9.2 the keyboard
   typed no umlauts or ß in the desktop at all (2026-10-04, see
   [Deviations](Deviations)); `€` there is not checked
+- **Controller navigation dead after boot** until the Steam button is
+  pressed, now and then: Steam logs "Prevented loading a mapping that's
+  being deleted" in `console_log.txt` at start, and only in those boots.
+  The same line is in SteamOS's logs of a boot that hung the same way, so
+  it is Steam's (Steam Input at start); reported as
+  [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921)
 - **Steam hung in its boot animation** on the first start after switching
   to the beta client (the bootstrapper had installed the update;
   steamwebhelper logged "SteamClient globals not available" and a
@@ -73,6 +121,8 @@ has changed since is on [Alpha 7](Alpha-7).
 
 ## Tests pending
 
+- **Steam's experimental SteamRT3 client** on Io: a capture with
+  `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
   should take it over), and ejecting a drive from Steam
 - **Decky Loader**
@@ -111,7 +161,8 @@ someone with the hardware.
 
 - Designed boot splash
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
-  inside game mode)
+  inside game mode; a first try with Valve's files: logging out of it did
+  not end its session)
 
 ---
 
@@ -144,7 +195,12 @@ someone with the hardware.
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
-  once for 3.9.2 in October 2026
+  once for 3.9.2 in October 2026. Valve's versions newer than Io's, seen on
+  2026-10-12 and not taken yet: `jupiter-hw-support` 20260930.1, `gpu-trace`
+  2.17, `linux-neptune-72` 7.2.7-valve2, `steamos-customizations-jupiter`
+  20260916.1, `holo-networking-tools` 1.4, `holo-systemreport` 1.24,
+  steamos-manager 26.4.1-3, NetworkManager 1.58.0, PipeWire 1.6.8,
+  WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
 - **Repair Io** on the recovery stick (implemented on the branch
   `destructive`): filesystem check, initramfs, boot loader, forgetting a
   hibernated session that does not resume, package check, factory reset,
@@ -165,8 +221,11 @@ someone with the hardware.
   newer versions to a file unless they are listed as already looked at
   (`pkgcheck.sh` today reports what changed since its last run)
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
-  default password on first boot. 1.0 is the beta (`beta1.img`,
-  `beta1.iso`)
+  default password on first boot; a sweep of Io's packages for Valve's
+  artwork and trademarks (`steamdeck-kde-presets`' wallpapers, avatars and
+  splash, the cursor in `deck-hw-support`); whether Valve's binaries
+  (firmware, updaters, Steam's bootstrap) may be passed on. 1.0 is the
+  first stable release
 
 ---
 
@@ -179,5 +238,3 @@ someone with the hardware.
 - Valve's kernel updates, with the configuration review described on
   [Kernel](Kernel)
 - Boot logs, for regressions and new warnings
-- After each gamescope update: *Use Legacy X11* in Steam's developer
-  settings

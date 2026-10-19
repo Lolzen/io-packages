@@ -35,7 +35,7 @@ its reason.
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
 | GRUB boots Io without its menu; *Restart* from Io starts Io again (UEFI `BootNext`), switching on starts the firmware's default system | `steamcl` without a menu, SteamOS on the internal SSD is the firmware's default | Io on an SD card has no boot entry of its own (GRUB at the removable path), so a restart started the internal SteamOS. `BootNext` lasts one boot, so SteamOS stays the default. A boot that goes wrong ends in dracut's emergency shell; the recovery stick keeps its menu |
-| SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the test phase. Images for 1.0 will follow SteamOS |
+| SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the alpha and beta phases. Images for 1.0 will follow SteamOS |
 
 ---
 
@@ -295,19 +295,13 @@ the session bus that Steam talks to.
 
 ## Graphics
 
-- **Mesa is Void's** (26.2.x), not Valve's (SteamOS 3.9.2: radeonsi 26.1.2,
-  RADV from Valve's `steamos-26.05` branch; analysed on 3.8.4's radeonsi
-  25.3.0 with one Valve patch and RADV `steamos-25.11.12`). Missing as a result:
-  - Valve's frame limiter for OpenGL through gamescope
-    (`GAMESCOPE_LIMITER_FILE`, DRI3): **OpenGL games most likely ignore
-    Steam's FPS limit** (from Mesa's source; to be confirmed with a game).
-    Vulkan games are limited through gamescope's WSI layer.
-  - RADV's game fixes that only exist in Valve's branch: NGG culling off
-    for *No Rest for the Wicked*, `vk_x11_override_min_image_count=4` for
-    *Forza Horizon 5*.
-
-  Why: Io would have to rebuild Mesa, with its 32-bit build, on every Void
-  update; the gain does not justify that (decided 2026-10-03).
+- **Mesa is Void's 26.2.5 with Valve's patches** (`mesa-holo`, 64 and 32
+  bit, see *Io overlay*), not Valve's builds (SteamOS 3.9.2: radeonsi
+  26.1.2 with one Valve patch, RADV from Valve's `steamos-26.05` branch, a
+  Mesa main snapshot of May 2026). Void's release is newer than both;
+  Valve's own commits and the RADV fixes 26.2.5 lacks are carried on top.
+  Valve's older fix for *No Rest for the Wicked* (NGG culling off) is not
+  in `steamos-26.05` either.
 - **gamescope's WSI layer for 32-bit games** is Io's `gamescope-wsi-32bit`,
   built from gamescope's source (SteamOS: `lib32-gamescope`). Void builds
   gamescope for 64 bit only.
@@ -452,7 +446,8 @@ Where Io needs a patch Valve carries in a package Void also has, it builds
 Void's package with the patch as a package of its own, `<name>-holo`, that
 replaces Void's (the build is described in io-packages'
 [overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)).
-Void's `-32bit` packages of these stay Void's.
+Void's `-32bit` packages of these stay Void's, except Mesa's: `mesa-holo`
+is built for 32 bit as well (`-holo-32bit` packages).
 
 | Package | Replaces | Valve's patches carried |
 |---|---|---|
@@ -464,6 +459,7 @@ Void's `-32bit` packages of these stay Void's.
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | text typed through XTEST (Steam's keyboard in the desktop) goes to the compositor as keysyms over libei, so letters outside the first layout group and CJK text arrive |
 | `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume; built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
 | `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting |
+| `mesa-holo` | `mesa` and all its subpackages (`mesa-dri`, `mesa-vulkan-radeon`, `libgbm`, ...), with their `-32bit` packages | OpenGL: Steam's frame limit through gamescope's limiter file (DRI3: the patch turns V-Sync on while a limit is set; confirmed with glxgears and V-Sync off: 30.0 FPS at limit 30, uncapped without a limit). RADV: explicit synchronisation for VM operations, per command buffer BO tracking and no global BO list for gamescope (stutter in game mode), `VK_EXT_pageable_device_local_memory`, *Forza Horizon* 4 to 6; three RADV fixes from Mesa main that are not in 26.2.5 |
 
 Valve's other patches to these packages are left out: for bluez, the
 `main.conf` settings (Io sets them in its own file), the wake-policy
@@ -475,7 +471,9 @@ black flash when returning to game mode; without them the desktop's last
 picture stays until Steam's boot animation, as on SteamOS); for
 wpa_supplicant, Arch's patches in Valve's build and the rest of Valve's
 build options (among them PC/SC and SIM authentication, which would need
-`pcsclite`); WEP stays enabled as in Void's build (Valve's leaves it off).
+`pcsclite`); WEP stays enabled as in Void's build (Valve's leaves it off);
+for Mesa, `radv: always consider some outputs as invariant` (in 26.2.5
+already), CI files and Valve's pick script.
 
 ---
 

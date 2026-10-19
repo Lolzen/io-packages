@@ -95,6 +95,9 @@ check "gamescope has CAP_SYS_NICE" sh -c 'grep -q "CapEff:.*0000000000800000" /p
 check "steam started with -gamepadui" sh -c 'tr "\0" " " < /proc/$(pgrep -o -x steam)/cmdline | grep -q -- -gamepadui'
 check "mangoapp running (performance overlay)" pgrep -x mangoapp
 check "mangoapp from Io's overlay (one render per game frame)" sh -c 'xbps-query MangoHud-mangoapp-holo > /dev/null'
+check "Mesa from Io's overlay (Valve's patches), 64 and 32 bit" sh -c 'xbps-query mesa-vulkan-radeon-holo > /dev/null && xbps-query mesa-vulkan-radeon-holo-32bit > /dev/null && xbps-query mesa-dri-holo-32bit > /dev/null'
+check "Mesa's 32-bit packages stand in for Void's (provides libgbm-32bit)" sh -c 'xbps-query -p provides libgbm-holo-32bit | grep -q "^libgbm-32bit-"'
+check "RADV without global BO list for gamescope (Valve's driconf)" grep -q radv_disable_global_bo_list /usr/share/drirc.d/00-radv-defaults.conf
 check "deck not in group gamemode (as SteamOS)" sh -c '! id -nG deck | grep -qw gamemode'
 check "Steam nice limit 0/28 (Proton nice)" sh -c 'prlimit --nice -o SOFT,HARD --noheadings -p $(pgrep -o -x steam) | grep -q "^ *0 *28 *$"'
 check "Steam open-file hard limit 524288" sh -c 'prlimit --nofile -o HARD --noheadings -p $(pgrep -o -x steam) | grep -q "^ *524288 *$"'
