@@ -394,7 +394,9 @@ the session bus that Steam talks to.
   the X11-only IBus environment, the nested desktop, Valve's menu overrides
   in `/usr/local` and its Firefox desktop file.
 - **Steam's DPI scaling in the desktop** is switched off once per user by
-  `io-plasma` (`DPIScaling` 0). Plasma keeps its own 135 %.
+  `io-plasma` (`DPIScaling` 0). Plasma keeps its own 135 %. SteamOS
+  (3.8.28, fresh user) shows Steam's keyboard oversized in the desktop; Io
+  does not.
 - **`steam-im-modules`**: the Qt part is Qt 5 only, as upstream.
 - **`jupiter-fan-control`** runs as a runit service; its `finish` script does
   what Valve's `ExecStopPost` does (hand the fan back to the embedded
@@ -458,7 +460,7 @@ is built for 32 bit as well (`-holo-32bit` packages).
 | `kwin-holo` | `kwin`, `kwin-devel` | the desktop takes the panel's current brightness instead of the saved one (KDE bug 508163); text from Steam's keyboard over libei goes past an input method that grabs the keyboard; libei 1.6 keysym and text events (kwin 6.8); no modes below 480p (kwin 6.8) |
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | text typed through XTEST (Steam's keyboard in the desktop) goes to the compositor as keysyms over libei, so letters outside the first layout group and CJK text arrive |
 | `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume; built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
-| `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting |
+| `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting; only the bands the adapter supports are scanned (SteamOS 3.9.3) |
 | `mesa-holo` | `mesa` and all its subpackages (`mesa-dri`, `mesa-vulkan-radeon`, `libgbm`, ...), with their `-32bit` packages | OpenGL: Steam's frame limit through gamescope's limiter file (DRI3: the patch turns V-Sync on while a limit is set; confirmed with glxgears and V-Sync off: 30.0 FPS at limit 30, uncapped without a limit). RADV: explicit synchronisation for VM operations, per command buffer BO tracking and no global BO list for gamescope (stutter in game mode), `VK_EXT_pageable_device_local_memory`, *Forza Horizon* 4 to 6; three RADV fixes from Mesa main that are not in 26.2.5 |
 
 Valve's other patches to these packages are left out: for bluez, the

@@ -36,8 +36,7 @@ requests).
 - Pull request #1 (Io's changelog in Steam's patch notes): the check of
   Steam's update page
 - *Tests pending* and *Open observations* below
-- Valve's newer versions (*Catching up with Valve*): `gpu-trace` 2.17 moves
-  its daemon log to `-l`, which Io's run script must pass; the kernel
+- Valve's newer versions (*Catching up with Valve*): the kernel
   7.2.7-valve2 with its configuration review ([Kernel](Kernel))
 - Void's side: NetworkManager 1.58.1 (*Next*), Mesa patches dropped as
   Void's Mesa takes them (the three RADV fixes most likely with 26.2.6), and
@@ -126,9 +125,10 @@ io-packages:
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
   should take it over), and ejecting a drive from Steam
 - **Decky Loader**
-- **Screen sharing prompt for a new user:** set
-  `~/.local/share/flatpak/db/screencast` aside, reboot, switch to the
-  desktop: Steam should ask once and, with *Allow restoring*, never again
+- **Screen sharing prompt for a new user, at the dock** (the prompt
+  comes with an external display; undocked, SteamOS 3.9.3 does not ask
+  either): set `~/.local/share/flatpak/db/screencast` aside, reboot, switch
+  to the desktop: Steam should ask once and, with *Allow restoring*, never again
   (as on SteamOS, which grants nothing in advance either)
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
@@ -195,9 +195,11 @@ someone with the hardware.
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
-  once for 3.9.2 in October 2026. Valve's versions newer than Io's, seen on
-  2026-10-12 and not taken yet: `jupiter-hw-support` 20260930.1, `gpu-trace`
-  2.17, `linux-neptune-72` 7.2.7-valve2, `steamos-customizations-jupiter`
+  once for 3.9.2 in October 2026; from SteamOS 3.9.3 (October 2026) Io has
+  `gpu-trace` 2.17, `holo-realtek-firmware-toggles` 1.4 and iwd's new band
+  scanning patch (`jupiter-hw-support` 20260930.1 on the branch
+  `destructive`). Valve's versions newer than Io's, seen on 2026-10-12 and
+  not taken yet: `linux-neptune-72` 7.2.7-valve2, `steamos-customizations-jupiter`
   20260916.1, `holo-networking-tools` 1.4, `holo-systemreport` 1.24,
   steamos-manager 26.4.1-3, NetworkManager 1.58.0, PipeWire 1.6.8,
   WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)

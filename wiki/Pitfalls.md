@@ -719,6 +719,12 @@ leaves them out.
 
 **`avahi-browse` is in `avahi-utils`**, not in `avahi`.
 
+**Files in `/sys/firmware/efi/efivars` cannot seek.** `tail -c +5 <var>`
+(to drop the 4 attribute bytes) fails with "Illegal seek" and prints
+nothing; in a script with `2> /dev/null` that looks like an empty variable.
+Read through a pipe: `cat <var> | tail -c +5`. `cat`, `od` and `efivar`
+are fine.
+
 **`prlimit -n` means `--nofile`**, not "no headings" (`--noheadings`).
 
 **Over SSH, `loginctl` and other paged tools fail on an unknown terminal

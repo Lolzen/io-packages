@@ -35,7 +35,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `xdg-desktop-portal-holo` | `xdg-desktop-portal-holo` 0.1.18 | Portal backend for game mode: Settings (color scheme, contrast, accent color), app chooser, e-mail, lockdown; started by D-Bus |
 | `steam_notif_daemon` | `steam_notif_daemon` 1.0.1 | Takes desktop notifications in game mode and passes them to Steam |
 | `drm_janitor` | `drm_janitor` 0.0.4 ([zzag/drm_janitor](https://github.com/zzag/drm_janitor)) | Resets the display state gamescope leaves behind when game mode ends |
-| `gpu-trace` | `gpu-trace` 2.16 ([lostgoat/gpu-trace](https://github.com/lostgoat/gpu-trace)) | Steam's system tracing (developer settings), runit service |
+| `gpu-trace` | `gpu-trace` 2.17 ([lostgoat/gpu-trace](https://github.com/lostgoat/gpu-trace)) | Steam's system tracing (developer settings), runit service; daemon log in `/var/log/gpu-trace-daemon.log` |
 | `holo-zram-swap` | `holo-zram-swap` 0.3 | zram swap service with Valve's values, zswap off |
 | `holo-earlyoom` | `holo-earlyoom` 1.1 | earlyoom configuration and SteamAppId-aware kill logging |
 | `steamos-tuning` | `steamos-customizations-jupiter` 20260827.2 | Sysctls, early HID drivers, NTSync loaded at boot, the Deck's initramfs modules (dracut configuration; the initramfs is rebuilt when they change), Valve's scheduler tunings (debugfs), 1 GiB swap file, suspend-then-hibernate (settings and swap helper), X11 virtual display size, Proton's nice limit, `EDITOR=vim`, `LIBVA_DRIVER_NAME=radeonsi`; Io's own: the hibernation guard, the sleep hook and dracut module for resuming (`io-hibernate`, `io-resume`), and the open-file limit SteamOS gets from systemd |
@@ -48,7 +48,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `vpower` | `vpower` 1.6.3 | Valve's battery daemon: metrics for Steam, controlled shutdown at 0.5 %. Patched to find the charge limit file |
 | `holo-upower-config` | `holo-upower-config` 1.0 | Hands UPower's critical battery action to vpower (with a fix for Valve's `yes`/`true` bug) |
 | `holo-sudo` | `holo-sudo` | Valve's sudoers files: `wheel`, `sudo`, `no-fqdn` |
-| `holo-realtek-firmware-toggles` | `holo-realtek-firmware-toggles` 1.3-3 | Valve's toggles for Realtek rtw89 USB Wi-Fi sticks |
+| `holo-realtek-firmware-toggles` | `holo-realtek-firmware-toggles` 1.4 | Valve's toggles for Realtek rtw89 USB Wi-Fi sticks |
 | `jupiter-firewall` | `jupiter-firewall` 0.1 | Valve's firewall rules, with ufw and `plasma-firewall` (Void has no firewalld); runit service |
 | `cecd` | `cecd` 0.3.0 | Valve's HDMI-CEC daemon; group rules for `/dev/cec*` and `/dev/uinput` |
 | `cec-audio-control` | `cec-audio-control` 0.1.0 | TV volume and mute over HDMI-CEC for PipeWire |
