@@ -146,6 +146,7 @@ check "storage expansion menu entry" test -r /usr/share/applications/io-grow-sto
 echo "== firmware (check modes only, nothing is flashed)"
 check "BIOS updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-biosupdate
 check "controller updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-controller-update
+check "dock updater installed (jupiter-dock-updater-bin)" test -x /usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh
 BIOSOUT=$(/usr/bin/jupiter-biosupdate check 2>&1)
 BIOSRC=$?
 info "jupiter-biosupdate check: exit $BIOSRC (0 = nothing to do, 7 = update available): $(echo "$BIOSOUT" | tr '\n' ' ' | cut -c1-160)"

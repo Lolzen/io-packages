@@ -30,10 +30,9 @@ daemon starts the process and exports it as a Job1 object on the system
 bus, the user daemon mirrors that object on the session bus (JobManager1
 announces it). TrimDevices and FormatDevice run Valve's trim-devices.sh
 and format-device.sh (with Io's check against formatting the disk Io runs
-from). UpdateBios1 runs Valve's BIOS updater the same way, exported only
-where the updater is installed, as steamos-manager does (platform.toml's
-[update_bios]). UpdateDock1 (Valve's dock updater) is on the branch
-dock-fw, waiting for a test with Valve's dock.
+from). UpdateBios1 and UpdateDock1 run Valve's BIOS and dock updaters the
+same way, exported only where the updater is installed, as steamos-manager
+does (platform.toml's [update_bios] and [update_dock]).
 
 The root daemon also owns com.steampowered.Atomupd1 (atomupd-daemon's
 update API, xbps behind it through /usr/libexec/io/io-update, the helper
@@ -322,11 +321,12 @@ JOB_IFACE = f"{IFACE}.Job1"
 JOBMANAGER_IFACE = f"{IFACE}.JobManager1"
 NOT_SUPPORTED = "org.freedesktop.DBus.Error.NotSupported"
 # Valve's platform.toml: [storage.trim_devices], [storage.format_device],
-# [update_bios]
+# [update_bios], [update_dock]
 TRIM_SCRIPT = "/usr/lib/hwsupport/trim-devices.sh"
 FORMAT_SCRIPT = "/usr/lib/hwsupport/format-device.sh"
 UPDATE_BIOS_SCRIPT = "/usr/bin/jupiter-biosupdate"
 UPDATE_BIOS_ARGS = ["--auto"]
+UPDATE_DOCK_SCRIPT = "/usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh"
 # Valve's platform.toml: [factory_reset.user|os|all], steamos-reset-tool
 # factory-reset --reset-user-data|--reset-os|--reset-all. Io: its own
 # io-factory-reset (see there for what each part does on Io).
@@ -466,6 +466,13 @@ class RootManager(ServiceInterface):
         if not script_available(UPDATE_BIOS_SCRIPT):
             raise DBusError(NOT_SUPPORTED, "UpdateBios is not supported on this platform")
         return await self.jobs.run([UPDATE_BIOS_SCRIPT, *UPDATE_BIOS_ARGS], "updating BIOS")
+
+    @method()
+    async def UpdateDock(self) -> "o":
+        # steamos-manager root.rs update_dock: platform.toml's [update_dock]
+        if not script_available(UPDATE_DOCK_SCRIPT):
+            raise DBusError(NOT_SUPPORTED, "UpdateDock is not supported on this platform")
+        return await self.jobs.run([UPDATE_DOCK_SCRIPT], "updating dock")
 
     @method()
     async def PrepareFactoryReset(self, kind: "u") -> "u":
@@ -2145,6 +2152,21 @@ class UpdateBios1(ServiceInterface, JobMirror):
         return await self._job("UpdateBios")
 
 
+class UpdateDock1(ServiceInterface, JobMirror):
+    """steamos-manager's UpdateDock1: Valve's dock updater as a job,
+    exported only where it is installed (jupiter-dock-updater-bin)."""
+
+    def __init__(self, root):
+        if not script_available(UPDATE_DOCK_SCRIPT):
+            raise OptionalInterfaceMissing("no dock updater installed")
+        super().__init__(f"{IFACE}.UpdateDock1")
+        self.init_jobs(root)
+
+    @method()
+    async def UpdateDock(self) -> "o":
+        return await self._job("UpdateDock")
+
+
 class FactoryReset1(ServiceInterface):
     """steamos-manager's FactoryReset1, relayed to the root daemon:
     exported only where io-factory-reset is installed, as steamos-manager
@@ -2259,6 +2281,7 @@ USER_INTERFACES = (
     ScreenReader1,
     Storage1,
     UpdateBios1,
+    UpdateDock1,
     FactoryReset1,
     UdevEvents1,
 )

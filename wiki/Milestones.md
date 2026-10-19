@@ -168,8 +168,8 @@ have. They are to become issues and draft pull requests, marked as needing
 someone with the hardware.
 
 - **Valve's Docking Station:** its firmware updater (`hub_update`, Valve's
-  package with the real `--check` and `UpdateDock1`, on the branch
-  `dock-fw` as a pull request), and HDMI-CEC with a dock that passes it
+  package with the real `--check` and `UpdateDock1`; this branch, `dock-fw`,
+  to be tested with Valve's dock before it is merged), and HDMI-CEC with a dock that passes it
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
