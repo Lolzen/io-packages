@@ -131,10 +131,10 @@ the session bus that Steam talks to.
   half numbers its jobs from the time it started, so a number is not
   reused after a restart. `FormatDevice` runs Valve's `format-device.sh`
   the same way (see *Storage*).
-- **`UpdateBios1`, `UpdateDock1`** as in steamos-manager: exported only
-  where the updater is installed (`deck-firmware-updaters`,
-  `jupiter-dock-updater-bin`), each a job running Valve's script
-  (`jupiter-biosupdate --auto`, `jupiter-dock-updater.sh`).
+- **`UpdateBios1`** as in steamos-manager: exported only where the updater
+  is installed (`deck-firmware-updaters`), a job running Valve's script
+  (`jupiter-biosupdate --auto`). `UpdateDock1` and Valve's dock updater
+  are on the branch `dock-fw` (pull request, needs Valve's dock).
 - **`UdevEvents1`** as in steamos-manager: the session half watches udev
   (pyudev) for a USB interface's `change` event carrying
   `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a

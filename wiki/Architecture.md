@@ -165,8 +165,8 @@ Some session-half interfaces drive other programs, as steamos-manager does:
   object that mirrors it; the caller can wait on it, pause, resume or
   cancel it there (`SIGSTOP`, `SIGCONT`, `SIGTERM`/`SIGKILL`) and read the
   exit code. `FormatDevice` runs Valve's `format-device.sh` the same way
-- **`UpdateBios1`, `UpdateDock1`:** exported only where Valve's updaters are
-  installed; each runs the updater as a job, as `Storage1` does
+- **`UpdateBios1`:** exported only where Valve's BIOS updater is installed;
+  runs it as a job, as `Storage1` does (`UpdateDock1`: branch `dock-fw`)
 - **`FactoryReset1`:** `PrepareFactoryReset` has the root half run
   `io-factory-reset --prepare user|os|all` and answers 1 (reboot required)
   when it succeeded

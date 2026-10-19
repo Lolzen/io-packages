@@ -168,7 +168,8 @@ have. They are to become issues and draft pull requests, marked as needing
 someone with the hardware.
 
 - **Valve's Docking Station:** its firmware updater (`hub_update`, Valve's
-  package on the branch `destructive`), and HDMI-CEC with a dock that passes it
+  package with the real `--check` and `UpdateDock1`, on the branch
+  `dock-fw` as a pull request), and HDMI-CEC with a dock that passes it
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
@@ -205,13 +206,13 @@ someone with the hardware.
   error: Failed to format*); next, with Io on the NVMe, SD cards and USB
   drives
 - **Firmware updaters** (implemented on the branch `destructive`): Valve's
-  BIOS updater (`h2offt` and the BIOS images), controller updater and dock
-  updater (`deck-firmware-updaters`, `jupiter-dock-updater-bin`), the
-  helpers, `UpdateBios1`/`UpdateDock1` and the updates at boot. Test order:
-  the check modes first (`jupiter-biosupdate check`,
-  `jupiter-controller-update --check`, `jupiter-dock-updater --check`), then
+  BIOS updater (`h2offt` and the BIOS images) and controller updater
+  (`deck-firmware-updaters`), the helpers, `UpdateBios1` and the updates
+  at boot. Test order: the check modes first (`jupiter-biosupdate check`,
+  `jupiter-controller-update --check`; done 2026-10-19: at boot and from
+  Steam, as on SteamOS), then
   a controller update, a BIOS update last, if at all. Open: whether Valve's
-  binaries (BIOS images, `h2offt`, `hub_update`, controller firmware) may be
+  binaries (BIOS images, `h2offt`, controller firmware) may be
   redistributed in Io's repository
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
