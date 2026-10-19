@@ -196,11 +196,15 @@ the session bus that Steam talks to.
   (`rtw89_8852cu`), as on SteamOS.
 - **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
   core service writes elogind's `sleep.conf.d`); on an SD card or USB drive
-  writing about 17 GB takes minutes and wears the medium. There, Valve's
-  suspend-then-hibernate of SteamOS 3.9.2 applies (delay 20 minutes; 3.8.4
-  had switched it off), with these differences:
+  writing about 17 GB takes minutes and wears the medium. On the NVMe,
+  Valve's settings of SteamOS 3.9.2 apply: hibernation allowed, and
+  suspend-then-hibernate with a delay of 20 minutes for programs that ask
+  for it (Plasma's power settings). Steam's *Standby* asks for a plain
+  suspend on SteamOS and on Io alike (Valve: hibernation "not yet exposed
+  in Game Mode UI"). Differences:
   - **On AC power as well:** elogind 252 has no `HibernateOnACPower=no`, so
-    the Deck also hibernates after 20 minutes when plugged in.
+    a suspend-then-hibernate also hibernates after 20 minutes when plugged
+    in.
   - **Resume path:** SteamOS's systemd writes the image location to an EFI
     variable (`HibernateLocation`) that its initramfs reads. Io's sleep hook
     (`io-hibernate`) writes an EFI variable of its own
@@ -215,8 +219,8 @@ the session bus that Steam talks to.
     service (`elogind-holo`).
   - Valve's reset of the A/B boot counter after resuming does not apply.
   **Tested** with Io on the NVMe (2026-10-19): hibernating and resuming
-  (`loginctl hibernate`). Still to test: suspend-then-hibernate from
-  Steam's power menu.
+  (`loginctl hibernate`). Plasma's hibernate and suspend-then-hibernate:
+  see [Milestones](Milestones), *Tests pending*.
 - **Proton's nice limit** as on SteamOS 3.9.2: `* hard nice -8` in
   `/etc/security/limits.d/15-proton-nice.conf`, read by `pam_limits` in
   SDDM's login (Steam's hard limit 28; game threads run at nice −1, −2 and

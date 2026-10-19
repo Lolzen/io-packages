@@ -124,6 +124,23 @@ io-packages:
 
 ## Tests pending
 
+- **Hibernation from the desktop** (Io on the NVMe): Plasma's leave menu
+  → *Hibernate* (the same path as `loginctl hibernate`, tested); Plasma's
+  energy settings with suspend-then-hibernate: after 20 minutes of suspend
+  the Deck should hibernate. elogind 252 tells a wake by its own timer from
+  a wake by the user through the firmware's wake-up type, and the Deck's
+  reads "power switch" (`/sys/firmware/dmi/entries/1-0/raw`, byte 24 =
+  0x06): it may stay in suspend. `io-hibernate-test.sh check`/`logs`
+  (project tools) record it
+- **Wi-Fi after a long suspend:** once, after 32 minutes, the LCD's card
+  (`rtw88_8822ce`) did not leave D3hot ("device inaccessible", "mac power
+  on failed") and Wi-Fi stayed dead until a reboot; the suspend of two
+  hours before resumed fine. If it comes back: restart NetworkManager,
+  reload `rtw88_8822ce`, remove and rescan the PCI device, before
+  rebooting, and compare with SteamOS (same kernel driver)
+- **elogind at reboot:** since `elogind-holo` every reboot logs a segfault
+  of elogind's reboot helper (`e-reboot`, same offset each time); the
+  reboot itself happens. Check whether Void's `elogind` does the same
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
