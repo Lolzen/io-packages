@@ -35,14 +35,14 @@ and sources of Io's packages are on [Packages](Packages).
 | `steam_notif_daemon` 1.0.1 | 1.0.1 | sd-bus from libelogind; started by the game mode session |
 | `drm_janitor` 0.0.4 | 0.0.4 | Run by the game mode session when gamescope exits |
 | `cecd` 0.3.0 (0.2.0), `cec-audio-control` 0.1.0 | same | |
-| `gpu-trace` 2.16 (2.14) | 2.16 | runit service |
+| `gpu-trace` 2.16 (2.14) | 2.17 (SteamOS 3.9.3) | runit service |
 | `holo-zram-swap` 0.3 | 0.3 | runit service |
 | `holo-earlyoom` 1.1 | 1.1 | |
 | `holo-dmi-rules` 1.1 | 1.1 | Core service instead of tmpfiles |
 | `holo-fstab-repair` 0.2 (0.1) | 0.2 | Runs at every boot |
 | `holo-sudo` | same files | Checked against Valve's source for 3.8.4; unchanged since (Valve's main branch moves it to `holo-sudo-config`) |
 | `holo-upower-config` 1.0 (not on 3.8.4) | 1.0 | With a fix for Valve's `yes`/`true` bug |
-| `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.3-3 | |
+| `holo-realtek-firmware-toggles` 1.3-3 (not on 3.8.4) | 1.4 (SteamOS 3.9.3) | |
 | `jupiter-firewall` 0.1 | 0.1 | ufw instead of firewalld |
 | `steamos-customizations-jupiter` 20260827.2 | `steamos-tuning` (parts) | Sysctls, `modules-load.d`, early HID drivers, the initramfs modules of the `steam-deck` hook (as a dracut configuration), scheduler tunings, swap file; the A/B parts are not ported (see below). The hibernation guard next to them is Io's own; Valve's suspend-then-hibernate settings wait for the move to the NVMe |
 | `steamos-tweak-mtu-probing` | in `steamos-tuning` | |
