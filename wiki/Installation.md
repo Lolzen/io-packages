@@ -79,5 +79,7 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
   SSH (OpenSSH's default `PermitRootLogin prohibit-password`); use `sudo`.
 
 **Status:** the stick boots, starts Plasma, and the disk dialog works.
-Installing is not released: do not install onto the internal SSD yet, it
-still holds SteamOS, the reference for Io.
+Installing to the internal NVMe is tested (2026-10-19, branch
+`destructive`): take out SD cards you do not want listed as a target first,
+the dialog offers every disk but the stick's. *Repair Io* is not tested
+yet.

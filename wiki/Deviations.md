@@ -214,7 +214,9 @@ the session bus that Steam talks to.
     (`SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK`) is set in elogind's runit
     service (`elogind-holo`).
   - Valve's reset of the A/B boot counter after resuming does not apply.
-  **Not tested yet:** needs Io on the NVMe.
+  **Tested** with Io on the NVMe (2026-10-19): hibernating and resuming
+  (`loginctl hibernate`). Still to test: suspend-then-hibernate from
+  Steam's power menu.
 - **Proton's nice limit** as on SteamOS 3.9.2: `* hard nice -8` in
   `/etc/security/limits.d/15-proton-nice.conf`, read by `pam_limits` in
   SDDM's login (Steam's hard limit 28; game threads run at nice −1, −2 and
@@ -547,10 +549,16 @@ SteamOS resets an A/B system: for the user data its initramfs formats the
 `/home` and `/var` partitions at the next boot (`/etc` lives in `/var`
 there, so every setting goes too); for the OS, `steamos-reset-tool`
 installs a fresh image from Valve's update server into the other slot.
-Steam asks for either or both (`FactoryReset1.PrepareFactoryReset`: 1 user
-data, 2 OS, 3 both) or runs the helper `steamos-factory-reset-config` (user
-data), then restarts the Deck. Io has one root filesystem and no slots, so
-`io-factory-reset` does it in place:
+Steam's client on SteamOS 3.9.3 runs, as the user, `steamos-reset-tool
+os-status` and then `steamos-reset-tool factory-reset --reset-os
+--reset-user-data` (Valve's tool reaches its root backends through a setuid
+wrapper), then restarts the Deck itself; `FactoryReset1.PrepareFactoryReset`
+(1 user data, 2 OS, 3 both) and the helper `steamos-factory-reset-config`
+still exist but were not called. Io has one root filesystem and no slots,
+so `io-factory-reset` does it in place, behind all three: Io's
+`/usr/bin/steamos-reset-tool` answers as Valve's (JSON on stdout) and gets
+root through polkit instead of a setuid wrapper (no password in the active
+local session, an admin's otherwise).
 
 - **User data**, at the next start, before any service (core service
   `04-io-factory-reset.sh`; SteamOS's initramfs runs at the same point):
@@ -561,7 +569,12 @@ data), then restarts the Deck. Io has one root filesystem and no slots, so
   deck's groups, Wi-Fi connections, backend and power saving, SDDM's login
   mode, SSH host keys, machine-id, and the services Steam switches: SSH on;
   developer mode, iwd and the LAVD scheduler off); a hibernated session is
-  dropped. The image's values come from `/var/lib/io/factory-defaults`,
+  dropped; shadow's backup files (`/etc/passwd-` and the like, with the old
+  password hashes) and sudo's first-use marks are removed; the update
+  channel goes back to the image's (the repository files in `/etc/xbps.d`,
+  such as Io's testing channel, are removed): SteamOS keeps its branch in
+  `/var`, which its reset formats, and falls back to stable. The image's
+  values come from `/var/lib/io/factory-defaults`,
   written by `mkrootfs.sh`; older installations get the build defaults.
   Everything else in `/etc` stays as it is: unlike SteamOS, Io cannot tell
   a changed system file in `/etc` from one an update brought.
@@ -569,8 +582,12 @@ data), then restarts the Deck. Io has one root filesystem and no slots, so
   system is updated, packages installed on top of Io are removed (those
   Io's packages need stay), every package whose files were changed or
   deleted is installed again (`xbps-pkgdb -a`), and `/usr/local` is
-  emptied. The update channel (`/etc/xbps.d`) is kept, as SteamOS keeps
-  its branch. Steam's call waits until this is done, as it waits for
+  emptied. Packages whose installed version is not the repositories'
+  (from another channel, or built by hand) are installed again from the
+  repositories, even where that is older. With both parts the channel is
+  reset first, so the system ends on the default channel's versions, as
+  SteamOS installs the stable image; the OS part alone keeps the channel.
+  Steam's call waits until this is done, as it waits for
   Valve's download of the new image; whether Steam's client gives up
   earlier is one of the things to test.
 - Steam's helper `steamos-factory-reset-config` needs no password only in

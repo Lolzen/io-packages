@@ -20,12 +20,14 @@ requests).
 **First: the move to the NVMe**
 
 1. The last captures on SteamOS, among them its factory reset
-   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards
+   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards (done
+   2026-10-18)
 2. The branch `destructive` on the Deck (see *In branches*): formatting
    against the internal SSD while Io runs from the card, the move with the
    recovery stick, suspend-then-hibernate, formatting SD cards and USB
    drives, the firmware updaters' check modes, `io-repair`, Io's factory
-   reset (compared with SteamOS's capture)
+   reset (compared with SteamOS's capture). Done on 2026-10-19: formatting
+   refused for the internal SSD, the move, hibernating and resuming
 3. `destructive` to `main`; Valve's calibration tools follow as their own
    pull request
 4. With Io on the NVMe: the desktop responsiveness again (*Open
@@ -57,8 +59,10 @@ io-packages:
 - **`destructive`:** what the move to the NVMe needs and can only be tested
   with it: formatting drives from Steam, the firmware updaters (BIOS,
   controller, dock), suspend-then-hibernate, *Repair Io*'s tools on the
-  recovery stick, and a factory reset of Io's own. None of it is tested on
-  hardware yet; Valve's calibration tools follow once it is merged
+  recovery stick, and a factory reset of Io's own. Tested on the Deck so
+  far: the move to the NVMe with the recovery stick, the refusal to format
+  the disk Io runs from, hibernating and resuming; Valve's calibration tools
+  follow once it is merged
 - **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
   Steam's patch notes for system updates
 - **Pull requests #2, #3 and #4:** the Steam Deck OLED (`galileo-oled`),
@@ -169,19 +173,19 @@ someone with the hardware.
 ## Later milestones
 
 - **Kernel metapackage** `linux-neptune`, with the next kernel update
-- **Installing to the internal NVMe**, once SteamOS on it is no longer needed
-  as the reference, with the recovery stick (built and booting; its
-  installer is tested with this move, see [Installation](Installation));
-  suspend-then-hibernate is tested with it (implemented on the branch
+- **Installing to the internal NVMe** with the recovery stick: done with
+  the branch `destructive` on 2026-10-19 (SteamOS is gone from the Deck;
+  [Installation](Installation)); suspend-then-hibernate is tested with it
+  (hibernating and resuming work, Steam's power menu still to test) (implemented on the branch
   `destructive`: Valve's settings and swap helper, Io's sleep hook writes
   the image location to an EFI variable of its own, the dracut module
   `io-resume` reads it; see [Deviations](Deviations))
 - **Formatting drives from Steam** (implemented on the branch
   `destructive`): Valve's helpers and `format-device.sh` with Io's check
   against formatting the disk Io runs from, `FormatDevice` as a job. Tested
-  together with the move to the NVMe: first against the internal SSD while
-  Io runs from the card (its SteamOS is wiped then anyway; Valve's device
-  list must refuse it), then, with Io on the NVMe, against SD cards and USB
+  together with the move to the NVMe: against the internal SSD while Io ran
+  from the card, refused as it should be (2026-10-19; Steam shows *Format
+  error: Failed to format*); next, with Io on the NVMe, SD cards and USB
   drives
 - **Firmware updaters** (implemented on the branch `destructive`): Valve's
   BIOS updater (`h2offt` and the BIOS images), controller updater and dock
@@ -209,8 +213,9 @@ someone with the hardware.
   root shell. To be tested with the move to the NVMe
 - **A factory reset of Io's own** (implemented on the branch
   `destructive`, `io-factory-reset`): user data erased at the next start,
-  OS repaired in place with xbps, through Steam (`FactoryReset1`, the
-  helper), a terminal or *Repair Io*. To be tested with the move to the
+  OS repaired in place with xbps, through Steam (`steamos-reset-tool`, as
+  Steam calls it on SteamOS 3.9.3; `FactoryReset1`, the helper), a terminal
+  or *Repair Io*. To be tested with the move to the
   NVMe
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
   (they drop to dracut's emergency shell, cause not found yet); the
