@@ -97,7 +97,9 @@ do_bootloader() {
 # "UUID=<filesystem> OFFSET=<pages>" from Io's sleep hook, if it is set
 hibernate_uuid() {
   [ -e "$IO_HIBERNATE_VAR" ] || return 0
-  tail -c +5 "$IO_HIBERNATE_VAR" 2>/dev/null | sed -n 's/.*UUID=\([^ ]*\).*/\1/p'
+  # efivarfs files cannot seek: read through cat, then drop the 4 bytes of
+  # attributes
+  cat "$IO_HIBERNATE_VAR" 2>/dev/null | tail -c +5 | sed -n 's/.*UUID=\([^ ]*\).*/\1/p'
 }
 
 # Before anything touches the filesystem: once the disk has been written
@@ -105,7 +107,7 @@ hibernate_uuid() {
 forget_hibernation() {
   echo "== forgetting the hibernated session"
   if [ -e "$IO_HIBERNATE_VAR" ]; then
-    echo "image location was: $(tail -c +5 "$IO_HIBERNATE_VAR" 2>/dev/null)"
+    echo "image location was: $(cat "$IO_HIBERNATE_VAR" 2>/dev/null | tail -c +5)"
     chattr -i "$IO_HIBERNATE_VAR" 2>/dev/null || true
     rm -f "$IO_HIBERNATE_VAR"
     [ ! -e "$IO_HIBERNATE_VAR" ] || die "could not delete the EFI variable IoHibernateLocation"

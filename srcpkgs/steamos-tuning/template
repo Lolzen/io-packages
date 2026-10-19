@@ -1,7 +1,7 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
 version=1.5
-revision=1
+revision=2
 depends="util-linux e2fsprogs bash"
 short_desc="Valve's SteamOS tuning: sysctls, limits, scheduler, HID preload, swap, hibernation"
 maintainer="Georg <funer@gmx.at>"

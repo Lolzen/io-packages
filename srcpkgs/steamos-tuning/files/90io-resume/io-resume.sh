@@ -19,8 +19,10 @@ io_resume() {
     fi
     [ -e "$var" ] || return 0
 
-    # 4 bytes of attributes, then the value
-    data=$(tail -c +5 "$var" 2> /dev/null)
+    # 4 bytes of attributes, then the value. Read through a pipe: efivarfs
+    # files cannot seek, and tail -c +5 on the file itself fails ("Illegal
+    # seek") and reads nothing.
+    data=$(cat "$var" 2> /dev/null | tail -c +5)
     chattr -i "$var" 2> /dev/null
     rm -f "$var"
 
