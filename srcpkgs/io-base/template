@@ -1,6 +1,6 @@
 # Template file for 'io-base'
 pkgname=io-base
-version=0.7.0
+version=0.7.1
 revision=1
 depends="polkit socklog-void plymouth alsa-pipewire efibootmgr util-linux
  grub-x86_64-efi"
@@ -33,6 +33,8 @@ do_install() {
 	vmkdir etc/default
 	vinstall ${FILESDIR}/io-bootnext.default 644 etc/default io-bootnext
 	# /usr/share/i18n/SUPPORTED, regenerated from libc-locales (as on Arch)
+	vmkdir etc/kernel.d/post-install
+	vinstall ${FILESDIR}/60-io-vkpurge 755 etc/kernel.d/post-install
 	vmkdir usr/libexec/io
 	vinstall ${FILESDIR}/io-i18n-supported 755 usr/libexec/io
 	vinstall ${FILESDIR}/io-bootnext 755 usr/libexec/io
