@@ -542,8 +542,10 @@ interfaces Steam uses:
   needed on the test Deck: its card is safe to trim).
 - **Formatting from Steam** runs Valve's helpers and `format-device.sh`,
   with an Io check that refuses the disk `/` is on: Valve's device list
-  takes any SD card or USB drive, and Io runs from one. Not tested on
-  hardware yet.
+  takes any SD card or USB drive, and Io runs from one. Tested
+  (2026-10-19): the internal SSD refused while Io ran from the card, an SD
+  card and a USB drive formatted (validation with f3probe, ext4, mounted
+  for deck), as on SteamOS.
 
 ---
 
@@ -603,7 +605,11 @@ local session, an admin's otherwise).
   `--status` and `--cancel` for a pending reset. On the recovery stick,
   *Repair Io* can request the same reset for an Io that does not start.
 
-**Not tested on hardware yet.**
+**Tested** (2026-10-20, Io on the NVMe): Steam's factory reset restarts the
+Deck, the user data is erased at the start, Steam's first setup follows,
+the update channel is back to the image's. The Wi-Fi backend stays
+wpa_supplicant, the default since SteamOS 3.9.2 (Valve's
+`10-steamos-defaults.conf`); Steam's setup does not change it.
 
 ---
 

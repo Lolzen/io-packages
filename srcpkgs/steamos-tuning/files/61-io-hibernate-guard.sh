@@ -10,8 +10,6 @@
 # starts; decided anew at every boot. The file name sorts after Valve's
 # steamos-suspend-then-hibernate.conf, so it wins over it.
 io_hibernate_conf=/etc/elogind/sleep.conf.d/zz-io-hibernate.conf
-# name used up to steamos-tuning 1.4 (sorted before Valve's file)
-rm -f /etc/elogind/sleep.conf.d/10-io-hibernate.conf
 io_hibernate_ok=no
 case "$(findmnt -no SOURCE /)" in
     /dev/nvme*)

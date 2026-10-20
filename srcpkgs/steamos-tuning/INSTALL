@@ -4,15 +4,9 @@
 # rebuilt once when these files differ from the ones they were last built
 # with. A kernel installed later builds its own initramfs with them anyway,
 # so a missing image is left to the kernel's hook.
-#
-# The hibernation guard's file was renamed in 1.5 (it has to sort after
-# Valve's sleep.conf.d file); renamed here as well, so the new name holds
-# before the next boot writes it.
+
 case "${ACTION}" in
 post)
-	if [ -f etc/elogind/sleep.conf.d/10-io-hibernate.conf ]; then
-		mv -f etc/elogind/sleep.conf.d/10-io-hibernate.conf etc/elogind/sleep.conf.d/zz-io-hibernate.conf
-	fi
 	_sum=var/lib/steamos-tuning/initramfs-modules.sum
 	_hook=etc/kernel.d/post-install/20-initramfs
 	_new=$(cat usr/lib/dracut/dracut.conf.d/20-steam-deck.conf \

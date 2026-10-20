@@ -68,7 +68,7 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
     loader, forget a hibernated session that does not resume (the session
     is lost), check the installed packages, request a factory reset (Io
     erases all user data at its next start), open a root shell in the
-    installation (`io-repair`). Not tested on hardware yet.
+    installation (`io-repair`). Tested on the internal NVMe (2026-10-20).
 - **Everything works by touch or with the trackpad.** The dialogs need no
   keyboard.
 - **The on-screen keyboard opens only on touch.** To type into the
@@ -79,7 +79,6 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
   SSH (OpenSSH's default `PermitRootLogin prohibit-password`); use `sudo`.
 
 **Status:** the stick boots, starts Plasma, and the disk dialog works.
-Installing to the internal NVMe is tested (2026-10-19, branch
-`destructive`): take out SD cards you do not want listed as a target first,
-the dialog offers every disk but the stick's. *Repair Io* is not tested
-yet.
+Installing to the internal NVMe and *Repair Io* are tested (2026-10-19
+and 20): take out SD cards you do not want listed as a target first, the
+dialog offers every disk but the stick's.
