@@ -58,6 +58,8 @@ requests).
 Work that is built but not on `main` yet, each on its own branch of
 io-packages:
 
+- **`calibration-tools`** (pull request): Valve's thumbstick and trigger
+  calibration tools (`deck-controller-calibration`)
 - **`dock-fw`** (pull request #6): Valve's dock firmware updater with
   Steam's real dock check and `UpdateDock1`; needs Valve's Docking Station
   to be tested

@@ -25,6 +25,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `deck-firmware` | `linux-firmware-neptune` (files) | Valve's older `amdgpu/vangogh_vcn.bin` and Valve's Realtek Bluetooth firmware, in `/usr/lib/firmware/updates` (the rest comes from Void's `linux-firmware`) |
 | `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers (the `steamos-update` helper calls `io-steamos-manager`'s script), udev rules, hwsupport scripts (automount, trimming, formatting), Valve's cursor theme; automount through `io-detach`, Io's rule hiding the internal SSD, `io-root-disk`; pulls in `udisks2` and the formatting tools |
 | `deck-firmware-updaters` | `jupiter-hw-support` 20260930.1 (SteamOS 3.9.3) | Valve's BIOS updater (`jupiter-biosupdate`, BIOS images, Insyde's `h2offt`) and controller updater (firmware, flashing scripts, update splash), `steamos-firmware-update`, `plymouth-wrap`; both run at boot. The controller updater never flashes older firmware over newer |
+| `deck-controller-calibration` | `jupiter-hw-support` 20260930.1 (files) | Valve's thumbstick and trigger calibration tools (`thumbstick_cal`, `thumbstick_fine_cal`, `trigger_cal`), run by hand in a terminal |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
 | `steamos-powerbuttond` | `steamos-powerbuttond` 4.2 | Power button daemon |
 | `steamos-systemreport` | `steamos-systemreport` 1.23 | System report for bug reports (socklog, session logs, xbps) |
