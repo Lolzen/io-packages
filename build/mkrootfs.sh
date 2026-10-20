@@ -42,6 +42,7 @@ build_system_rootfs() {
   # wheel gets sudo through holo-sudo, as on SteamOS.
   log "verifying passwords"
   verify_passwords "$SYS_ROOTFS" "$USERNAME"
+  write_factory_defaults "$SYS_ROOTFS" "$USERNAME" "$USERGROUPS" "$HOSTNAME" "$TIMEZONE" "$LANG_DEFAULT" "$ROOTHASH" "$USERHASH"
   log "enabling services"
   # shellcheck disable=SC2086
   enable_services "$SYS_ROOTFS" $SERVICES

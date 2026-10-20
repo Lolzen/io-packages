@@ -1,9 +1,9 @@
 # Template file for 'steamos-tuning'
 pkgname=steamos-tuning
-version=1.4
-revision=1
-depends="util-linux"
-short_desc="Valve's SteamOS tuning: sysctls, limits, scheduler, HID preload, swap file"
+version=1.5
+revision=3
+depends="util-linux e2fsprogs bash"
+short_desc="Valve's SteamOS tuning: sysctls, limits, scheduler, HID preload, swap, hibernation"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
 homepage="https://github.com/Lolzen/io-packages"
@@ -39,15 +39,30 @@ homepage="https://github.com/Lolzen/io-packages"
 #     "steam-deck" as a dracut configuration (dracut is Void's initramfs
 #     generator). INSTALL rebuilds existing initramfs images once when the
 #     list changes, as pacman does for a changed mkinitcpio hook.
+#   steamos-suspend-then-hibernate.conf - Valve's suspend-then-hibernate
+#     (hibernate after 20 minutes of suspend), in elogind's sleep.conf.d,
+#     without HibernateOnACPower=no, which elogind 252 does not know: on AC
+#     power the Deck hibernates after the delay as well.
+#   hibernate-swap-helper.sh - Valve's: the swap file for the image (RAM
+#     plus VRAM) is created when hibernating and removed after resuming.
 # Everything ported here is identical in 20260827.2, the version of SteamOS
-# 3.9.2 (checked 2026-10-04). Not ported yet: Valve's suspend-then-hibernate
-# settings of 3.9.2 (sleep.conf.d, delay 20 minutes on battery); they only
-# matter once Io runs from the NVMe with a resume path (see
-# 61-io-hibernate-guard.sh).
+# 3.9.2 (checked 2026-10-04).
 #
-# 61-io-hibernate-guard.sh is Io's own: hibernation is allowed only when / is
-# on the internal NVMe and the kernel command line has resume= (see the file). Valve's suspend-then-hibernate itself
-# follows with installing to the NVMe, where it can be tested.
+# Io's own for hibernation:
+#   61-io-hibernate-guard.sh - hibernation only when / is on the internal
+#     NVMe (and the Deck booted with UEFI); elsewhere elogind is told it is
+#     not allowed (see the file).
+#   io-hibernate - elogind sleep hook in place of Valve's
+#     hibernate-prepare.service and system-sleep/hibernate-post.sh: runs the
+#     helper and writes where the image is to an EFI variable of Io's own
+#     (IoHibernateLocation), which systemd does on SteamOS.
+#   90io-resume, 21-io-resume.conf - dracut module that reads that variable
+#     at boot and resumes from the image, in place of systemd's
+#     systemd-hibernate-resume-generator.
+#   Valve's logind drop-in that sets SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK
+#     (the swap that exists before hibernating is too small for logind's
+#     check) is part of the elogind overlay (overlay/elogind).
+# Not tested yet: hibernation needs Io on the NVMe.
 # Not included on purpose:
 #   20-panic-sysctls.conf, 21-steamos-panic-sysctls.conf - reboot on kernel
 #     panic; Valve pairs this with its crash log submitter, Io has none yet,
@@ -74,6 +89,16 @@ do_install() {
 	vinstall ${FILESDIR}/ntsync.conf 644 usr/lib/modules-load.d
 	vmkdir usr/lib/dracut/dracut.conf.d
 	vinstall ${FILESDIR}/20-steam-deck.conf 644 usr/lib/dracut/dracut.conf.d
+	vinstall ${FILESDIR}/21-io-resume.conf 644 usr/lib/dracut/dracut.conf.d
+	vmkdir usr/lib/dracut/modules.d/90io-resume
+	vinstall ${FILESDIR}/90io-resume/module-setup.sh 755 usr/lib/dracut/modules.d/90io-resume
+	vinstall ${FILESDIR}/90io-resume/io-resume.sh 755 usr/lib/dracut/modules.d/90io-resume
+	vmkdir usr/lib/elogind/sleep.conf.d
+	vinstall ${FILESDIR}/steamos-suspend-then-hibernate.conf 644 usr/lib/elogind/sleep.conf.d
+	vmkdir usr/libexec/elogind/system-sleep
+	vinstall ${FILESDIR}/io-hibernate 755 usr/libexec/elogind/system-sleep
+	vmkdir usr/libexec/holo
+	vinstall ${FILESDIR}/hibernate-swap-helper.sh 755 usr/libexec/holo
 	vinstall ${FILESDIR}/holo-cfs-debugfs-settings 755 usr/libexec
 	vmkdir etc/runit/core-services
 	vinstall ${FILESDIR}/holo-create-swapfile 755 usr/libexec

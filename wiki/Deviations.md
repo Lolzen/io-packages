@@ -129,14 +129,20 @@ the session bus that Steam talks to.
   every root job already running when it starts); `Job1.ExitCode`, declared
   in Valve's interface file but not implemented in 26.1.0, works; the root
   half numbers its jobs from the time it started, so a number is not
-  reused after a restart. `FormatDevice` answers `NotSupported` until
-  formatting is ported and tested (see *Storage*).
+  reused after a restart. `FormatDevice` runs Valve's `format-device.sh`
+  the same way (see *Storage*).
+- **`UpdateBios1`** as in steamos-manager: exported only where the updater
+  is installed (`deck-firmware-updaters`), a job running Valve's script
+  (`jupiter-biosupdate --auto`). `UpdateDock1` and Valve's dock updater
+  are on the branch `dock-fw` (pull request, needs Valve's dock).
 - **`UdevEvents1`** as in steamos-manager: the session half watches udev
   (pyudev) for a USB interface's `change` event carrying
   `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a
   port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
-- **Not implemented**, for lack of a counterpart on Io: `UpdateBios1`,
-  `UpdateDock1`, `FactoryReset1`.
+- **`FactoryReset1`** runs Io's own `io-factory-reset` in the root half
+  instead of Valve's `steamos-reset-tool` (see *Factory reset*); exported
+  only where it is installed. As in steamos-manager it is a plain call, not
+  a job: 1 (*reboot required*) on success, 0 otherwise.
   `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
   and 3.9.2).
 - **HDMI-CEC (`HdmiCec1`, `HdmiCec2`)** as in steamos-manager 26.4.1: the
@@ -188,12 +194,33 @@ the session bus that Steam talks to.
   On the LCD it ends at once, as its card is not self-managed; with Valve's
   USB streaming dongle plugged in it also reloads that dongle's driver
   (`rtw89_8852cu`), as on SteamOS.
-- **Hibernation is allowed only with `/` on the internal NVMe and `resume=`
-  on the kernel command line** (Io's own core service writes elogind's
-  `sleep.conf.d`); without a resume path a hibernated session would be
-  lost. SteamOS 3.9.2 allows hibernation and suspend-then-hibernate (delay
-  20 minutes, counted only on battery); 3.8.4 switched it off ("disabled for
-  3.8.x cycle"). Not set up on Io yet.
+- **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
+  core service writes elogind's `sleep.conf.d`); on an SD card or USB drive
+  writing about 17 GB takes minutes and wears the medium. On the NVMe,
+  Valve's settings of SteamOS 3.9.2 apply: hibernation allowed, and
+  suspend-then-hibernate with a delay of 20 minutes for programs that ask
+  for it (Plasma's power settings). Steam's *Standby* asks for a plain
+  suspend on SteamOS and on Io alike (Valve: hibernation "not yet exposed
+  in Game Mode UI"). Differences:
+  - **On AC power as well:** elogind 252 has no `HibernateOnACPower=no`, so
+    a suspend-then-hibernate also hibernates after 20 minutes when plugged
+    in.
+  - **Resume path:** SteamOS's systemd writes the image location to an EFI
+    variable (`HibernateLocation`) that its initramfs reads. Io's sleep hook
+    (`io-hibernate`) writes an EFI variable of its own
+    (`IoHibernateLocation`), read and deleted by the dracut module
+    `io-resume`; a SteamOS on the same Deck never sees it. Before
+    hibernating, the hook also sets BootNext to Io (`io-bootnext`).
+  - **Swap file timing:** Valve creates the swap file for the image before
+    systemd picks one; elogind picks first (Io's 1 GiB swap file), so the
+    hook points the kernel at the new file afterwards.
+  - Valve's skip of logind's swap size check
+    (`SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK`) is set in elogind's runit
+    service (`elogind-holo`).
+  - Valve's reset of the A/B boot counter after resuming does not apply.
+  **Tested** with Io on the NVMe (2026-10-19): hibernating and resuming
+  (`loginctl hibernate`). Plasma's hibernate and suspend-then-hibernate:
+  see [Milestones](Milestones), *Tests pending*.
 - **Proton's nice limit** as on SteamOS 3.9.2: `* hard nice -8` in
   `/etc/security/limits.d/15-proton-nice.conf`, read by `pam_limits` in
   SDDM's login (Steam's hard limit 28; game threads run at nice −1, −2 and
@@ -236,9 +263,17 @@ the session bus that Steam talks to.
 - **`CAP_SYS_NICE` for gamescope** is set as a file capability, exactly as
   on SteamOS, but by a boot-time core service (with kwin's), because
   gamescope comes from Void's package and an update would drop it.
-- **Boot splash** is ended by `io-sddm` right before SDDM starts. There is no
-  controller firmware update splash (`plymouth-wrap`), since Io has no
-  controller update service.
+- **Boot splash** is ended by `io-sddm` right before SDDM starts. The
+  controller firmware update splash (Valve's `plymouth-wrap`) uses Io's
+  theme, which draws the title and progress as Valve's holo theme does
+  (`io-branding` 0.3.0; in the initramfs after its next rebuild).
+- **Firmware updates at boot** run from a core service
+  (`97-io-firmware-update.sh`) instead of `jupiter-biosupdate.service` and
+  `jupiter-controller-update.service`, with the same time limits. Io's
+  controller updater does not flash a controller whose firmware is newer
+  than Io's copy (SteamOS on the same Deck may have brought a newer one);
+  Valve's flashes whatever differs. `steamos-firmware-update` has no fwupd
+  branch (Legion Go, Steam Machine): fwupd is not part of Io.
 - **Initramfs:** dracut loads the SD card modules before `amdgpu` on
   purpose, so card detection overlaps `amdgpu`'s load (about 3.7 s on its
   own).
@@ -378,8 +413,8 @@ the session bus that Steam talks to.
   `rp_filter`, `promote_secondaries`, `accept_source_route=0` and
   `ping_group_range` (values as captured on SteamOS, from systemd's
   `50-default.conf`), and `net.unix.max_dgram_qlen=512`, which systemd
-  raises at start. Valve's suspend-then-hibernate settings are not taken
-  over (see *System services*, hibernation).
+  raises at start. Valve's suspend-then-hibernate settings are taken over
+  without `HibernateOnACPower` (see *System services*, hibernation).
 - **`holo-fstab-repair`** runs Valve's script on every boot; SteamOS runs it
   only when the user changed `fstab` in its `/etc` overlay, which Io does
   not have.
@@ -505,21 +540,85 @@ interfaces Steam uses:
   internal SSD instead; Io may run from that card, so it trims every ext4
   or btrfs filesystem mounted read-write except those on the card (not yet
   needed on the test Deck: its card is safe to trim).
-- **Formatting from Steam is not available yet**: `FormatDevice` answers
-  `NotSupported` until formatting is ported and tested, the format helpers
-  are stubs. Valve's `format-device.sh` is in place with an Io check that
-  refuses the disk `/` is on: Valve's device list takes any SD card or USB
-  drive, and Io runs from one.
+- **Formatting from Steam** runs Valve's helpers and `format-device.sh`,
+  with an Io check that refuses the disk `/` is on: Valve's device list
+  takes any SD card or USB drive, and Io runs from one. Tested
+  (2026-10-19): the internal SSD refused while Io ran from the card, an SD
+  card and a USB drive formatted (validation with f3probe, ext4, mounted
+  for deck), as on SteamOS.
+
+---
+
+## Factory reset
+
+SteamOS resets an A/B system: for the user data its initramfs formats the
+`/home` and `/var` partitions at the next boot (`/etc` lives in `/var`
+there, so every setting goes too); for the OS, `steamos-reset-tool`
+installs a fresh image from Valve's update server into the other slot.
+Steam's client on SteamOS 3.9.3 runs, as the user, `steamos-reset-tool
+os-status` and then `steamos-reset-tool factory-reset --reset-os
+--reset-user-data` (Valve's tool reaches its root backends through a setuid
+wrapper), then restarts the Deck itself; `FactoryReset1.PrepareFactoryReset`
+(1 user data, 2 OS, 3 both) and the helper `steamos-factory-reset-config`
+still exist but were not called. Io has one root filesystem and no slots,
+so `io-factory-reset` does it in place, behind all three: Io's
+`/usr/bin/steamos-reset-tool` answers as Valve's (JSON on stdout) and gets
+root through polkit instead of a setuid wrapper (no password in the active
+local session, an admin's otherwise).
+
+- **User data**, at the next start, before any service (core service
+  `04-io-factory-reset.sh`; SteamOS's initramfs runs at the same point):
+  `/home` and `/root` emptied, deck's home made new from `/etc/skel`, other
+  people's accounts removed; Wi-Fi and Bluetooth pairings, Flatpaks, logs
+  and caches in `/var` deleted; the settings Steam and the user change in
+  `/etc` set back to the image's (hostname, time zone, language, passwords,
+  deck's groups, Wi-Fi connections, backend and power saving, SDDM's login
+  mode, SSH host keys, machine-id, and the services Steam switches: SSH on;
+  developer mode, iwd and the LAVD scheduler off); a hibernated session is
+  dropped; shadow's backup files (`/etc/passwd-` and the like, with the old
+  password hashes) and sudo's first-use marks are removed; the update
+  channel goes back to the image's (the repository files in `/etc/xbps.d`,
+  such as Io's testing channel, are removed): SteamOS keeps its branch in
+  `/var`, which its reset formats, and falls back to stable. The image's
+  values come from `/var/lib/io/factory-defaults`,
+  written by `mkrootfs.sh`; older installations get the build defaults.
+  Everything else in `/etc` stays as it is: unlike SteamOS, Io cannot tell
+  a changed system file in `/etc` from one an update brought.
+- **OS**, right away while the system runs (it needs the network): the
+  system is updated, packages installed on top of Io are removed (those
+  Io's packages need stay), every package whose files were changed or
+  deleted is installed again (`xbps-pkgdb -a`), and `/usr/local` is
+  emptied. Packages whose installed version is not the repositories'
+  (from another channel, or built by hand) are installed again from the
+  repositories, even where that is older. With both parts the channel is
+  reset first, so the system ends on the default channel's versions, as
+  SteamOS installs the stable image; the OS part alone keeps the channel.
+  Steam's call waits until this is done, as it waits for
+  Valve's download of the new image; whether Steam's client gives up
+  earlier is one of the things to test.
+- Steam's helper `steamos-factory-reset-config` needs no password only in
+  the active local session (Steam); Valve's policy lets any caller
+  schedule the wipe.
+- Like SteamOS, an interrupted user-data reset is started again at the
+  next start until it completes.
+- From a terminal: `io-factory-reset` asks first and restarts;
+  `--status` and `--cancel` for a pending reset. On the recovery stick,
+  *Repair Io* can request the same reset for an Io that does not start.
+
+**Tested** (2026-10-20, Io on the NVMe): Steam's factory reset restarts the
+Deck, the user data is erased at the start, Steam's first setup follows,
+the update channel is back to the image's. The Wi-Fi backend stays
+wpa_supplicant, the default since SteamOS 3.9.2 (Valve's
+`10-steamos-defaults.conf`); Steam's setup does not change it.
 
 ---
 
 ## Not present on Io
 
 Atomic A/B updates (`steamos-atomupd`, `rauc`, `holo-desync`,
-`steamos-efi`; Io updates with xbps, see *System updates*), BIOS and
-dock firmware updates, factory reset (`steamos-reset`), controller firmware
-updates, the crash log submitter, Valve's nested desktop (Plasma inside game
-mode), formatting drives from Steam (prepared, see *Storage*), and the VRAM
+`steamos-efi`; Io updates with xbps, see *System updates*), Valve's reset
+tool (`steamos-reset`; Io has its own, see *Factory reset*), the crash log
+submitter, Valve's nested desktop (Plasma inside game mode), and the VRAM
 priority for the foreground game (`dmemcg-booster`, `kcgroups`,
 `plasma-foreground-booster`: driven by systemd's units and slices; decided
 not to implement on 2026-10-03: `dmemcg-booster` protects the user's

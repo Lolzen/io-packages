@@ -62,7 +62,13 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
     is **erased** and Io installed on it (`io-install` → `io-restore`). The
     disk the stick runs from, and disks with a mounted partition or active
     swap, are refused.
-  - *Repair Io* — a placeholder for now; it lists the disks.
+  - *Repair Io* — pick an Io installation (internal NVMe, SD card or USB
+    drive; found by its `IOROOT` partition) and the repairs: check and
+    repair the filesystems, rebuild the initramfs, reinstall the boot
+    loader, forget a hibernated session that does not resume (the session
+    is lost), check the installed packages, request a factory reset (Io
+    erases all user data at its next start), open a root shell in the
+    installation (`io-repair`). Tested on the internal NVMe (2026-10-20).
 - **Everything works by touch or with the trackpad.** The dialogs need no
   keyboard.
 - **The on-screen keyboard opens only on touch.** To type into the
@@ -73,5 +79,6 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
   SSH (OpenSSH's default `PermitRootLogin prohibit-password`); use `sudo`.
 
 **Status:** the stick boots, starts Plasma, and the disk dialog works.
-Installing is not released: do not install onto the internal SSD yet, it
-still holds SteamOS, the reference for Io.
+Installing to the internal NVMe and *Repair Io* are tested (2026-10-19
+and 20): take out SD cards you do not want listed as a target first, the
+dialog offers every disk but the stick's.

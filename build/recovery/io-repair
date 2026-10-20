@@ -1,8 +1,261 @@
 #!/bin/sh
-# io-repair - "Repair Io" on the recovery desktop. A placeholder for repair
-# tools to come; for now it lists the disks. The window stays open
-# (konsole --hold), so no key press is needed.
+# io-repair - "Repair Io" on the recovery desktop: repairs an Io installation
+# (internal NVMe, SD card or USB drive) that no longer starts. Pick the
+# installation and the repairs in dialogs (kdialog, by touch or with the
+# trackpad); without a graphical session it asks in the terminal.
+#
+# Repairs, each one optional:
+#   fsck        check and repair both filesystems (e2fsck -f -y on IOROOT,
+#               fsck.vfat -a on IOESP), before anything is mounted
+#   initramfs   rebuild the initramfs of every installed kernel (dracut of
+#               the installed system, in a chroot)
+#   bootloader  reinstall GRUB as io-restore and mkimg.sh set it up: at the
+#               removable path, plus the "Io" boot entry on the internal
+#               NVMe; then grub-mkconfig
+#   hibernation forget a hibernated session that does not resume: delete
+#               the EFI variable IoHibernateLocation and the hibernation
+#               swap file. The hibernated session is lost.
+#   packages    check the installed packages (xbps-pkgdb -a; reports only)
+#   reset       factory reset: Io erases all user data at its next start
+#               (io-factory-reset --prepare user, in the installation)
+#   shell       a root shell in the installed system, with everything
+#               mounted (terminal only), last
+#
+# Nothing on the disk is erased; the hibernation repair deletes only the
+# hibernated session. Refuses the disk the recovery system runs from and
+# installations with a mounted partition.
+#
+#   io-repair                          dialogs, then runs the repairs via sudo
+#   io-repair --run ROOTPART REPAIR... the repairs themselves (as root)
 set -eu
-printf 'Io repair tools are not implemented yet.\n\n'
-printf 'Block devices:\n\n'
-lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS,MODEL,TRAN
+
+MNT=/mnt/io-repair
+IO_HIBERNATE_VAR=/sys/firmware/efi/efivars/IoHibernateLocation-00693127-9e1a-4740-b3c3-13fdd5f0df56
+ALL_REPAIRS="fsck initramfs bootloader hibernation packages reset shell"
+
+die() { printf 'io-repair: %s\n' "$*" >&2; exit 1; }
+gui() { [ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ] && command -v kdialog > /dev/null; }
+disk_of() { lsblk -nsrpo NAME,TYPE -- "$1" 2>/dev/null | awk '$2 == "disk" { print $1; exit }'; }
+part_with_label() { lsblk -nrpo NAME,PARTLABEL "$1" | awk -v l="$2" '$2 == l { print $1; exit }'; }
+
+################################################################################
+# Repairs (as root)
+################################################################################
+
+cleanup() {
+  set +e
+  umount -R "$MNT" 2>/dev/null
+}
+
+mount_system() {
+  [ -n "$(findmnt -n "$MNT" 2>/dev/null)" ] && return 0
+  mkdir -p "$MNT"
+  mount "$ROOT_PART" "$MNT"
+  mkdir -p "$MNT/boot/efi"
+  mount "$ESP_PART" "$MNT/boot/efi"
+  # rbind for /sys: efivarfs is below it (grub-install's boot entry)
+  for d in dev sys; do mount --rbind "/$d" "$MNT/$d"; mount --make-rslave "$MNT/$d"; done
+  for d in proc run; do mount --bind "/$d" "$MNT/$d"; done
+}
+
+do_fsck() {
+  echo "== checking $ROOT_PART (IOROOT)"
+  rc=0
+  e2fsck -f -y "$ROOT_PART" || rc=$?
+  # 1: errors corrected, 2: corrected, reboot advised (only for a mounted /)
+  [ "$rc" -le 2 ] || die "e2fsck could not repair $ROOT_PART (exit $rc)"
+  echo "== checking $ESP_PART (IOESP)"
+  rc=0
+  fsck.vfat -a "$ESP_PART" || rc=$?
+  [ "$rc" -le 1 ] || die "fsck.vfat could not repair $ESP_PART (exit $rc)"
+}
+
+do_initramfs() {
+  n=0
+  for dir in "$MNT"/usr/lib/modules/*/; do
+    ver=${dir%/}; ver=${ver##*/}
+    [ -f "$MNT/boot/vmlinuz-$ver" ] || continue
+    echo "== initramfs for $ver"
+    chroot "$MNT" dracut --force --kver "$ver" "/boot/initramfs-$ver.img"
+    n=$((n + 1))
+  done
+  [ "$n" -gt 0 ] || die "no kernel found in the installation"
+}
+
+do_bootloader() {
+  if [ "$(lsblk -dno TRAN "$DISK")" = nvme ]; then
+    echo "== GRUB with the boot entry \"Io\" (internal NVMe)"
+    chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Io ||
+      echo "io-repair: no boot entry written; the removable path below still boots" >&2
+  fi
+  echo "== GRUB at the removable path"
+  chroot "$MNT" grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=Io --removable --no-nvram
+  [ -f "$MNT/boot/efi/EFI/BOOT/BOOTX64.EFI" ] || die "no EFI loader written"
+  chroot "$MNT" grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+# "UUID=<filesystem> OFFSET=<pages>" from Io's sleep hook, if it is set
+hibernate_uuid() {
+  [ -e "$IO_HIBERNATE_VAR" ] || return 0
+  # efivarfs files cannot seek: read through cat, then drop the 4 bytes of
+  # attributes
+  cat "$IO_HIBERNATE_VAR" 2>/dev/null | tail -c +5 | sed -n 's/.*UUID=\([^ ]*\).*/\1/p'
+}
+
+# Before anything touches the filesystem: once the disk has been written
+# to, resuming the hibernated session would corrupt it.
+forget_hibernation() {
+  echo "== forgetting the hibernated session"
+  if [ -e "$IO_HIBERNATE_VAR" ]; then
+    echo "image location was: $(cat "$IO_HIBERNATE_VAR" 2>/dev/null | tail -c +5)"
+    chattr -i "$IO_HIBERNATE_VAR" 2>/dev/null || true
+    rm -f "$IO_HIBERNATE_VAR"
+    [ ! -e "$IO_HIBERNATE_VAR" ] || die "could not delete the EFI variable IoHibernateLocation"
+    echo "EFI variable IoHibernateLocation deleted"
+  else
+    echo "no EFI variable IoHibernateLocation"
+  fi
+}
+
+do_hibernation() {
+  echo "== removing the hibernation swap file"
+  rm -f "$MNT/home/hibernation.swapfile" "$MNT/home/.hibernation.metadata"
+}
+
+do_packages() {
+  echo "== checking the installed packages (xbps-pkgdb -a)"
+  if chroot "$MNT" xbps-pkgdb -a; then
+    echo "all packages are fine"
+  else
+    echo "io-repair: xbps-pkgdb found problems (above); nothing was changed" >&2
+  fi
+}
+
+do_reset() {
+  echo "== factory reset at the next start of Io"
+  [ -x "$MNT/usr/bin/io-factory-reset" ] || die "this Io has no io-factory-reset (too old); update it first"
+  chroot "$MNT" /usr/bin/io-factory-reset --prepare user
+}
+
+do_shell() {
+  echo "== root shell in the installation; leave it with exit"
+  chroot "$MNT" /bin/bash -l || true
+}
+
+run_repairs() {
+  ROOT_PART=$(readlink -f "$1"); shift
+  [ "$(id -u)" -eq 0 ] || die "must run as root"
+  [ -b "$ROOT_PART" ] || die "not a block device: $ROOT_PART"
+  [ "$(lsblk -no PARTLABEL "$ROOT_PART")" = IOROOT ] || die "$ROOT_PART is not an Io root partition (IOROOT)"
+  DISK=$(disk_of "$ROOT_PART")
+  OWN=$(disk_of "$(findmnt -nvo SOURCE /)")
+  [ -n "$DISK" ] && [ -n "$OWN" ] || die "cannot tell the disks apart"
+  [ "$DISK" != "$OWN" ] || die "$DISK is the disk the recovery system runs from"
+  ESP_PART=$(part_with_label "$DISK" IOESP)
+  [ -b "$ESP_PART" ] || die "no IOESP partition on $DISK"
+  MOUNTED=$(lsblk -nrpo MOUNTPOINTS "$DISK") || die "lsblk failed for $DISK"
+  if [ -n "$(printf '%s' "$MOUNTED" | tr -d '[:space:]')" ]; then
+    lsblk -o NAME,MOUNTPOINTS "$DISK" >&2
+    die "partitions of $DISK are mounted; unmount them first"
+  fi
+
+  trap cleanup EXIT
+  trap 'cleanup; exit 130' INT TERM HUP
+
+  echo "Io on $DISK: root $ROOT_PART, ESP $ESP_PART"
+  # A hibernated Io: every repair writes to the disk, and resuming after
+  # that corrupts the filesystem. So the session goes first, or nothing runs.
+  ROOT_UUID=$(blkid -s UUID -o value "$ROOT_PART")
+  HIB_UUID=$(hibernate_uuid)
+  case " $* " in
+    *" hibernation "*) forget_hibernation ;;
+    *)
+      if [ -n "$HIB_UUID" ] && [ "$HIB_UUID" = "$ROOT_UUID" ]; then
+        die "this Io is hibernated. Start it to resume the session, or choose \"Forget a hibernated session\" (the session is lost) together with the other repairs."
+      fi
+      ;;
+  esac
+  case " $* " in *" fsck "*) do_fsck ;; esac
+  for r in initramfs bootloader hibernation packages reset shell; do
+    case " $* " in
+      *" $r "*) mount_system; "do_$r" ;;
+    esac
+  done
+  sync
+  echo "== done"
+}
+
+if [ "${1:-}" = --run ]; then
+  shift
+  [ $# -ge 2 ] || die "usage: io-repair --run ROOTPART REPAIR..."
+  run_repairs "$@"
+  exit 0
+fi
+
+################################################################################
+# Dialogs (as the recovery user)
+################################################################################
+
+OWN=$(disk_of "$(findmnt -nvo SOURCE /)")
+# Io root partitions (IOROOT, from io-restore and mkimg.sh) on other disks
+SYSTEMS=$(lsblk -rpno NAME,PARTLABEL,FSTYPE | awk '$2 == "IOROOT" && $3 == "ext4" { print $1 }' |
+  while read -r p; do [ "$(disk_of "$p")" = "$OWN" ] || echo "$p"; done)
+describe() {
+  d=$(disk_of "$1")
+  printf '%s on %s  %s  %s' "$1" "$d" "$(lsblk -dno SIZE "$d" | tr -d ' ')" "$(lsblk -dno MODEL "$d")"
+}
+
+if [ -z "$SYSTEMS" ]; then
+  echo "No Io installation found (no IOROOT partition)."
+  echo
+  lsblk -o NAME,SIZE,FSTYPE,PARTLABEL,LABEL,MOUNTPOINTS,MODEL,TRAN
+  if gui; then kdialog --title "Repair Io" --error "No Io installation found (no IOROOT partition)." || true; fi
+  exit 1
+fi
+
+if gui; then
+  set --
+  for p in $SYSTEMS; do set -- "$@" "$p" "$(describe "$p")" off; done
+  ROOT=$(kdialog --title "Repair Io" --radiolist "Repair which Io installation?" "$@") || { echo "aborted"; exit 1; }
+  [ -n "$ROOT" ] || { echo "nothing selected"; exit 1; }
+  REPAIRS=$(kdialog --title "Repair Io" --separate-output --checklist "Repairs for $(describe "$ROOT"):" \
+    fsck "Check and repair the filesystems" on \
+    initramfs "Rebuild the initramfs" on \
+    bootloader "Reinstall the boot loader (GRUB)" on \
+    hibernation "Forget a hibernated session that does not resume (the session is lost)" off \
+    packages "Check the installed packages (report only)" on \
+    reset "Factory reset: erase ALL user data at Io's next start" off \
+    shell "Open a root shell in the installation (needs the keyboard)" off) || { echo "aborted"; exit 1; }
+  REPAIRS=$(echo $REPAIRS)
+  [ -n "$REPAIRS" ] || { echo "no repair selected"; exit 1; }
+  kdialog --title "Repair Io" --warningcontinuecancel "Run on $(describe "$ROOT"):
+
+$REPAIRS
+
+Continue?" || { echo "aborted"; exit 1; }
+else
+  printf '\nIo Recovery - Repair\n\nIo installations:\n\n'
+  for p in $SYSTEMS; do describe "$p"; echo; done
+  printf '\nEnter the root partition (for example /dev/nvme0n1p2): '
+  read -r ROOT
+  case " $(echo $SYSTEMS) " in *" $ROOT "*) ;; *) echo "not one of the partitions above" >&2; exit 1 ;; esac
+  printf '\nRepairs: %s\nEnter the ones to run, separated by spaces: ' "$ALL_REPAIRS"
+  read -r REPAIRS
+  for r in $REPAIRS; do
+    case " $ALL_REPAIRS " in *" $r "*) ;; *) echo "unknown repair: $r" >&2; exit 1 ;; esac
+  done
+  [ -n "$REPAIRS" ] || { echo "no repair selected"; exit 1; }
+fi
+
+echo "Repairing Io on $(describe "$ROOT"): $REPAIRS"
+# shellcheck disable=SC2086 # one word per repair
+if sudo /usr/sbin/io-repair --run "$ROOT" $REPAIRS; then
+  echo
+  echo "Repairs finished. Remove the recovery drive before rebooting."
+  if gui; then kdialog --title "Repair Io" --msgbox "Repairs finished. Remove the recovery drive before rebooting." || true; fi
+else
+  echo
+  echo "Repairs failed, see above."
+  if gui; then kdialog --title "Repair Io" --error "Repairs failed; the terminal window shows why." || true; fi
+  exit 1
+fi

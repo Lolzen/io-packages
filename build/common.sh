@@ -211,6 +211,28 @@ make_users() {
   fi
   chroot "$1" usermod -p "$4" "$2"
 }
+# The image's settings for a factory reset (io-factory-reset reads them):
+# what mkrootfs.sh set, so the reset returns to this image and not to a
+# hard-coded guess. Root only: it holds the password hashes.
+write_factory_defaults() {
+  mkdir -p "$1/var/lib/io"
+  _f="$1/var/lib/io/factory-defaults"
+  (
+    umask 077
+    {
+      echo "# Written by mkrootfs.sh: the image's settings, for io-factory-reset."
+      printf "IO_DEFAULT_USER='%s'\n" "$2"
+      printf "IO_DEFAULT_GROUPS='%s'\n" "$3"
+      printf "IO_DEFAULT_HOSTNAME='%s'\n" "$4"
+      printf "IO_DEFAULT_TIMEZONE='%s'\n" "$5"
+      printf "IO_DEFAULT_LANG='%s'\n" "$6"
+      printf "IO_DEFAULT_ROOTHASH='%s'\n" "$7"
+      printf "IO_DEFAULT_USERHASH='%s'\n" "$8"
+    } > "$_f"
+  )
+  chmod 600 "$_f"
+}
+
 # A missing hash would only show at the first password prompt (the
 # autologin skips authentication), so check it here.
 verify_passwords() {

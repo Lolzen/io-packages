@@ -94,6 +94,8 @@ one release, so the update removes the overlay package and installs Void's.
 | [kwin](kwin/README.md) | kwin, kwin-devel | 6.7.5 | brightness from the device; Steam keyboard input from libei past a grabbing input method; libei 1.6 keysyms and text; no modes below 480p | 0002/0006 not upstream; 0011/0013 in 6.8 | 2026-10-11 |
 | [wpa_supplicant](wpa_supplicant/README.md) | wpa_supplicant | 2.12 | SAE wrong-password detection; 2 rescan fixes (6 GHz); WNM, MBO and other options from Valve's configuration | not in hostap | 2026-10-11 |
 | [xorg-server-xwayland](xorg-server-xwayland/README.md) | xorg-server-xwayland | 24.1.13 | libei: text as keysyms (Steam keyboard in the desktop, with kwin-holo); Valve's two seamless-start reverts left out (black flash on Io) | not in 24.1.13 | 2026-10-11 |
+| [python3-hid](python3-hid/README.md) | python3-hid | 1.0.4 | pyhidapi 1.0.6 (`BusType`, `bus_type`), as Valve's controller updater needs | released in 1.0.6 | 2026-10-12 |
+| [elogind](elogind/README.md) | elogind, libelogind, elogind-devel | 252.39 | runit service sets `SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1`, as Valve's logind drop-in (hibernation) | not a patch: Valve's configuration | 2026-10-12 |
 | [mesa](mesa/README.md) | mesa and all subpackages, and their -32bit packages | 26.2.5 | OpenGL frame limiter; explicit sync for VM operations (Forza); pageable device-local memory; no global BO list for gamescope (stutter); 3 RADV fixes from main | Valve only; the fixes in main | 2026-10-17 |
 
 ## Hand-written stand-ins

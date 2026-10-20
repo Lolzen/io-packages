@@ -20,14 +20,18 @@ requests).
 **First: the move to the NVMe**
 
 1. The last captures on SteamOS, among them its factory reset
-   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards
-2. The branch `destructive` on the Deck (see *In branches*): formatting
+   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards (done
+   2026-10-18)
+2. The branch `destructive` on the Deck: formatting
    against the internal SSD while Io runs from the card, the move with the
    recovery stick, suspend-then-hibernate, formatting SD cards and USB
    drives, the firmware updaters' check modes, `io-repair`, Io's factory
-   reset (compared with SteamOS's capture)
-3. `destructive` to `main`; Valve's calibration tools follow as their own
-   pull request
+   reset (compared with SteamOS's capture). Done 2026-10-19/20: formatting
+   refused for the internal SSD, the move, hibernating and resuming,
+   formatting SD cards and USB drives, the check modes, Repair Io, the
+   factory reset from Steam
+3. `destructive` to `main` (done 2026-10-20); Valve's calibration tools
+   follow as their own pull request
 4. With Io on the NVMe: the desktop responsiveness again (*Open
    observations*)
 
@@ -54,11 +58,9 @@ requests).
 Work that is built but not on `main` yet, each on its own branch of
 io-packages:
 
-- **`destructive`:** what the move to the NVMe needs and can only be tested
-  with it: formatting drives from Steam, the firmware updaters (BIOS,
-  controller, dock), suspend-then-hibernate, *Repair Io*'s tools on the
-  recovery stick, and a factory reset of Io's own. None of it is tested on
-  hardware yet; Valve's calibration tools follow once it is merged
+- **`dock-fw`** (pull request #6): Valve's dock firmware updater with
+  Steam's real dock check and `UpdateDock1`; needs Valve's Docking Station
+  to be tested
 - **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
   Steam's patch notes for system updates
 - **Pull requests #2, #3 and #4:** the Steam Deck OLED (`galileo-oled`),
@@ -120,6 +122,23 @@ io-packages:
 
 ## Tests pending
 
+- **Hibernation from the desktop** (Io on the NVMe): Plasma's leave menu
+  → *Hibernate* (the same path as `loginctl hibernate`, tested); Plasma's
+  energy settings with suspend-then-hibernate: after 20 minutes of suspend
+  the Deck should hibernate. elogind 252 tells a wake by its own timer from
+  a wake by the user through the firmware's wake-up type, and the Deck's
+  reads "power switch" (`/sys/firmware/dmi/entries/1-0/raw`, byte 24 =
+  0x06): it may stay in suspend. `io-hibernate-test.sh check`/`logs`
+  (project tools) record it
+- **Wi-Fi after a long suspend:** once, after 32 minutes, the LCD's card
+  (`rtw88_8822ce`) did not leave D3hot ("device inaccessible", "mac power
+  on failed") and Wi-Fi stayed dead until a reboot; the suspend of two
+  hours before resumed fine. If it comes back: restart NetworkManager,
+  reload `rtw88_8822ce`, remove and rescan the PCI device, before
+  rebooting, and compare with SteamOS (same kernel driver)
+- **elogind at reboot:** since `elogind-holo` every reboot logs a segfault
+  of elogind's reboot helper (`e-reboot`, same offset each time); the
+  reboot itself happens. Check whether Void's `elogind` does the same
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
@@ -146,8 +165,9 @@ Parts that can be built, but not tested without hardware Georg does not
 have. They are to become issues and draft pull requests, marked as needing
 someone with the hardware.
 
-- **Valve's Docking Station:** its firmware updater (`hub_update`, today a
-  stub that reports "up to date"), and HDMI-CEC with a dock that passes it
+- **Valve's Docking Station:** its firmware updater (`hub_update`, Valve's
+  package with the real `--check` and `UpdateDock1`, on the branch
+  `dock-fw` as a pull request), and HDMI-CEC with a dock that passes it
   through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
   cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
   untested
@@ -169,42 +189,24 @@ someone with the hardware.
 ## Later milestones
 
 - **Kernel metapackage** `linux-neptune`, with the next kernel update
-- **Installing to the internal NVMe**, once SteamOS on it is no longer needed
-  as the reference, with the recovery stick (built and booting; its
-  installer is tested with this move, see [Installation](Installation));
-  suspend-then-hibernate comes with it (Valve's resume path keeps the swap
-  file's position in an EFI variable through systemd; Valve's newer
-  configuration allows suspend-then-hibernate again, 20 minutes on battery;
-  Io's version is on the branch `destructive`, see *In branches*)
-- **Formatting drives from Steam** (from Alpha 5): Valve's `format-device.sh`
-  is in place with Io's check against formatting the disk Io runs from;
-  on `main`, `FormatDevice` and the format helpers still refuse, the branch
-  `destructive` has them working. Tested together with
-  the move to the NVMe: first against the internal SSD while Io runs from
-  the card (its SteamOS is wiped then anyway; Valve's device list must
-  refuse it), then, with Io on the NVMe, against SD cards and USB drives
-- **Firmware updaters** (from Alpha 5): on the branch `destructive`,
-  Valve's BIOS, controller and dock updaters with their check modes, so
-  Steam can show whether an update is due; flashing is tested last, if at
-  all. Until then SteamOS on the same Deck keeps the firmware current
+- **Firmware updates:** Valve's BIOS updater (`h2offt` and the BIOS
+  images) and controller updater (`deck-firmware-updaters`), the helpers,
+  `UpdateBios1` and the updates at boot are in place; their check modes
+  work as on SteamOS (tested 2026-10-19, at boot and from Steam). Still to
+  test: a controller update, a BIOS update last, if at all. Open: whether Valve's
+  binaries (BIOS images, `h2offt`, controller firmware) may be
+  redistributed in Io's repository
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
   once for 3.9.2 in October 2026; from SteamOS 3.9.3 (October 2026) Io has
   `gpu-trace` 2.17, `holo-realtek-firmware-toggles` 1.4 and iwd's new band
-  scanning patch (`jupiter-hw-support` 20260930.1 on the branch
-  `destructive`). Valve's versions newer than Io's, seen on 2026-10-12 and
+  scanning patch, and `jupiter-hw-support` 20260930.1's firmware
+  updaters. Valve's versions newer than Io's, seen on 2026-10-12 and
   not taken yet: `linux-neptune-72` 7.2.7-valve2, `steamos-customizations-jupiter`
   20260916.1, `holo-networking-tools` 1.4, `holo-systemreport` 1.24,
   steamos-manager 26.4.1-3, NetworkManager 1.58.0, PipeWire 1.6.8,
   WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
-- **Repair Io** on the recovery stick: in this release a placeholder that
-  lists the disks ([Installation](Installation)); `io-repair` on the
-  branch `destructive` checks the file system and repairs the initramfs,
-  the boot loader, hibernation and the packages
-- **A factory reset of Io's own**, as Steam offers it (user data, the
-  system, or both): on the branch `destructive`, to be compared with
-  SteamOS's own reset, which is recorded when SteamOS is wiped
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
   (they drop to dracut's emergency shell, cause not found yet); the
   recovery stick covers installing in the meantime. After it,
