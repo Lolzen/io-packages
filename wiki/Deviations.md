@@ -95,8 +95,11 @@ its reason.
   a restore token. Io stores it for an app without an ID (`""`), SteamOS for
   `steam`, most likely because without systemd the portal cannot name
   Steam from a cgroup scope. Neither system grants it in advance
-  (`kde-authorized` empty on both), so a new user should be asked once on
-  either; not tried yet on a fresh user (see [Milestones](Milestones)).
+  (`kde-authorized` empty on both). A fresh user is asked once on Io
+  (*Share screen with*, 2026-10-20), on SteamOS 3.9.3 not (2026-10-19),
+  with or without the dock; most likely a screencast package that comes
+  with Io's kwin/Plasma and SteamOS does not ship (see
+  [Milestones](Milestones), *Open observations*).
 - **Touch only with the dock:** SteamOS switches the trackpads and the
   pointer off while the dock is attached and leaves only the touchscreen
   (seen with a mirrored display); Io leaves them on. Not looked into yet.

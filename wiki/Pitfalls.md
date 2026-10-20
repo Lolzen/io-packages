@@ -507,6 +507,12 @@ check that refuses the disk `/` is on.
 
 ## First boot
 
+**In a Plymouth script, a global named `image` leaks into `Sprite()`.**
+Plymouth's `Sprite(image)` called without an argument looks up `image`,
+finds no local one and takes the script's global: with the logo stored as
+`image`, every empty `Sprite()` showed the logo again at 0,0. Do not name
+globals after the parameters of Plymouth's own functions.
+
 **`plymouth quit --retain-splash` leaves the console in graphics mode.**
 Text written to tty1 afterwards is not drawn at all — during Alpha 2 a
 first-boot network prompt waited invisibly for input on every fresh image,

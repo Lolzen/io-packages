@@ -93,6 +93,12 @@ io-packages:
   missing realtime threads are fixed in Alpha 6. Same scheduler, governor
   and preemption. To check again after the move to the NVMe
 - **vpower's shutdown at 0.5 %:** never tested on a real empty battery
+- **Screen sharing prompt for a new user:** Io asks once when Steam starts
+  in the desktop (Plasma's *Share screen with*, fresh user after Io's
+  factory reset, 2026-10-20); SteamOS 3.9.3 does not (fresh user,
+  2026-10-19). Not a dock matter on either. Most likely a screencast
+  package that comes with Io's kwin/Plasma and that SteamOS does not ship.
+  Suppressing it comes later
 - **Wi-Fi next to the dock's Ethernet showed "can't reach network"** once,
   during a day of heavy testing; plugging and unplugging the dock later
   behaved correctly. If it comes back, record before reconnecting:
@@ -144,11 +150,6 @@ io-packages:
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
   should take it over), and ejecting a drive from Steam
 - **Decky Loader**
-- **Screen sharing prompt for a new user, at the dock** (the prompt
-  comes with an external display; undocked, SteamOS 3.9.3 does not ask
-  either): set `~/.local/share/flatpak/db/screencast` aside, reboot, switch
-  to the desktop: Steam should ask once and, with *Allow restoring*, never again
-  (as on SteamOS, which grants nothing in advance either)
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
 - **Wake-on-Bluetooth** (a controller waking the Deck from suspend). Io
@@ -192,8 +193,11 @@ someone with the hardware.
 - **Firmware updates:** Valve's BIOS updater (`h2offt` and the BIOS
   images) and controller updater (`deck-firmware-updaters`), the helpers,
   `UpdateBios1` and the updates at boot are in place; their check modes
-  work as on SteamOS (tested 2026-10-19, at boot and from Steam). Still to
-  test: a controller update, a BIOS update last, if at all. Open: whether Valve's
+  work as on SteamOS (tested 2026-10-19, at boot and from Steam), and the
+  update at boot with its splash (title, log lines, progress) runs through
+  with Valve's simulated controller update (`/etc/.simulate-firmware-update`,
+  2026-10-20). Still to test: a real controller update once Valve ships
+  newer firmware, a BIOS update last, if at all. Open: whether Valve's
   binaries (BIOS images, `h2offt`, controller firmware) may be
   redistributed in Io's repository
 - **Catching up with Valve, periodically:** after Io's beta, a regular
