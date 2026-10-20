@@ -1,6 +1,6 @@
 # Template file for 'linux-neptune-72'
 pkgname=linux-neptune-72
-version=7.2.7
+version=7.2.11
 revision=1
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.2 series)"
 depends="linux-firmware-amd linux-firmware-network"
@@ -15,7 +15,7 @@ if [ "${version##*.}" != 0 ]; then
 fi
 
 checksum="f9fef3d14c0df53819026f4be74459835c2a0b0dcbf5b5bbd9ea19f0829402b3
- 7d08d70146f0c81bfd529d97450044d356e774a93ae2ec041e7cd825f48b0695"
+ 534895f65175db29e0635fecfef4d4e9cce7574bde3c144f090add61ab681817"
 python_version=3
 
 # XXX Restrict archs until a proper <arch>-dotconfig is available in FILESDIR.
@@ -30,7 +30,23 @@ preserve=yes
 hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
  pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
 
-_valvever=valve1
+# Valve's 7.2.7-valve2 (SteamOS 3.9.3) on stable 7.2.11: patches/0001-neptune-72.patch
+# is the difference between stable 7.2.11 and Valve's tree with 7.2.11
+# merged in, as Valve merges stable/linux-7.2.y into its 7.2/integration
+# branch (generated without Valve's ci/ and .gitlab-ci.yml). Conflicts,
+# resolved for this merge:
+#   hid-steam.c, hid-oxp.c - Valve's (it already carries stable's four
+#     hid-steam commits, as their upstream, and later ones; hid-oxp already
+#     waits for its work items)
+#   xpad.c - Valve's table (Xbox One pads are driven by Valve's gip driver)
+#     plus stable's new Xbox 360 entries (PDP Marvel, Azeron, Corsair)
+#   ttm_bo.c - stable's fix (swapped-out resources leave their bulk move:
+#     "if (ret > 0)", a use-after-free after hibernation) on Valve's code
+#   amdgpu_dm.c - Valve's file with stable's display fixes on top (native
+#     totals sink mode, dc_state copy NULL check, stream put, self-refresh
+#     off for tearing flips); stable's PWM backlight curve is left out:
+#     Valve keeps the linear curve (use_linear_backlight_curve).
+_valvever=valve2
 _kernver="${version}-${_valvever}_${revision}"
 triggers="kernel-hooks"
 kernel_hooks_version="${_kernver}"
