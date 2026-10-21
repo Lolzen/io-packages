@@ -1,0 +1,8 @@
+# Io: NetworkManager 1.58 removed the modify_system build option, which Void
+# set until 1.56. With it, active local users could create and change
+# system-wide connections without a password; without it that needs an
+# admin password, and Steam (no polkit agent in game mode) could no longer
+# save Wi-Fi networks for deck. Valve builds 1.58 with polkit_noauth_group=
+# wheel: a polkit rule that allows it for local users in wheel, deck among
+# them (Void's own rule covers the network group only).
+configure_args+=" -Dpolkit_noauth_group=wheel"
