@@ -59,6 +59,12 @@ the `-holo` names, not on Void's: a dependency on the Void name is met by
 the `provides` on an installed system, but when an image is built from
 scratch xbps could pick Void's package for it, next to the stand-in.
 
+The same holds between overlays: holo.sh gives a dependency on a package
+of another overlay its `-holo` name (NetworkManager-holo depends on
+`wpa_supplicant-holo`, not on Void's `wpa_supplicant`). With the Void name
+an update replaced wpa_supplicant-holo with Void's wpa_supplicant on the
+Deck (2026-10-21), and io-desktop's dependency was left unmet.
+
 By default only x86_64 is built: Void's `-32bit` package of an overlaid
 package stays Void's (its dependency on the 64-bit package is met by the
 `provides`). With `lib32=yes` in `overlay.conf` (mesa), build.sh

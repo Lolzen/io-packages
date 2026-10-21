@@ -31,6 +31,9 @@
 #     Void (revision bump) and a change of Io's patches give a newer package
 #   - a subpackage list set by the template itself (subpackages="...",
 #     subpackages+=" ...") gets the new names as well
+#   - a dependency on a package of another overlay (NetworkManager's
+#     "wpa_supplicant") names its stand-in ("wpa_supplicant-holo"): xbps
+#     could otherwise satisfy it with Void's package and drop the stand-in
 #   - ${pkgname} keeps meaning the Void name outside functions (distfiles,
 #     wrksrc, ...) and in the build functions (do_install, post_install:
 #     paths such as ${FILESDIR}/${pkgname}.conf); only inside a subpackage's
@@ -199,7 +202,14 @@ cmd_gen() {
     fi
 
     subs=$(subpkgs_of "$src/template" | tr "\n" " ")
-    awk -v name="$o" -v ver="$vver" -v vrev="$vrev" -v newrev="$newrev" -v subs="$subs" '
+    # the packages of the other overlays (their Void names)
+    others=""
+    for o2 in $(overlays); do
+        [ "$o2" = "$o" ] && continue
+        t2=$(void_template "$o2") || continue
+        others="$others $o2 $(subpkgs_of "$t2" | tr "\n" " ")"
+    done
+    awk -v name="$o" -v ver="$vver" -v vrev="$vrev" -v newrev="$newrev" -v subs="$subs" -v others="$others" '
         # replace every literal occurrence of f in str by t
         function lit(str, f, t,    out, i) {
             out = ""
@@ -223,7 +233,26 @@ cmd_gen() {
             }
             return out str
         }
+        # in a depends string: a token naming a package of another overlay
+        # ("wpa_supplicant", "wpa_supplicant>=2.10") gets its -holo name
+        function deps(str,    out, tok, nm, rest, c) {
+            out = ""
+            while (match(str, /[A-Za-z0-9._+-]+/)) {
+                out = out substr(str, 1, RSTART - 1)
+                tok = substr(str, RSTART, RLENGTH)
+                str = substr(str, RSTART + RLENGTH)
+                c = substr(str, 1, 1)
+                # a bare name, or a name followed by a version constraint
+                if ((tok in other) && (c == "" || c ~ /[ \t"<>=]/))
+                    tok = tok "-holo"
+                out = out tok
+            }
+            return out str
+        }
         BEGIN {
+            m = split(others, ow, " ")
+            for (i = 1; i <= m; i++) if (ow[i] != "") other[ow[i]] = 1
+            indeps = 0
             n = split(subs, s, " ")
             for (i = 1; i <= n; i++) if (s[i] != "") issub[s[i]] = 1
             for (sp in issub) sib[sp] = 1
@@ -256,6 +285,21 @@ cmd_gen() {
             }
             infunc = 0; inpkg = 0
             print; next
+        }
+        # depends="..." / depends+=" ...", also over several lines
+        indeps || /(^|[ \t])depends\+?="/ {
+            if (indeps) {
+                q = index($0, "\"")
+                if (q > 0) { $0 = deps(substr($0, 1, q - 1)) substr($0, q); indeps = 0 }
+                else $0 = deps($0)
+            } else {
+                match($0, /depends\+?="/)
+                head = substr($0, 1, RSTART + RLENGTH - 1)
+                rest = substr($0, RSTART + RLENGTH)
+                q = index(rest, "\"")
+                if (q > 0) $0 = head deps(substr(rest, 1, q - 1)) substr(rest, q)
+                else { $0 = head deps(rest); indeps = 1 }
+            }
         }
         # dependencies between the packages of this template, at the exact
         # build version ("libnm-${version}_${revision}"), follow the rename
