@@ -134,6 +134,25 @@ unbind_chroot() {
   done
 }
 
+# The same for the package install, as void-mklive does (mount_pseudofs):
+# xbps-install -r runs the packages' INSTALL scripts chrooted, and some
+# need /dev, /proc or /sys (Python's byte-compiling with -j0 needs
+# /dev/shm). Read-only, so the install cannot change the host's own
+# directories; that applies to the top mount only, /dev/shm and /dev/pts
+# stay writable. /run stays out: base-files creates run/lock in the root.
+bind_install() {
+  for d in dev proc sys; do
+    mkdir -p "$1/$d"
+    mount -r --rbind "/$d" "$1/$d" --make-rslave
+    track_mount "$1/$d"
+  done
+}
+unbind_install() {
+  for d in sys proc dev; do
+    case " ${MOUNTS:-} " in *" $1/$d "*) umount_tracked "$1/$d" ;; esac
+  done
+}
+
 pkglist() { grep -v '^[[:space:]]*#' "$1" | grep -v '^[[:space:]]*$' | tr '\n' ' '; }
 xbps_root() {
   # shellcheck disable=SC2086
@@ -152,9 +171,11 @@ install_repo_keys() {
 # is brought up to date first: xbps-install without -u installs what is
 # missing but leaves installed packages at their old version, and the
 # tarball would quietly carry them. xbps updates itself first when needed.
+# The pseudo file systems are mounted for the whole install (bind_install).
 install_pkgfile() {
   _pkgs=$(pkglist "$2")
   install_repo_keys "$1"
+  bind_install "$1"
   if [ -x "$1/usr/bin/xbps-install" ]; then
     log "updating the existing root first"
     xbps_root -S -u -r "$1" xbps
@@ -162,6 +183,7 @@ install_pkgfile() {
   fi
   # shellcheck disable=SC2086
   xbps_root -S -r "$1" $_pkgs
+  unbind_install "$1"
 }
 
 # BUILD_ROOTFS=1 runs mkrootfs.sh first, BUILD_ROOTFS=clean runs it with
@@ -176,8 +198,8 @@ maybe_build_rootfs() {
   esac
 }
 
-# Configure any package the install step left unconfigured, now that /dev,
-# /proc and /sys are there (normally none; void-mklive runs the same step).
+# Configure any package the install step left unconfigured (normally none,
+# the install has /dev, /proc and /sys too; void-mklive runs the same step).
 chroot_reconfigure() {
   chroot "$1" xbps-reconfigure -a
 }
