@@ -53,6 +53,14 @@ steam_dpi_scaling_off() {
     grep -q '"DPIScaling"[[:space:]]*"0"' "$reg" && touch "$mark"
 }
 
+# Steam keeps the Wi-Fi backend at wpa_supplicant only with this variable,
+# which Valve's gamescope-session sets for game mode. Without it, Steam in
+# the desktop switches NetworkManager to iwd (and game mode switches back):
+# Wi-Fi drops for a few seconds at every switch, and iwd does not know the
+# networks saved under wpa_supplicant, so Plasma asked for the password.
+# Io's default backend is wpa_supplicant in both sessions.
+export STEAM_USE_WPASUPPLICANT=1
+
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 steam_dpi_scaling_off
