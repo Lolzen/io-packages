@@ -1,7 +1,7 @@
 # Template file for 'linux-neptune-72'
 pkgname=linux-neptune-72
 version=7.2.11
-revision=1
+revision=2
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.2 series)"
 depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
