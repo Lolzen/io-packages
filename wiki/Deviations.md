@@ -173,6 +173,18 @@ the session bus that Steam talks to.
   it was switched in Steam's settings). Switching works in
   both directions. iwd runs as a runit service linked only while it is the
   backend.
+- **`STEAM_USE_WPASUPPLICANT=1` in the desktop as well:** SteamOS's
+  gamescope-session sets it for game mode only. Steam sets the Wi-Fi
+  backend itself when it starts: with the variable it keeps the backend
+  set in Steam (on Io wpa_supplicant; the SteamOS Deck captured on 3.9.2
+  ran iwd in game mode, switched in Steam's settings), without it it
+  switches to iwd. Started without it in Io's
+  desktop, Steam switched to iwd and game mode back to wpa_supplicant, at
+  every change of mode, with a short Wi-Fi drop each time; iwd did not
+  know the networks saved under wpa_supplicant, so Plasma asked for the
+  password (measured 2026-10-21; SteamOS's NetworkManager carries Valve's
+  patches that mirror wpa_supplicant's connections into iwd, which Io
+  leaves out). Io's desktop session (`io-plasma`) sets the variable too.
 - **Wi-Fi power save** goes into a file of Io's own
   (`99-io-wifi-powersave.conf`) and into iwd's `main.conf`. Valve keeps it
   in `99-valve-wifi-backend.conf`, which Valve's own backend switch
@@ -422,7 +434,10 @@ the session bus that Steam talks to.
   only when the user changed `fstab` in its `/etc` overlay, which Io does
   not have.
 - **Versions:** the ported Valve packages are the versions of SteamOS
-  3.9.2 ([SteamOS packages](Valve-Package-Survey)).
+  3.9.2 ([SteamOS packages](Valve-Package-Survey)), some of them newer
+  (from 3.9.3 or Valve's main branch, see [Milestones](Milestones),
+  *Catching up with Valve*). The kernel is Valve's 3.9.3 kernel
+  (`7.2.7-valve2`) with stable 7.2.11 merged in ([Kernel](Kernel)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
@@ -463,19 +478,21 @@ is built for 32 bit as well (`-holo-32bit` packages).
 | Package | Replaces | Valve's patches carried |
 |---|---|---|
 | `MangoHud-holo` | `MangoHud`, `MangoHud-mangoapp` | mangoapp draws once per game frame (MangoHud `2c1dc52`, after 0.8.4; Void's 0.8.4 draws continuously) |
-| `NetworkManager-holo` | `NetworkManager`, `libnm`, `NetworkManager-devel` | after resume, scan only the last-associated frequency (MR 2514, not merged) |
+| `NetworkManager-holo` | `NetworkManager`, `libnm`, `NetworkManager-devel` | after resume, scan only the last-associated frequency (MR 2514, not merged). Built with `polkit_noauth_group=wheel` as Valve's 1.58: 1.58 dropped the `modify_system` option Void used, so saving a network for all users would ask for an admin password (no polkit agent in game mode); the rule allows it for local users in `wheel` |
 | `bluez-holo` | `bluez`, `libbluetooth` and the other bluez packages | a re-paired device's old entry with the same key is removed (Steam Controller and suspend); the Switch Pro Controller's link may use sniff mode. Built with `-std=gnu17`: Void's autoconf 2.73 makes bluez 5.86 compile as C23, where it fails |
 | `ibus-anthy-holo` | `ibus-anthy` | Valve's fork of 1.5.14 (Void: 1.5.16, Valve's changes do not apply to it); not generated from Void's template |
-| `kwin-holo` | `kwin`, `kwin-devel` | the desktop takes the panel's current brightness instead of the saved one (KDE bug 508163); text from Steam's keyboard over libei goes past an input method that grabs the keyboard; libei 1.6 keysym and text events (kwin 6.8); no modes below 480p (kwin 6.8) |
+| `kwin-holo` | `kwin`, `kwin-devel` | the desktop takes the panel's current brightness instead of the saved one (KDE bug 508163); text from Steam's keyboard over libei goes past an input method that grabs the keyboard; libei 1.6 keysym and text events (kwin 6.8); no modes below 480p (kwin 6.8); before suspend kwin turns the screens off itself, holds its sleep delay while screens are on and drops it without outputs (Valve's 6.7.3-1.7: frozen picture and looping sound at hibernation on the Steam Machine; kwin master, 6.8) |
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | text typed through XTEST (Steam's keyboard in the desktop) goes to the compositor as keysyms over libei, so letters outside the first layout group and CJK text arrive |
-| `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume; built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
+| `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume (hostap `20e1762ee`, `ab3200b10`, merged upstream, not released yet); built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
 | `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting; only the bands the adapter supports are scanned (SteamOS 3.9.3) |
 | `mesa-holo` | `mesa` and all its subpackages (`mesa-dri`, `mesa-vulkan-radeon`, `libgbm`, ...), with their `-32bit` packages | OpenGL: Steam's frame limit through gamescope's limiter file (DRI3: the patch turns V-Sync on while a limit is set; confirmed with glxgears and V-Sync off: 30.0 FPS at limit 30, uncapped without a limit). RADV: explicit synchronisation for VM operations, per command buffer BO tracking and no global BO list for gamescope (stutter in game mode), `VK_EXT_pageable_device_local_memory`, *Forza Horizon* 4 to 6; three RADV fixes from Mesa main that are not in 26.2.5 |
 
 Valve's other patches to these packages are left out: for bluez, the
 `main.conf` settings (Io sets them in its own file), the wake-policy
 plugin and LL privacy (no effect on SteamOS 3.9.2), test changes; for
-NetworkManager, the iwd backend patches (wpa_supplicant is the backend);
+NetworkManager, the iwd backend patches including the SAE type pair with
+iwd and the migration patches that mirror connections into iwd
+(wpa_supplicant is the backend; decided 2026-10-21);
 for kwin, the `WM_TAKE_FOCUS` fix (already in 6.7.5); for Xwayland, the two
 reverts Valve carries for a seamless start of Steam (on Io they caused a
 black flash when returning to game mode; without them the desktop's last

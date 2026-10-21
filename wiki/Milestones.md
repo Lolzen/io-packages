@@ -40,15 +40,11 @@ requests).
 - Pull request #1 (Io's changelog in Steam's patch notes): the check of
   Steam's update page
 - *Tests pending* and *Open observations* below
-- Valve's newer versions (*Catching up with Valve*): the kernel
-  7.2.7-valve2 with its configuration review ([Kernel](Kernel))
-- Void's side: NetworkManager 1.58.1 (*Next*), Mesa patches dropped as
-  Void's Mesa takes them (the three RADV fixes most likely with 26.2.6), and
-  the overlays rebuilt after Void updates (*Recurring*)
-- The image build: Python's byte-compiling fails for some modules because
-  `mkrootfs.sh` installs the packages before `/dev` is mounted in the root
-  (`compileall -j0` needs `/dev/shm`); mount the pseudo file systems first,
-  as void-mklive does
+- Valve's newer versions (*Catching up with Valve*)
+- Void's side: Mesa patches dropped as Void's Mesa takes them (the three
+  RADV fixes most likely with 26.2.6), wpa_supplicant's rescan patches with
+  the next hostap release, and the overlays rebuilt after Void updates
+  (*Recurring*)
 - *Polish* below
 
 ---
@@ -72,10 +68,6 @@ io-packages:
 
 ## Next (no theme yet)
 
-- **NetworkManager 1.58.1** for `NetworkManager-holo`, once Void's update
-  (void-packages pull request 62975) is merged; Valve's patch applies to it
-
-- **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
 - **steamos-manager refuses calls from games:** on Valve's main branch
   after 26.4.1 (not in SteamOS 3.9.2), the session half rejects D-Bus calls
   whose sender runs inside a game, recognised by the systemd cgroup
@@ -128,6 +120,11 @@ io-packages:
 
 ## Tests pending
 
+- **The image build** with `/dev`, `/proc` and `/sys` mounted during the
+  package install (`build/common.sh`, as void-mklive): Python's
+  byte-compiling (`compileall -j0`) failed for some modules without them.
+  Check at the next `mkrootfs.sh --clean` that those errors are gone and
+  nothing stays mounted
 - **Hibernation from the desktop** (Io on the NVMe): Plasma's leave menu
   → *Hibernate* (the same path as `loginctl hibernate`, tested); Plasma's
   energy settings with suspend-then-hibernate: after 20 minutes of suspend
@@ -205,11 +202,13 @@ someone with the hardware.
   Void's own packages wherever Valve's patches have gone upstream. Done
   once for 3.9.2 in October 2026; from SteamOS 3.9.3 (October 2026) Io has
   `gpu-trace` 2.17, `holo-realtek-firmware-toggles` 1.4 and iwd's new band
-  scanning patch, and `jupiter-hw-support` 20260930.1's firmware
-  updaters. Valve's versions newer than Io's, seen on 2026-10-12 and
-  not taken yet: `linux-neptune-72` 7.2.7-valve2, `steamos-customizations-jupiter`
-  20260916.1, `holo-networking-tools` 1.4, `holo-systemreport` 1.24,
-  steamos-manager 26.4.1-3, NetworkManager 1.58.0, PipeWire 1.6.8,
+  scanning patch, `jupiter-hw-support` 20260930.1's firmware updaters and
+  the kernel `7.2.7-valve2` (as 7.2.11); from Valve's main branch
+  (2026-10-21) kwin 6.7.3-1.7's suspend patches and wpa_supplicant
+  2.12-1.3's rescan patches as merged in hostap. Valve's versions newer
+  than Io's, seen on 2026-10-12 and not taken yet:
+  `steamos-customizations-jupiter` 20260916.1, `holo-networking-tools` 1.4,
+  `holo-systemreport` 1.24, steamos-manager 26.4.1-3, PipeWire 1.6.8,
   WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
   (they drop to dracut's emergency shell, cause not found yet); the

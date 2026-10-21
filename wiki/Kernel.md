@@ -1,8 +1,10 @@
 # Kernel
 
-`linux-neptune-72` is Valve's Steam Deck kernel, 7.2.7 (`7.2.7-valve1`,
-since Alpha 6), built with Void's kernel packaging; SteamOS 3.9.2 runs the
-same version. SteamOS 3.8.4 ran 6.16 (`linux-neptune-616`). Io moved from 6.15.8 to Valve's 7.2 branch in
+`linux-neptune-72` is Valve's Steam Deck kernel, built with Void's kernel
+packaging: 7.2.11, Valve's `7.2.7-valve2` with the stable releases up to
+7.2.11 merged in (since October 2026; Alpha 6 and 7 had `7.2.7-valve1`).
+SteamOS 3.9.2 runs `7.2.7-valve1`, 3.9.3 `7.2.7-valve2`. SteamOS 3.8.4 ran
+6.16 (`linux-neptune-616`). Io moved from 6.15.8 to Valve's 7.2 branch in
 September 2026, for NTSync, the newer HID drivers and HDMI-CEC over the
 dock's DisplayPort link.
 
@@ -11,12 +13,35 @@ dock's DisplayPort link.
 ## Source
 
 Io does not keep a kernel fork. The package builds the kernel.org tarball
-(7.2 plus `patch-7.2.7`) and applies one patch,
+(7.2 plus `patch-7.2.11`) and applies one patch,
 `patches/0001-neptune-72.patch`: the whole difference between that tree and
-Valve's `linux-integration` tree at `7.2.7-valve1` (generated from Valve's
-mirror, without Valve's `ci/` directory and CI files; applied, it gives
-Valve's tree). Void's small build fixes (`fix-ccache.patch` and the like)
-come on top. `fix-musl-btf-ids.patch` is gone: upstream since 7.2.4.
+Valve's `linux-integration` tree at `7.2.7-valve2` with stable 7.2.11
+merged in (generated from Valve's mirror, without Valve's `ci/` directory
+and CI files; applied, it gives the merged tree). Void's small build fixes
+(`fix-ccache.patch` and the like) come on top. `fix-musl-btf-ids.patch` is
+gone: upstream since 7.2.4.
+
+**Stable releases on Valve's tag.** Valve merges `stable/linux-7.2.y` into
+its 7.2 integration branch from time to time; Io does the same when Void
+already ships a newer 7.2 than Valve's tag:
+
+1. In Valve's tree (the bare git repository in the source archive on
+   `steamdeck-packages.steamos.cloud`), check out Valve's tag and
+   `git merge` the stable tag (here `v7.2.11`).
+2. Resolve the conflicts, each with its reason in the template's comment.
+3. Generate the patch against the stable tag:
+   `git diff v7.2.11 <merge> -- . ':(exclude)ci' ':(exclude).gitlab-ci.yml'`.
+4. Check that kernel.org 7.2 + `patch-7.2.11` + the patch gives the merged
+   tree, and `_valvever` names Valve's tag.
+
+The conflicts of the 7.2.11 merge (in the template):
+
+| File | Resolution |
+|---|---|
+| `hid-steam.c`, `hid-oxp.c` | Valve's: it already has stable's commits and later ones |
+| `xpad.c` | Valve's table (Xbox One pads go through Valve's gip driver) plus stable's new Xbox 360 entries |
+| `ttm_bo.c` | stable's fix on Valve's code (`if (ret > 0)`: a use-after-free after hibernation) |
+| `amdgpu_dm.c` | Valve's file with four of stable's display fixes; stable's PWM backlight curve stays out, Valve keeps the linear curve |
 
 ---
 
@@ -46,14 +71,15 @@ apart from Valve's.
 
 Since Valve's configuration is a full one, it overrides nearly every option
 Void's base sets; Void's value survives only where it has no entry.
-Checked for 7.2.7: nothing Void's userspace depends on is lost (cgroup v2
+Checked for 7.2.7 (and unchanged in 7.2.7-valve2, whose `config.x86_64`
+and `config-neptune` are the same): nothing Void's userspace depends on is lost (cgroup v2
 only, as runit-void uses it; zstd-compressed modules, which Void's
 `mv-debug` handles; `devtmpfs` mounted by the kernel).
 
 **Security modules:** SteamOS's order (`landlock,lockdown,yama,integrity,bpf`),
-not Void's (decided 2026-10-04). TOMOYO is built but not active; its
-activation trigger is still Arch's systemd path and follows Void's
-`/sbin/init` with the next kernel update.
+not Void's (decided 2026-10-04). TOMOYO is built but not active (not in
+the list); its activation trigger is Void's `/sbin/init` instead of Arch's
+systemd path (`config-io`, since 7.2.11).
 
 **Rust:** Valve builds with Rust (the Rust Binder, a QR code on the panic
 screen); Void's kernel build has no Rust toolchain, so Io builds without
@@ -67,6 +93,7 @@ it and uses the C Binder.
 | `MODULE_SIG_ALL`, `MODULE_COMPRESS_ALL` | off | Void packaging | Void's `mv-debug` splits off the debug information, then signs and compresses each module itself; doing it in `modules_install` already would be undone by the strip |
 | `DEFAULT_HOSTNAME` | `(none)` | Io's own | Valve's value is Arch's (`archlinux`); the real name comes from `/etc/hostname` |
 | `ANDROID_BINDER_IPC`, `ANDROID_BINDERFS` | built in | Towards SteamOS | Binder for Android containers (Waydroid). SteamOS 3.8.4 has the C Binder, 3.9.2 the Rust Binder; Io builds without Rust, so the C one |
+| `SECURITY_TOMOYO_ACTIVATION_TRIGGER` | `/sbin/init` | Towards Void | Valve's value is Arch's systemd path; Io's init is runit at `/sbin/init`. TOMOYO stays inactive either way (not in the security module list) |
 
 ### On every kernel update
 
@@ -87,6 +114,19 @@ each new kernel:
 The same rule as for all of Valve's packages applies (see
 [Deviations](Deviations), *Versions*): the newer state where it makes sense,
 unless the change is transitional or specific to Arch or systemd.
+
+---
+
+## Old kernels
+
+`io-base` installs a kernel hook (`/etc/kernel.d/post-install/60-io-vkpurge`)
+that runs Void's `vkpurge rm all` after every kernel install: kernels no
+package owns any more (the previous revision after an update) are removed
+with their modules and initramfs. `vkpurge` never removes the running
+kernel, so after the first boot of a new kernel the old one goes with the
+next kernel install, or at once with
+`sudo xbps-reconfigure -f linux-neptune-72`. Without the hook, old kernels
+stayed in `/boot` until `vkpurge` was run by hand.
 
 ---
 

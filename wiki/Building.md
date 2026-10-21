@@ -129,7 +129,18 @@ describes it in full.
   well; xbps-src turns that build into `<sub>-holo-32bit` packages for the
   multilib repository. The 32-bit build takes as long as the 64-bit one.
 - Io's own templates depend on the `-holo` names, so a fresh image never
-  installs Void's package next to the stand-in.
+  installs Void's package next to the stand-in. The generated templates do
+  the same among overlays: a dependency on another overlay's package gets
+  its `-holo` name (NetworkManager-holo depends on `wpa_supplicant-holo`).
+- A new Void version with the same patches can still need a build change:
+  NetworkManager 1.58 dropped the `modify_system` option, so
+  `NetworkManager-holo` sets `polkit_noauth_group=wheel` in its
+  `template.append`, as Valve's build. Read Void's template diff and the
+  upstream release notes, not only whether the patches apply.
+- A rebuild with unchanged version and revision is not uploaded
+  (`publish.sh`: "already present"); raise `io_revision`, or the revision
+  of an Io package. Versions on other branches count too: a version
+  another branch already put into `testing` is taken.
 
 ## Updating a device
 

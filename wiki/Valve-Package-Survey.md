@@ -16,7 +16,7 @@ and sources of Io's packages are on [Packages](Packages).
 
 | SteamOS 3.9.2 | On Io | Notes |
 |---|---|---|
-| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-72` 7.2.7 | Built from the configuration Valve's package uses, see [Kernel](Kernel) |
+| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-72` 7.2.11 | Valve's `7.2.7-valve2` (SteamOS 3.9.3) with stable 7.2.11 merged in; built from the configuration Valve's package uses, see [Kernel](Kernel) |
 | `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps |
 | `steamos-manager` 26.4.1 (26.1.0) | `io-steamos-manager` | Io's own implementation of 26.4.1's interfaces (with `HdmiCec2`, `SwitchToDesktopSession`, without `Audio1`), see [Architecture](Architecture) |
 | `steam-jupiter-stable` 1.0.0.85-12 (-8) | `steam-jupiter` (-12) | |

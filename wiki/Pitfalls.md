@@ -62,6 +62,23 @@ converters) in `streaming_log.txt`.
 *Trying to create an encoder* line in `streaming_log.txt` means no frame
 ever came — look at PipeWire, not at VA-API.
 
+**Steam sets the Wi-Fi backend itself at every start.** With
+`STEAM_USE_WPASUPPLICANT=1` it keeps the backend set in Steam; without it it
+switches NetworkManager to iwd within seconds (Wi-Fi drops while
+NetworkManager restarts). SteamOS sets the variable in gamescope-session
+only, Io in the desktop session too (see [Deviations](Deviations)). A
+backend that changes on its own, or a desktop that asks for a known Wi-Fi
+password, points here: `steamos-wifi-set-backend --check` in both modes.
+
+**After a hard power-off Steam may start its first setup again.** Steam
+writes `~/.steam/registry.vdf` without syncing it; switched off with the
+power button while Steam hung, the file came back as a fresh one, without
+the mark that setup is complete (`SetOOBEComplete` on SteamOS). Settings
+in `~/.local/share/Steam/config` (`config.vdf`, `loginusers.vdf`) survive,
+so the setup knows the account. Going through it again loses nothing.
+The file is Steam's own; to avoid it, stop a hung Steam over SSH instead
+(`steam -shutdown`, a reboot from the shell).
+
 **The question before switching to the desktop is Steam's.** Whether
 *Switch to Desktop* asks "Are you sure?" depends on the client: on Io the
 stable client of October 2026 switches after a two-second countdown
@@ -274,10 +291,13 @@ never on the target at install time. Code for install time goes into
 `srcpkgs/<pkg>/INSTALL`, using `$ACTION`.
 
 **`xbps-install -r` runs the packages' `INSTALL` scripts chrooted, but
-without `/proc`, `/dev` and `/sys`** unless they are bind-mounted first.
-The image build (`build/`) runs `xbps-reconfigure -a` after the mounts (configures whatever
-was left unconfigured, as void-mklive does); a script that needs the
-pseudo file systems has to be forced with `xbps-reconfigure -f`.
+without `/proc`, `/dev` and `/sys`** unless they are mounted first; Python's
+byte-compiling (`compileall -j0`, it needs `/dev/shm`) then fails for some
+modules. The image build (`build/common.sh`, `install_pkgfile`) mounts
+them read-only for the install, as void-mklive does (`mount -r --rbind`:
+read-only applies to the top mount only, so `/dev/shm` stays writable, and
+the install cannot change the host's own directories), and runs
+`xbps-reconfigure -a` afterwards for whatever was left unconfigured.
 
 **`/etc/sysctl.d` is rejected by Void's package linter.** Packages ship
 defaults in `/usr/lib/sysctl.d`.
@@ -296,6 +316,15 @@ one shipping the unversioned `libclang.so` that `clang-sys` looks for.
 packages needs that file written (`overlay/holo.sh` does it for
 `lib32=yes`), or Void's packages that depend on it stay broken
 (`xbps-pkgdb`: dependency not satisfied).
+
+**A dependency on a Void name can drop a stand-in.** NetworkManager's
+template depends on `wpa_supplicant`; `wpa_supplicant-holo` provides that
+name, yet an update on the Deck installed Void's `wpa_supplicant` and
+`wpa_supplicant-holo` went, leaving io-desktop's dependency on it unmet
+(`xbps-pkgdb -a`). `holo.sh` therefore gives a dependency on a package of
+another overlay its `-holo` name; Io's own templates name the `-holo`
+packages anyway. After an update, `xbps-pkgdb -a` shows whether a stand-in
+is missing.
 
 **Void rebuilds its own packages for a new soname, not Io's.** After Void's
 `libdisplay-info` 0.3.0, `kwin-holo` 6.7.5_201 still needed

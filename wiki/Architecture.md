@@ -102,7 +102,8 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`, for the
   provides the on-screen keyboard in the desktop (Steam + X) and keeps hold
   of the controller. Before Plasma starts, `io-plasma` switches Steam's DPI
   scaling off once per user, so Steam draws in real pixels next to Plasma's
-  135 %.
+  135 %, and exports `STEAM_USE_WPASUPPLICANT=1`, as `io-gamemode` does, so
+  Steam keeps the Wi-Fi backend in both modes (see [Deviations](Deviations)).
 
 ### Switching
 
