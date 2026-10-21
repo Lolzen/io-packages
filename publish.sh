@@ -300,7 +300,15 @@ if [ -s "$TMP/unsigned.txt" ]; then
 fi
 
 # --------------------------------------------------------------- upload
+# Created only when GitHub says it does not exist: any other failure of
+# "release view" (network, rate limit, authentication) stops here, instead of
+# a create that fails with "tag_name already exists".
 if [ "$TESTING" = 1 ] && ! gh release view "$GHTAG" --repo "$GHREPO" > "$GHLOG" 2>&1; then
+    if ! grep -q -i 'release not found' "$GHLOG"; then
+        echo "publish: gh release view $GHTAG failed:" >&2
+        cat "$GHLOG" >&2
+        exit 1
+    fi
     echo "== creating release $GHTAG"
     gh_run release create "$GHTAG" --repo "$GHREPO" --prerelease --title "Io testing" --notes "Test builds that are not merged yet, for testing on a Deck only."
 fi
