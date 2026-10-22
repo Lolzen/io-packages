@@ -43,7 +43,7 @@
 #   io-factory-reset [--user-data|--os|--all]   asks, prepares, restarts
 #                                               (default --all)
 #   io-factory-reset --prepare user|os|all      no questions, no restart
-#                                               (io-steamos-manager, the
+#                                               (steamos-reset-tool, the
 #                                               Steam helper)
 #   io-factory-reset --status                   is a reset pending?
 #   io-factory-reset --cancel                   drop a pending reset
@@ -178,9 +178,10 @@ reset_identity() {
     # Wi-Fi connections, Wi-Fi backend and power saving (Steam's switches)
     rm -f /etc/NetworkManager/system-connections/*
     rm -f /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf
-    rm -f /etc/NetworkManager/conf.d/99-io-wifi-powersave.conf
     rm -f /etc/iwd/main.conf
-    # Login mode and temporary session (io-steamos-manager)
+    # Login mode and temporary session (steamos-manager; the zz-steamos-*
+    # names from before holo.conf)
+    rm -f /etc/sddm.conf.d/zz-holo-autologin.conf /etc/sddm.conf.d/zzt-holo-temp-login.conf
     rm -f /etc/sddm.conf.d/zz-steamos-autologin.conf /etc/sddm.conf.d/zzt-steamos-temp-login.conf
     # New SSH host keys (sshd's service makes them when they are missing)
     rm -f /etc/ssh/ssh_host_*
