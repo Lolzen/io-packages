@@ -21,7 +21,8 @@
 #              /var/lib/io/factory-defaults, written by mkrootfs.sh), Wi-Fi
 #              connections and backend, SDDM's login mode, SSH host keys,
 #              machine-id, the services Steam switches (SSH on, developer
-#              mode, iwd and the LAVD scheduler off); a hibernated session is
+#              mode and iwd off, the LAVD scheduler and EC logging linked but
+#              down); a hibernated session is
 #              dropped; shadow's backup files (/etc/passwd- and the like,
 #              with the old password hashes) and sudo's first-use marks
 #              are removed; the update channel goes back to the image's: the
@@ -142,7 +143,12 @@ VAR_DIRS="$VAR_DIRS /var/lib/upower /var/lib/udisks2 /var/tmp /var/cache/xbps"
 # sudo's "lectured" marks (who has seen sudo's first-use notice)
 VAR_DIRS="$VAR_DIRS /var/db/sudo/lectured"
 # The services Steam switches that the image has off
-SWITCHED_OFF="avahi-daemon steamos-devkit-service iwd scx ec-log"
+SWITCHED_OFF="avahi-daemon steamos-devkit-service iwd"
+# The services steamos-manager starts and stops but never links: the image
+# has them linked with a down file (/etc/sv/<name>/down), supervised but not
+# started at boot, so that is their reset state; unlinked, steamos-manager
+# could no longer start them (the LAVD scheduler, EC logging)
+SUPERVISED_DOWN="scx ec-log"
 
 clear_var() {
     local d
@@ -197,6 +203,9 @@ reset_identity() {
     [ -d /etc/sv/sshd ] && ln -sfn /etc/sv/sshd "$SV_DIR/sshd"
     for s in $SWITCHED_OFF; do
         rm -f "${SV_DIR:?}/$s"
+    done
+    for s in $SUPERVISED_DOWN; do
+        [ -f "/etc/sv/$s/down" ] && ln -sfn "/etc/sv/$s" "$SV_DIR/$s"
     done
 
     # The update channel back to the image's (done already when the OS part
