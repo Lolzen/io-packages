@@ -1,0 +1,17 @@
+#!/bin/sh
+# Valve's ec-log.service (ec-log 0.1): forwards the ChromeOS EC's console log
+# (Steam Machine) to the system log. Installed with a down file, as the unit
+# is installed but not enabled on SteamOS: steamos-manager starts and stops
+# it when Steam switches EC logging (FirmwareDebug1). Restart=always is
+# runit's own behaviour.
+exec 2>&1
+# Valve's unit requires sys-kernel-debug.mount; runit does not mount debugfs.
+mountpoint -q /sys/kernel/debug || mount -t debugfs debugfs /sys/kernel/debug
+log=/sys/kernel/debug/cros_ec/console_log
+# ConditionPathExists: without the EC's log (any other hardware) the unit is
+# skipped, so the service takes itself down instead of restarting forever.
+if [ ! -r "$log" ]; then
+	echo "ec-log: $log not available"
+	exec sv down .
+fi
+exec logger --tag ec-log --file "$log"

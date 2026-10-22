@@ -1,0 +1,21 @@
+# Template file for 'ec-log'
+pkgname=ec-log
+version=0.1
+revision=1
+depends="util-linux runit-void"
+short_desc="Forward the ChromeOS EC's console log to the system log (Valve)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/"
+
+# Valve's ec-log 0.1 (jupiter-3.9), a single systemd unit, as a runit
+# service. steamos-manager's device file for the Steam Machine names it for
+# FirmwareDebug1 (firmware_debug = "ec-log.service"); on runit that is the
+# service ec-log. It is linked with a down file (see INSTALL): supervised, so
+# steamos-manager can start it, but not started at boot, as on SteamOS where
+# the unit is installed and disabled. Unused on the Steam Deck, which has no
+# ChromeOS EC.
+
+do_install() {
+	vsv ec-log
+}
