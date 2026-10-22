@@ -21,9 +21,11 @@ do_install() {
 	# whenever a session ends. SDDM starts io-start from the session files.
 	vsv io-sddm
 	vmkdir usr/lib/sddm/sddm.conf.d
-	# SteamOS's name: steamos-manager offers session management (switching
-	# modes, the default login mode) only where this file exists.
-	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d steamos.conf
+	# Valve's name (holo-session-selection): steamos-manager offers session
+	# management (switching modes, the default login mode) only where this
+	# file exists, and then writes /etc/sddm.conf.d/zz-holo-autologin.conf
+	# and zzt-holo-temp-login.conf (the zz-steamos-* names while those exist).
+	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d holo.conf
 	vmkdir usr/share/wayland-sessions
 	vinstall ${FILESDIR}/gamescope-wayland.desktop 644 usr/share/wayland-sessions
 	vinstall ${FILESDIR}/io-desktop.desktop 644 usr/share/wayland-sessions
@@ -32,7 +34,9 @@ do_install() {
 	vmkdir etc/security/limits.d
 	vinstall ${FILESDIR}/90-io-memlock.conf 644 etc/security/limits.d
 	vbin ${FILESDIR}/io-plasma
-	vbin ${FILESDIR}/steamos-session-select
+	# Steam calls steamos-session-select (SteamOS: a steamos-alias link)
+	vbin ${FILESDIR}/holo-session-select
+	ln -s holo-session-select ${DESTDIR}/usr/bin/steamos-session-select
 	vmkdir etc/skel/Desktop
 	vbin ${FILESDIR}/io-grow-storage
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
