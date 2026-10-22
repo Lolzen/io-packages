@@ -123,12 +123,22 @@ bindir() {
     esac
 }
 
-# newest file of package $2 in directory $1 (x86_64 or noarch)
+# newest file of package $2 in directory $1 (x86_64 or noarch), by xbps's
+# own version order: sort -V puts 26.4.1_1 above 26.4.1.20261022_1
 newest_in() {
+    best=""
     for f in "$1/$2"-[0-9]*.xbps; do
         [ -f "$f" ] || continue
-        [ "$(pkgname_of "$f")" = "$2" ] && echo "$f"
-    done | sort -V | tail -1
+        [ "$(pkgname_of "$f")" = "$2" ] || continue
+        if [ -z "$best" ]; then
+            best=$f
+            continue
+        fi
+        rc=0
+        xbps-uhelper cmpver "$(pkgver_of "$f")" "$(pkgver_of "$best")" || rc=$?
+        [ "$rc" = 1 ] && best=$f
+    done
+    echo "$best"
 }
 
 # most recently built file of package $2 in directory $1 (for --replace)
