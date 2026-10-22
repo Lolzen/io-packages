@@ -1,11 +1,11 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
 version=1.02
-revision=17
+revision=18
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
-depends="pipewire wireplumber rnnoise-ladspa"
+depends="pipewire wireplumber rnnoise-ladspa alsa-plugins-ffmpeg"
 short_desc="Valve's Steam Deck speaker/microphone DSP (Faust LV2 plugins, UCM, hardware profiles)"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
@@ -16,7 +16,9 @@ checksum=33cbb5fe073c69db2fb061258f3212a2b60143513446efb2dcf9cfc86fcd1712
 # Both Deck models. Jupiter (LCD, card acp5x) is what Io is built and tested
 # on. Galileo (OLED, card sof-nau8821-max, untested: no hardware) gets
 # Valve's SOF firmware, its own filter chain (io-session starts it there
-# instead of the LCD's) and Valve's speaker filter graph.
+# instead of the LCD's) and Valve's speaker filter graph. The Steam Machine
+# (Fremont, untested: no hardware) gets Valve's WirePlumber profile for it,
+# installed aside (see below).
 archs="x86_64*"
 
 post_extract() {
@@ -132,4 +134,24 @@ do_install() {
 	# matches only the speaker sink of sof-nau8821-max, so on Jupiter it
 	# does nothing.
 	vinstall ${FILESDIR}/92-io-galileo-speakers.conf 644 etc/wireplumber/wireplumber.conf.d
+
+	# The Steam Machine (Fremont): Valve's WirePlumber profile for it -
+	# HDMI/DisplayPort sound with the AC3 profile set for ARC, full volume on
+	# HDMI, no filter chain. It is not installed into the search paths:
+	# io-session points WirePlumber at it with WIREPLUMBER_CONFIG_DIR on
+	# Fremont only, so the Deck's fragments are not read there and the Deck
+	# never sees these. Its CEC volume control (external-volume-control,
+	# support.varlink) needs Valve's PipeWire and WirePlumber patches, which
+	# Void's builds do not have; those keys are inert. pipewire.conf.d is the
+	# same as the Deck's. Io's sink loopbacks (91-io-sink-loopback.conf) are
+	# shadowed there by an empty file of the same name, since Valve's Fremont
+	# profile loops back sources only and hides looped-back nodes: the HDMI
+	# sinks (AC3 for ARC) must stay visible. AC3 needs the ALSA a52 plugin
+	# (alsa-plugins-ffmpeg).
+	_fremont=usr/share/io/wireplumber-fremont/wireplumber.conf.d
+	vmkdir ${_fremont}
+	for f in wireplumber/hardware-profiles/valve-fremont/wireplumber.conf.d/*.conf; do
+		vinstall "$f" 644 ${_fremont}
+	done
+	vinstall ${FILESDIR}/91-io-sink-loopback-fremont.conf 644 ${_fremont} 91-io-sink-loopback.conf
 }
