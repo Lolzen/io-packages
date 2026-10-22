@@ -1,14 +1,15 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
 version=26.4.1.20261022
-revision=13
+revision=14
 _commit=c789c39bd5aac0b313abec0fa5a8676c353c2703
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
 hostmakedepends="pkg-config clang llvm clang21-devel"
 makedepends="glib-devel eudev-libudev-devel speech-dispatcher-devel"
 depends="dbus iw wireless_tools gsettings-desktop-schemas dconf glib runit-void
- deck-hw-support steamos-networking-tools scx orca speech-dispatcher espeak-ng at-spi2-core"
+ deck-hw-support steamos-networking-tools scx orca speech-dispatcher espeak-ng at-spi2-core
+ trace-cmd"
 conf_files="/etc/default/scx"
 short_desc="Valve's SteamOS Manager daemon, with runit support"
 maintainer="Georg <funer@gmx.at>"
@@ -26,8 +27,8 @@ replaces="io-steamos-manager>=0"
 # (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch,
 # Wi-Fi debug mode), and without systemd --user the login mode from the
 # session, Orca as a child process (restarted on failure), logout through
-# logind, and callers below Steam's reaper refused as calls from a game. The version is 26.4.1 with the
-# date of the branch's first commit.
+# logind, and callers below Steam's reaper refused as calls from a game.
+# The version is 26.4.1 with the date of the branch's first commit.
 #
 # Io's side, in place of Valve's systemd units:
 # - root half: the runit service steamos-manager (linked by INSTALL on
@@ -39,6 +40,9 @@ replaces="io-steamos-manager>=0"
 # - platform.toml unchanged: Valve's factory reset runs steamos-reset-tool,
 #   which on Io is io-factory-reset's (factory-reset --reset-*)
 # - D-Bus policy: Io's, callers limited to root and wheel
+#
+# trace-cmd: the Wi-Fi debug mode (Steam Deck OLED only) traces the Wi-Fi
+# driver with it and extracts the trace (wifi.rs, TRACE_CMD_PATH).
 #
 # hostmakedepends: speech-dispatcher-sys generates its bindings with
 # bindgen, which needs libclang (clang21-devel ships the unversioned
