@@ -1,8 +1,8 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
 version=26.4.1.20261022
-revision=11
-_commit=66a07cab700f9cdd0e44bb5b2bc786a60c446d3d
+revision=13
+_commit=c789c39bd5aac0b313abec0fa5a8676c353c2703
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
 hostmakedepends="pkg-config clang llvm clang21-devel"
@@ -15,7 +15,7 @@ maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://gitlab.steamos.cloud/holo/steamos-manager"
 distfiles="https://github.com/Lolzen/steamos-manager/archive/${_commit}.tar.gz"
-checksum=d388be11d98842d793eb5531ced1615c3dd9058357150def42010e22b276ad31
+checksum=b4a39213427ecea9ce12c1ba9195f472312b084195225e2897a8a90a116b6eb8
 # Valve's daemon takes over from Io's reimplementation; Atomupd1, which
 # io-steamos-manager served as well, moved to io-atomupd.
 replaces="io-steamos-manager>=0"
@@ -25,8 +25,8 @@ replaces="io-steamos-manager>=0"
 # plus the runit support meant for Valve: system services through runit
 # (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch,
 # Wi-Fi debug mode), and without systemd --user the login mode from the
-# session, Orca as a child process (restarted on failure) and logout
-# through logind. The version is 26.4.1 with the
+# session, Orca as a child process (restarted on failure), logout through
+# logind, and callers below Steam's reaper refused as calls from a game. The version is 26.4.1 with the
 # date of the branch's first commit.
 #
 # Io's side, in place of Valve's systemd units:
