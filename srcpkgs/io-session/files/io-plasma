@@ -9,8 +9,13 @@ fi
 # malloc arena - settings that would be wrong for the main daemon. prlimit
 # raises this process's memlock soft limit to the hard limit set at login
 # (/etc/security/limits.d/90-io-memlock.conf); MALLOC_ARENA_MAX matches Valve's drop-in.
+#
+# Galileo (Steam Deck OLED) has its own filter chain configuration
+# (steamdeck-dsp: filter-chain-galileo.conf, for its sof-nau8821-max card).
 start_filter_chain() {
-    pgrep -f "pipewire -c filter-chain.conf" > /dev/null && return
+    fc_conf=filter-chain.conf
+    [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ] && fc_conf=filter-chain-galileo.conf
+    pgrep -f "pipewire -c $fc_conf" > /dev/null && return
     # Wait for the main daemon's socket in the background: a PipeWire client
     # started before it exits instead of retrying. Valve gets the ordering
     # from socket activation.
@@ -20,7 +25,7 @@ start_filter_chain() {
             sleep 1
             i=$((i + 1))
         done
-        MALLOC_ARENA_MAX=1 exec prlimit --memlock=104857600 pipewire -c filter-chain.conf
+        MALLOC_ARENA_MAX=1 exec prlimit --memlock=104857600 pipewire -c "$fc_conf"
     ) > /dev/null 2>&1 &
 }
 

@@ -29,8 +29,13 @@ fi
 # malloc arena - settings that would be wrong for the main daemon. prlimit
 # raises this process's memlock soft limit to the hard limit set at login
 # (/etc/security/limits.d/90-io-memlock.conf); MALLOC_ARENA_MAX matches Valve's drop-in.
+#
+# Galileo (Steam Deck OLED) has its own filter chain configuration
+# (steamdeck-dsp: filter-chain-galileo.conf, for its sof-nau8821-max card).
 start_filter_chain() {
-    pgrep -f "pipewire -c filter-chain.conf" > /dev/null && return
+    fc_conf=filter-chain.conf
+    [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ] && fc_conf=filter-chain-galileo.conf
+    pgrep -f "pipewire -c $fc_conf" > /dev/null && return
     # Wait for the main daemon's socket in the background: a PipeWire client
     # started before it exits instead of retrying. Valve gets the ordering
     # from socket activation.
@@ -40,7 +45,7 @@ start_filter_chain() {
             sleep 1
             i=$((i + 1))
         done
-        MALLOC_ARENA_MAX=1 exec prlimit --memlock=104857600 pipewire -c filter-chain.conf
+        MALLOC_ARENA_MAX=1 exec prlimit --memlock=104857600 pipewire -c "$fc_conf"
     ) > /dev/null 2>&1 &
 }
 
@@ -91,6 +96,33 @@ start_ibus() {
         export GAMESCOPE_WAYLAND_DISPLAY=gamescope-0
         exec ibus-daemon -r --panel=disable --emoji-extension=disable
     ) > /dev/null 2>&1 &
+}
+
+# Galileo's mura correction (SteamOS: galileo-mura-setup.service, a user
+# service wanted by gamescope-session.target, only on Valve/Galileo): reads
+# the panel's correction data (or downloads it once, as Valve's script
+# does) and hands it to gamescope through an X property. gamescope only
+# notices the property when it changes, so the script has to run after
+# gamescope listens for it (Valve: after gamescope-session.service is
+# ready). The X socket alone is no sign of that (the previous session's
+# survives in /tmp); gamescope sets GAMESCOPE_XWAYLAND_SERVER_ID on the root
+# window just before it starts listening. A failure leaves the panel
+# uncorrected, nothing else.
+start_mura() {
+    [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ] || return
+    command -v galileo-mura-setup > /dev/null 2>&1 || return
+    (
+        export DISPLAY=:0
+        i=0
+        until pgrep -x gamescope-wl > /dev/null &&
+            xprop -root GAMESCOPE_XWAYLAND_SERVER_ID 2> /dev/null | grep -q '= 0'; do
+            [ "$i" -ge 60 ] && exit 0
+            sleep 1
+            i=$((i + 1))
+        done
+        sleep 1
+        exec galileo-mura-setup
+    ) 2>&1 &
 }
 
 pgrep -x pipewire > /dev/null || pipewire &
@@ -185,7 +217,13 @@ export ENABLE_GAMESCOPE_WSI=1
 export GAMESCOPE_LIMITER_FILE="$(mktemp /tmp/gamescope-limiter.XXXXXXXX)"
 
 board=$(cat /sys/class/dmi/id/board_name 2>/dev/null)
-if [ "$board" = "Jupiter" ]; then
+if [ "$board" = "Galileo" ]; then
+    # Steam Deck OLED, as Valve's gamescope-session (untested on Io: no
+    # hardware): its 45-90 Hz panel, and HDR on by default
+    export STEAM_DISPLAY_REFRESH_LIMITS=45,90
+    export STEAM_GAMESCOPE_FORCE_HDR_DEFAULT=1
+    export STEAM_GAMESCOPE_FORCE_OUTPUT_TO_HDR10PQ_DEFAULT=1
+elif [ "$board" = "Jupiter" ]; then
     export STEAM_DISPLAY_REFRESH_LIMITS=40,60
 fi
 # Valve points Steam's update screen at a full-screen picture of its boot logo
@@ -269,6 +307,7 @@ tracker=/usr/lib/steamos/steam-short-session-tracker
 "$tracker" --track-started
 start_mangoapp
 start_ibus
+start_mura
 gamescope "$@" -- /usr/lib/steamos/steam-launcher
 rc=$?
 "$tracker" --track-stopped
