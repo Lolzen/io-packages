@@ -4,6 +4,15 @@ if pgrep -x kwin_wayland > /dev/null; then
     exit 1
 fi
 
+# The Steam Machine, as Valve's audio profile selection (wireplumber-hwconfig
+# in steamdeck-dsp) recognises it: sys_vendor-product_name "valve-fremont",
+# or "oem-f7f" on early units.
+io_is_fremont() {
+    v=$(tr 'A-Z' 'a-z' < /sys/class/dmi/id/sys_vendor 2>/dev/null)
+    p=$(tr 'A-Z' 'a-z' < /sys/class/dmi/id/product_name 2>/dev/null)
+    [ "$v-$p" = valve-fremont ] || [ "$v-$p" = oem-f7f ]
+}
+
 # Valve runs the filter chain as its own PipeWire instance
 # (filter-chain.service), with a fixed quantum, locked memory and a single
 # malloc arena - settings that would be wrong for the main daemon. prlimit
@@ -12,7 +21,9 @@ fi
 #
 # Galileo (Steam Deck OLED) has its own filter chain configuration
 # (steamdeck-dsp: filter-chain-galileo.conf, for its sof-nau8821-max card).
+# The Steam Machine (Fremont) has no filter chain in Valve's profile.
 start_filter_chain() {
+    io_is_fremont && return
     fc_conf=filter-chain.conf
     [ "$(cat /sys/class/dmi/id/board_name 2>/dev/null)" = Galileo ] && fc_conf=filter-chain-galileo.conf
     pgrep -f "pipewire -c $fc_conf" > /dev/null && return
@@ -66,6 +77,13 @@ steam_dpi_scaling_off() {
 # Io's default backend is wpa_supplicant in both sessions.
 export STEAM_USE_WPASUPPLICANT=1
 
+# The Steam Machine (Fremont): WirePlumber reads Valve's profile for it
+# (steamdeck-dsp) instead of the Deck's in /etc/wireplumber; it inherits
+# this from PipeWire, which starts it (context.exec).
+if io_is_fremont; then
+    WP_FREMONT=/usr/share/io/wireplumber-fremont
+    export WIREPLUMBER_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wireplumber:$WP_FREMONT:/usr/share/wireplumber"
+fi
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 steam_dpi_scaling_off
