@@ -149,6 +149,7 @@ echo "== firmware (check modes only, nothing is flashed)"
 check "BIOS updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-biosupdate
 check "controller updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-controller-update
 check "dock updater installed (jupiter-dock-updater-bin)" test -x /usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh
+check "controller calibration tools (deck-controller-calibration)" test -x /usr/bin/thumbstick_cal
 check "OLED mura extractor setuid (galileo-mura)" test -u /usr/bin/galileo-mura-extractor
 check "trace-cmd for Wi-Fi debug mode" test -x /usr/bin/trace-cmd
 check "Galileo filter chain configuration" test -e /usr/share/pipewire/filter-chain-galileo.conf
