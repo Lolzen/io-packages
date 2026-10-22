@@ -1,6 +1,6 @@
 #!/bin/sh
 # Valve's version runs 'iwconfig wlan0 power off'. Io has neither iwconfig
-# nor a fixed interface name, so it asks the root half of io-steamos-manager,
+# nor a fixed interface name, so it asks the root half of steamos-manager,
 # which finds the wireless interface itself and uses iw.
 SVC=com.steampowered.SteamOSManager1
 OBJ=/com/steampowered/SteamOSManager1

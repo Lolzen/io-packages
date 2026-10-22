@@ -116,7 +116,7 @@ echo "== steamos manager"
 check "root half running" sh -c 'pgrep -u 0 -f "^/usr/lib/steamos-manager -r$"'
 check "session half running" sh -c "pgrep -u $U -f '^/usr/lib/steamos-manager$'"
 check "scx supervised, not started at boot (down file)" sh -c 'test -e /etc/sv/scx/down && sv status scx | grep -q "^down:"'
-check "session management offered (steamos.conf)" test -e /usr/lib/sddm/sddm.conf.d/steamos.conf
+check "session management offered (holo.conf)" test -e /usr/lib/sddm/sddm.conf.d/holo.conf
 # The fan daemon follows Steam's fan control setting (Settings > System);
 # a fresh Steam profile has it off, which stops the service on purpose.
 if pgrep -f 'fancontrol.py --run' > /dev/null; then
