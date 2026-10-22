@@ -8,7 +8,7 @@ build_style=cargo
 hostmakedepends="pkg-config clang llvm clang21-devel"
 makedepends="glib-devel eudev-libudev-devel speech-dispatcher-devel"
 depends="dbus iw wireless_tools gsettings-desktop-schemas dconf glib runit-void
- deck-hw-support scx orca speech-dispatcher espeak-ng at-spi2-core"
+ deck-hw-support steamos-networking-tools scx orca speech-dispatcher espeak-ng at-spi2-core"
 conf_files="/etc/default/scx"
 short_desc="Valve's SteamOS Manager daemon, with runit support"
 maintainer="Georg <funer@gmx.at>"

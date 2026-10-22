@@ -12,5 +12,13 @@ post)
 	for s in steamos-manager scx; do
 		[ -e "var/service/$s" ] || ln -sf "/etc/sv/$s" var/service/
 	done
+	# io-steamos-manager's Wi-Fi power saving: a file of its own for
+	# NetworkManager (Valve's is 99-valve-wifi-backend.conf), and iwd's
+	# setting in /etc/iwd/main.conf, removed when the file holds nothing else
+	rm -f etc/NetworkManager/conf.d/99-io-wifi-powersave.conf
+	f=etc/iwd/main.conf
+	if [ -f "$f" ] && [ "$(cat "$f")" = "$(printf '[DriverQuirks]\nPowerSaveDisable=*')" ]; then
+		rm -f "$f"
+	fi
 	;;
 esac
