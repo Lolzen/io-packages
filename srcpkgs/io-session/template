@@ -1,11 +1,11 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.7.4
+version=0.7.5
 revision=1
 # The desktop session (steamos-session-select plasma) needs kde-plasma,
 # which io-desktop pulls in.
 depends="bash gamescope kwin-holo steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
- io-steamos-manager rtkit libcap-progs sddm cecd
+ steamos-manager rtkit libcap-progs sddm cecd
  cec-audio-control steam_notif_daemon drm_janitor"
 conf_files="/etc/elogind/logind.conf.d/10-io-kill-user-processes.conf"
 short_desc="Io game mode session scripts and session switching"
@@ -21,7 +21,9 @@ do_install() {
 	# whenever a session ends. SDDM starts io-start from the session files.
 	vsv io-sddm
 	vmkdir usr/lib/sddm/sddm.conf.d
-	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d 10-io.conf
+	# SteamOS's name: steamos-manager offers session management (switching
+	# modes, the default login mode) only where this file exists.
+	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d steamos.conf
 	vmkdir usr/share/wayland-sessions
 	vinstall ${FILESDIR}/gamescope-wayland.desktop 644 usr/share/wayland-sessions
 	vinstall ${FILESDIR}/io-desktop.desktop 644 usr/share/wayland-sessions
@@ -55,4 +57,5 @@ do_install() {
 	vinstall ${FILESDIR}/steam-short-session-tracker 755 usr/lib/steamos
 	vmkdir usr/libexec/io
 	vinstall ${FILESDIR}/io-low-disk-cleanup 755 usr/libexec/io
+	vinstall ${FILESDIR}/io-manager-session 755 usr/libexec/io
 }

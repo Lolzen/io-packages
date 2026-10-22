@@ -96,19 +96,14 @@ start_ibus() {
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 pgrep -f steamos-powerbuttond > /dev/null || setsid /usr/lib/hwsupport/steamos-powerbuttond > /dev/null 2>&1 &
-# user half only - the root half (io-steamos-manager -r) runs as a runit service.
-# Every session has its own D-Bus session bus and needs its own user half, so
-# it is always started. (Checking for a running one found the previous
-# session's user half, still on its way out after SDDM's relogin, and the new
-# session was left without one.) Its output goes to the session log.
-setsid /usr/bin/io-steamos-manager &
-
-# HDMI-CEC (SteamOS: cecd.service and cec-audio-control, user services of
-# the graphical session). cecd starts through D-Bus activation: anyone asking
-# for com.steampowered.CecDaemon1 early (Steam, io-steamos-manager) would
-# otherwise have the bus start a second one next to ours. It waits for a CEC
-# device to appear (-e); its settings come from io-steamos-manager (HdmiCec1).
-busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus StartServiceByName su com.steampowered.CecDaemon1 0 > /dev/null 2>&1 &
+# steamos-manager: the root half runs as a runit service; the session half
+# starts through D-Bus activation on this session's own bus, from
+# io-manager-session (Valve's user units at session start: temporary
+# session cleanup, cecd's configuration, then cecd itself). Every session
+# has its own bus, so a session half still on its way out from the previous
+# session does not count. Its output goes to the session log.
+/usr/libexec/io/io-manager-session &
+# SteamOS: cec-audio-control.service, a user service of the graphical session
 RUST_LOG=info setsid /usr/bin/cec-audio-control -d "" &
 
 # ----------------------------------------------------- session identity
@@ -236,6 +231,18 @@ ulimit -n 524288 2>/dev/null || ulimit -n "$(ulimit -Hn)"
 # Valve's low-disk check: with less than 500 MB free, Steam may not start at
 # all; the session makes room by deleting the least recently changed game.
 /usr/libexec/io/io-low-disk-cleanup
+
+# For services started on behalf of the session, as Valve's gamescope-session
+# writes it: steamos-manager starts Orca (the screen reader) with these
+# variables, as orca.service reads them. gamescope's first Xwayland is :0.
+{
+    echo "DISPLAY=:0"
+    echo "GAMESCOPE_WAYLAND_DISPLAY=gamescope-0"
+    echo "XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP"
+    echo "XDG_SESSION_DESKTOP=$XDG_SESSION_DESKTOP"
+    echo "XDG_SESSION_TYPE=$XDG_SESSION_TYPE"
+    echo "DESKTOP_SESSION=$DESKTOP_SESSION"
+} > "$XDG_RUNTIME_DIR/gamescope-environment"
 
 # -------------------------------------------------------------- launch
 set -- --generate-drm-mode fixed

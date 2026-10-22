@@ -1,0 +1,24 @@
+#!/bin/sh
+# io-manager-session - what Valve's user units do for steamos-manager at the
+# start of a session, for Io's sessions (io-gamemode, io-plasma), which have
+# no systemd --user. Runs in the background of the session script.
+#
+# - steamos-manager-session-cleanup.service: steamosctl
+#   clean-temporary-sessions. The call also starts the session half of
+#   steamos-manager through D-Bus activation on the session's own bus.
+# - Io: Valve's default desktop session is plasma.desktop, Plasma without
+#   Io's session setup. While it is still that default, Io's desktop
+#   session (io-desktop.desktop) is set instead; another choice stays.
+# - steamos-manager-configure-cecd.service (before cecd.service):
+#   steamosctl configure-cecd, then cecd. cecd starts through D-Bus
+#   activation: anyone asking for com.steampowered.CecDaemon1 early (Steam,
+#   steamos-manager) would otherwise have the bus start a second one. It
+#   waits for a CEC device to appear (-e).
+
+steamosctl clean-temporary-sessions || echo "io: steamos-manager did not start" >&2
+if [ "$(steamosctl get-default-desktop-session 2> /dev/null)" = plasma.desktop ]; then
+    steamosctl set-default-desktop-session io-desktop.desktop
+fi
+steamosctl configure-cecd
+L=org.freedesktop.DBus
+busctl --user call $L /org/freedesktop/DBus $L StartServiceByName su com.steampowered.CecDaemon1 0 > /dev/null 2>&1

@@ -2,7 +2,7 @@
 # steamos-session-select - kept for Steam client compatibility, as on
 # SteamOS, where it is a thin wrapper around steamosctl. Same mapping as
 # Valve's; Io has one desktop session, which every plasma variant selects.
-# io-steamos-manager (SessionManagement1) does the switch: it tells SDDM
+# steamos-manager (SessionManagement1) does the switch: it tells SDDM
 # which session to log in next and ends the running one.
 set -e
 SVC=com.steampowered.SteamOSManager1

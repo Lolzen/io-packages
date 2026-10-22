@@ -64,12 +64,12 @@ export STEAM_USE_WPASUPPLICANT=1
 pgrep -x pipewire > /dev/null || pipewire &
 start_filter_chain
 steam_dpi_scaling_off
-# HDMI-CEC (SteamOS: cecd.service and cec-audio-control, user services of
-# the graphical session). cecd starts through D-Bus activation: anyone asking
-# for com.steampowered.CecDaemon1 early (Steam, io-steamos-manager) would
-# otherwise have the bus start a second one next to ours. It waits for a CEC
-# device to appear (-e); its settings come from io-steamos-manager (HdmiCec1).
-busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus StartServiceByName su com.steampowered.CecDaemon1 0 > /dev/null 2>&1 &
+# steamos-manager's session half (D-Bus activation), its session cleanup,
+# cecd's configuration and cecd: see io-manager-session. A game mode
+# session's gamescope-environment does not apply here.
+rm -f "$XDG_RUNTIME_DIR/gamescope-environment"
+/usr/libexec/io/io-manager-session &
+# SteamOS: cec-audio-control.service, a user service of the graphical session
 RUST_LOG=info setsid /usr/bin/cec-audio-control -d "" &
 
 exec startplasma-wayland
