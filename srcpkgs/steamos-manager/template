@@ -1,7 +1,7 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
 version=26.4.1.20261022
-revision=8
+revision=9
 _commit=cffa908425287f1fd971b4e28bd234a8d022ab17
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
