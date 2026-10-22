@@ -1,33 +1,26 @@
 # Template file for 'steamos-networking-tools'
 pkgname=steamos-networking-tools
 version=1.3
-revision=3
-depends="bash iw iwd-holo NetworkManager-holo polkit runit-void"
-short_desc="SteamOS networking tools: switch the Wi-Fi backend (iwd/wpa_supplicant)"
+revision=4
+depends="iwd-holo NetworkManager-holo"
+short_desc="SteamOS NetworkManager defaults: Wi-Fi backend, IPv6 privacy, connectivity check"
 maintainer="Georg <funer@gmx.at>"
 license="LGPL-2.1-or-later"
 homepage="https://gitlab.steamos.cloud/holo/holo"
 
-# Valve's steamos-wifi-set-backend (1.3, as on SteamOS 3.9.2: an error
-# message when wlan0 cannot be added to phy0), plus the NetworkManager
-# defaults from steamos-customizations-jupiter (wpa_supplicant as backend since Valve's
-# change of 2026-08-27, iwd selectable; IPv6 privacy extensions) and
-# a connectivity check (GNOME's endpoint, SteamOS uses Arch's).
-# Io's changes: runit instead of systemd in the privileged helper (iwd is a
-# runit service linked while it is the backend; wpa_supplicant is started by
-# NetworkManager through D-Bus). Switching away from iwd waits until iwd has
-# exited: it removes the interface it created as it goes, and Valve's
-# workaround that recreates wlan0 must run after that, not before. The
-# status check after switching looks at the processes instead of systemctl. The interface must be called wlan0
-# as on SteamOS (net.ifnames=0): iwd recreates it under the kernel name, and
-# a renamed interface leaves NetworkManager looking for one that is gone.
+# The NetworkManager defaults from steamos-customizations-jupiter
+# (wpa_supplicant as backend since Valve's change of 2026-08-27, iwd
+# selectable; IPv6 privacy extensions) and a connectivity check (GNOME's
+# endpoint, SteamOS uses Arch's). The interface must be called wlan0 as on
+# SteamOS (net.ifnames=0): iwd recreates it under the kernel name, and a
+# renamed interface leaves NetworkManager looking for one that is gone.
+#
+# Until revision 3 this package also had Valve's steamos-wifi-set-backend
+# 1.3, adapted to runit, for io-steamos-manager's backend switch. Valve's
+# steamos-manager switches the backend itself (through runit on Io), so
+# Io's adaptation went.
 
 do_install() {
-	vbin ${FILESDIR}/steamos-wifi-set-backend
-	vmkdir usr/bin/steamos-polkit-helpers
-	vinstall ${FILESDIR}/steamos-wifi-set-backend-privileged 755 usr/bin/steamos-polkit-helpers
-	vinstall ${FILESDIR}/steamos-wifi-set-backend.bash-completion 644 usr/share/bash-completion/completions steamos-wifi-set-backend
-	vinstall ${FILESDIR}/com.steampowered.SteamOS.WifiSetBackend.policy 644 usr/share/polkit-1/actions
 	vinstall ${FILESDIR}/10-steamos-defaults.conf 644 usr/lib/NetworkManager/conf.d
 	vinstall ${FILESDIR}/20-connectivity.conf 644 usr/lib/NetworkManager/conf.d
 }
