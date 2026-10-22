@@ -1,0 +1,9 @@
+# Atomupd1 moved here from io-steamos-manager's root half: link the service
+# on installed systems (an image links it from its service list).
+case "${ACTION}" in
+post)
+	if [ -d var/service ] && [ ! -e var/service/io-atomupd ]; then
+		ln -sf /etc/sv/io-atomupd var/service/
+	fi
+	;;
+esac
