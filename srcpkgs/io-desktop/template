@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=51
+revision=52
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to linux-neptune-72 and does not
@@ -17,6 +17,8 @@ replaces="base-system>=0"
 # keyboard, as on SteamOS; ttf-twemoji-default is SteamOS's emoji font.
 # wireless-domain-setter is Valve's regulatory domain helper for
 # self-managed Wi-Fi cards, enabled on every model as on SteamOS.
+# galileo-mura is the Steam Deck OLED's panel correction (started on that
+# model only), installed on every model as on SteamOS.
 depends="
  base-files ncurses coreutils findutils diffutils libgcc dash bash grep gzip
  file sed gawk less util-linux which tar man-pages mdocml shadow e2fsprogs
@@ -60,6 +62,7 @@ depends="
  noto-fonts-cjk
  ttf-twemoji-default
  wireless-domain-setter
+ galileo-mura
 "
 short_desc="Io meta package: complete Steam Deck game mode system"
 maintainer="Georg <funer@gmx.at>"

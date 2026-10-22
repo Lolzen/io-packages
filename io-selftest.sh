@@ -127,8 +127,8 @@ fi
 
 echo "== audio"
 check "loopback script installed" test -r /usr/share/wireplumber/scripts/io-create-loopback.lua
-check "filter chain in its own PipeWire instance" pgrep -f "pipewire -c filter-chain.conf"
-check "filter chain memlock 100 MB" sh -c 'prlimit --memlock -o HARD --noheadings -p $(pgrep -f "pipewire -c filter-chain.conf" | head -n 1) | grep -q 104857600'
+check "filter chain in its own PipeWire instance" pgrep -f "pipewire -c filter-chain"
+check "filter chain memlock 100 MB" sh -c 'prlimit --memlock -o HARD --noheadings -p $(pgrep -f "pipewire -c filter-chain" | head -n 1) | grep -q 104857600'
 check "ALSA default device goes through PipeWire" test -e /etc/alsa/conf.d/99-pipewire-default.conf
 check "locale en_US.UTF-8 generated" sh -c 'locale -a | grep -qi "^en_US.utf8$"'
 
@@ -149,6 +149,9 @@ echo "== firmware (check modes only, nothing is flashed)"
 check "BIOS updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-biosupdate
 check "controller updater installed (deck-firmware-updaters)" test -x /usr/bin/jupiter-controller-update
 check "dock updater installed (jupiter-dock-updater-bin)" test -x /usr/lib/jupiter-dock-updater/jupiter-dock-updater.sh
+check "OLED mura extractor setuid (galileo-mura)" test -u /usr/bin/galileo-mura-extractor
+check "trace-cmd for Wi-Fi debug mode" test -x /usr/bin/trace-cmd
+check "Galileo filter chain configuration" test -e /usr/share/pipewire/filter-chain-galileo.conf
 BIOSOUT=$(/usr/bin/jupiter-biosupdate check 2>&1)
 BIOSRC=$?
 info "jupiter-biosupdate check: exit $BIOSRC (0 = nothing to do, 7 = update available): $(echo "$BIOSOUT" | tr '\n' ' ' | cut -c1-160)"
