@@ -34,8 +34,8 @@ behind each difference, see [Deviations](Deviations).
      controller update with its splash, as SteamOS runs them before the
      login manager
 4. **runit stage 2** starts the services linked in `/var/service`, among them
-   `io-steamos-manager` (root half), `vpower`, `holo-zram-swap`, `earlyoom`,
-   `jupiter-fan-control`, `socklog-unix` and `nanoklogd`,
+   `steamos-manager` (root half), `io-atomupd`, `vpower`, `holo-zram-swap`,
+   `earlyoom`, `jupiter-fan-control`, `socklog-unix` and `nanoklogd`,
    `jupiter-firewall`, `steam-web-debug-portforward`, and `io-sddm`. Steam's
    developer mode adds `avahi-daemon` and `steamos-devkit-service`.
 5. **`io-sddm`** removes a leftover one-shot login file, ends the splash with
@@ -52,7 +52,8 @@ SDDM (autologin, Relogin)  →  gamescope-wayland.desktop  →  io-start gamemod
                            →  io-desktop.desktop         →  io-start desktop   →  io-plasma   → startplasma-wayland
 ```
 
-SDDM's settings are in `/usr/lib/sddm/sddm.conf.d/10-io.conf`: autologin
+SDDM's settings are in `/usr/lib/sddm/sddm.conf.d/holo.conf` (Valve's name
+for its own file, see *SteamOS Manager*): autologin
 for `deck` into game mode, and a fresh login whenever a session ends
 (`Relogin=true`), as on SteamOS. The login runs through PAM and elogind, so
 each session is a real session on `seat0`; the memlock limit for the filter
@@ -77,28 +78,34 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`, for the
   before and after it, as `steam-launcher.service` does. Like Valve's session
   it limits the portals to the game mode backends (`XDG_DESKTOP_PORTAL_DIR`:
   holo first, then gamescope), and passes gamescope's statistics pipe (`-T`,
-  `GAMESCOPE_STATS`). It also starts PipeWire, the power button daemon, the
-  session half of `io-steamos-manager` (always, one per session and bus), the
-  HDMI-CEC daemons, the filter chain's own PipeWire instance, Steam's
+  `GAMESCOPE_STATS`). It also starts PipeWire, the power button daemon,
+  `io-manager-session` (SteamOS Manager's session half and cecd, see
+  *SteamOS Manager*), the HDMI-CEC daemons, the filter chain's own PipeWire
+  instance, Steam's
   notification daemon (`steam_notif_daemon`, which owns
   `org.freedesktop.Notifications` and hands each notification to Steam as a
   `steam://` link), and — right before gamescope, once the environment is
   complete — mangoapp for Steam's performance overlay, and once gamescope
-  is up `ibus-daemon` for Steam's keyboard. When gamescope exits,
+  is up `ibus-daemon` for Steam's keyboard and, on the OLED, Valve's mura
+  correction (`galileo-mura-setup`). It writes
+  `$XDG_RUNTIME_DIR/gamescope-environment` for the screen reader, as Valve's
+  session does. When gamescope exits,
   `drm_janitor` resets the display state before the next session takes the
   screen, as Valve's `ExecStopPost` does.
 - **HDMI-CEC:** `cecd` is started through D-Bus activation
-  (`StartServiceByName`), so there is only one way it comes up and the bus
-  keeps it to one instance; `cec-audio-control` is started directly and
+  (`StartServiceByName`, by `io-manager-session` after `steamosctl
+  configure-cecd` has written its configuration), so there is only one way
+  it comes up and the bus keeps it to one instance; `cec-audio-control` is
+  started directly and
   creates its socket in `$XDG_RUNTIME_DIR` itself. Both in game mode and in
   Plasma, as SteamOS's user services of the graphical session.
 - **Logging out ends the session's processes** (`KillUserProcesses=yes` in
   elogind, as on SteamOS): with SDDM a switch is a logout, and the session's
   bus, its daemons, PipeWire and anything started with `setsid` end with it.
   The next session starts its own PipeWire on its own bus.
-- **`io-plasma`** starts KDE Plasma. The session half of
-  `io-steamos-manager` starts there through XDG autostart, and so does Steam
-  (`steam -silent`, from `steamdeck-kde-presets`), as on SteamOS: it
+- **`io-plasma`** starts KDE Plasma, with `io-manager-session` as in game
+  mode. Steam starts there through XDG autostart (`steam -silent`, from
+  `steamdeck-kde-presets`), as on SteamOS: it
   provides the on-screen keyboard in the desktop (Steam + X) and keeps hold
   of the controller. Before Plasma starts, `io-plasma` switches Steam's DPI
   scaling off once per user, so Steam draws in real pixels next to Plasma's
@@ -107,24 +114,26 @@ chain comes from `/etc/security/limits.d/90-io-memlock.conf`, for the
 
 ### Switching
 
-As on SteamOS, `SessionManagement1` of `io-steamos-manager` tells SDDM which
+As on SteamOS, `SessionManagement1` of steamos-manager tells SDDM which
 session to log in next and ends the running one:
 
 - **Game mode → desktop:** Steam calls `SwitchToDesktopMode`. The root half
-  writes the one-shot file `/etc/sddm.conf.d/zzt-steamos-temp-login.conf`,
-  gamescope ends, and SDDM logs in with that file: Plasma. The session half
-  in the new session removes the file again.
-- **Desktop → game mode:** *Return to Gaming Mode* runs
-  `steamos-session-select gamescope`, which calls `SwitchToGameMode` over
-  D-Bus. Plasma is logged out through its own session manager
-  (`org.kde.Shutdown.logout`), which closes every program in order — ending
-  kwin alone would not end the session, `kwin_wayland_wrapper` restarts it.
-  The desktop's last picture stays on screen until Steam's boot animation,
-  as on SteamOS.
+  writes the one-shot file `/etc/sddm.conf.d/zzt-holo-temp-login.conf`
+  (`zzt-steamos-temp-login.conf` while a file of that older name exists),
+  the session half ends the login session through logind, and SDDM logs in
+  with that file: Io's desktop. `steamosctl clean-temporary-sessions` in the
+  new session removes the file again.
+- **Desktop → game mode:** *Return to Gaming Mode* (Valve's `Return.desktop`)
+  logs Plasma out through its own session manager (`org.kde.Shutdown`), and
+  SDDM logs in to game mode, the default; with the desktop as default login
+  mode it runs `steamosctl switch-to-game-mode` instead, which ends the
+  session as above. The desktop's last picture stays on screen until
+  Steam's boot animation, as on SteamOS.
 - **Default login mode:** `DefaultLoginMode` writes
-  `/etc/sddm.conf.d/zz-steamos-autologin.conf` for a desktop default
+  `/etc/sddm.conf.d/zz-holo-autologin.conf` for a desktop default
   (`steamos-session-select plasma-wayland-persistent`) and removes it for
-  game mode.
+  game mode. `steamos-session-select` is Valve's `holo-session-select` with
+  Io's desktop session (`io-desktop.desktop`) in place of Plasma's.
 - **GPU reset:** the udev rule restarts `io-sddm`, as Valve's restarts SDDM:
   any session ends, and SDDM logs in fresh.
 
@@ -132,45 +141,73 @@ session to log in next and ends the running one:
 
 ## SteamOS Manager
 
-`io-steamos-manager` implements `com.steampowered.SteamOSManager1` in two
-halves, like Valve's daemon:
+Io runs Valve's `steamos-manager` (`com.steampowered.SteamOSManager1`),
+built from the branch `runit` of
+[Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager):
+Valve's main branch after 26.4.1 plus runit support, written to go to
+Valve. At start it finds the init system: systemd when
+`/run/systemd/system` exists, runit when PID 1 is `runit`. Booted with
+systemd, nothing changes. Two halves, as on SteamOS:
 
 | | Root half | Session half |
 |---|---|---|
-| Started as | `io-steamos-manager -r`, runit service | `io-steamos-manager`, by `io-gamemode` or XDG autostart |
+| Started as | runit service `steamos-manager` (`steamos-manager -r`) | D-Bus activation on the session's own bus, first by `io-manager-session` (SteamOS: the user unit `steamos-manager.service`) |
 | Bus | system | session |
-| Interfaces | `RootManager` (`SetTdpLimit`, `SetManualGpuClock`, `SetLoginSession`, `FanControlState`, `SetFanSpeed`, `TrimDevices`, ...), jobs under `/com/steampowered/SteamOSManager1/Jobs`; also `com.steampowered.Atomupd1` at `/com/steampowered/Atomupd1` | everything Steam talks to (`TdpLimit1`, `GpuPerformanceLevel1`, `FanControl1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, `UdevEvents1`, ...), and the root half's jobs it started, mirrored |
-| Does | validates values, writes sysfs, controls runit services | reads sysfs, forwards every write to the root half, reports the value in effect afterwards |
+| Interfaces | `RootManager`, the jobs it runs | what Steam talks to, as Valve's device file and `platform.toml` decide; on the LCD `TdpLimit1`, `GpuPerformanceLevel1`, `GpuPowerProfile1`, `FanControl1`, `CpuScheduler1`, `SessionManagement1`, `LowPowerMode1`, `HdmiCec1`, `HdmiCec2`, `ScreenReader0/1`, `Storage1`, `UdevEvents1`, `UpdateBios1`, `UpdateDock1`, `FactoryReset1`, `WifiBackend1`, `WifiPowerManagement1`, ... |
 
-Access to the root half is limited to root and `wheel`
-(`/usr/share/dbus-1/system.d/com.steampowered.SteamOSManager1.conf`,
-`com.steampowered.Atomupd1.conf`).
+Booted with runit, the daemon does without systemd:
 
-Some session-half interfaces drive other programs, as steamos-manager does:
+- **System services:** a systemd unit name stands for the runit service of
+  the same name (`jupiter-fan-control.service` → `/etc/sv/jupiter-fan-control`),
+  started and stopped with `sv`; enabled means linked in `/var/service`
+  without a `down` file. That covers fan control (`FanControl1`, download
+  mode), the LAVD scheduler (`scx`, linked with a `down` file: supervised
+  but not started at boot, as `scx.service` is installed but not enabled on
+  SteamOS), EC logging on the Steam Machine (`ec-log`) and the Wi-Fi
+  backends.
+- **Wi-Fi backend (`WifiBackend1`):** NetworkManager is restarted with the
+  new backend after the old one's D-Bus owner (`fi.w1.wpa_supplicant1`,
+  `net.connman.iwd`) has ended; iwd runs as a runit service linked only
+  while it is the backend, wpa_supplicant through D-Bus activation. Wi-Fi
+  debug mode (OLED only) runs iwd with `-d`, set through `OPTS` in
+  `/etc/sv/iwd/conf` (Valve: a systemd drop-in), and traces with
+  `trace-cmd`.
+- **Login mode:** from the session's `XDG_CURRENT_DESKTOP` (`gamescope` is
+  game mode). The session half belongs to one login session and ends with
+  it, so the mode cannot change while it runs. SteamOS watches
+  `gamescope-session.service`.
+- **Screen reader (`ScreenReader0/1`):** Orca runs as a child of the session
+  half, with the variables from `$XDG_RUNTIME_DIR/gamescope-environment`,
+  and is restarted when it fails, as `orca.service` is (at most 5 starts in
+  10 s).
+- **Logout for a mode switch:** the session half asks logind for its own
+  login session (`GetSessionByPID`) and ends it (`Session.Terminate`) half a
+  second after it replied. SteamOS stops `graphical-session.target`.
+- **Calls from games** are refused (`AuthFailed`), as on Valve's main
+  branch: a caller whose process descends from Steam's `reaper SteamLaunch`
+  counts as a game. SteamOS recognises the game's `app-steam-app…` systemd
+  scope, which Io does not have.
 
-- **`ScreenReader0/1`:** starts and stops Orca (detached, with the running
-  Steam's display settings), writes Orca's `user-settings.conf` and has
-  Orca reload it (`SIGUSR1`), lists voices from speech-dispatcher, and
-  presses Orca's shortcuts on a virtual keyboard named `steamos-manager`
-  (`/dev/uinput`, group `input`)
-- **`HdmiCec1`, `HdmiCec2`:** write the four switches (`wake_tv`,
-  `suspend_tv`, `uinput`, `allow_standby`) to
-  `~/.config/cecd/config.d/99-steamos-manager.toml` (identity in `00-`),
-  then have cecd reload them over D-Bus (`Config1.Reload`); `MakeActive`
-  calls cecd's `Daemon1.Wake`
-- **`LowPowerMode1`:** hands out the write end of a pipe; while any is
-  open, the TDP is 6 W and the fan runs at a fixed 2000 rpm (OS fan control
-  is stopped meanwhile and started again afterwards)
-- **`Storage1`:** `TrimDevices` has the root half run Valve's
-  `trim-devices.sh` as a job and returns the session-bus path of a `Job1`
-  object that mirrors it; the caller can wait on it, pause, resume or
-  cancel it there (`SIGSTOP`, `SIGCONT`, `SIGTERM`/`SIGKILL`) and read the
-  exit code. `FormatDevice` runs Valve's `format-device.sh` the same way
-- **`UpdateBios1`:** exported only where Valve's BIOS updater is installed;
-  runs it as a job, as `Storage1` does (`UpdateDock1`: branch `dock-fw`)
-- **`FactoryReset1`:** `PrepareFactoryReset` has the root half run
-  `io-factory-reset --prepare user|os|all` and answers 1 (reboot required)
-  when it succeeded
+What Valve does with systemd user units, Io does in `io-manager-session`
+(`/usr/libexec/io`), started in the background by `io-gamemode` and
+`io-plasma`:
+
+1. `steamosctl configure-cecd` writes cecd's identity for the TV, before
+   cecd starts (`steamos-manager-configure-cecd.service`,
+   `Before=cecd.service`); it needs no daemon.
+2. cecd through D-Bus activation (`StartServiceByName`).
+3. `steamosctl clean-temporary-sessions`
+   (`steamos-manager-session-cleanup.service`), which also starts the
+   session half.
+4. While the default desktop session is still Valve's `plasma.desktop`
+   (Plasma without Io's session setup), `io-desktop.desktop` is set
+   instead.
+
+`SessionManagement1` is offered only where SDDM's `holo.conf` exists in
+`/usr/lib/sddm/sddm.conf.d` (`holo-session-selection` on SteamOS);
+`io-session` installs Io's SDDM settings under that name. Access to the root
+half is limited to root and `wheel` (Io's D-Bus policy,
+`/usr/share/dbus-1/system.d/com.steampowered.SteamOSManager1.conf`).
 
 Steam does not use D-Bus for everything. Some features are enabled by
 environment variables alone (the adaptive brightness toggle, fan control,
@@ -194,7 +231,7 @@ stayed where it was set.
 
 ```
 Steam → pkexec steamos-polkit-helpers/steamos-update → /usr/bin/steamos-update → /usr/libexec/io/io-update → xbps-install
-D-Bus clients → com.steampowered.Atomupd1 (root half) ───────────────────────────────┘
+D-Bus clients → com.steampowered.Atomupd1 (io-atomupd) ──────────────────────────────┘
 ```
 
 - **`io-update`** does the work: `check` syncs the repositories and lists
@@ -205,6 +242,8 @@ D-Bus clients → com.steampowered.Atomupd1 (root half) ────────
   `/run/io-update`, gone after the reboot). One run at a time (`flock`).
   A proxy set through `Atomupd1.EnableHttpProxy` is kept in
   `/run/io-update/proxy` and passed to xbps.
+- **`io-atomupd`** (runit service, package of the same name) serves
+  `Atomupd1`, atomupd-daemon's update API, on the system bus.
 - **`steamos-update`** is Steam's interface on top: exit codes, build id,
   progress lines and *Update completed* as Valve's script prints them.
 - Log: `/var/log/io-update.log` (everything xbps printed, with timestamps
@@ -266,11 +305,16 @@ that identity to recognize the built-in devices and shows its own localized
 names for them.
 
 The filter chain runs in a second PipeWire instance
-(`pipewire -c filter-chain.conf`), started per session, with Valve's own
+(`pipewire -c filter-chain.conf`; on the OLED `filter-chain-galileo.conf`
+with Valve's Galileo settings), started per session, with Valve's own
 settings: fixed quantum, `mem.mlock-all` within a 100 MB memlock limit, and
 a single malloc arena. Volume keys are handled by Steam itself.
 Plain ALSA clients reach PipeWire through `alsa-pipewire`, linked in
 `/etc/alsa/conf.d/`.
+
+On the Steam Machine (untested) the session points WirePlumber at Valve's
+profile for it (`WIREPLUMBER_CONFIG_DIR`, `/usr/share/io/wireplumber-fremont`),
+and no filter chain runs.
 
 ---
 
@@ -294,9 +338,10 @@ udev rule 99-steamos-automount  →  io-detach (setsid --fork)  →  block-devic
    top directory writable for everyone if `deck` cannot write to it.
 4. **Steam** learns about the drive from udisks and lists it in its storage
    settings; a drive without a Steam library gets the offer to format it
-   (refused on Io for now). With `STEAM_ALLOW_DRIVE_ADOPT` and
-   `STEAM_ALLOW_DRIVE_UNMOUNT` set in game mode, as in Valve's session,
-   Steam may take over a library on it and eject it (not tried yet).
+   (Valve's `steamos-format-device` helper and `format-device.sh`). With
+   `STEAM_ALLOW_DRIVE_ADOPT` and `STEAM_ALLOW_DRIVE_UNMOUNT` set in game
+   mode, as in Valve's session, Steam may take over a library on it and
+   eject it (not tried yet).
 
 The internal SSD holds SteamOS. While Io runs from another disk,
 `90-io-hide-internal-disk.rules` marks it for udisks as ignored and

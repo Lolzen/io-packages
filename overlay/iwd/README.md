@@ -1,6 +1,7 @@
 # iwd-holo
 
-Replaces Void's `iwd`. iwd is Io's second Wi-Fi backend (`steamos-wifi-set-backend`), as on SteamOS.
+Replaces Void's `iwd`. iwd is Io's second Wi-Fi backend, switched in Steam
+(SteamOS Manager's `WifiBackend1`), as on SteamOS.
 
 | Patch | Source | Upstream |
 |---|---|---|

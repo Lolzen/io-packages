@@ -1,7 +1,7 @@
 # Io
 
-A Void Linux rebuild of SteamOS for the Steam Deck (LCD, "Jupiter"), with
-runit instead of systemd.
+A Void Linux rebuild of SteamOS for the Steam Deck (LCD, "Jupiter"; the
+OLED and the Steam Machine are untested), with runit instead of systemd.
 
 ## Pages
 

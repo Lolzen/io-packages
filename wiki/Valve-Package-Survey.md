@@ -17,8 +17,12 @@ and sources of Io's packages are on [Packages](Packages).
 | SteamOS 3.9.2 | On Io | Notes |
 |---|---|---|
 | `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-72` 7.2.11 | Valve's `7.2.7-valve2` (SteamOS 3.9.3) with stable 7.2.11 merged in; built from the configuration Valve's package uses, see [Kernel](Kernel) |
-| `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps |
-| `steamos-manager` 26.4.1 (26.1.0) | `io-steamos-manager` | Io's own implementation of 26.4.1's interfaces (with `HdmiCec2`, `SwitchToDesktopSession`, without `Audio1`), see [Architecture](Architecture) |
+| `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps. From 20260930.1 (SteamOS 3.9.3): the firmware updaters (`deck-firmware-updaters`) and the thumbstick and trigger calibration tools (`deck-controller-calibration`) |
+| `steamos-manager` 26.4.1 (26.1.0) | `steamos-manager` (Valve's main after 26.4.1) | Valve's daemon with runit support (fork [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager), branch `runit`), see [Architecture](Architecture); until October 2026 Io's own implementation, `io-steamos-manager` |
+| `ec-log` 0.1 (new) | `ec-log` 0.1 | The Steam Machine's EC log; runit service linked with a `down` file, started by SteamOS Manager |
+| `jupiter-dock-updater-bin` | 20260811.01 (newest in jupiter-3.9) | Valve's dock updater as it is; untested without Valve's dock |
+| `holo-session-selection` (new) | in `io-session` | `holo-session-select` (also as `steamos-session-select`, which Steam calls) with Io's desktop session, and SDDM's settings under its name `holo.conf`. Its `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
+| `galileo-mura` v0.10 | `galileo-mura` v0.10 | Started by the game mode session on the OLED (Valve: a user service); untested |
 | `steam-jupiter-stable` 1.0.0.85-12 (-8) | `steam-jupiter` (-12) | |
 | `steamdeck-dsp` 1.02 (0.91) | `steamdeck-dsp` 1.02 | Sink loopbacks kept as in 0.91 |
 | `steamdeck-kde-presets` 3.9.4 (3.8.5) | 3.9.4 | |
@@ -28,7 +32,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `xdg-desktop-portal-holo` 0.1.18 | 0.1.18 | Started by D-Bus, no systemd unit |
 | `steamos-systemreport` 1.23 (0.16) | 1.23 | socklog and xbps instead of journal and pacman |
 | `steamos-powerbuttond` 4.2 | 4.2 | |
-| `steamos-networking-tools` 1.3 (1.2) | 1.3 | runit port of the backend switch |
+| `steamos-networking-tools` 1.3 (1.2) | 1.3 (parts) | NetworkManager defaults; `steamos-wifi-set-backend` is left out, SteamOS Manager switches the backend itself |
 | `steamos-passwd` 1.0 | 1.0 | |
 | `steamos-devkit-service` 0.20250916.0 | same | mDNS through Avahi |
 | `steam-im-modules` 20240131 | same | |
@@ -63,7 +67,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `gamemode`, `orca`, `speech-dispatcher`, `espeak-ng`, `sof-firmware`, `sdl2-compat`, `sdl3`, `knighttime`, `plasma-keyboard`, `noto-fonts-cjk` | Void's packages |
 | `linux-firmware-neptune`, `amd-ucode-neptune` | Void's `linux-firmware` packages (the amplifier firmware, the Wi-Fi firmware and AMD's microcode are in them). Nothing the LCD needs is missing; Io's `deck-firmware` adds Valve's older `vangogh_vcn.bin` (AMD withdrew Void's) and Valve's Realtek Bluetooth firmware, see [Deviations](Deviations) |
 | `mesa`, `vulkan-radeon` (Valve's builds) | `mesa-holo`: Void's Mesa 26.2.5 with Valve's patches, 64 and 32 bit, see [Deviations](Deviations) (*Graphics*, *Io overlay*) |
-| `scx-scheds` | Void's `scx`, switched through a runit service by `io-steamos-manager` |
+| `scx-scheds` | Void's `scx`, switched by SteamOS Manager through the runit service `scx` |
 | `iio-sensor-proxy` (new in 3.9.2) | Not on Io: removed in Alpha 5, when SteamOS 3.8.4 did not have it either; Steam reads the light sensor itself. On 3.9.2 it runs, but nothing in game mode uses it |
 
 ## Not on Io
@@ -75,13 +79,11 @@ and sources of Io's packages are on [Packages](Packages).
 | `dmemcg-booster`, `kcgroups`, `plasma-foreground-booster` | Driven by systemd's units and slices (`org.freedesktop.systemd1`); decided not to implement, see [Deviations](Deviations) |
 | `steamos-log-submitter`, `jupiter-steamos-log-submitter` | Sends crash logs to Valve; would have to be retargeted first |
 | `kdumpst`, `steamos-kdumpst-layer` | Kernel crash dumps, developer-facing; parked |
-| `inputplumber` | Installed but not running on the Deck (3.8.4 and 3.9.2) |
-| `galileo-mura` | Steam Deck OLED only |
+| `inputplumber` | Installed but not running on the Deck (3.8.4 and 3.9.2); steamos-manager uses it for other handhelds' controllers, which Io does not support |
 | `dirlock` | Home directory encryption, filed with the A/B notes below (decided 2026-10-03) |
 | `holo-keyring`, `holo-nix-offload`, `holo-nfs-utils-tmpfiles` | pacman keys, Nix store, NFS: nothing Io needs |
 | `steamos-alias` (new in 3.9.2) | A pacman hook linking `steamos-*` names to the renamed `holo-*` helpers; Io keeps the `steamos-*` names Steam calls |
-| `ec-log`, `holo-debuginfod-config`, `holo-grant-cap-sys-nice` (new) | Embedded controller logging for other hardware (service disabled); debug symbols only for SteamOS builds; `cap_sys_nice` for SteamVR's compositor |
-| `holo-session-selection` (new) | `holo-session-select` and SDDM's `holo.conf`; Steam calls `steamos-session-select`, which Io has. `holo.conf`'s `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
+| `holo-debuginfod-config`, `holo-grant-cap-sys-nice` (new) | Debug symbols only for SteamOS builds; `cap_sys_nice` for SteamVR's compositor |
 | `plasma-login-manager` (new) | Login manager installed but disabled (SDDM stays) |
 
 ---

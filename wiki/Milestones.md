@@ -31,7 +31,7 @@ requests).
    formatting SD cards and USB drives, the check modes, Repair Io, the
    factory reset from Steam
 3. `destructive` to `main` (done 2026-10-20); Valve's calibration tools
-   follow as their own pull request
+   followed (2026-10-22)
 4. With Io on the NVMe: the desktop responsiveness again (*Open
    observations*)
 
@@ -54,26 +54,28 @@ requests).
 Work that is built but not on `main` yet, each on its own branch of
 io-packages:
 
-- **`dock-fw`** (pull request #6): Valve's dock firmware updater with
-  Steam's real dock check and `UpdateDock1`; needs Valve's Docking Station
-  to be tested
 - **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
   Steam's patch notes for system updates
-- **Pull requests #2, #3 and #4:** the Steam Deck OLED (`galileo-oled`),
-  other handhelds with a Valve device file (`other-devices`) and the Steam
-  Machine (`steam-machine`); they need the hardware to be tested (see
-  *Needs hardware to test*)
+- **`test-reset-scx`:** the factory reset keeps the LAVD scheduler's and EC
+  logging's runit services linked with their `down` file (it unlinked them,
+  and Valve's steamos-manager only starts and stops them); to be tested
+  with a factory reset
+
+The hardware pull requests (#2 OLED, #3 other handhelds, #4 Steam Machine,
+#6 dock firmware, #7 calibration tools) were redone on top of Valve's
+steamos-manager and merged on 2026-10-22; see *Needs hardware to test*.
 
 ---
 
 ## Next (no theme yet)
 
-- **steamos-manager refuses calls from games:** on Valve's main branch
-  after 26.4.1 (not in SteamOS 3.9.2), the session half rejects D-Bus calls
-  whose sender runs inside a game, recognised by the systemd cgroup
-  `/app-steam-app…` Steam starts games in. Io has no such cgroups, so it
-  needs its own way to tell a game's process; a larger change that can only
-  partly be tested. Left until Valve ships it
+- **SteamOS Manager's runit support to Valve:** the fork's branch `runit`
+  ([Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager),
+  seven commits on Valve's main) as an update to the issue on Valve's
+  GitLab and then a merge request: what is tested on the LCD, and what
+  only the OLED (Wi-Fi debug mode) and the Steam Machine (EC logging) can
+  test; Io's side (session cleanup, `configure-cecd`, D-Bus activation
+  files) stays the distribution's
 
 ---
 
@@ -142,6 +144,8 @@ io-packages:
 - **elogind at reboot:** since `elogind-holo` every reboot logs a segfault
   of elogind's reboot helper (`e-reboot`, same offset each time); the
   reboot itself happens. Check whether Void's `elogind` does the same
+- **The LAVD scheduler under Valve's steamos-manager:** choose it in
+  Steam, then `sv status scx` (run); back to none (down)
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
@@ -159,19 +163,34 @@ io-packages:
 
 ## Needs hardware to test
 
-Parts that can be built, but not tested without hardware Georg does not
-have. They are to become issues and draft pull requests, marked as needing
-someone with the hardware.
+Parts that are in Io but cannot be tested without hardware Georg does not
+have; they need someone with the hardware.
 
-- **Valve's Docking Station:** its firmware updater (`hub_update`, Valve's
-  package with the real `--check` and `UpdateDock1`, on the branch
-  `dock-fw` as a pull request), and HDMI-CEC with a dock that passes it
-  through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
-  cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
-  untested
-- **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
-  Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
-  and the display quirks
+- **Valve's Docking Station:** its firmware updater (Valve's
+  `jupiter-dock-updater-bin`, with the real `--check` and `UpdateDock1`),
+  and HDMI-CEC with a dock that passes it through (`/dev/cec*`; Georg's
+  JSAUX dock does not, on SteamOS neither); cecd 0.3.0 and Steam's CEC
+  switches (`HdmiCec2`) work, the TV side is untested
+- **Steam Deck OLED:** Valve's packages and settings for it are in place:
+  Valve's audio profile differences and SOF firmware, the mura correction
+  (`galileo-mura`), the 45–90 Hz refresh range and HDR default, Wi-Fi debug
+  mode (`trace-cmd`), the regulatory domain of its ath11k card. The kernel
+  (Valve's tree) and fan control already covered it. Valve's
+  `modules-reload.sh` (reloading ath11k around hibernation) is not ported
+- **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`), waking from
+  the TV through the embedded controller (steamos-manager), Valve's audio
+  profile (HDMI, AC3 for ARC), fan control. Not ported: CEC volume control
+  (needs Valve's PipeWire and WirePlumber patches), Valve's PipeWire HDMI
+  fixes (ports for the AC3 profiles, the HDMI profiles rechecked when the
+  connected display's ELD changes; from PipeWire's master, not in the 1.6
+  series Void ships), BIOS updates (`fremont-hw-support`, fwupd), Valve's
+  own USB Bluetooth firmware. The PipeWire fixes wait for a Void PipeWire
+  update that contains them, rather than an Io overlay, unless a Steam
+  Machine user needs them sooner
+- **Other handhelds** (Legion Go, ROG Ally, MSI Claw, Zotac Zone):
+  steamos-manager brings Valve's device files for them, but Io is not
+  built for them (no InputPlumber for their controllers) and nothing is
+  tested
 
 ---
 
@@ -205,10 +224,12 @@ someone with the hardware.
   scanning patch, `jupiter-hw-support` 20260930.1's firmware updaters and
   the kernel `7.2.7-valve2` (as 7.2.11); from Valve's main branch
   (2026-10-21) kwin 6.7.3-1.7's suspend patches and wpa_supplicant
-  2.12-1.3's rescan patches as merged in hostap. Valve's versions newer
+  2.12-1.3's rescan patches as merged in hostap, and Valve's steamos-manager
+  itself from its main branch after 26.4.1 (2026-10-22, with Io's runit
+  support). Valve's versions newer
   than Io's, seen on 2026-10-12 and not taken yet:
   `steamos-customizations-jupiter` 20260916.1, `holo-networking-tools` 1.4,
-  `holo-systemreport` 1.24, steamos-manager 26.4.1-3, PipeWire 1.6.8,
+  `holo-systemreport` 1.24, PipeWire 1.6.8,
   WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
 - **Live ISO with an installer**, once self-built void-mklive ISOs boot
   (they drop to dracut's emergency shell, cause not found yet); the

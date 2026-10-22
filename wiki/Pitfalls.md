@@ -68,7 +68,7 @@ switches NetworkManager to iwd within seconds (Wi-Fi drops while
 NetworkManager restarts). SteamOS sets the variable in gamescope-session
 only, Io in the desktop session too (see [Deviations](Deviations)). A
 backend that changes on its own, or a desktop that asks for a known Wi-Fi
-password, points here: `steamos-wifi-set-backend --check` in both modes.
+password, points here: `steamosctl get-wifi-backend` in both modes.
 
 **After a hard power-off Steam may start its first setup again.** Steam
 writes `~/.steam/registry.vdf` without syncing it; switched off with the
@@ -98,6 +98,23 @@ removes its bus only when its own child exits normally; killed with the
 session, it leaves the bus and everything started with `setsid` running.
 `KillUserProcesses=yes` in elogind ends the session's processes, as on
 SteamOS.
+
+**steamos-manager offers `SessionManagement1` only with SDDM's
+`holo.conf`.** It checks for `/usr/lib/sddm/sddm.conf.d/holo.conf` (or the
+older `steamos.conf`); without it there is no mode switch and no default
+login mode, and no error says why. It writes `zz-holo-*` files in
+`/etc/sddm.conf.d`, or the older `zz-steamos-*` names while a file of that
+name exists.
+
+**steamos-manager's session half starts cecd.** It reads cecd's settings as
+it starts, and the call D-Bus-activates cecd. What has to be in cecd's
+configuration first (`steamosctl configure-cecd`, the device's name for the
+TV) must run before the session half starts.
+
+**Without a user service manager, the login mode comes from
+`XDG_CURRENT_DESKTOP`.** steamos-manager on runit takes game mode from
+`gamescope` in it (SDDM sets it from the session file's `DesktopNames`);
+the screen reader's interfaces appear only in game mode, as on SteamOS.
 
 **A daemon that is D-Bus activatable must not also be started by hand.**
 If a client asks for its name before the hand-started one has claimed it,
@@ -162,8 +179,7 @@ org.kde.Shutdown /Shutdown org.kde.Shutdown logout`), as SteamOS does.
 
 **dbus_fast answers `GetManagedObjects` itself**, for every path, from
 everything exported below it. An `org.freedesktop.DBus.ObjectManager`
-interface of one's own is never called; `io-steamos-manager` still exports
-one at `/`, unused.
+interface of one's own is never called.
 
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
@@ -205,7 +221,9 @@ sessions.** Its developer page reads `SessionManagement1`'s session list:
 when it is exactly `plasma.desktop` and `plasmax11.desktop`, Steam shows the
 X11 switch, otherwise a session menu (or nothing for an empty list). It has
 nothing to do with gamescope. SteamOS 3.9.2 reports exactly these two and
-shows the switch; Io reports its one session, `io-desktop.desktop`.
+shows the switch. steamos-manager lists every session file in
+`wayland-sessions` and `xsessions`, so the list depends on what is
+installed.
 
 **Steam's developer *Speaker Test* only sends a counter** to the client's
 audio controller (`AudioDevices.UpdateSomething`); it looks like a
@@ -551,7 +569,7 @@ image, not on a development card.
 
 **xbps does not restart a runit service when its package is updated.** The
 service keeps running the old program until a reboot or `sv restart`; a
-test right after an update of `io-steamos-manager` tests the old root half.
+test right after an update of `steamos-manager` tests the old root half.
 
 **`sv down` returns before the `finish` script has run.**
 `jupiter-fan-control`'s `finish` hands the fan back to the embedded
@@ -605,6 +623,20 @@ applications. On SteamOS the first switch after boot trips the loopback
 once (`cannot set PortConfig param: node already started`), later ones
 work.
 
+**PipeWire reads the drop-ins of the name given with `-c`.**
+`pipewire -c filter-chain-galileo.conf` loads `filter-chain-galileo.conf`
+(here a symlink to PipeWire's `filter-chain.conf`) and the fragments in
+`filter-chain-galileo.conf.d/`, not those of `filter-chain.conf.d/`. That
+gives a model its own filter chain without touching the other's.
+
+**`WIREPLUMBER_CONFIG_DIR` replaces WirePlumber's search path.** With it
+set, only the listed directories are read (no `/etc/wireplumber`). As
+always, a fragment in a higher-priority directory hides a lower one of the
+same file name instead of being added to it. Io uses both on the Steam
+Machine: the Deck's fragments in `/etc` are left out, and an empty
+`91-io-sink-loopback.conf` hides Io's sink loopback rule. WirePlumber gets
+the variable from PipeWire, which starts it (`context.exec`).
+
 **Valve's `filter-chain.conf.d/` belongs to a second PipeWire instance.** It
 only takes effect when that instance runs (`pipewire -c filter-chain.conf`,
 `filter-chain.service` on SteamOS). Valve's two `context-properties` files are
@@ -645,8 +677,7 @@ files.
 **Orca stops at start when its settings file lacks a section**
 (`KeyError: 'pronunciations'`). Orca writes all of them itself when it
 creates the file; steamos-manager writes only what it changes, which on
-SteamOS is fine because Orca ran first. Io's manager adds the missing
-sections.
+SteamOS is fine because Orca ran first.
 
 **Orca's shortcuts are key presses on a virtual keyboard.** Steam sets the
 screen reader mode at every start; steamos-manager presses Orca's key for it
@@ -672,8 +703,9 @@ interface's `change` event only when a port really trips. A rule in
 interface, produces the same event for `UdevEvents1` without touching the
 hardware; remove the rule afterwards.
 
-**SteamOS does not offer `WifiDebug1`** on the Deck (3.8.4 and 3.9.2),
-although Valve's interface file describes it. On 3.9.2 neither
+**SteamOS does not offer `WifiDebug1`** on the LCD (3.8.4 and 3.9.2),
+although Valve's interface file describes it; steamos-manager exports it
+on Galileo only. On 3.9.2 neither
 `FirmwareDebug1`, `PerformanceProfile1` nor `GameStreaming1` is exported
 on the LCD.
 
@@ -738,6 +770,18 @@ packages (`-headers`, `-debug`) and a few others (`steamfs-git`) appear
 only in the binary repositories' databases
 (`archlinux-mirror/<repo>/os/x86_64/<repo>.db`). A name check should read
 those.
+
+**gamescope only notices its mura property when it changes.** It reads
+`GAMESCOPE_COLOR_MURA_CORRECTION_IMAGE` from a PropertyNotify, and selects
+those events on the root window only during its X setup; a value set
+before that is never seen. The X socket is no sign of readiness (the
+previous session's survives in `/tmp`); `GAMESCOPE_XWAYLAND_SERVER_ID` on
+the root window, set right before gamescope starts listening, is.
+
+**Orca's "AT-SPI: Unable to open bus connection" for `at-spi2-…` is
+harmless.** The address is steamwebhelper's direct socket, which exists only
+inside the Steam Runtime's container (`/proc/<pid>/root`), not on the host;
+Orca falls back to the accessibility bus and reads Steam's interface.
 
 **Valve's Xwayland reverts for a seamless start cause a black flash on
 Io.** Valve's `xorg-xwayland` reverts two upstream commits (only the

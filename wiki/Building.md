@@ -157,8 +157,9 @@ dependencies.
 Changes to the session scripts and to audio configuration take effect with
 the next session (a switch to the desktop and back); a cold boot is the
 reliable test. xbps does not restart runit services: after an update of
-`io-steamos-manager`, its root half keeps running the old code until a
-reboot or `sudo sv restart io-steamos-manager`.
+`steamos-manager`, its root half keeps running the old code until a
+reboot or `sudo sv restart steamos-manager` (the session half until the
+next session).
 
 Right after `publish.sh`, an update may still see the old index for a few
 minutes (GitHub's download servers cache release assets); repeat it, or
@@ -241,7 +242,7 @@ sudo build/mkrecovery.sh
 
 `deck` is the default user, as on SteamOS. With another `USERNAME`, three
 places still name `deck` and have to be changed by hand: SDDM's autologin
-(`User=` in `/usr/lib/sddm/sddm.conf.d/10-io.conf`), the devkit service
+(`User=` in `/usr/lib/sddm/sddm.conf.d/holo.conf`), the devkit service
 (`/etc/sv/steamos-devkit-service/run`) and Valve's automount script
 (`/usr/lib/hwsupport/steamos-automount.sh`, which stops without a user
 `deck`). A package update puts all three back.

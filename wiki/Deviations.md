@@ -30,7 +30,7 @@ its reason.
 | Void Linux with runit | Arch Linux with systemd | The point of the project |
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
-| Steam Deck LCD (Jupiter) only | LCD and OLED (Galileo) | No OLED hardware to test with |
+| Built and tested on the Steam Deck LCD (Jupiter); the OLED (Galileo) and the Steam Machine get Valve's packages and settings for them, untested, with gaps (see [Milestones](Milestones)) | LCD, OLED (Galileo) and the Steam Machine | No hardware other than the LCD to test with |
 | Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
@@ -42,20 +42,21 @@ its reason.
 ## Login and sessions
 
 - **SDDM as on SteamOS**, with the same autologin and `Relogin`, run as
-  the runit service `io-sddm`. Its settings are Io's own
-  (`/usr/lib/sddm/sddm.conf.d/10-io.conf`), with the Wayland greeter on
-  kwin. Each session runs `io-start` under its own `dbus-run-session`;
+  the runit service `io-sddm`. Its settings are Io's own, under Valve's file
+  name (`/usr/lib/sddm/sddm.conf.d/holo.conf`, which steamos-manager looks
+  for), with the Wayland greeter on kwin. Each session runs `io-start`
+  under its own `dbus-run-session`;
   SteamOS uses systemd user units instead. Valve's SDDM file also sets
   `InputMethod=qtvirtualkeyboard`; Io leaves it out, since it is SDDM's
   default and SDDM 0.21 drops it for a Wayland greeter anyway.
 - **The desktop session is `io-desktop.desktop`**, not Plasma's own
   `plasma.desktop`: it runs Io's session setup (PipeWire, the filter chain,
   Steam's DPI setting) before Plasma, which SteamOS does through user
-  services. `SessionManagement1` accepts Plasma's session names and maps
-  them to it. Because it reports this one session, Steam's developer page
-  shows a session menu with one entry instead of *Use Legacy X11 Desktop
-  Mode* (shown only for exactly `plasma.desktop` and `plasmax11.desktop`);
-  Io has no X11 desktop session.
+  services. `steamos-session-select` (Valve's `holo-session-select`) names
+  it in place of Plasma's sessions, and `io-manager-session` makes it the
+  default desktop session while Valve's default (`plasma.desktop`) is set.
+  Plasma's own session files stay installed; chosen by hand, they start
+  Plasma without Io's session setup. Io has no X11 desktop session.
 - **gamescope starts Steam as its child.** SteamOS runs gamescope and Steam
   as two systemd units and passes the display names through a startup socket
   (`-R`); Io does not need it. The statistics pipe (`-T`) is set as on
@@ -68,7 +69,8 @@ its reason.
 - **`ibus-daemon` for Steam's keyboard** is started by `io-gamemode` once
   gamescope is up, with the same arguments as SteamOS's
   `ibus-gamescope.service` (a user service there).
-- **HDMI-CEC:** `cecd` starts through D-Bus activation and
+- **HDMI-CEC:** `cecd` starts through D-Bus activation, after
+  `steamosctl configure-cecd` (`io-manager-session`), and
   `cec-audio-control` directly from the session scripts (SteamOS: user
   services of the graphical session, `cec-audio-control` socket-activated).
   Access to `/dev/cec*` and `/dev/uinput` comes from group rules (`video`,
@@ -84,6 +86,11 @@ its reason.
   script in a loop tied to gamescope (Valve: a user service with
   `Restart=always`), gamemode on demand through D-Bus (Valve: a service that
   always runs).
+- **Galileo's mura correction** (`galileo-mura-setup`) is started by
+  `io-gamemode` on the OLED once gamescope has set its
+  `GAMESCOPE_XWAYLAND_SERVER_ID` root property, the sign that it listens
+  for the correction's X property. SteamOS starts it as a user service after
+  `gamescope-session.service` is ready.
 - **The text console stays on tty1** with a login prompt. SteamOS moves it
   to tty4–6 (`fbcon=vc:4-6`). The sessions run on tty7 either way.
 - **On-screen keyboard in the desktop:** `plasma-keyboard`, as SteamOS 3.9.2
@@ -111,68 +118,45 @@ its reason.
 
 ## SteamOS Manager
 
-`io-steamos-manager` is Io's own Python implementation of
-`com.steampowered.SteamOSManager1`. Valve's Rust daemon depends on systemd
-throughout. The structure is the same as Valve's: a root half on the system
-bus (runit service) that does all privileged work, and a session half on
-the session bus that Steam talks to.
+Valve's `steamos-manager`, built from the branch `runit` of
+[Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager):
+Valve's main branch after 26.4.1 (`f82ebc2`, newer than SteamOS 3.9.2's
+26.4.1) with seven commits that let it run without systemd, written to be
+offered to Valve. How it does without systemd is on
+[Architecture](Architecture), *SteamOS Manager*. Until October 2026 Io ran
+its own implementation (`io-steamos-manager`).
 
-- **Access to the root half** is limited to root and the `wheel` group.
-  Valve allows any local user.
-- **Values match SteamOS** (TDP 3–15 W, GPU power profiles `CAPPED` and
-  `UNCAPPED`), except the desktop session name (`io-desktop.desktop`, see
-  *Login and sessions*).
-- **`SessionManagement1`** writes the same SDDM files as steamos-manager
-  (`zz-steamos-autologin.conf`, `zzt-steamos-temp-login.conf`) through the
-  root half, and logs Plasma out through `org.kde.Shutdown`.
-- **`Storage1`** runs as steamos-manager 26.1.0 does: `TrimDevices` starts
-  Valve's `trim-devices.sh` as a job (`Job1`, announced by `JobManager1`)
-  on the root half, mirrored for Steam on the session bus. Differences: the
-  session half mirrors the jobs it started itself (Valve's also picks up
-  every root job already running when it starts); `Job1.ExitCode`, declared
-  in Valve's interface file but not implemented in 26.1.0, works; the root
-  half numbers its jobs from the time it started, so a number is not
-  reused after a restart. `FormatDevice` runs Valve's `format-device.sh`
-  the same way (see *Storage*).
-- **`UpdateBios1`** as in steamos-manager: exported only where the updater
-  is installed (`deck-firmware-updaters`), a job running Valve's script
-  (`jupiter-biosupdate --auto`). `UpdateDock1` and Valve's dock updater
-  are on the branch `dock-fw` (pull request, needs Valve's dock).
-- **`UdevEvents1`** as in steamos-manager: the session half watches udev
-  (pyudev) for a USB interface's `change` event carrying
-  `OVER_CURRENT_PORT` and `OVER_CURRENT_COUNT` (set by the kernel when a
-  port trips) and emits `UsbOverCurrent(devpath, port, count)` for Steam.
-- **`FactoryReset1`** runs Io's own `io-factory-reset` in the root half
-  instead of Valve's `steamos-reset-tool` (see *Factory reset*); exported
-  only where it is installed. As in steamos-manager it is a plain call, not
-  a job: 1 (*reboot required*) on success, 0 otherwise.
-  `WifiDebug1` is not needed: SteamOS does not offer it on the Deck (3.8.4
-  and 3.9.2).
-- **HDMI-CEC (`HdmiCec1`, `HdmiCec2`)** as in steamos-manager 26.4.1: the
-  switches Steam sets go into `cecd`'s configuration, and `cecd` reloads it
-  through its own D-Bus interface (`Config1.Reload`). Io keeps its own copy
-  of the four settings in `99-steamos-manager.toml` instead of rebuilding
-  the file from a cache, as Valve does. `WakeDevice` is unsupported (false),
-  as on the LCD under SteamOS. `MakeActive` asks `cecd` to wake the TV.
-- **Download mode** stops the OS fan control through runit, sets the fan to
-  2000 rpm (`fan1_target`) and starts fan control again afterwards, in
-  Valve's order; the root half waits until runit has really stopped the fan
-  service (`sv -w`), whose `finish` script would otherwise reset the fan
-  after Io set it.
-- **`com.steampowered.Atomupd1`**, atomupd-daemon's update API (interface
-  version 8), is served by the root half with xbps behind it; see
-  *System updates*. Steam itself only calls its proxy methods.
-- **`ScreenReader0/1`** starts Orca itself (SteamOS: `orca.service` with
-  gamescope's environment file), with the running Steam's display settings.
-  When it writes Orca's settings file before Orca ever ran, it adds the
-  sections Orca needs (Orca would otherwise stop at start).
-- **`CpuScheduler1`** switches `scx_lavd` through a runit service `scx` in
-  place of SteamOS's `scx.service`, with Valve's `/etc/default/scx`.
+- **Access to the root half** is limited to root and the `wheel` group
+  (Io's D-Bus policy). Valve allows any local user.
+- **Started without user units:** the root half is a runit service, the
+  session half starts through D-Bus activation on the session's bus. What
+  Valve's user units do at session start (`steamos-manager-session-cleanup`,
+  `steamos-manager-configure-cecd` before `cecd`) is done by
+  `io-manager-session`.
+- **Login mode, logout, Orca and system services** go through the
+  session's `XDG_CURRENT_DESKTOP`, logind, a child process and runit
+  instead of systemd units; see [Architecture](Architecture).
+- **Calls from games** are recognised by Steam's `reaper SteamLaunch`
+  among the caller's parent processes, not by the `app-steam-app…`
+  systemd scope (Io has no per-game cgroups; `STEAM_LAUNCH_WRAPPER_SCOPE`
+  stays unset, see *Login and sessions*).
+- **Default desktop session** `io-desktop.desktop` (Valve:
+  `plasma.desktop`), see *Login and sessions*.
+- **`CpuScheduler1`:** the LAVD scheduler is the runit service `scx`,
+  linked with a `down` file and Valve's `/etc/default/scx`; a choice lasts
+  until the next boot, as on SteamOS, where `scx.service` is not enabled.
+- **`FactoryReset1`** and Steam's factory reset call `steamos-reset-tool`
+  as Valve's `platform.toml` says; on Io that is `io-factory-reset`'s (see
+  *Factory reset*).
+- **`com.steampowered.Atomupd1`** comes from Io's `io-atomupd`, not from
+  SteamOS Manager or atomupd-daemon; see *System updates*.
 - **Wi-Fi backend:** wpa_supplicant by default, as Valve ships SteamOS
   3.9.2 (3.8.4 still defaulted to iwd; the captured Deck runs iwd because
-  it was switched in Steam's settings). Switching works in
-  both directions. iwd runs as a runit service linked only while it is the
-  backend.
+  it was switched in Steam's settings). Switching works in both
+  directions; iwd runs as a runit service linked only while it is the
+  backend. Wi-Fi debug mode (OLED only, as on SteamOS) sets iwd's `-d`
+  through `OPTS` in `/etc/sv/iwd/conf` instead of a systemd drop-in, and
+  leaves a `conf` file it did not write alone.
 - **`STEAM_USE_WPASUPPLICANT=1` in the desktop as well:** SteamOS's
   gamescope-session sets it for game mode only. Steam sets the Wi-Fi
   backend itself when it starts: with the variable it keeps the backend
@@ -185,11 +169,12 @@ the session bus that Steam talks to.
   password (measured 2026-10-21; SteamOS's NetworkManager carries Valve's
   patches that mirror wpa_supplicant's connections into iwd, which Io
   leaves out). Io's desktop session (`io-plasma`) sets the variable too.
-- **Wi-Fi power save** goes into a file of Io's own
-  (`99-io-wifi-powersave.conf`) and into iwd's `main.conf`. Valve keeps it
-  in `99-valve-wifi-backend.conf`, which Valve's own backend switch
-  rewrites, losing it; and NetworkManager does not pass it on to iwd.
 - **Connectivity check** against GNOME's endpoint; SteamOS uses Arch's.
+- **Hardware other than the Steam Deck:** Valve's device files come with
+  the daemon unchanged. Io is built for the Steam Deck; on the OLED and the
+  Steam Machine Valve's packages for them are in place (untested), on other
+  handhelds nothing is tested, and InputPlumber, which steamos-manager uses
+  for their controllers, is not part of Io.
 
 ---
 
@@ -209,6 +194,13 @@ the session bus that Steam talks to.
   On the LCD it ends at once, as its card is not self-managed; with Valve's
   USB streaming dongle plugged in it also reloads that dongle's driver
   (`rtw89_8852cu`), as on SteamOS.
+- **`ec-log`** (Valve's, the Steam Machine's EC console log) is a runit
+  service linked with a `down` file, which steamos-manager starts and stops
+  for Steam's EC logging (`FirmwareDebug1`), as the systemd unit is
+  installed but not enabled on SteamOS. Its log goes through `logger` to
+  socklog. Where the EC's log does not exist (every Steam Deck), the service
+  takes itself down instead of restarting (Valve: `ConditionPathExists`);
+  it mounts debugfs itself if needed (Valve: `sys-kernel-debug.mount`).
 - **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
   core service writes elogind's `sleep.conf.d`); on an SD card or USB drive
   writing about 17 GB takes minutes and wears the medium. On the NVMe,
@@ -342,9 +334,25 @@ the session bus that Steam talks to.
   headphone sink), as on SteamOS. Void's `alsa-ucm-conf` also ships
   `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM would pick first by the
   card's long name; `steamdeck-dsp` keeps it out (`noextract`).
-- **No hardware profile switching.** SteamOS picks the audio profile for the
-  Deck model at boot through symlinks in `/run`. Io only supports Jupiter and
-  installs its configuration directly into the standard search paths.
+- **No hardware profile switching at boot.** SteamOS picks the audio profile
+  for the model at boot through symlinks in `/run`. Io installs Jupiter's
+  configuration directly into the standard search paths. Valve's Galileo
+  profile differs from it in two places, which Io adds: the filter chain's
+  target card (`sof-nau8821-max`), as its own configuration
+  `filter-chain-galileo.conf` that the session starts instead on the OLED,
+  and Valve's speaker filter graph (`92-io-galileo-speakers.conf`, upstream
+  WirePlumber's `node.filter-graph.rules`; it matches only the OLED's
+  speaker).
+- **The Steam Machine** (untested) gets Valve's WirePlumber profile for it
+  (HDMI/DisplayPort, the AC3 profile set for ARC, full volume on HDMI),
+  installed under `/usr/share/io/wireplumber-fremont`. The session points
+  WirePlumber at it with `WIREPLUMBER_CONFIG_DIR` there, which replaces the
+  Deck's fragments in `/etc/wireplumber`; Io's sink loopback rule is
+  shadowed (Valve's profile loops back sources only), and no filter chain
+  runs, as in Valve's profile. Its CEC volume control needs Valve's
+  PipeWire and WirePlumber patches, which Void's builds lack; volume stays
+  on the machine. AC3 needs the ALSA a52 plugin (`alsa-plugins-ffmpeg`,
+  installed with `steamdeck-dsp`).
 - **ALSA loopbacks** are created by an Io WirePlumber script that rebuilds
   Valve's `CreateLoopback()`, which only exists in Valve's patched
   WirePlumber. The result matches SteamOS, including the card identity the
@@ -356,8 +364,9 @@ the session bus that Steam talks to.
   loopback keeps applications from seeing the speaker rebuilt: with Steam's
   *Mono audio*, a stream on the bare speaker saw the channel count change,
   and Steam's interface sound closed for good when switching back.
-- **OLED (Galileo) firmware removed**, its UCM profile kept (two small files,
-  a head start for anyone porting Io to that model).
+- **Galileo's SOF firmware** (`amd/sof`, `amd/sof-tplg`) is installed as on
+  SteamOS; the kernel loads it only on the OLED, whose audio DSP runs SOF.
+  Both UCM profiles (`acp5x`, `sof-nau8821-max`) are Valve's.
 
 ---
 
@@ -518,7 +527,7 @@ interfaces Steam uses:
   but means something else: the date and the number of pending packages
   (`20261005.12`). `xbps` itself is updated first when it is outdated.
 - **`com.steampowered.Atomupd1`** (interface version 8) is served by
-  `io-steamos-manager`'s root half: the proxy methods (a proxy set in
+  `io-atomupd`, a runit service: the proxy methods (a proxy set in
   Steam is used for xbps's downloads), `CheckForUpdates`, `StartUpdate` and
   the properties. One variant (`steamdeck`) and one branch (`stable`).
   Pausing and cancelling are refused: xbps cannot be stopped safely in the
@@ -643,6 +652,6 @@ priority for the foreground game (`dmemcg-booster`, `kcgroups`,
 `plasma-foreground-booster`: driven by systemd's units and slices; decided
 not to implement on 2026-10-03: `dmemcg-booster` protects the user's
 `app.slice` and `user@` service against the system, session and
-background slices, and on Io nothing else competes for VRAM in game mode). The dock
-updater is a stub that tells Steam the dock is up to date. The full list,
-package by package, is on [SteamOS packages](Valve-Package-Survey).
+background slices, and on Io nothing else competes for VRAM in game
+mode). The full list, package by package, is on
+[SteamOS packages](Valve-Package-Survey).
