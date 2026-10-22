@@ -28,7 +28,7 @@ depends="
 
  io-base io-branding io-session steamos-manager io-atomupd ec-log
  linux-neptune-72 linux-firmware deck-firmware deck-hw-support
- deck-firmware-updaters
+ deck-firmware-updaters jupiter-dock-updater-bin
  jupiter-fan-control steamos-powerbuttond
 
  steamdeck-dsp holo-zram-swap holo-earlyoom steamos-tuning

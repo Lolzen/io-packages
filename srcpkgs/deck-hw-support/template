@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=18
+revision=19
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind-holo udisks2 parted e2fsprogs exfatprogs f3"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -27,11 +27,9 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # Formatting from Steam runs Valve's format-device.sh (parted, mkfs.ext4,
 # and f3probe and mkfs.exfat for validating a card), which refuses the disk
 # Io runs from. The firmware helpers hand over to deck-firmware-updaters
-# (BIOS, controller), which carries Valve's updaters and firmware files;
-# Valve's dock updater is on the branch dock-fw (needs Valve's dock to be
-# tested); until then jupiter-dock-updater answers "up to date".
-# steamos-factory-reset-config requests a reset of the user data from
-# io-factory-reset.
+# (BIOS, controller) and jupiter-dock-updater-bin (Valve's dock), which
+# carry Valve's updaters and firmware files. steamos-factory-reset-config
+# requests a reset of the user data from io-factory-reset.
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers
