@@ -1,8 +1,8 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
 version=26.4.1.20261022
-revision=9
-_commit=cffa908425287f1fd971b4e28bd234a8d022ab17
+revision=11
+_commit=66a07cab700f9cdd0e44bb5b2bc786a60c446d3d
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
 hostmakedepends="pkg-config clang llvm clang21-devel"
@@ -15,7 +15,7 @@ maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://gitlab.steamos.cloud/holo/steamos-manager"
 distfiles="https://github.com/Lolzen/steamos-manager/archive/${_commit}.tar.gz"
-checksum=b0182168c85b9b695f3571bbe3e2bc37cdfb7d6db7d9442ce76adcc89ca07a3b
+checksum=d388be11d98842d793eb5531ced1615c3dd9058357150def42010e22b276ad31
 # Valve's daemon takes over from Io's reimplementation; Atomupd1, which
 # io-steamos-manager served as well, moved to io-atomupd.
 replaces="io-steamos-manager>=0"
@@ -23,9 +23,10 @@ replaces="io-steamos-manager>=0"
 # Valve's steamos-manager from the branch "runit" of the fork
 # github.com/Lolzen/steamos-manager: Valve's main after 26.4.1 (f82ebc2)
 # plus the runit support meant for Valve: system services through runit
-# (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch),
-# and without systemd --user the login mode from the session, Orca as a
-# child process and logout through logind. The version is 26.4.1 with the
+# (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch,
+# Wi-Fi debug mode), and without systemd --user the login mode from the
+# session, Orca as a child process (restarted on failure) and logout
+# through logind. The version is 26.4.1 with the
 # date of the branch's first commit.
 #
 # Io's side, in place of Valve's systemd units:
