@@ -48,7 +48,7 @@ echo "== packages"
 check "installed: io-desktop" xbps-query io-desktop
 
 echo "== services"
-for s in dbus elogind NetworkManager io-steamos-manager io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace wireless-domain-setter; do
+for s in dbus elogind NetworkManager steamos-manager io-atomupd io-sddm vpower holo-zram-swap earlyoom socklog-unix nanoklogd jupiter-firewall steam-web-debug-portforward gpu-trace wireless-domain-setter; do
     check "service running: $s" sh -c "sv status $s | grep -q '^run:'"
 done
 check "vpower writes battery metrics" test -s /run/vpower/battery_percent
@@ -84,7 +84,7 @@ echo "== game mode session"
 check "SDDM session on seat0" sh -c 'loginctl --no-pager list-sessions | grep -q seat0'
 check "gamescope running" pgrep -x gamescope-wl
 check "gamescope with stats pipe (-T)" sh -c 'tr "\0" " " < /proc/$(pgrep -x gamescope-wl)/cmdline | grep -q -- " -T "'
-check "one io-steamos-manager user half" sh -c '[ "$(pgrep -c -u deck -f "^/usr/bin/python3 /usr/bin/io-steamos-manager$")" = 1 ]'
+check "one steamos-manager session half" sh -c '[ "$(pgrep -c -u deck -f "^/usr/lib/steamos-manager$")" = 1 ]'
 check "one cecd" sh -c '[ "$(pgrep -c -u deck -x cecd)" = 1 ]'
 check "one steam_notif_daemon (notifications to Steam)" sh -c '[ "$(pgrep -c -u deck -f ^/usr/bin/steam_notif_daemon)" = 1 ]'
 check "holo portal first in game mode" grep -q "default=holo;gamescope" /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
@@ -113,8 +113,10 @@ DEVLOG=/home/$U/.local/state/io/log-gamemode/current
 check "session log exists (RAM or developer mode)" sh -c "[ -s $RAMLOG ] || [ -s $DEVLOG ]"
 
 echo "== steamos manager"
-check "root half running" sh -c 'pgrep -u 0 -f "io-steamos-manager -r"'
-check "session half running" sh -c "pgrep -u $U -f io-steamos-manager"
+check "root half running" sh -c 'pgrep -u 0 -f "^/usr/lib/steamos-manager -r$"'
+check "session half running" sh -c "pgrep -u $U -f '^/usr/lib/steamos-manager$'"
+check "scx supervised, not started at boot (down file)" sh -c 'test -e /etc/sv/scx/down && sv status scx | grep -q "^down:"'
+check "session management offered (steamos.conf)" test -e /usr/lib/sddm/sddm.conf.d/steamos.conf
 # The fan daemon follows Steam's fan control setting (Settings > System);
 # a fresh Steam profile has it off, which stops the service on purpose.
 if pgrep -f 'fancontrol.py --run' > /dev/null; then

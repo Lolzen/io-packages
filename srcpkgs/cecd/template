@@ -26,7 +26,7 @@ checksum=17cbf7826e1596a5b68f7b6112cd08325455c91f5c81cea67d7c139f9f09d00f
 # started and the bus keeps it to one instance; the service file runs it
 # instead of naming a systemd unit. Valve's uaccess rules become group rules (eudev).
 # Configuration: /usr/share/cecd, /etc/cecd, ~/.config/cecd, where
-# io-steamos-manager (HdmiCec1) writes what steamos-manager writes.
+# steamos-manager (HdmiCec1, steamosctl configure-cecd) writes.
 post_extract() {
 	mkdir -p src
 	git --git-dir=cecd-0.3.0 archive --format=tar cecd-0.3.0 | tar -x -C src

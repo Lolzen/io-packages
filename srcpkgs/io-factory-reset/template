@@ -16,8 +16,8 @@ homepage="https://github.com/Lolzen/io-packages"
 # resets the OS in place with xbps; what each covers is in io-factory-reset.
 # Called by Steam through steamos-reset-tool (what SteamOS 3.9.3's Steam
 # runs: os-status, then factory-reset --reset-os --reset-user-data; root
-# through polkit, org.io.steamos-reset-tool.policy), by io-steamos-manager
-# (FactoryReset1.PrepareFactoryReset) and by Steam's helper
+# through polkit, org.io.steamos-reset-tool.policy), by steamos-manager
+# (FactoryReset1.PrepareFactoryReset, through steamos-reset-tool) and by Steam's helper
 # steamos-factory-reset-config (deck-hw-support). The
 # image's own settings come from /var/lib/io/factory-defaults, written by
 # mkrootfs.sh; installations made before fall back to the build defaults.

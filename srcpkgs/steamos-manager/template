@@ -1,0 +1,64 @@
+# Template file for 'steamos-manager'
+pkgname=steamos-manager
+version=26.4.1.20261022
+revision=8
+_commit=cffa908425287f1fd971b4e28bd234a8d022ab17
+wrksrc="steamos-manager-${_commit}"
+build_style=cargo
+hostmakedepends="pkg-config clang llvm clang21-devel"
+makedepends="glib-devel eudev-libudev-devel speech-dispatcher-devel"
+depends="dbus iw wireless_tools gsettings-desktop-schemas dconf glib runit-void
+ deck-hw-support scx orca speech-dispatcher espeak-ng at-spi2-core"
+conf_files="/etc/default/scx"
+short_desc="Valve's SteamOS Manager daemon, with runit support"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/steamos-manager"
+distfiles="https://github.com/Lolzen/steamos-manager/archive/${_commit}.tar.gz"
+checksum=b0182168c85b9b695f3571bbe3e2bc37cdfb7d6db7d9442ce76adcc89ca07a3b
+# Valve's daemon takes over from Io's reimplementation; Atomupd1, which
+# io-steamos-manager served as well, moved to io-atomupd.
+replaces="io-steamos-manager>=0"
+
+# Valve's steamos-manager from the branch "runit" of the fork
+# github.com/Lolzen/steamos-manager: Valve's main after 26.4.1 (f82ebc2)
+# plus the runit support meant for Valve: system services through runit
+# (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch),
+# and without systemd --user the login mode from the session, Orca as a
+# child process and logout through logind. The version is 26.4.1 with the
+# date of the branch's first commit.
+#
+# Io's side, in place of Valve's systemd units:
+# - root half: the runit service steamos-manager (linked by INSTALL on
+#   installed systems, by the image's service list otherwise)
+# - session half: D-Bus activation on the session bus; io-gamemode and
+#   io-plasma call it at session start (steamosctl clean-temporary-sessions,
+#   as Valve's steamos-manager-session-cleanup.service, and configure-cecd)
+# - scx: a runit service linked with a down file (scx.service, not enabled)
+# - platform.toml unchanged: Valve's factory reset runs steamos-reset-tool,
+#   which on Io is io-factory-reset's (factory-reset --reset-*)
+# - D-Bus policy: Io's, callers limited to root and wheel
+#
+# hostmakedepends: speech-dispatcher-sys generates its bindings with
+# bindgen, which needs libclang (clang21-devel ships the unversioned
+# libclang.so that clang-sys looks for). GitHub's archive is not a release
+# file; the commit is the source.
+
+do_install() {
+	# Valve installs the binary as /usr/lib/steamos-manager (Makefile)
+	vinstall target/${RUST_TARGET}/release/steamos-manager 755 usr/lib
+	vbin target/${RUST_TARGET}/release/steamosctl
+	vmkdir usr/share/steamos-manager/devices
+	vcopy "data/devices/*" usr/share/steamos-manager/devices
+	vinstall data/platform.toml 644 usr/share/steamos-manager
+	vmkdir usr/share/steamos-manager/remotes.d
+	vmkdir etc/steamos-manager/remotes.d
+	vmkdir usr/share/dbus-1/interfaces
+	vcopy "data/interfaces/*" usr/share/dbus-1/interfaces
+	vinstall ${FILESDIR}/com.steampowered.SteamOSManager1.conf 644 usr/share/dbus-1/system.d
+	vinstall ${FILESDIR}/com.steampowered.SteamOSManager1.service 644 usr/share/dbus-1/services
+	vsv steamos-manager
+	vsv scx
+	vinstall ${FILESDIR}/scx.default 644 etc/default scx
+	vlicense LICENSE
+}
