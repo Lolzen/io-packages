@@ -142,25 +142,11 @@ script, which re-creates a broken swap file), `offload/` and
 
 ---
 
-## Updates of Alpha 6
+## Not taken
 
-What Io took over from SteamOS 3.9.2 in Alpha 6 (checked 2026-10-03/04;
-Valve's main branch renames most `steamos-*` tools to `holo-*`, 3.9.2 still
-ships the old names, and Steam still calls them):
-
-| Package | Before | Now (SteamOS 3.9.2) | Why |
-|---|---|---|---|
-| `cecd` | 0.2.0 | 0.3.0 | Holds suspend to put the TV in standby (logind delay inhibitor, works with elogind), *Request Active Source*, no double suspend, no reply loop on *Feature Abort* |
-| `linux-neptune-72` | 7.2.4 | 7.2.7.valve1 | Display interrupt race (`flip_done` timeouts), VRAM after resume, backlight steps, S4 wake bits, Valve's Bluetooth delay removed; with the configuration base ([Kernel](Kernel)) |
-| `gpu-trace` | 2.14 | 2.16 | The daemon shuts down cleanly |
-| `holo-realtek-firmware-toggles` | 1.3-1 | 1.3-3 | Low-latency mode turns aggressive EDCA on (rtw89 USB sticks only) |
-| `steamos-networking-tools` | 1.2 | 1.3 | An error message when `wlan0` cannot be added |
-| `steamos-customizations-jupiter` | 3.8.4's | 20260827.2 | Proton nice limit at the right path, `EDITOR=vim`; the rest is A/B work and renames |
-| `steamos-manager` (API) | 26.1.0's | 26.4.1 | `HdmiCec2` (the current Steam beta uses it), `SwitchToDesktopSession`; `Audio1` removed |
-
-Not taken: `rnnoise-ladspa` stays 1.10 (upstream 1.21 raised the LADSPA
-plugin's default voice threshold from about 25 % to about 74 %, and Valve's
-filter chain sets none; the microphone would cut more).
+- `rnnoise-ladspa` stays 1.10: upstream 1.21 raised the LADSPA plugin's
+  default voice threshold from about 25 % to about 74 %, and Valve's filter
+  chain sets none; the microphone would cut more.
 
 ---
 
@@ -168,16 +154,6 @@ filter chain sets none; the microphone would cut more).
 
 Names in Valve's `jupiter-*` and `holo-*` repositories this page did not
 mention before, checked against SteamOS 3.9.2 and Void.
-
-**Done in Alpha 6:** input methods for Steam's keyboard (`ibus-daemon` in
-game mode as SteamOS's `ibus-gamescope.service`; the engines `ibus-pinyin`
-with `pyzy`, `ibus-table` with `cangjie-lite`, Valve's `ibus-anthy` fork,
-Void's `ibus-hangul`), Valve's `libva.sh` (`LIBVA_DRIVER_NAME=radeonsi`,
-from `steamos-customizations-jupiter`; `holo-libva-config` is its successor
-on Valve's main branch, not installed on 3.9.2), `plasma-keyboard` instead
-of Maliit. Io already had a colour emoji font
-(`Noto Color Emoji`); SteamOS's Twemoji (`ttf-twemoji-default`) followed
-in Alpha 7.
 
 **Skipped:** `fremont-hw-support` (Steam Machine BIOS only),
 `usbhid-gadget-passthru` (USB device mode, developer tool),
@@ -204,17 +180,9 @@ packages of Valve's main branch (`holo-plymouth-config`,
 `holo-sudo`, `holo-config-mtu-probing` with the file Io already has in
 `steamos-tuning`).
 
-**Arch packages Valve rebuilds with patches:** taken in Alpha 6, without
-patching where possible: Valve's Bluetooth settings (a configuration file),
-the desktop keeping the brightness set in game mode (Io did it before kwin
-started; since Alpha 7 Valve's kwin patch does it). Through the overlay
-(`-holo` packages): mangoapp drawing once per game frame (MangoHud, fixed
-upstream after 0.8.4), NetworkManager's scan of the last channel after
-resume, bluez's fixes for re-pairing and the Switch Pro Controller; in
-Alpha 7 kwin's and Xwayland's patches for Steam's keyboard in the desktop
-(and kwin's brightness and mode filter), wpa_supplicant's and iwd's fixes,
-and wpa_supplicant's roaming options (WNM, MBO) that Void's build leaves
-out, and Valve's Mesa patches (OpenGL frame limiter, RADV) on Void's Mesa
-26.2.5, for 32 bit as well.
+**Arch packages Valve rebuilds with patches:** Io takes Valve's changes as
+configuration where that is enough (Valve's Bluetooth settings), and
+otherwise builds Void's package with Valve's patches as an overlay package
+(see [Deviations](Deviations), *Io overlay*).
 Watched: PipeWire's next major release (Bluetooth profiles, dock HDMI
 fixes).

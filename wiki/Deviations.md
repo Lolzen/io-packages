@@ -273,7 +273,7 @@ its own implementation (`io-steamos-manager`).
 - **Boot splash** is ended by `io-sddm` right before SDDM starts. The
   controller firmware update splash (Valve's `plymouth-wrap`) uses Io's
   theme, which draws the title and progress as Valve's holo theme does
-  (`io-branding` 0.3.0; in the initramfs after its next rebuild).
+  (`io-branding`; the initramfs is rebuilt when the theme changes).
 - **Firmware updates at boot** run from a core service
   (`97-io-firmware-update.sh`) instead of `jupiter-biosupdate.service` and
   `jupiter-controller-update.service`, with the same time limits. Io's
@@ -300,9 +300,9 @@ its own implementation (`io-steamos-manager`).
   the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
   `steamos.efi`). Io adds `net.ifnames=0`: SteamOS's Wi-Fi interface is
   `wlan0` as well, while Void's udev would rename it (see *Pitfalls*).
-- **No reboot on kernel panic.** SteamOS's panic sysctls are left out during
-  the alpha phase: Valve pairs them with a crash log submitter, and without
-  one a frozen device is more useful for debugging.
+- **No reboot on kernel panic.** SteamOS's panic sysctls are left out:
+  Valve pairs them with a crash log submitter, and without one a frozen
+  device is more useful for debugging.
 
 ---
 
@@ -402,8 +402,10 @@ its own implementation (`io-steamos-manager`).
   3.9.2 runs; Steam still calls the `steamos-*` names. The cursor images come from
   20260327.1, later versions moved them to another package. Several helpers
   are stubs, see [Helper status](Helper-Status). Automount and trimming:
-  see *Storage*. `99-sdcard-rescan.rules` stays disabled (it needs
-  `systemd-run`, and has nothing to do while Io boots from the card).
+  see *Storage*. `99-sdcard-rescan.rules` (Valve's workaround for
+  misdetected SanDisk cards) is still disabled: it starts its script with
+  `systemd-run`. With Io on the internal SSD it matters (see
+  [Milestones](Milestones)).
   `steamos-select-branch` knows one branch, `rel` (stable); switching to
   another is refused.
 - **`steamos-priv-write`** gives the written files to the `wheel` group
@@ -419,8 +421,9 @@ its own implementation (`io-steamos-manager`).
   instead of libsystemd; the upstream build offers both.
 - **`steamdeck-kde-presets`**: the Deck variant of the Vapor theme is written
   into `kdeglobals` directly (Valve picks it with a systemd service);
-  *Return to Gaming Mode* calls `steamos-session-select` (Valve:
-  `steamosctl`); IBus uses Void's panel path under `/usr/libexec`. Left out:
+  *Return to Gaming Mode* is Valve's command, run by `bash` (Void's `sh` is
+  dash) with Qt 6's `qdbus` from `/usr/lib/qt6/bin`; IBus uses Void's panel
+  path under `/usr/libexec`. Left out:
   the X11-only IBus environment, the nested desktop, Valve's menu overrides
   in `/usr/local` and its Firefox desktop file.
 - **Steam's DPI scaling in the desktop** is switched off once per user by
@@ -604,7 +607,8 @@ local session, an admin's otherwise).
   `/etc` set back to the image's (hostname, time zone, language, passwords,
   deck's groups, Wi-Fi connections, backend and power saving, SDDM's login
   mode, SSH host keys, machine-id, and the services Steam switches: SSH on;
-  developer mode, iwd and the LAVD scheduler off); a hibernated session is
+  developer mode and iwd off; the LAVD scheduler and EC logging linked with
+  their `down` file, as installed); a hibernated session is
   dropped; shadow's backup files (`/etc/passwd-` and the like, with the old
   password hashes) and sudo's first-use marks are removed; the update
   channel goes back to the image's (the repository files in `/etc/xbps.d`,

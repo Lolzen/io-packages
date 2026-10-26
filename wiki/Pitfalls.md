@@ -121,9 +121,6 @@ If a client asks for its name before the hand-started one has claimed it,
 the bus starts a second instance. Start it through the bus
 (`StartServiceByName`), so there is one way it comes up.
 
-**A child started with `Popen` and never waited for stays a zombie.**
-Start detached helpers with `setsid -f`, so the system reaps them.
-
 **`busctl --user` over SSH has no session bus.** Each Io session has its own
 bus; borrow its address from a process in it
 (`DBUS_SESSION_BUS_ADDRESS` from `/proc/$(pgrep -o -x steam)/environ`).
@@ -156,10 +153,26 @@ sources `core-services/*.sh` with `.`; a core service ending in
 `exec something` replaces runit's stage 1 process, and all remaining core
 services are silently skipped.
 
+**xbps does not restart a runit service when its package is updated.** The
+service keeps running the old program until a reboot or `sv restart`; a
+test right after an update of `steamos-manager` tests the old root half.
+
+**`sv down` returns before the `finish` script has run.**
+`jupiter-fan-control`'s `finish` hands the fan back to the embedded
+controller, which also resets the fan target; a speed set right after
+`sv down` was undone (download mode's 2000 rpm read back as 0, the fan ran
+at 4100 rpm). `sv -w <seconds> down` waits for the service to be down,
+`finish` included. A stop job of steamos-manager's runit backend is done
+only when `supervise/stat` reads `down`, after `finish`.
+
+**Steam stops `jupiter-fan-control` when its fan control setting is off**
+(Settings → System), when Steam starts (`down … normally up`). With a fresh
+Steam profile the setting was off here. Not a failure.
+
 **`sv status` only works as root.** Run as a user it fails with
 `access denied` — a wait loop on it simply runs into its timeout, every
-time. `io-netcheck` lost 10 s per boot this way. Use a tool the user may run
-(`nm-online`, `pgrep`).
+time (an early Io network check lost 10 s per boot this way). Use a tool the
+user may run (`nm-online`, `pgrep`).
 
 **X sockets in `/tmp/.X11-unix/` survive a session.** Waiting for `X0` to
 appear before starting an overlay or helper therefore succeeds immediately,
@@ -176,10 +189,6 @@ moves. Log out through `org.kde.Shutdown` (`busctl --user call
 org.kde.Shutdown /Shutdown org.kde.Shutdown logout`), as SteamOS does.
 
 **`busctl` is there without systemd** — elogind ships it.
-
-**dbus_fast answers `GetManagedObjects` itself**, for every path, from
-everything exported below it. An `org.freedesktop.DBus.ObjectManager`
-interface of one's own is never called.
 
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
@@ -237,7 +246,7 @@ same. Not a bug of Io; Steam presumably shows only notifications of
 processes it knows.
 
 **Steam's HDMI-CEC switches are in the power menu**, not under display
-settings. The current Steam beta sets them through `HdmiCec2`.
+settings. Steam sets them through SteamOS Manager's `HdmiCec2`.
 
 **SDDM ignores `InputMethod=qtvirtualkeyboard` on a Wayland greeter.**
 SDDM 0.21 drops it there (the compositor has to provide the keyboard), and
@@ -508,9 +517,9 @@ pulse layer), which is why it went unnoticed.
 **A restart from the recovery stick boots the firmware's default system.**
 The stick has no `io-bootnext` (it lacks `io-base`), and neither does Io with
 `IO_BOOTNEXT=no`: GRUB at the removable path has no boot entry of its own,
-so a warm reboot skips the boot selector and starts the internal SteamOS.
-From the outside it looks like a broken Io service until you see the other
-system's login prompt.
+so a warm reboot skips the boot selector and starts the firmware's default,
+the system on the internal SSD. With SteamOS there, it looks like a broken
+Io service until you see the other system's login prompt.
 
 ---
 
@@ -554,8 +563,8 @@ eject through udisks would show up on the system bus as `Unmount` or
 
 **Valve's `format-device.sh` accepts any SD card or USB drive.** On SteamOS
 the system is on the internal SSD, which its device list leaves out; Io
-runs from an SD card or a USB drive, which the list lets through. Io adds a
-check that refuses the disk `/` is on.
+may run from an SD card or a USB drive, which the list lets through. Io
+adds a check that refuses the disk `/` is on.
 
 ---
 
@@ -573,21 +582,6 @@ first-boot network prompt waited invisibly for input on every fresh image,
 and only there, because a development card already knows its Wi-Fi. The
 fallback shell would be just as invisible. Test first boot with a fresh
 image, not on a development card.
-
-**xbps does not restart a runit service when its package is updated.** The
-service keeps running the old program until a reboot or `sv restart`; a
-test right after an update of `steamos-manager` tests the old root half.
-
-**`sv down` returns before the `finish` script has run.**
-`jupiter-fan-control`'s `finish` hands the fan back to the embedded
-controller, which also resets the fan target; a speed set right after
-`sv down` was undone (download mode's 2000 rpm read back as 0, the fan ran
-at 4100 rpm). `sv -w <seconds> down` waits for the service to be down,
-`finish` included.
-
-**Steam stops `jupiter-fan-control` when its fan control setting is off**
-(Settings → System), when Steam starts (`down … normally up`). With a fresh
-Steam profile the setting was off here. Not a failure.
 
 ---
 
@@ -681,19 +675,14 @@ files.
 
 ## Valve packages
 
-**Orca stops at start when its settings file lacks a section**
-(`KeyError: 'pronunciations'`). Orca writes all of them itself when it
-creates the file; steamos-manager writes only what it changes, which on
-SteamOS is fine because Orca ran first.
-
 **Orca's shortcuts are key presses on a virtual keyboard.** Steam sets the
 screen reader mode at every start; steamos-manager presses Orca's key for it
 (Insert+A). With Orca not running, the presses land in the focused window —
 `aa` in Plasma's search field. Press them only while Orca runs.
 
 **`jupiter-dock-updater --check`: 0 means "update available", 7 "up to
-date"** (Valve's mock script). A stub that simply exits 0 makes Steam
-announce a dock update at every start.
+date".** Without Valve's updater the helper has to answer 7: an answer of 0
+makes Steam announce a dock update at every start.
 
 **`sv up` right after linking a service fails.** runsvdir notices a new
 link in `/var/service` only on its next scan (up to 5 s); until then the
@@ -734,7 +723,8 @@ charge limit.
 **Valve's udev rules call `/bin/systemd-run`**, which does not exist under
 runit. The automount rule runs through `io-detach` instead (see *Drives and
 udisks*); `99-sdcard-rescan.rules` (a workaround for misdetected SanDisk
-cards) stays disabled until Io runs from the internal SSD.
+cards) is still disabled: it only matters with Io on the internal SSD, and
+needs `systemd-run` replaced first (see [Milestones](Milestones)).
 
 **`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
 (the user name is chosen when the image is built), and `systemd-cat` becomes
