@@ -58,11 +58,6 @@ Work that is built but not on `main` yet:
 
 ## Open observations
 
-- **Desktop responsiveness:** SteamOS 3.9.2's desktop felt more responsive
-  than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
-  the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
-  missing realtime threads are fixed in Alpha 6. Same scheduler, governor
-  and preemption. To check again now that Io runs from the NVMe
 - **vpower's shutdown at 0.5 %:** never tested on a real empty battery
 - **Screen sharing prompt for a new user:** Io asks once when Steam starts
   in the desktop (Plasma's *Share screen with*, fresh user after Io's
@@ -99,11 +94,6 @@ Work that is built but not on `main` yet:
 
 ## Tests pending
 
-- **The image build** with `/dev`, `/proc` and `/sys` mounted during the
-  package install (`build/common.sh`, as void-mklive): Python's
-  byte-compiling (`compileall -j0`) failed for some modules without them.
-  Check at the next `mkrootfs.sh --clean` that those errors are gone and
-  nothing stays mounted
 - **Hibernation from the desktop** (Io on the NVMe): Plasma's leave menu
   → *Hibernate* (the same path as `loginctl hibernate`, tested); Plasma's
   energy settings with suspend-then-hibernate: after 20 minutes of suspend
@@ -121,12 +111,6 @@ Work that is built but not on `main` yet:
 - **elogind at reboot:** since `elogind-holo` every reboot logs a segfault
   of elogind's reboot helper (`e-reboot`, same offset each time); the
   reboot itself happens. Check whether Void's `elogind` does the same
-- **Steam's factory reset with `io-factory-reset` 0.2.1_3:** afterwards
-  `scx` and `ec-log` are still linked with their `down` file, and LAVD can
-  be chosen (`io-reset-check.sh`, project tools). Before 0.2.1_3 the reset
-  unlinked them. A fix to the reset cannot be tried through the testing
-  channel: the reset's OS part installs the default channel's version
-  first
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam

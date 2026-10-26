@@ -643,7 +643,8 @@ local session, an admin's otherwise).
 Deck, the user data is erased at the start, Steam's first setup follows,
 the update channel is back to the image's. The Wi-Fi backend stays
 wpa_supplicant, the default since SteamOS 3.9.2 (Valve's
-`10-steamos-defaults.conf`); Steam's setup does not change it.
+`10-steamos-defaults.conf`); Steam's setup does not change it. Again on
+2026-10-26 with Valve's steamos-manager (`io-factory-reset` 0.2.1_3).
 
 ---
 
