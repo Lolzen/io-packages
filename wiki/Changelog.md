@@ -7,6 +7,7 @@ afterwards. What is still open is on [Milestones](Milestones).
 
 | Release | Theme | |
 |---|---|---|
+| [Beta 0.8](Beta-0.8) | Valve's SteamOS Manager, Io on the internal SSD | [beta-0.8](https://github.com/Lolzen/io-packages/releases/tag/beta-0.8) |
 | [Alpha 7](Alpha-7) | Valve's patches, restart into Io | [alpha7](https://github.com/Lolzen/io-packages/releases/tag/alpha7) |
 | [Alpha 6](Alpha-6) | SteamOS 3.9.2 parity, system updates from Steam | [alpha6](https://github.com/Lolzen/io-packages/releases/tag/alpha6) |
 | [Alpha 5](Alpha-5) | Storage; parity III | [alpha5](https://github.com/Lolzen/io-packages/releases/tag/alpha5) |
