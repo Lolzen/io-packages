@@ -91,7 +91,7 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `wpa_supplicant-holo` | `wpa_supplicant` | WPA3 wrong-password detection, fewer rescans after resume (hostap's merged commits), WNM/MBO and some of Valve's other build options |
 | `iwd-holo` | `iwd` | Valve's scanning and connecting fixes |
 | `python3-hid-holo` | `python3-hid` | pyhidapi 1.0.6 (`BusType`), as Valve's controller updater needs |
-| `elogind-holo`, `libelogind-holo`, `elogind-devel-holo` | Void's elogind packages | No patch: the runit service skips logind's swap size check for hibernation, as Valve's logind drop-in does |
+| `elogind-holo`, `libelogind-holo`, `elogind-devel-holo` | Void's elogind packages | The runit service skips logind's swap size check for hibernation, as Valve's logind drop-in does; elogind's fix for the crash of its shutdown and reboot helper (`e-poweroff`, `e-reboot`), from elogind main |
 | `mesa-holo`, `mesa-dri-holo`, `mesa-vulkan-radeon-holo`, ..., and their `-holo-32bit` packages | Void's Mesa packages, 64 and 32 bit | Steam's frame limit for OpenGL, RADV's explicit VM sync and per command buffer BO tracking for gamescope, game fixes, three RADV fixes from Mesa main |
 
 ## Upstream sources

@@ -108,9 +108,6 @@ Work that is built but not on `main` yet:
   hours before resumed fine. If it comes back: restart NetworkManager,
   reload `rtw88_8822ce`, remove and rescan the PCI device, before
   rebooting, and compare with SteamOS (same kernel driver)
-- **elogind at reboot:** since `elogind-holo` every reboot logs a segfault
-  of elogind's reboot helper (`e-reboot`, same offset each time); the
-  reboot itself happens. Check whether Void's `elogind` does the same
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
