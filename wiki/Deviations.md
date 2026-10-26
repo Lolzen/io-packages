@@ -403,9 +403,9 @@ its own implementation (`io-steamos-manager`).
   20260327.1, later versions moved them to another package. Several helpers
   are stubs, see [Helper status](Helper-Status). Automount and trimming:
   see *Storage*. `99-sdcard-rescan.rules` (Valve's workaround for
-  misdetected SanDisk cards) is still disabled: it starts its script with
-  `systemd-run`. With Io on the internal SSD it matters (see
-  [Milestones](Milestones)).
+  misdetected SanDisk cards) starts its script through `io-detach` instead
+  of `systemd-run`, and is left out while Io runs from an SD card itself:
+  rebinding the card reader would take the running system's disk away.
   `steamos-select-branch` knows one branch, `rel` (stable); switching to
   another is refused.
 - **`steamos-priv-write`** gives the written files to the `wheel` group

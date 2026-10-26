@@ -49,11 +49,6 @@ Work that is built but not on `main` yet:
   the commits as patches; Valve's GitLab does not let the account fork, so
   there is no merge request yet. Waiting for Valve's answer; changes Valve
   asks for, or bugs in Io's use of it, go into the branch
-- **Valve's SD card rescan rule** (`99-sdcard-rescan.rules`, a workaround
-  for misdetected SanDisk microSD cards): disabled so far, since it starts
-  its script with `systemd-run` and had nothing to do while Io booted from
-  the card. With Io on the internal SSD it matters; it needs `io-detach` in
-  place of `systemd-run`
 - **The recovery stick as a release download:** installing on the internal
   SSD and *Repair Io* are tested, but `recovery.img` is not attached to the
   releases yet; it is built with `build/mkrecovery.sh` (see
@@ -175,6 +170,9 @@ have; they need someone with the hardware.
   own USB Bluetooth firmware. The PipeWire fixes wait for a Void PipeWire
   update that contains them, rather than an Io overlay, unless a Steam
   Machine user needs them sooner
+- **A misdetected SanDisk microSD card** (named `SD032`, 30.6 MB): Valve's
+  rescan rule runs through `io-detach` now; checked with `udevadm test`
+  that a normal card is left alone and still mounts
 - **Other handhelds** (Legion Go, ROG Ally, MSI Claw, Zotac Zone):
   steamos-manager brings Valve's device files for them, but Io is not
   built for them (no InputPlumber for their controllers) and nothing is

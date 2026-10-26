@@ -722,9 +722,8 @@ charge limit.
 
 **Valve's udev rules call `/bin/systemd-run`**, which does not exist under
 runit. The automount rule runs through `io-detach` instead (see *Drives and
-udisks*); `99-sdcard-rescan.rules` (a workaround for misdetected SanDisk
-cards) is still disabled: it only matters with Io on the internal SSD, and
-needs `systemd-run` replaced first (see [Milestones](Milestones)).
+udisks*), and so does `99-sdcard-rescan.rules` (a workaround for
+misdetected SanDisk cards).
 
 **`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
 (the user name is chosen when the image is built), and `systemd-cat` becomes
