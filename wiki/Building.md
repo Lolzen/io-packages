@@ -285,19 +285,22 @@ start at which each boot stage began.
 
 1. The milestone's items done, or left open on [Milestones](Milestones)
 2. Fresh image built (`build/`), written to a spare card, booted, storage grown,
-   `io-selftest.sh` passes
+   `io-selftest.sh` passes; the recovery stick built from the same tarball
+   (`mkrecovery.sh`)
 3. The release page written (see [Changelog](Changelog)): goal,
    highlights, changes by area, known limitations; done items removed from
    [Milestones](Milestones)
-4. Remove the previous release's `io.img.xz*` files first — a leftover part
-   would be joined into the new image. Then compress the image and split it
-   below GitHub's 2 GiB asset limit:
+4. Remove the previous release's `io.img.xz*` and `recovery.img.xz*` files
+   first — a leftover part would be joined into the new image. Then
+   compress both images and split them below GitHub's 2 GiB asset limit
+   (the same for `recovery.img`, from `/home/gee/io-build`):
    ```
    xz -T0 -k io.img
    split -b 1900M -d io.img.xz io.img.xz.part
    sha256sum io.img.xz > io.img.xz.sha256
    ```
    Check that `cat io.img.xz.part* | sha256sum` matches the checksum.
-5. Tag, create the release, attach the parts and the checksum
+5. Tag, create the release, attach the parts and the checksums
 
-Users rebuild the image with `cat io.img.xz.part* > io.img.xz`.
+Users rebuild the images with `cat io.img.xz.part* > io.img.xz` (and the
+same for `recovery.img.xz`).

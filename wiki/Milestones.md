@@ -49,10 +49,6 @@ Work that is built but not on `main` yet:
   the commits as patches; Valve's GitLab does not let the account fork, so
   there is no merge request yet. Waiting for Valve's answer; changes Valve
   asks for, or bugs in Io's use of it, go into the branch
-- **The recovery stick as a release download:** installing on the internal
-  SSD and *Repair Io* are tested, but `recovery.img` is not attached to the
-  releases yet; it is built with `build/mkrecovery.sh` (see
-  [Building](Building))
 
 ---
 
@@ -82,13 +78,6 @@ Work that is built but not on `main` yet:
   The same line is in SteamOS's logs of a boot that hung the same way, so
   it is Steam's (Steam Input at start); reported as
   [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921)
-- **Steam hung in its boot animation** on the first start after switching
-  to the beta client (the bootstrapper had installed the update;
-  steamwebhelper logged "SteamClient globals not available" and a
-  timeout waiting for `RegisterForStartupFinished`). A reboot fixed it.
-  If it happens again, copy the logs in `~/.local/share/Steam/logs`
-  (`bootstrap_log.txt`, `console_log.txt`, `cef_log.txt`,
-  `webhelper.txt`, `webhelper_js.txt`) over SSH before restarting
 
 ---
 
@@ -196,12 +185,9 @@ have; they need someone with the hardware.
   `steamos-customizations-jupiter` 20260916.1, `holo-networking-tools` 1.4,
   `holo-systemreport` 1.24, PipeWire 1.6.8,
   WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
-- **Live ISO with an installer**, once self-built void-mklive ISOs boot
-  (they drop to dracut's emergency shell, cause not found yet); the
-  recovery stick covers installing in the meantime. After it,
-  **flavours**: *Plasma* (today's image),
-  *Base* (game mode only), *Slim* (a light desktop). The split is prepared:
-  `io-base` is the core, `io-desktop` adds the desktop
+- **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
+  (a light desktop). The split is prepared: `io-base` is the core,
+  `io-desktop` adds the desktop
 - **Automation, once Io changes less often:** GitHub Actions that build and
   publish the packages; man pages; a version check that writes Valve's
   newer versions to a file unless they are listed as already looked at

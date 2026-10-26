@@ -1,10 +1,9 @@
 # Installation
 
 Io runs from an SD card, written from the release image, or from the
-Deck's internal SSD, installed with the recovery stick. Installing with the
-stick and *Repair Io* are tested on the internal NVMe; the stick itself is
-not a release download yet and is built from io-packages (see
-[Building](Building)).
+Deck's internal SSD, installed with the recovery stick. Both images are
+attached to every release since Beta 0.8. Installing with the stick and
+*Repair Io* are tested on the internal NVMe.
 
 ---
 
@@ -48,11 +47,20 @@ do not trust.
 
 A small writable Void system with Plasma on a USB drive, with Io's system
 tarball inside. It only has to boot to a desktop from which the install
-scripts run. How to build it is on [Building](Building).
+scripts run. Download all `recovery.img.xz.part*` files and
+`recovery.img.xz.sha256` from the
+[latest release](https://github.com/Lolzen/io-packages/releases/latest),
+join and check them, then write the image to a USB drive (replace `sdX`
+with the drive; everything on it is lost):
 
 ```
+cat recovery.img.xz.part* > recovery.img.xz
+sha256sum -c recovery.img.xz.sha256
+xz -d recovery.img.xz
 sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
+
+How to build it yourself is on [Building](Building).
 
 - **Boot:** hold Volume Down, press Power, pick the USB drive.
 - **Login:** automatic, user `iorecovery`. Its password and root's are

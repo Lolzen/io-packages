@@ -82,7 +82,7 @@ reason is documented in
   Plasma's firewall page), and the SteamOS Devkit Client
 
 Io runs from an SD card or, installed with the recovery stick, from the
-internal SSD; the stick is not a release download yet (see
+internal SSD (see
 [Installation](https://github.com/Lolzen/io-packages/wiki/Installation)).
 A real BIOS or controller update is untested. Built and tested on the
 Steam Deck LCD; Valve's packages for the OLED, the Steam Machine and Valve's
