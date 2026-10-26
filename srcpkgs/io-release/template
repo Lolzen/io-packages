@@ -1,10 +1,10 @@
 # Template file for 'io-release'
 pkgname=io-release
-version=0.7
+version=0.8
 revision=1
 _codename=loki
-_name="Alpha 7"
-_build=20261017.1
+_name="Beta 0.8"
+_build=20261026.1
 short_desc="Io's release information: os-release and lsb_release"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
