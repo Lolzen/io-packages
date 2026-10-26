@@ -5,37 +5,19 @@ the [Changelog](Changelog). The latest release is [Beta 0.8](Beta-0.8).
 
 ---
 
-## Beta (next)
+## Beta
 
-With Alpha 7 the foundation is in place and Io is usable day to day; the
-beta is for making it good. Its release versions go on from Alpha 7's 0.7:
-0.0.1 steps for ordinary releases (0.7.1, 0.7.2, ...), a 0.1 step for a
-larger change (0.8, ...; the middle number goes on past 9, as in 0.10 or
+Beta 0.8 (October 2026) is the first beta release: Io on the internal SSD,
+Valve's own SteamOS Manager, and the parts that needed the NVMe tested. The
+beta is for making Io good. Its release versions go on from there: 0.0.1
+steps for ordinary releases (0.8.1, 0.8.2, ...), a 0.1 step for a larger
+change (0.9, ...; the middle number goes on past 9, as in 0.10 or
 0.102.3). 1.0 is the first stable release. SSH stays enabled in the images
 throughout the beta. Whether a beta release comes with a new image is
-decided per release. As in the alpha phase, io-packages is public, but
-there is no call for testers yet (not even for the hardware pull
-requests).
+decided per release. io-packages is public, but there is no call for
+testers yet.
 
-**First: the move to the NVMe**
-
-1. The last captures on SteamOS, among them its factory reset
-   (`steamos-reset-capture.sh`); SteamOS is wiped afterwards (done
-   2026-10-18)
-2. The branch `destructive` on the Deck: formatting
-   against the internal SSD while Io runs from the card, the move with the
-   recovery stick, suspend-then-hibernate, formatting SD cards and USB
-   drives, the firmware updaters' check modes, `io-repair`, Io's factory
-   reset (compared with SteamOS's capture). Done 2026-10-19/20: formatting
-   refused for the internal SSD, the move, hibernating and resuming,
-   formatting SD cards and USB drives, the check modes, Repair Io, the
-   factory reset from Steam
-3. `destructive` to `main` (done 2026-10-20); Valve's calibration tools
-   followed (2026-10-22)
-4. With Io on the NVMe: the desktop responsiveness again (*Open
-   observations*)
-
-**Then, release by release**
+**Release by release**
 
 - Pull request #1 (Io's changelog in Steam's patch notes): the check of
   Steam's update page
@@ -43,39 +25,34 @@ requests).
 - Valve's newer versions (*Catching up with Valve*)
 - Void's side: Mesa patches dropped as Void's Mesa takes them (the three
   RADV fixes most likely with 26.2.6), wpa_supplicant's rescan patches with
-  the next hostap release, and the overlays rebuilt after Void updates
-  (*Recurring*)
+  the next hostap release, gamescope 3.17 once Void has it (Io's
+  `gamescope-wsi-32bit` follows it), and the overlays rebuilt after Void
+  updates (*Recurring*)
 - *Polish* below
 
 ---
 
 ## In branches
 
-Work that is built but not on `main` yet, each on its own branch of
-io-packages:
+Work that is built but not on `main` yet:
 
 - **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
   Steam's patch notes for system updates
-- **`test-reset-scx`:** the factory reset keeps the LAVD scheduler's and EC
-  logging's runit services linked with their `down` file (it unlinked them,
-  and Valve's steamos-manager only starts and stops them); to be tested
-  with a factory reset
-
-The hardware pull requests (#2 OLED, #3 other handhelds, #4 Steam Machine,
-#6 dock firmware, #7 calibration tools) were redone on top of Valve's
-steamos-manager and merged on 2026-10-22; see *Needs hardware to test*.
 
 ---
 
 ## Next (no theme yet)
 
-- **SteamOS Manager's runit support to Valve:** the fork's branch `runit`
-  ([Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager),
-  seven commits on Valve's main) as an update to the issue on Valve's
-  GitLab and then a merge request: what is tested on the LCD, and what
-  only the OLED (Wi-Fi debug mode) and the Steam Machine (EC logging) can
-  test; Io's side (session cleanup, `configure-cecd`, D-Bus activation
-  files) stays the distribution's
+- **SteamOS Manager's runit support at Valve:** offered on Valve's GitLab
+  (2026-10-23), in the issue, with the fork's branch `runit`
+  ([Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager)) and
+  the commits as patches; Valve's GitLab does not let the account fork, so
+  there is no merge request yet. Waiting for Valve's answer; changes Valve
+  asks for, or bugs in Io's use of it, go into the branch
+- **The recovery stick as a release download:** installing on the internal
+  SSD and *Repair Io* are tested, but `recovery.img` is not attached to the
+  releases yet; it is built with `build/mkrecovery.sh` (see
+  [Building](Building))
 
 ---
 
@@ -85,7 +62,7 @@ steamos-manager and merged on 2026-10-22; see *Needs hardware to test*.
   than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
   the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
   missing realtime threads are fixed in Alpha 6. Same scheduler, governor
-  and preemption. To check again after the move to the NVMe
+  and preemption. To check again now that Io runs from the NVMe
 - **vpower's shutdown at 0.5 %:** never tested on a real empty battery
 - **Screen sharing prompt for a new user:** Io asks once when Steam starts
   in the desktop (Plasma's *Share screen with*, fresh user after Io's
@@ -146,6 +123,12 @@ steamos-manager and merged on 2026-10-22; see *Needs hardware to test*.
   reboot itself happens. Check whether Void's `elogind` does the same
 - **The LAVD scheduler under Valve's steamos-manager:** choose it in
   Steam, then `sv status scx` (run); back to none (down)
+- **Steam's factory reset with `io-factory-reset` 0.2.1_3:** afterwards
+  `scx` and `ec-log` are still linked with their `down` file, and LAVD can
+  be chosen (`io-reset-check.sh`, project tools). Before 0.2.1_3 the reset
+  unlinked them. A fix to the reset cannot be tried through the testing
+  channel: the reset's OS part installs the default channel's version
+  first
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam

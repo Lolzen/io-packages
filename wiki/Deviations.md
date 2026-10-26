@@ -31,10 +31,10 @@ its reason.
 | Writable root file system, software through xbps | Read-only root, A/B images, atomic updates | Simpler, and lets users install anything from Void's repositories. A/B updates are a possible post-1.0 goal |
 | No Flatpak, no Discover; OctoXBPS as graphical package manager | Flatpak through Discover | SteamOS needs Flatpak because its root is read-only. Io does not; Flatpak can still be installed by hand |
 | Built and tested on the Steam Deck LCD (Jupiter); the OLED (Galileo) and the Steam Machine get Valve's packages and settings for them, untested, with gaps (see [Milestones](Milestones)) | LCD, OLED (Galileo) and the Steam Machine | No hardware other than the LCD to test with |
-| Disk image written with `dd`; a recovery stick with an installer exists, installing is not released yet ([Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
+| Disk image written with `dd` to an SD card, or a recovery stick that installs Io on a disk of the Deck (not a release download yet, [Installation](Installation)) | Recovery image with installer | Fixed hardware, nothing for an installer to ask. The recovery stick is a plain writable Void system instead of a live ISO: self-built live ISOs stop in dracut's emergency shell (cause not found) |
 | Io-branded boot splash and update screen | SteamOS logo | Valve's logos are Valve's trademarks; Io does not ship them |
 | Io's own messages are English only, not localized | Localized | One-person project; English as the common denominator |
-| GRUB boots Io without its menu; *Restart* from Io starts Io again (UEFI `BootNext`), switching on starts the firmware's default system | `steamcl` without a menu, SteamOS on the internal SSD is the firmware's default | Io on an SD card has no boot entry of its own (GRUB at the removable path), so a restart started the internal SteamOS. `BootNext` lasts one boot, so SteamOS stays the default. A boot that goes wrong ends in dracut's emergency shell; the recovery stick keeps its menu |
+| GRUB boots Io without its menu; *Restart* from Io starts Io again (UEFI `BootNext`), switching on starts the firmware's default system | `steamcl` without a menu, SteamOS on the internal SSD is the firmware's default | Io on an SD card has no boot entry of its own (GRUB at the removable path), so a restart started the internal SteamOS. `BootNext` lasts one boot, so SteamOS stays the default. Io installed on the internal SSD with the recovery stick has its own entry and is the default itself. A boot that goes wrong ends in dracut's emergency shell; the recovery stick keeps its menu |
 | SSH server enabled out of the box, user `deck` with password `deck` | SSH off; enabled through Steam's developer settings, no password until the user sets one | Needed during the alpha and beta phases. Images for 1.0 will follow SteamOS |
 
 ---
@@ -558,8 +558,9 @@ interfaces Steam uses:
   which disk `/` is on and leaves that whole disk alone, and also any drive
   when it cannot tell.
 - **The internal SSD is hidden from udisks** (`UDISKS_IGNORE`,
-  `UDISKS_SYSTEM`) while Io runs from another disk, since it holds SteamOS
-  (Io's `90-io-hide-internal-disk.rules`). Steam leaves it out of its
+  `UDISKS_SYSTEM`) while Io runs from another disk, since it holds a system
+  of its own, SteamOS or an installed Io (Io's
+  `90-io-hide-internal-disk.rules`). Steam leaves it out of its
   storage list at start, but lists it again after a USB drive is plugged
   in, most likely from udisks' drive object, which unlike the disk and its
   partitions cannot be hidden. Accepted; the only thing Steam offers for it

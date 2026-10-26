@@ -9,14 +9,6 @@ system. The sulphur it throws into space forms a plasma ring around Jupiter,
 the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
-> **Status:** [Alpha 7](https://github.com/Lolzen/io-packages/releases/tag/alpha7)
-> released (Valve's patches, restart into Io) — see
-> [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) and the
-> [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog).
-> Io ships as a disk image, written straight to an SD card with `dd`. It
-> boots into Steam's game mode, plays games, and switches to the KDE Plasma
-> desktop and back.
-
 ```
                   ==
         ==================
@@ -89,8 +81,10 @@ reason is documented in
 - HDMI-CEC with Steam's switches, a firewall with Valve's rules (and
   Plasma's firewall page), and the SteamOS Devkit Client
 
-Not yet released: installing to the internal SSD (the recovery stick does
-it). A real BIOS or controller update is untested. Built and tested on the
+Io runs from an SD card or, installed with the recovery stick, from the
+internal SSD; the stick is not a release download yet (see
+[Installation](https://github.com/Lolzen/io-packages/wiki/Installation)).
+A real BIOS or controller update is untested. Built and tested on the
 Steam Deck LCD; Valve's packages for the OLED, the Steam Machine and Valve's
 own dock are in place, but need someone with the hardware to test.
 

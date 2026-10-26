@@ -5,7 +5,7 @@ OLED and the Steam Machine are untested), with runit instead of systemd.
 
 ## Pages
 
-- [Installation](Installation) — SD card image, recovery stick
+- [Installation](Installation) — SD card image, recovery stick for the internal SSD
 - [Milestones](Milestones) — what is open, and where it is headed
 - [Changelog](Changelog) — what each release brought
 - [Deviations from SteamOS](Deviations) — where Io differs from SteamOS, and why

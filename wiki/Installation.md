@@ -1,9 +1,10 @@
 # Installation
 
-Io runs from an SD card. A recovery stick that installs Io onto a disk of
-the Deck exists as well, but installing with it is not released yet: it is
-tested together with the move to the internal NVMe (see
-[Milestones](Milestones)).
+Io runs from an SD card, written from the release image, or from the
+Deck's internal SSD, installed with the recovery stick. Installing with the
+stick and *Repair Io* are tested on the internal NVMe; the stick itself is
+not a release download yet and is built from io-packages (see
+[Building](Building)).
 
 ---
 

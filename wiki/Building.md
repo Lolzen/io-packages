@@ -48,10 +48,10 @@ changed behaviour) raises the version and resets the revision to 1;
 packaging-only changes raise the revision. Ported packages keep their
 upstream version. 1.0 is reserved for Io's first stable release.
 
-**Release versions** (`io-release`): Alpha *n* was 0.*n*; the beta goes on
-from 0.7 in 0.0.1 steps (0.7.1, 0.7.2, ...) and takes a 0.1 step for a
-larger change (0.8, ...; the middle number goes on past 9). 1.0 is the
-first stable release.
+**Release versions** (`io-release`): Alpha *n* was 0.*n*; the beta started
+at 0.8 and goes on in 0.0.1 steps (0.8.1, 0.8.2, ...) and takes a 0.1 step
+for a larger change (0.9, ...; the middle number goes on past 9). 1.0 is
+the first stable release.
 
 **32-bit packages:** a template with `archs="i686"` (today
 `gamescope-wsi`) is built by `build.sh` in an i686 masterdir

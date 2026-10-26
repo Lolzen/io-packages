@@ -290,6 +290,13 @@ file patched at image build time (as `mkimg.sh` once did to
 update. Use drop-in directories, own service directories, or ship the file
 in the package that owns it.
 
+**A fix to the factory reset cannot be tried from the testing channel.**
+Steam's reset runs its OS part first: it resets the update channel and
+installs every package whose version is not the default channel's, so the
+testing build of `io-factory-reset` is replaced by the published one before
+the user-data part runs at the next start. Publish the fix first, or try it
+with `io-factory-reset --prepare user` (user data only).
+
 **Bump `revision` for every change.** Same version and revision means the
 same file name; the new build is treated as already published.
 

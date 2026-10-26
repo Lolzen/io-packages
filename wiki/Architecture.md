@@ -7,11 +7,15 @@ behind each difference, see [Deviations](Deviations).
 
 ## Boot
 
-1. **GRUB** from the card's EFI partition, without showing its menu
-   (`GRUB_TIMEOUT=0`, `GRUB_TIMEOUT_STYLE=hidden`, set by `io-base`). It is
-   installed in removable mode without an NVRAM entry, because the card's
-   partition GUIDs change with every image build. On *Restart* the shutdown
-   hook `75-io-bootnext.sh` runs `/usr/libexec/io/io-bootnext`: it sets UEFI
+1. **GRUB** from Io's EFI partition, without showing its menu
+   (`GRUB_TIMEOUT=0`, `GRUB_TIMEOUT_STYLE=hidden`, set by `io-base`). On an
+   SD card from the image it is installed in removable mode without an
+   NVRAM entry, because the card's partition GUIDs change with every image
+   build. Installed with the recovery stick (`io-restore`), Io also gets an
+   NVRAM entry, so the firmware starts it from that disk by default, as
+   SteamOS's entry did; the removable path stays as a fallback. On
+   *Restart* the shutdown hook `75-io-bootnext.sh` runs
+   `/usr/libexec/io/io-bootnext`: it sets UEFI
    `BootNext` to the firmware's boot entry for the EFI partition Io started
    from (found by its PARTUUID; created once, outside `BootOrder`, if the
    firmware has none), so the next boot starts Io again. Switching off
@@ -343,8 +347,9 @@ udev rule 99-steamos-automount  →  io-detach (setsid --fork)  →  block-devic
    mode, as in Valve's session, Steam may take over a library on it and
    eject it (not tried yet).
 
-The internal SSD holds SteamOS. While Io runs from another disk,
-`90-io-hide-internal-disk.rules` marks it for udisks as ignored and
+While Io runs from another disk, the internal SSD (with SteamOS, or an
+installed Io) is left alone: `90-io-hide-internal-disk.rules` marks it for
+udisks as ignored and
 belonging to the system (`io-root-disk` tells which disk `/` is on, from
 the mount table and sysfs, without asking udev).
 
