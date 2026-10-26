@@ -1,0 +1,50 @@
+Backport of elogind e7c9887df90156eae865dee345f393c10a5ae26d (main, 2026-05-08)
+From: Sven Eden <sven@eden-worx.com>
+Subject: [PATCH] logind-dbus.c: Fix segfault in e-poweroff/e-reboot (#341)
+
+The forked child of a shutdown or reboot logged its end with
+m->delayed_action->handle, which is NULL when the action was not delayed,
+and crashed after the action had been started. Use the action it was
+given, and reset the manager's fork state when the fork fails.
+
+Adapted to 252.39 (the v252-stable branch does not have the fix).
+Bug: https://github.com/elogind/elogind/issues/341
+---
+diff --git a/src/login/logind-dbus.c b/src/login/logind-dbus.c
+index 94174bf4..8e9c0628 100644
+--- a/src/login/logind-dbus.c
++++ b/src/login/logind-dbus.c
+@@ -1781,6 +1781,9 @@ static int elogind_execute_shutdown_or_sleep(
+          */
+         m->sleep_fork_action = a; /* Remember this for the SIGCHLD handler */
+         m->action_job = strdup( handle_action_to_string( a->handle ) );
++        if (!m->action_job)
++                return log_oom();
++
+         forker = strjoina( "e-", m->action_job );
+         t = safe_fork( forker,
+                        FORK_LOG|FORK_REOPEN_LOG|FORK_DEATHSIG|FORK_CLOSE_ALL_FDS,
+@@ -1788,7 +1791,13 @@ static int elogind_execute_shutdown_or_sleep(
+ 
+         if ( t ) {
+                 log_debug_elogind( "Forking off '%s' returned %d and set PID %d", forker, t, m->sleep_fork_pid );
+-                return t < 0 ? log_error_errno( t, "Failed to fork %s: %m", forker ) : t;
++                if (t < 0) {
++                        m->sleep_fork_action = NULL;
++                        m->action_job = mfree(m->action_job);
++                        return log_error_errno( t, "Failed to fork %s: %m", forker );
++                }
++
++                return t;
+         }
+ 
+         /* This is the forked out child */
+@@ -1805,7 +1814,7 @@ static int elogind_execute_shutdown_or_sleep(
+ 
+         log_debug_elogind("Exiting from %s", program_invocation_short_name);
+ 
+-        log_info("Operation '%s' finished.", handle_action_to_string(m->delayed_action->handle));
++        log_info("Operation '%s' finished.", handle_action_to_string(a->handle));
+ 
+         m->action_job = mfree(m->action_job);
+         m->delayed_action = NULL;
