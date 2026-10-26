@@ -121,8 +121,9 @@ Work that is built but not on `main` yet:
 - **elogind at reboot:** since `elogind-holo` every reboot logs a segfault
   of elogind's reboot helper (`e-reboot`, same offset each time); the
   reboot itself happens. Check whether Void's `elogind` does the same
-- **The LAVD scheduler under Valve's steamos-manager:** choose it in
-  Steam, then `sv status scx` (run); back to none (down)
+- **The LAVD scheduler under Valve's steamos-manager:** Steam's client
+  offers no setting for it; switched with `steamosctl set-cpu-scheduler
+  lavd`, then `sudo sv status scx` (run); back to none (down)
 - **Steam's factory reset with `io-factory-reset` 0.2.1_3:** afterwards
   `scx` and `ec-log` are still linked with their `down` file, and LAVD can
   be chosen (`io-reset-check.sh`, project tools). Before 0.2.1_3 the reset
