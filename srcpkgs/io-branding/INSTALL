@@ -17,7 +17,7 @@ post)
 	_sum=var/lib/io-branding/initramfs-theme.sum
 	_hook=etc/kernel.d/post-install/20-initramfs
 	_theme=usr/share/plymouth/themes/io
-	_new=$(cat ${_theme}/io.plymouth ${_theme}/io.script ${_theme}/io.png | cksum)
+	_new=$(cat ${_theme}/* | cksum)
 	_old=$(cat "${_sum}" 2>/dev/null)
 	_rebuild=no
 	if [ "${UPDATE}" = "yes" ] && [ "${_new}" != "${_old}" ]; then

@@ -1,8 +1,8 @@
 # Template file for 'io-branding'
 pkgname=io-branding
-version=0.3.1
+version=0.4.0
 revision=1
-hostmakedepends="librsvg-utils"
+hostmakedepends="librsvg-utils python3-numpy python3-Pillow"
 depends="plymouth"
 short_desc="Io distribution branding: logo, boot splash, fastfetch config"
 maintainer="Georg <funer@gmx.at>"
@@ -12,7 +12,13 @@ homepage="https://github.com/Lolzen/io-packages"
 # os-release and lsb_release come from io-release.
 
 do_build() {
-	rsvg-convert -w 384 -h 384 ${FILESDIR}/io-logo.svg -o io.png
+	# The boot splash's sprites: drawn for a 384 pixel logo, scaled to the
+	# 320 the splash shows on the Deck. build_assets.py writes them to
+	# theme/io-torus next to its own folder.
+	mkdir -p tools
+	cp ${FILESDIR}/plymouth/build_assets.py tools/
+	python3 tools/build_assets.py --assets-only
+	python3 ${FILESDIR}/plymouth/scale_assets.py theme/io-torus 320
 	# Steam's update screen (STEAM_UPDATEUI_PNG_BACKGROUND) fills the screen
 	# with this image, so it is a whole 1280x720 picture like Valve's
 	# steamos-jupiter.png: the logo centred on black at the same size.
@@ -31,6 +37,8 @@ do_install() {
 	vmkdir usr/share/plymouth/themes/io
 	vinstall ${FILESDIR}/plymouth/io.plymouth 644 usr/share/plymouth/themes/io
 	vinstall ${FILESDIR}/plymouth/io.script 644 usr/share/plymouth/themes/io
-	vinstall io.png 644 usr/share/plymouth/themes/io
 	vinstall io-update.png 644 usr/share/plymouth/themes/io
+	for _f in theme/io-torus/*.png; do
+		vinstall ${_f} 644 usr/share/plymouth/themes/io
+	done
 }
