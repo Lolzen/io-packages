@@ -1,7 +1,7 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
-version=1.02
-revision=18
+version=1.03
+revision=1
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
 makedepends="faust lv2 boost-devel"
@@ -11,7 +11,7 @@ maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
 homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
-checksum=33cbb5fe073c69db2fb061258f3212a2b60143513446efb2dcf9cfc86fcd1712
+checksum=d4365c0f67a3792d310bee8a18058bc8859c3540960fe6503c6795fce5098558
 
 # Both Deck models. Jupiter (LCD, card acp5x) is what Io is built and tested
 # on. Galileo (OLED, card sof-nau8821-max, untested: no hardware) gets
@@ -134,6 +134,9 @@ do_install() {
 	# matches only the speaker sink of sof-nau8821-max, so on Jupiter it
 	# does nothing.
 	vinstall ${FILESDIR}/92-io-galileo-speakers.conf 644 etc/wireplumber/wireplumber.conf.d
+	# Galileo's headphone suspend timeout (1.03): Valve's rule for its card,
+	# as Jupiter's alsa-card1.conf has it for acp5x.
+	vinstall ${FILESDIR}/93-io-galileo-headphones.conf 644 etc/wireplumber/wireplumber.conf.d
 
 	# The Steam Machine (Fremont): Valve's WirePlumber profile for it -
 	# HDMI/DisplayPort sound with the AC3 profile set for ARC, full volume on
