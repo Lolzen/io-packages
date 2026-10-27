@@ -1,6 +1,6 @@
 # Template file for 'io-base'
 pkgname=io-base
-version=0.7.1
+version=0.7.2
 revision=1
 depends="polkit socklog-void plymouth alsa-pipewire efibootmgr util-linux
  grub-x86_64-efi"
@@ -47,4 +47,7 @@ do_install() {
 	vinstall ${FILESDIR}/bluetooth-main.conf 644 usr/share/io/bluetooth main.conf
 	vmkdir etc/sv/bluetoothd
 	vinstall ${FILESDIR}/bluetoothd.conf 644 etc/sv/bluetoothd conf
+	# NetworkManager's connectivity check (SteamOS: Arch's endpoint)
+	vmkdir usr/lib/NetworkManager/conf.d
+	vinstall ${FILESDIR}/20-io-connectivity.conf 644 usr/lib/NetworkManager/conf.d
 }

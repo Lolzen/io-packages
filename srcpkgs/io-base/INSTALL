@@ -1,9 +1,6 @@
 case "${ACTION}" in
 post)
 	usr/libexec/io/io-i18n-supported 2>/dev/null || true
-	# Io's earlier timedatectl also wrote /etc/timezone (not used on Void
-	# or SteamOS); it would keep a stale zone from now on.
-	rm -f etc/timezone
 	# GRUB without its menu: Io boots at once, as SteamOS does. A boot that
 	# goes wrong ends in dracut's emergency shell anyway; the recovery stick
 	# keeps its menu. grub (a dependency) is configured before this runs.

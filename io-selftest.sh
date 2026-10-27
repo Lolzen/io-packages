@@ -65,6 +65,9 @@ check "firewall active (ufw)" sh -c 'ufw status | grep -q "Status: active"'
 check "bluetoothd with SteamOS's settings" sh -c 'tr "\0" " " < /proc/$(pgrep -x bluetoothd)/cmdline | grep -q /usr/share/io/bluetooth/main.conf'
 check "logout ends the session (KillUserProcesses)" grep -q "KillUserProcesses=yes" /etc/elogind/logind.conf.d/10-io-kill-user-processes.conf
 check "no iwd service (wpa_supplicant is the default backend)" sh -c '[ ! -e /var/service/iwd ] || grep -q iwd /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf'
+check "NetworkManager defaults (holo-networkmanager-config)" test -e /usr/lib/NetworkManager/conf.d/10-holo-defaults.conf
+check "connectivity check (io-base)" test -e /usr/lib/NetworkManager/conf.d/20-io-connectivity.conf
+check "steamos-networking-tools replaced" sh -c '! xbps-query steamos-networking-tools > /dev/null 2>&1'
 
 echo "== memory"
 check "zram swap active" grep -q '^/dev/zram' /proc/swaps

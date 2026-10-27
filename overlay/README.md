@@ -54,7 +54,7 @@ overlay/holo.sh check            status of all overlays, changes nothing
 `publish.sh` publishes the overlay packages with Io's own; their names come
 from `holo.sh names`.
 
-Io's own templates (`io-desktop`, `steamos-networking-tools`, ...) depend on
+Io's own templates (`io-desktop`, `holo-networkmanager-config`, ...) depend on
 the `-holo` names, not on Void's: a dependency on the Void name is met by
 the `provides` on an installed system, but when an image is built from
 scratch xbps could pick Void's package for it, next to the stand-in.
