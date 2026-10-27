@@ -82,12 +82,6 @@ Work that is built but not on `main` yet:
 
 ## Tests pending
 
-- **Wi-Fi after a long suspend:** once, after 32 minutes, the LCD's card
-  (`rtw88_8822ce`) did not leave D3hot ("device inaccessible", "mac power
-  on failed") and Wi-Fi stayed dead until a reboot; the suspend of two
-  hours before resumed fine. If it comes back: restart NetworkManager,
-  reload `rtw88_8822ce`, remove and rescan the PCI device, before
-  rebooting, and compare with SteamOS (same kernel driver)
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
