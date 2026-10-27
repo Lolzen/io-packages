@@ -1,0 +1,23 @@
+# Template file for 'jupiter-hibernate-disable'
+pkgname=jupiter-hibernate-disable
+version=0.1
+revision=1
+short_desc="Disable hibernation on the Steam Deck (Valve)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/"
+
+# Valve's jupiter-hibernate-disable 0.1 (jupiter-main): a oneshot unit before
+# systemd-logind writes a sleep.conf.d drop-in that disallows hibernation,
+# suspend-then-hibernate and hybrid sleep on Valve's Jupiter and Galileo, and
+# removes it on other hardware. Io runs the same logic as a runit core
+# service (stage 1, before elogind starts) and writes the drop-in for
+# elogind (/etc/elogind/sleep.conf.d). Valve asks dmidecode for the system
+# manufacturer and product name; the core service reads the same strings
+# from /sys/class/dmi/id. Io's own hibernation guard (steamos-tuning) still
+# keeps hibernation off on any other machine where / is not on the NVMe.
+
+do_install() {
+	vmkdir etc/runit/core-services
+	vinstall ${FILESDIR}/62-jupiter-hibernate-disable.sh 644 etc/runit/core-services
+}
