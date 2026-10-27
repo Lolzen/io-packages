@@ -1,31 +1,117 @@
-# Io boot splash: the Io logo centred on black, the same layout as
-# SteamOS's own boot splash (the "steamos" theme from jupiter-hw-support).
+# Io boot splash "Io Torus": the Io logo animated. Jupiter turns in the
+# middle, Io orbits on the plasma torus and brightness waves run along the
+# torus, all on one clock: one turn of Jupiter in JUPITER_SECONDS,
+# Io's orbit and the torus at their real ratios to it (9.925 h, 42.459 h,
+# 98.5 % of Jupiter's turn). The sprites are PNGs drawn at build time by
+# build_assets.py from the logo's geometry, for a 384 pixel logo, and scaled
+# by scale_assets.py to ASSET_SIZE, the logo's size on the Deck's screen.
+# The script scales them only on a screen with less than 800 pixels on its
+# short side: scaling them here takes about a second at boot.
 # The panel orientation is handled by the kernel's quirk table, so the
-# image needs no rotation here.
+# window is already landscape here.
+
+JUPITER_SECONDS = 8.0;
+JUPITER_HOURS = 9.925;
+IO_HOURS = 42.459;
+TORUS_SPEED = 0.985;
+FPS = 30;
+ASSET_SIZE = 320;
+FRAMES = 120;
+SEGMENTS = 48;
+TAU = 6.283185307179586;
+
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
+Plymouth.SetRefreshRate(FPS);
 
-# Not named "image": Plymouth's Sprite() without an argument reads a
-# variable "image" and, finding no local one, takes the global one - every
-# empty sprite below would show the logo at 0,0.
-logo = Image("io.png");
-logo_sprite = Sprite(logo);
-logo_sprite.SetX(Window.GetWidth() / 2 - logo.GetWidth() / 2);
-logo_sprite.SetY(Window.GetHeight() / 2 - logo.GetHeight() / 2);
-logo_sprite.SetZ(1);
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+short_side = screen_width;
+if (screen_height < short_side) short_side = screen_height;
+logo_size = Math.Int(short_side * 0.40);
+if (logo_size > ASSET_SIZE) logo_size = ASSET_SIZE;
+if (logo_size < 128) logo_size = 128;
+scale = logo_size / ASSET_SIZE;
+center_x = Window.GetX() + screen_width / 2;
+center_y = Window.GetY() + screen_height / 2;
+# the torus's radius in build_assets.py's 384 pixel logo
+radius = 144 * logo_size / 384;
 
-# Firmware updates at boot (plymouth-wrap, from Valve's holo theme): a
-# title, the updater's last log line and its progress in percent, centred
-# under the logo. plymouth-wrap sends "<!command>argument" messages:
-# set-title, and set-ttl (the expected duration in seconds), from which the
-# progress is counted here, as Valve's theme does; spin-logo and fade-out
-# are Valve's theme effects and are ignored.
-text_y = logo_sprite.GetY() + logo.GetHeight() + 40;
+# Not named "image" outside a function: Plymouth's Sprite() without an
+# argument reads a variable "image" and, finding no local one, takes the
+# global one - every empty sprite below would show it at 0,0.
+fun scaled_asset (name)
+{
+    local.img = Image(name);
+    if (global.scale == 1)
+        return img;
+    return img.Scale(Math.Int(img.GetWidth() * scale), Math.Int(img.GetHeight() * scale));
+}
+
+ring_image = scaled_asset("torus.png");
+ring = Sprite(ring_image);
+ring.SetPosition(center_x - ring_image.GetWidth() / 2, center_y - ring_image.GetHeight() / 2, 10);
+
+for (i = 0; i < FRAMES; i++)
+    jupiter_images[i] = scaled_asset("jupiter-" + i + ".png");
+jupiter = Sprite(jupiter_images[0]);
+jupiter.SetPosition(center_x - jupiter_images[0].GetWidth() / 2, center_y - jupiter_images[0].GetHeight() / 2, 30);
+
+for (i = 0; i < SEGMENTS; i++)
+{
+    plasma[i].image = scaled_asset("plasma-" + i + ".png");
+    plasma[i].sprite = Sprite(plasma[i].image);
+    plasma[i].angle = TAU * i / SEGMENTS;
+    plasma[i].sprite.SetPosition(center_x - radius * Math.Sin(plasma[i].angle) - plasma[i].image.GetWidth() / 2,
+                                  center_y - radius * Math.Cos(plasma[i].angle) - plasma[i].image.GetHeight() / 2, 20);
+    plasma[i].sprite.SetOpacity(0);
+}
+
+io_image = scaled_asset("io.png");
+io = Sprite(io_image);
+io.SetZ(40);
+
+ring.SetOpacity(0);
+jupiter.SetOpacity(0);
+io.SetOpacity(0);
+
+seconds = 0;
+ticks = 0;
+running = 1;
+last_frame = -1;
+
+# Text under the logo: password prompts and questions, and the firmware
+# updates at boot (plymouth-wrap, from Valve's holo theme) - a title, the
+# updater's last log line and its progress in percent.
+text_y = center_y + logo_size / 2 + 40;
+if (text_y > Window.GetY() + screen_height - 90) text_y = Window.GetY() + screen_height - 90;
+
 title_sprite = Sprite();
 mesg_sprite = Sprite();
 prog_sprite = Sprite();
-ttl_ticks = 0;
-ticks = 0;
+prompt_sprite = Sprite();
+input_sprite = Sprite();
+
+fun text_image (text, r, g, b)
+{
+    local.img = Image.Text(text, r, g, b);
+    local.limit = screen_width * 0.85;
+    if (img.GetWidth() > limit)
+        img = img.Scale(Math.Int(limit), Math.Int(img.GetHeight() * limit / img.GetWidth()));
+    return img;
+}
+
+fun place (spr, img, y)
+{
+    spr.SetImage(img);
+    spr.SetPosition(center_x - img.GetWidth() / 2, y, 100);
+    spr.SetOpacity(1);
+}
+
+fun put_text (spr, text, y)
+{
+    place(spr, text_image(text, 0.94, 0.88, 0.78), y);
+}
 
 fun strlen (s)
 {
@@ -59,19 +145,17 @@ fun to_int (s)
     return n;
 }
 
-fun place (spr, img, y)
-{
-    spr.SetImage(img);
-    spr.SetX(Window.GetWidth() / 2 - img.GetWidth() / 2);
-    spr.SetY(y);
-    spr.SetZ(2);
-    spr.SetOpacity(1);
-}
-
 fun progress (prog)
 {
-    place(prog_sprite, Image.Text(Math.Int(Math.Clamp(prog, 0, 100)) + " %", 1, 1, 1), text_y + 60);
+    place(prog_sprite, text_image(Math.Int(Math.Clamp(prog, 0, 100)) + " %", 1, 1, 1), text_y + 60);
 }
+
+# plymouth-wrap sends "<!command>argument" messages: set-title, and set-ttl
+# (the expected duration in seconds), from which the progress is counted
+# here, as Valve's theme does; spin-logo and fade-out are Valve's theme
+# effects and are ignored. Anything else is a log line.
+ttl = 0;
+ttl_start = 0;
 
 fun show_message (text)
 {
@@ -87,17 +171,17 @@ fun show_message (text)
         if (idx < len - 1) arg = t.SubString(idx + 1, len);
         if (cmd == "set-title")
         {
-            if (arg) place(title_sprite, Image.Text(arg, 1, 1, 1), text_y);
+            if (arg) put_text(title_sprite, arg, text_y);
             else title_sprite.SetOpacity(0);
         }
         if (cmd == "set-ttl" && arg)
         {
-            global.ttl_ticks = to_int(arg) * 50;
-            global.ticks = 0;
+            global.ttl = to_int(arg);
+            global.ttl_start = global.seconds;
         }
         return;
     }
-    place(mesg_sprite, Image.Text(t, 0.6, 0.6, 0.6), text_y + 30);
+    place(mesg_sprite, text_image(t, 0.6, 0.6, 0.6), text_y + 30);
 }
 
 fun hide_message (text)
@@ -109,22 +193,77 @@ fun hide_message (text)
 # the estimate from set-ttl
 fun system_update (prog)
 {
-    global.ttl_ticks = 0;
+    global.ttl = 0;
     progress(prog);
 }
 
-# 50 refreshes a second
-fun refresh ()
+fun display_normal ()
 {
-    if (global.ttl_ticks > 0)
-    {
-        global.ticks++;
-        if (global.ticks % 25 == 0)
-            progress(Math.Min(global.ticks * 100 / global.ttl_ticks, 99));
-    }
+    prompt_sprite.SetOpacity(0);
+    input_sprite.SetOpacity(0);
 }
 
+fun display_password (prompt, bullets)
+{
+    if (!prompt) prompt = "Password:";
+    put_text(prompt_sprite, prompt, text_y);
+    local.dots = "";
+    local.count = bullets;
+    if (count > 64) count = 64;
+    for (local.i = 0; i < count; i++) dots += "*";
+    put_text(input_sprite, dots, text_y + 30);
+}
+
+fun display_question (prompt, entry)
+{
+    put_text(prompt_sprite, prompt, text_y);
+    put_text(input_sprite, entry, text_y + 30);
+}
+
+fun refresh ()
+{
+    if (!global.running) return;
+    local.fade = global.seconds / 0.35;
+    if (fade > 1) fade = 1;
+    ring.SetOpacity(fade);
+    jupiter.SetOpacity(fade);
+    io.SetOpacity(fade);
+    local.frame = Math.Int(global.seconds / JUPITER_SECONDS * FRAMES) % FRAMES;
+    if (frame != global.last_frame)
+    {
+        jupiter.SetImage(jupiter_images[frame]);
+        global.last_frame = frame;
+    }
+    # The torus stays in place; two brightness waves run along it.
+    local.plasma_phase = TAU * global.seconds / JUPITER_SECONDS * TORUS_SPEED;
+    for (local.i = 0; i < SEGMENTS; i++)
+    {
+        local.a = (1 + Math.Cos(plasma[i].angle - plasma_phase)) / 2;
+        local.b = (1 + Math.Cos(plasma[i].angle - plasma_phase - TAU / 2)) / 2;
+        plasma[i].sprite.SetOpacity(fade * (0.55 * a * a * a * a * a * a + 0.16 * b * b * b * b * b * b));
+    }
+    local.io_phase = TAU * global.seconds / (JUPITER_SECONDS * IO_HOURS / JUPITER_HOURS);
+    io.SetX(center_x - radius * Math.Sin(io_phase) - io_image.GetWidth() / 2);
+    io.SetY(center_y - radius * Math.Cos(io_phase) - io_image.GetHeight() / 2);
+    # Counted per refresh: under load the animation slows down as a whole.
+    global.seconds += 1 / FPS;
+    global.ticks++;
+    if (global.ttl > 0 && global.ticks % 15 == 0)
+        progress(Math.Min((global.seconds - global.ttl_start) * 100 / global.ttl, 99));
+}
+
+fun quit ()
+{
+    global.running = 0;
+}
+
+Plymouth.SetRefreshFunction(refresh);
+Plymouth.SetDisplayNormalFunction(display_normal);
+Plymouth.SetDisplayPasswordFunction(display_password);
+Plymouth.SetDisplayQuestionFunction(display_question);
 Plymouth.SetDisplayMessageFunction(show_message);
 Plymouth.SetHideMessageFunction(hide_message);
 Plymouth.SetSystemUpdateFunction(system_update);
-Plymouth.SetRefreshFunction(refresh);
+Plymouth.SetQuitFunction(quit);
+display_normal();
+refresh();
