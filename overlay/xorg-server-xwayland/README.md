@@ -4,7 +4,7 @@ Replaces Void's `xorg-server-xwayland`.
 
 | Patch | Source | Upstream |
 |---|---|---|
-| `libei-forward-text-as-keysyms.patch` | Valve's xorg-xwayland 24.1.13-1.2 (SteamOS 3.9.2), `0003-LibEi-keysyms.patch` (David Edmundson, KDE, 2026) | not in 24.1.13 |
+| `libei-forward-text-as-keysyms.patch` | Valve's xorg-xwayland 24.1.13-1.2 (SteamOS 3.9.2), `0003-LibEi-keysyms.patch` (David Edmundson, KDE, 2026); unchanged in Valve's 24.1.14-1.1 | not in 24.1.13 or 24.1.14 |
 
 Why: an X11 client's text input through XTEST (Steam's on-screen keyboard
 in the desktop) is forwarded to the compositor as keysyms instead of
@@ -27,6 +27,7 @@ SteamOS.
 
 The patch applies to the 24.1.13 sources: Valve builds from the release
 tarball, Void from GitLab's archive of the `xwayland-24.1.13` tag (a
-different tarball of the same release).
+different tarball of the same release). It also applies to the 24.1.14
+release tarball (dry run, 2026-10-27), for when Void moves to it.
 
 Way back: drop it once it is in an xwayland release Void ships.
