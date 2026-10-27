@@ -178,9 +178,12 @@ have; they need someone with the hardware.
   splits), the `holo-*` renames (`holo-systemreport` 1.24,
   `holo-networking-tools` 1.4, `holo-networkmanager-config` with Io's
   NetworkManager defaults), `atomupd-daemon` 0.20260907.1 (`Atomupd1`
-  version 9 only adds credentials for custom updates). Still to look at:
-  WirePlumber 0.5.18, Xwayland 24.1.14, Valve's newer Mesa snapshots,
-  Valve's `scx` (newer LAVD changes than 1.1.3), PipeWire 1.6.8
+  version 9 only adds credentials for custom updates). WirePlumber
+  0.5.18 and PipeWire are Void's, newer than or equal to Valve's (Valve's
+  loopback patches only rebased; its one new patch is for smart filters);
+  Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it)
+  and follows when Void has it. Still to look at: Valve's newer Mesa
+  snapshots, Valve's `scx` (newer LAVD changes than 1.1.3)
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
   (a light desktop). The split is prepared: `io-base` is the core,
   `io-desktop` adds the desktop
