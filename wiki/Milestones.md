@@ -184,8 +184,12 @@ have; they need someone with the hardware.
   Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it)
   and follows when Void has it. Valve's Mesa on its main branch is what
   Io's overlay was checked against (RADV `steamos-26.05.19`; radeonsi
-  26.1.2-4 only adds a virgl patch for virtual machines). Still to look
-  at: Valve's `scx` (newer LAVD changes than 1.1.3)
+  26.1.2-4 only adds a virgl patch for virtual machines). Valve's `scx`
+  (`1.1.3.linux.steamos.2`) is a snapshot of upstream main of September
+  2026 plus 26 LAVD changes by its author that upstream does not have yet;
+  LAVD is opt-in on the Deck (Steam offers no switch for it), so Io stays
+  with Void's `scx` and takes them as Void updates (upstream 1.1.4 is out,
+  Void has 1.1.3)
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
   (a light desktop). The split is prepared: `io-base` is the core,
   `io-desktop` adds the desktop
