@@ -71,7 +71,10 @@ check "zram swap active" grep -q '^/dev/zram' /proc/swaps
 check "zram uses zstd" sh -c 'zramctl | grep -q zstd'
 check "zswap disabled" sh -c 'grep -q N /sys/module/zswap/parameters/enabled'
 check "swap file active" grep -q '^/home/swapfile' /proc/swaps
-if findmnt -no SOURCE / | grep -q '^/dev/nvme'; then
+if grep -q -x -E 'Jupiter|Galileo' /sys/class/dmi/id/product_name 2> /dev/null; then
+    info "Steam Deck: hibernation off (Valve's jupiter-hibernate-disable)"
+    check "hibernation disabled on the Steam Deck" grep -q "AllowHibernation=no" /etc/elogind/sleep.conf.d/zz-holo-jupiter-nohibernate.conf
+elif findmnt -no SOURCE / | grep -q '^/dev/nvme'; then
     info "/ on the NVMe: hibernation allowed"
     check "elogind skips the swap size check (hibernation)" sh -c 'tr "\0" "\n" < /proc/$(pgrep -x elogind)/environ | grep -q "^SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1"'
     check "initramfs has io-resume" sh -c 'lsinitrd "/boot/initramfs-$(uname -r).img" | grep -q "pre-mount/09-io-resume.sh"'
