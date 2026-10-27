@@ -118,7 +118,8 @@ have; they need someone with the hardware.
   (`galileo-mura`), the 45–90 Hz refresh range and HDR default, Wi-Fi debug
   mode (`trace-cmd`), the regulatory domain of its ath11k card. The kernel
   (Valve's tree) and fan control already covered it. Valve's
-  `modules-reload.sh` (reloading ath11k around hibernation) is not ported
+  `modules-reload.sh` (reloading ath11k around hibernation) is not needed:
+  the Deck does not hibernate (`jupiter-hibernate-disable`)
 - **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`), waking from
   the TV through the embedded controller (steamos-manager), Valve's audio
   profile (HDMI, AC3 for ARC), fan control. Not ported: CEC volume control

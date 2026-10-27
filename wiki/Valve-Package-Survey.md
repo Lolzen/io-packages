@@ -116,7 +116,8 @@ Valve's choices and is the starting point if Io ever gets A/B updates.
   `hibernate-swap-helper.sh cleanup`, is part of Io's sleep hook
   `io-hibernate` (`steamos-tuning`). The rest of the
   sleep setup is on [Deviations](Deviations) (*System services*);
-  `modules-reload.sh` only concerns the OLED's Wi-Fi (`ath11k`).
+  `modules-reload.sh` only concerns the OLED's Wi-Fi (`ath11k`), and the
+  Deck no longer hibernates (`jupiter-hibernate-disable`).
 - **Valve's newer `steamos-customizations`** (after 3.8.4) is mostly A/B
   work: `holo-sync-var` (syncing `/var` between slots, fallbacks), RAUC
   options, `first-boot` activation, boot attempt counters.
