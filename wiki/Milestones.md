@@ -25,9 +25,8 @@ testers yet.
 - Valve's newer versions (*Catching up with Valve*)
 - Void's side: Mesa patches dropped as Void's Mesa takes them (the three
   RADV fixes most likely with 26.2.6), wpa_supplicant's rescan patches with
-  the next hostap release, gamescope 3.17 once Void has it (Io's
-  `gamescope-wsi-32bit` follows it), and the overlays rebuilt after Void
-  updates (*Recurring*)
+  the next hostap release, and the overlays rebuilt after Void updates
+  (*Recurring*)
 - *Polish* below
 
 ---
@@ -83,14 +82,6 @@ Work that is built but not on `main` yet:
 
 ## Tests pending
 
-- **Hibernation from the desktop** (Io on the NVMe): Plasma's leave menu
-  → *Hibernate* (the same path as `loginctl hibernate`, tested); Plasma's
-  energy settings with suspend-then-hibernate: after 20 minutes of suspend
-  the Deck should hibernate. elogind 252 tells a wake by its own timer from
-  a wake by the user through the firmware's wake-up type, and the Deck's
-  reads "power switch" (`/sys/firmware/dmi/entries/1-0/raw`, byte 24 =
-  0x06): it may stay in suspend. `io-hibernate-test.sh check`/`logs`
-  (project tools) record it
 - **Wi-Fi after a long suspend:** once, after 32 minutes, the LCD's card
   (`rtw88_8822ce`) did not leave D3hot ("device inaccessible", "mac power
   on failed") and Wi-Fi stayed dead until a reboot; the suspend of two
@@ -180,11 +171,16 @@ have; they need someone with the hardware.
   (2026-10-21) kwin 6.7.3-1.7's suspend patches and wpa_supplicant
   2.12-1.3's rescan patches as merged in hostap, and Valve's steamos-manager
   itself from its main branch after 26.4.1 (2026-10-22, with Io's runit
-  support). Valve's versions newer
-  than Io's, seen on 2026-10-12 and not taken yet:
-  `steamos-customizations-jupiter` 20260916.1, `holo-networking-tools` 1.4,
-  `holo-systemreport` 1.24, PipeWire 1.6.8,
-  WirePlumber 0.5.18, `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9)
+  support); on 2026-10-27 `jupiter-hibernate-disable` 0.1 (no hibernation
+  on the Deck), `steamdeck-dsp` 1.03 and gamescope 3.17.0 (Void's, with
+  Io's 32-bit WSI layer). Checked on 2026-10-27 and not needed:
+  `steamos-customizations-jupiter` 20260916.1 (A/B work and packaging
+  splits), the `holo-*` renames (`holo-systemreport` 1.24,
+  `holo-networking-tools` 1.4, `holo-networkmanager-config` with Io's
+  NetworkManager defaults), `atomupd-daemon` 0.20260907.1 (`Atomupd1`
+  version 9 only adds credentials for custom updates). Still to look at:
+  WirePlumber 0.5.18, Xwayland 24.1.14, Valve's newer Mesa snapshots,
+  Valve's `scx` (newer LAVD changes than 1.1.3), PipeWire 1.6.8
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
   (a light desktop). The split is prepared: `io-base` is the core,
   `io-desktop` adds the desktop

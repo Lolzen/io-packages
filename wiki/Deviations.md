@@ -201,6 +201,15 @@ its own implementation (`io-steamos-manager`).
   socklog. Where the EC's log does not exist (every Steam Deck), the service
   takes itself down instead of restarting (Valve: `ConditionPathExists`);
   it mounts debugfs itself if needed (Valve: `sys-kernel-debug.mount`).
+- **No hibernation on the Steam Deck**, as Valve decided on its main branch
+  (`jupiter-hibernate-disable` 0.1, October 2026): on Valve's Jupiter and
+  Galileo elogind is told that hibernation, suspend-then-hibernate and
+  hybrid sleep are not allowed. Valve's package is a oneshot unit before
+  logind; Io's is a core service before elogind, which reads the DMI
+  strings from `/sys/class/dmi/id` instead of asking `dmidecode`. Steam's
+  *Standby* is a plain suspend either way. Io's hibernation support stays
+  installed for other hardware, and is described below as it worked on the
+  Deck until then.
 - **Hibernation is allowed only with `/` on the internal NVMe** (Io's own
   core service writes elogind's `sleep.conf.d`); on an SD card or USB drive
   writing about 17 GB takes minutes and wears the medium. On the NVMe,
@@ -225,9 +234,8 @@ its own implementation (`io-steamos-manager`).
     (`SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK`) is set in elogind's runit
     service (`elogind-holo`).
   - Valve's reset of the A/B boot counter after resuming does not apply.
-  **Tested** with Io on the NVMe (2026-10-19): hibernating and resuming
-  (`loginctl hibernate`). Plasma's hibernate and suspend-then-hibernate:
-  see [Milestones](Milestones), *Tests pending*.
+  **Tested** on the Deck with Io on the NVMe (2026-10-19): hibernating and
+  resuming (`loginctl hibernate`).
 - **Proton's nice limit** as on SteamOS 3.9.2: `* hard nice -8` in
   `/etc/security/limits.d/15-proton-nice.conf`, read by `pam_limits` in
   SDDM's login (Steam's hard limit 28; game threads run at nice −1, −2 and
@@ -327,9 +335,12 @@ its own implementation (`io-steamos-manager`).
   plugin (label `nt-filter`). Io builds werman/noise-suppression-for-voice as
   `rnnoise-ladspa` (label `noise_suppressor_mono`), because Void's NoiseTorch
   package ships no system-wide plugin.
-- **Version:** `steamdeck-dsp` 1.02, as on SteamOS 3.9.2 (3.8.4 ran 0.91,
-  which kept the microphone filter from suspending; 1.02 drops that, and Io
-  follows).
+- **Version:** `steamdeck-dsp` 1.03 from Valve's main branch: it lets the
+  headphone output stay awake for 15 minutes of silence, against clicks
+  (Valve's rule for Galileo's card in a file of Io's own,
+  `93-io-galileo-headphones.conf`). SteamOS 3.9.2 runs 1.02; 3.8.4 ran
+  0.91, which kept the microphone filter from suspending; 1.02 drops that,
+  and Io follows.
 - **UCM profile:** Valve's profile from `steamdeck-dsp` (`Internal Mic`,
   headphone sink), as on SteamOS. Void's `alsa-ucm-conf` also ships
   `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM would pick first by the
@@ -377,8 +388,9 @@ its own implementation (`io-steamos-manager`).
   names; the standard Steam udev rules keep coming from Void's
   `steam-udev-rules`. Arch's `lib32-pipewire` becomes `pipewire-32bit` plus
   every `libspa-*-32bit`, which Void ships separately.
-- **gamescope** is Void's, 3.16.30 (Io's update to Void), built from
-  Valve's source, the version SteamOS 3.9.2 runs as well.
+- **gamescope** is Void's, 3.17.0, built from Valve's source, the version
+  Valve's main branch has (SteamOS 3.9.2: 3.16.30); Io's 32-bit WSI layer
+  (`gamescope-wsi-32bit`) is built from the same version.
 - **`jupiter-firewall`:** Valve's rules with ufw instead of firewalld, which
   Void does not have: SSH, DHCPv6 and every port from 1024 up come in, the
   privileged ports below are rejected. The package sets them up once in ufw,

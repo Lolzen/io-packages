@@ -29,6 +29,8 @@ behind each difference, see [Deviations](Deviations).
    - `20-dmi-serial-perms.sh` — DMI serial numbers readable by `wheel` only
    - `20-fstab-repair.sh` — comments out invalid SD card lines in fstab
    - `60-io-swapfile.sh` — Valve's 1 GiB swap file in `/home`
+   - `62-jupiter-hibernate-disable.sh` — no hibernation on the Steam Deck
+     (Valve's `jupiter-hibernate-disable`)
    - `61-io-hibernate-guard.sh` — hibernation allowed only with `/` on the
      internal NVMe
    - `70-io-cfs-tunings.sh` — mounts debugfs, applies Valve's scheduler tunings
