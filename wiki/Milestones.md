@@ -165,14 +165,16 @@ have; they need someone with the hardware.
   (2026-10-21) kwin 6.7.3-1.7's suspend patches and wpa_supplicant
   2.12-1.3's rescan patches as merged in hostap, and Valve's steamos-manager
   itself from its main branch after 26.4.1 (2026-10-22, with Io's runit
-  support; on 2026-10-28 Valve's main of 2026-10-24); on 2026-10-27 `jupiter-hibernate-disable` 0.1 (no hibernation
-  on the Deck), `steamdeck-dsp` 1.03 and gamescope 3.17.0 (Void's, with
-  Io's 32-bit WSI layer). Checked on 2026-10-27 and not needed:
+  support; on 2026-10-28 Valve's main of 2026-10-24); on 2026-10-27
+  `jupiter-hibernate-disable` 0.1 (no hibernation on the Deck),
+  `steamdeck-dsp` 1.03 and gamescope 3.17.0 (Void's, with Io's 32-bit WSI
+  layer). Checked on 2026-10-27 and not needed:
   `steamos-customizations-jupiter` 20260916.1 (A/B work and packaging
   splits), the `holo-*` renames (`holo-systemreport` 1.24,
   `holo-networking-tools` 1.4; `holo-networkmanager-config` 1.0 was taken
-  on 2026-10-28 in place of Io's `steamos-networking-tools`), `atomupd-daemon` 0.20260907.1 (`Atomupd1`
-  version 9 only adds credentials for custom updates). WirePlumber
+  on 2026-10-28 in place of Io's `steamos-networking-tools`),
+  `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9 only adds
+  credentials for custom updates). WirePlumber
   0.5.18 and PipeWire are Void's, newer than or equal to Valve's (Valve's
   loopback patches only rebased; its one new patch is for smart filters);
   Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it)
