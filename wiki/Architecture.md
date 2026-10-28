@@ -150,7 +150,7 @@ session to log in next and ends the running one:
 Io runs Valve's `steamos-manager` (`com.steampowered.SteamOSManager1`),
 built from the branch `runit` of
 [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager):
-Valve's main branch after 26.4.1 plus runit support, written to go to
+Valve's main branch (2026-10-24) plus runit support, written to go to
 Valve. At start it finds the init system: systemd when
 `/run/systemd/system` exists, runit when PID 1 is `runit`. Booted with
 systemd, nothing changes. Two halves, as on SteamOS:

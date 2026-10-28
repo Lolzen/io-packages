@@ -120,7 +120,7 @@ its reason.
 
 Valve's `steamos-manager`, built from the branch `runit` of
 [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager):
-Valve's main branch after 26.4.1 (`f82ebc2`, newer than SteamOS 3.9.2's
+Valve's main branch of 2026-10-24 (`a3b2013`, newer than SteamOS 3.9.2's
 26.4.1) with seven commits that let it run without systemd, written to be
 offered to Valve. How it does without systemd is on
 [Architecture](Architecture), *SteamOS Manager*. Until October 2026 Io ran
@@ -169,7 +169,8 @@ its own implementation (`io-steamos-manager`).
   password (measured 2026-10-21; SteamOS's NetworkManager carries Valve's
   patches that mirror wpa_supplicant's connections into iwd, which Io
   leaves out). Io's desktop session (`io-plasma`) sets the variable too.
-- **Connectivity check** against GNOME's endpoint; SteamOS uses Arch's.
+- **Connectivity check** against GNOME's endpoint (`io-base`); SteamOS uses
+  Arch's.
 - **Hardware other than the Steam Deck:** Valve's device files come with
   the daemon unchanged. Io is built for the Steam Deck; on the OLED and the
   Steam Machine Valve's packages for them are in place (untested), on other

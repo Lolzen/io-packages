@@ -18,7 +18,7 @@ and sources of Io's packages are on [Packages](Packages).
 |---|---|---|
 | `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-72` 7.2.11 | Valve's `7.2.7-valve2` (SteamOS 3.9.3) with stable 7.2.11 merged in; built from the configuration Valve's package uses, see [Kernel](Kernel) |
 | `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps. From 20260930.1 (SteamOS 3.9.3): the firmware updaters (`deck-firmware-updaters`) and the thumbstick and trigger calibration tools (`deck-controller-calibration`) |
-| `steamos-manager` 26.4.1 (26.1.0) | `steamos-manager` (Valve's main after 26.4.1) | Valve's daemon with runit support (fork [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager), branch `runit`), see [Architecture](Architecture); until October 2026 Io's own implementation, `io-steamos-manager` |
+| `steamos-manager` 26.4.1 (26.1.0) | `steamos-manager` (Valve's main of 2026-10-24) | Valve's daemon with runit support (fork [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager), branch `runit`), see [Architecture](Architecture); until October 2026 Io's own implementation, `io-steamos-manager` |
 | `ec-log` 0.1 (new) | `ec-log` 0.1 | The Steam Machine's EC log; runit service linked with a `down` file, started by SteamOS Manager |
 | `jupiter-dock-updater-bin` | 20260811.01 (newest in jupiter-3.9) | Valve's dock updater as it is; untested without Valve's dock |
 | `holo-session-selection` (new) | in `io-session` | `holo-session-select` (also as `steamos-session-select`, which Steam calls) with Io's desktop session, and SDDM's settings under its name `holo.conf`. Its `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
@@ -33,7 +33,7 @@ and sources of Io's packages are on [Packages](Packages).
 | `xdg-desktop-portal-holo` 0.1.18 | 0.1.18 | Started by D-Bus, no systemd unit |
 | `steamos-systemreport` 1.23 (0.16) | 1.23 | socklog and xbps instead of journal and pacman |
 | `steamos-powerbuttond` 4.2 | 4.2 | |
-| `steamos-networking-tools` 1.3 (1.2) | 1.3 (parts) | NetworkManager defaults; `steamos-wifi-set-backend` is left out, SteamOS Manager switches the backend itself |
+| `steamos-networking-tools` 1.3 (1.2) | `holo-networkmanager-config` 1.0 | `steamos-wifi-set-backend` is left out, SteamOS Manager switches the backend itself. The NetworkManager defaults (on 3.9.2 in `steamos-customizations-jupiter`) come from Valve's `holo-networkmanager-config` of its main branch, without systemd-resolved; the connectivity check is `io-base`'s |
 | `steamos-passwd` 1.0 | 1.0 | |
 | `steamos-devkit-service` 0.20250916.0 | same | mDNS through Avahi |
 | `steam-im-modules` 20240131 | same | |
