@@ -1,8 +1,8 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
-version=26.4.1.20261022
-revision=15
-_commit=c789c39bd5aac0b313abec0fa5a8676c353c2703
+version=26.4.1.20261024
+revision=1
+_commit=956be098795a09fa179f68d5ab54a0b275574661
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
 hostmakedepends="pkg-config clang llvm clang21-devel"
@@ -16,16 +16,16 @@ maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://gitlab.steamos.cloud/holo/steamos-manager"
 distfiles="https://github.com/Lolzen/steamos-manager/archive/${_commit}.tar.gz"
-checksum=b4a39213427ecea9ce12c1ba9195f472312b084195225e2897a8a90a116b6eb8
+checksum=b69c56bfc399b848b8a04f324ebdac6cd77e3f63920d87d12c1eba044cc092cc
 
 # Valve's steamos-manager from the branch "runit" of the fork
-# github.com/Lolzen/steamos-manager: Valve's main after 26.4.1 (f82ebc2)
+# github.com/Lolzen/steamos-manager: Valve's main after 26.4.1 (a3b2013)
 # plus the runit support meant for Valve: system services through runit
 # (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch,
 # Wi-Fi debug mode), and without systemd --user the login mode from the
 # session, Orca as a child process (restarted on failure), logout through
 # logind, and callers below Steam's reaper refused as calls from a game.
-# The version is 26.4.1 with the date of the branch's first commit.
+# The version is 26.4.1 with the date of Valve's newest commit in it.
 #
 # Io's side, in place of Valve's systemd units:
 # - root half: the runit service steamos-manager (linked by INSTALL on
