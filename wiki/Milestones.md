@@ -53,12 +53,6 @@ Work that is built but not on `main` yet:
 
 ## Open observations
 
-- **Screen sharing prompt for a new user:** Io asks once when Steam starts
-  in the desktop (Plasma's *Share screen with*, fresh user after Io's
-  factory reset, 2026-10-20); SteamOS 3.9.3 does not (fresh user,
-  2026-10-19). Not a dock matter on either. Most likely a screencast
-  package that comes with Io's kwin/Plasma and that SteamOS does not ship.
-  Suppressing it comes later
 - **Wi-Fi next to the dock's Ethernet showed "can't reach network"** once,
   during a day of heavy testing; plugging and unplugging the dock later
   behaved correctly. If it comes back, record before reconnecting:

@@ -97,16 +97,15 @@ its reason.
   (it replaced Maliit there). As on SteamOS it is not set as kwin's input
   method by default; System Settings → Keyboard → Virtual Keyboard turns it
   on. The recovery stick's build sets it (it opens on touch only).
-- **Screen sharing permission in the desktop:** Steam asks Plasma's portal
-  for screen sharing when it starts in the desktop; the answer is kept with
-  a restore token. Io stores it for an app without an ID (`""`), SteamOS for
-  `steam`, most likely because without systemd the portal cannot name
-  Steam from a cgroup scope. Neither system grants it in advance
-  (`kde-authorized` empty on both). A fresh user is asked once on Io
-  (*Share screen with*, 2026-10-20), on SteamOS 3.9.3 not (2026-10-19),
-  with or without the dock; most likely a screencast package that comes
-  with Io's kwin/Plasma and SteamOS does not ship (see
-  [Milestones](Milestones), *Open observations*).
+- **Screen sharing in the desktop:** Steam asks Plasma's portal for the
+  screen when it starts in the desktop. As on SteamOS, it gets all screens
+  without Plasma's *Share screen with* dialog when it has no saved choice
+  (Valve's patch to `xdg-desktop-portal-kde`, in `xdg-desktop-portal-kde-holo`);
+  a choice made earlier is restored. SteamOS's portal knows Steam by its
+  systemd unit (`app-steam@…`); without systemd every host application has
+  an empty app id, so Io recognises Steam by the client binary behind the
+  request (`steamrt64/steam` or `ubuntu12_32/steam`). Tested 2026-10-29: no
+  dialog, the saved choice is the Deck's screen.
 - **Touch only with the dock:** SteamOS switches the trackpads and the
   pointer off while the dock is attached and leaves only the touchscreen
   (seen with a mirrored display); Io leaves them on. Not looked into yet.
@@ -511,6 +510,7 @@ is built for 32 bit as well (`-holo-32bit` packages).
 | `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume (hostap `20e1762ee`, `ab3200b10`, merged upstream, not released yet); built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
 | `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting; only the bands the adapter supports are scanned (SteamOS 3.9.3) |
 | `mesa-holo` | `mesa` and all its subpackages (`mesa-dri`, `mesa-vulkan-radeon`, `libgbm`, ...), with their `-32bit` packages | OpenGL: Steam's frame limit through gamescope's limiter file (DRI3: the patch turns V-Sync on while a limit is set; confirmed with glxgears and V-Sync off: 30.0 FPS at limit 30, uncapped without a limit). RADV: explicit synchronisation for VM operations, per command buffer BO tracking and no global BO list for gamescope (stutter in game mode), `VK_EXT_pageable_device_local_memory`, *Forza Horizon* 4 to 6; three RADV fixes from Mesa main that are not in 26.2.5 |
+| `xdg-desktop-portal-kde-holo` | `xdg-desktop-portal-kde` | Steam may share the screen without Plasma's dialog when it has no saved choice (Valve's patch, xdg-desktop-portal-kde 6.7.3-1.2, SteamOS 3.9.3); Io's own: Steam recognised by its client binary, since without systemd the portal passes no app id |
 
 Valve's other patches to these packages are left out: for bluez, the
 `main.conf` settings (Io sets them in its own file), the wake-policy
