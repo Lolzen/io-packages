@@ -33,5 +33,10 @@ holo.sh copies an overlay's `INSTALL` into the generated package.
 All 14 apply to 22.02.122 after Void's two patches (12 cleanly, two with
 fuzz); built (autoreconf, Void's configure options) on 2026-10-29.
 
+`template.append`: `autoreconf` (patch 11 changes Makefile.am), and
+`-std=gnu17`: the regenerated configure (autoconf 2.72+) asks for C23, and
+the X11 renderer does not build as C23 (`return false` from a function
+returning a pointer). Reproduced and checked with GCC 14 here.
+
 Way back: Valve only; none is upstream (plymouth 24 reworked the renderer).
 Stays while Void ships 22.02.
