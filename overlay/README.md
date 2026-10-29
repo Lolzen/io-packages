@@ -103,6 +103,7 @@ one release, so the update removes the overlay package and installs Void's.
 | [python3-hid](python3-hid/README.md) | python3-hid | 1.0.4 | pyhidapi 1.0.6 (`BusType`, `bus_type`), as Valve's controller updater needs | released in 1.0.6 | 2026-10-12 |
 | [elogind](elogind/README.md) | elogind, libelogind, elogind-devel | 252.39 | runit service sets `SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1`, as Valve's logind drop-in (hibernation); no segfault of `e-poweroff`/`e-reboot` (#341) | the variable: Valve's configuration; the fix: elogind main `e7c9887d`, not in 252 | 2026-10-26 |
 | [mesa](mesa/README.md) | mesa and all subpackages, and their -32bit packages | 26.2.5 | OpenGL frame limiter; explicit sync for VM operations (Forza); pageable device-local memory; no global BO list for gamescope (stutter); 3 RADV fixes from main | Valve only; the fixes in main | 2026-10-17 |
+| [xdg-desktop-portal-kde](xdg-desktop-portal-kde/README.md) | xdg-desktop-portal-kde | 6.7.5 | Steam may share the screen without Plasma's prompt (Valve's patch), recognised by its process without systemd | Valve only; the recognition Io only | 2026-10-29 |
 
 ## Hand-written stand-ins
 
