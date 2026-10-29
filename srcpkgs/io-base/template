@@ -1,8 +1,8 @@
 # Template file for 'io-base'
 pkgname=io-base
 version=0.7.2
-revision=1
-depends="polkit socklog-void plymouth alsa-pipewire efibootmgr util-linux
+revision=2
+depends="polkit socklog-void plymouth-holo alsa-pipewire efibootmgr util-linux
  grub-x86_64-efi"
 conf_files="/etc/elogind/logind.conf.d/10-io.conf /etc/sv/bluetoothd/conf
  /etc/default/io-bootnext"

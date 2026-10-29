@@ -192,6 +192,10 @@ cmd_gen() {
     dst="$VP_DIR/srcpkgs/$o-holo"
     rm -rf "$dst"
     cp -a "$src" "$dst"
+    # an overlay's own INSTALL script (Void's package has none)
+    if [ -f "$OVERLAY/$o/INSTALL" ]; then
+        cp "$OVERLAY/$o/INSTALL" "$dst/INSTALL"
+    fi
     if [ -d "$OVERLAY/$o/patches" ]; then
         mkdir -p "$dst/patches"
         for p in "$OVERLAY/$o/patches"/*.patch; do
