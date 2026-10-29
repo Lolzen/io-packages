@@ -24,7 +24,7 @@ testers yet.
 - *Tests pending* and *Open observations* below
 - Valve's newer versions (*Catching up with Valve*)
 - Void's side: Mesa patches dropped as Void's Mesa takes them (the three
-  RADV fixes most likely with 26.2.6), wpa_supplicant's rescan patches with
+  RADV fixes went with 26.2.6), wpa_supplicant's rescan patches with
   the next hostap release, and the overlays rebuilt after Void updates
   (*Recurring*)
 - *Polish* below

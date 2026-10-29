@@ -9,9 +9,12 @@ template's own `subpackages=` list; nothing is written by hand.
 SteamOS 3.9.2 builds Mesa from two sources: OpenGL from `radeonsi-26.1.2`
 (Mesa 26.1.2 plus one Valve commit) and Vulkan (RADV) from
 `steamos-26.05.19` (a Mesa main snapshot of May 2026 plus backports and
-Valve's own commits). Void's 26.2.5 is newer than both, so only Valve's own
-commits (`STEAMOS:`) and the backports that are not in 26.2.5 yet are taken
-over (checked against Valve's `jupiter-3.9` sources of 2026-10-15).
+Valve's own commits). Void's 26.2.6 is newer than both, so only Valve's own
+commits (`STEAMOS:`) are taken over (checked against Valve's `jupiter-3.9`
+sources of 2026-10-15; no newer RADV snapshot on Valve's mirror on
+2026-10-29). The three RADV fixes from Mesa main that Io carried for 26.2.5
+(descriptor set allocator heap size, memory leak and error code when a pool
+entry fails) are in 26.2.6.
 
 | Patch | What | Upstream |
 |---|---|---|
@@ -22,18 +25,17 @@ over (checked against Valve's `jupiter-3.9` sources of 2026-10-15).
 | 0010, 0011 | `radv_vm_explicit_sync` for Forza Horizon 4, 5 and 6 (stutter) | Valve only |
 | 0012 | `VK_EXT_pageable_device_local_memory` (memory priorities for DXVK and vkd3d-proton); a no-op on kernels without Valve's ioctl | Valve only |
 | 0013, 0014 | **Per command buffer BO tracking, and no global BO list for gamescope:** a buffer shared by gamescope and the game made the kernel synchronise both processes' submissions (GPU bubbles, stutter in game mode). Valve's device check keeps the global list when gamescope enables a feature that needs it | Valve only (holo-team/tasks#2011) |
-| 0015-0017 | RADV fixes: descriptor set allocator heap size, memory leak and error code when a pool entry fails | Mesa main, picked by Valve; not in 26.2.5 |
 
 Rebased onto 26.2.5 by Io (noted in each patch): 0008 (calls changed
 upstream, sync type moved out of the winsys), 0009 and 0014 (RADV's driconf
 options are declared in `radv_drirc_gen.py` there), 0013 (small conflicts).
-Compile-tested (RADV and radeonsi, x86_64) before committing.
+Compile-tested (RADV and radeonsi, x86_64) before committing. All 14 apply
+to 26.2.6 unchanged, without fuzz (2026-10-29).
 
 Left out: Valve's `radv: always consider some outputs as invariant` (in
 26.2.5 already), CI expectation files and Valve's pick script.
 
-Way back: per patch, when Void's Mesa contains it; 0015-0017 most likely
-with 26.2.6. When the overlay goes, switch `io-desktop` and `steam-jupiter`
+Way back: per patch, when Void's Mesa contains it. When the overlay goes, switch `io-desktop` and `steam-jupiter`
 back to Void's names; an Io package must then replace the `-holo` and
 `-holo-32bit` packages.
 

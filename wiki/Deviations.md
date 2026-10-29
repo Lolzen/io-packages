@@ -316,11 +316,11 @@ its own implementation (`io-steamos-manager`).
 
 ## Graphics
 
-- **Mesa is Void's 26.2.5 with Valve's patches** (`mesa-holo`, 64 and 32
+- **Mesa is Void's 26.2.6 with Valve's patches** (`mesa-holo`, 64 and 32
   bit, see *Io overlay*), not Valve's builds (SteamOS 3.9.2: radeonsi
   26.1.2 with one Valve patch, RADV from Valve's `steamos-26.05` branch, a
   Mesa main snapshot of May 2026). Void's release is newer than both;
-  Valve's own commits and the RADV fixes 26.2.5 lacks are carried on top.
+  Valve's own commits are carried on top.
   Valve's older fix for *No Rest for the Wicked* (NGG culling off) is not
   in `steamos-26.05` either.
 - **gamescope's WSI layer for 32-bit games** is Io's `gamescope-wsi-32bit`,
@@ -509,7 +509,7 @@ is built for 32 bit as well (`-holo-32bit` packages).
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | text typed through XTEST (Steam's keyboard in the desktop) goes to the compositor as keysyms over libei, so letters outside the first layout group and CJK text arrive |
 | `wpa_supplicant-holo` | `wpa_supplicant` | a WPA3 (SAE) "unspecified failure" counts as a wrong password; two fixes against forced rescans after resume (hostap `20e1762ee`, `ab3200b10`, merged upstream, not released yet); built with WNM, MBO, OCV, FILS, the learning background scan, autoscan and 802.11be, as Valve's build |
 | `iwd-holo` | `iwd` | a scan of some channels keeps the list of known access points; the access point being joined stays in it; scans are cancelled before connecting; only the bands the adapter supports are scanned (SteamOS 3.9.3) |
-| `mesa-holo` | `mesa` and all its subpackages (`mesa-dri`, `mesa-vulkan-radeon`, `libgbm`, ...), with their `-32bit` packages | OpenGL: Steam's frame limit through gamescope's limiter file (DRI3: the patch turns V-Sync on while a limit is set; confirmed with glxgears and V-Sync off: 30.0 FPS at limit 30, uncapped without a limit). RADV: explicit synchronisation for VM operations, per command buffer BO tracking and no global BO list for gamescope (stutter in game mode), `VK_EXT_pageable_device_local_memory`, *Forza Horizon* 4 to 6; three RADV fixes from Mesa main that are not in 26.2.5 |
+| `mesa-holo` | `mesa` and all its subpackages (`mesa-dri`, `mesa-vulkan-radeon`, `libgbm`, ...), with their `-32bit` packages | OpenGL: Steam's frame limit through gamescope's limiter file (DRI3: the patch turns V-Sync on while a limit is set; confirmed with glxgears and V-Sync off: 30.0 FPS at limit 30, uncapped without a limit). RADV: explicit synchronisation for VM operations, per command buffer BO tracking and no global BO list for gamescope (stutter in game mode), `VK_EXT_pageable_device_local_memory`, *Forza Horizon* 4 to 6 |
 | `xdg-desktop-portal-kde-holo` | `xdg-desktop-portal-kde` | Steam may share the screen without Plasma's dialog when it has no saved choice (Valve's patch, xdg-desktop-portal-kde 6.7.3-1.2, SteamOS 3.9.3); Io's own: Steam recognised by its client binary, since without systemd the portal passes no app id |
 
 Valve's other patches to these packages are left out: for bluez, the
@@ -525,8 +525,8 @@ picture stays until Steam's boot animation, as on SteamOS); for
 wpa_supplicant, Arch's patches in Valve's build and the rest of Valve's
 build options (among them PC/SC and SIM authentication, which would need
 `pcsclite`); WEP stays enabled as in Void's build (Valve's leaves it off);
-for Mesa, `radv: always consider some outputs as invariant` (in 26.2.5
-already), CI files and Valve's pick script.
+for Mesa, `radv: always consider some outputs as invariant` (in Void's
+Mesa already), CI files and Valve's pick script.
 
 ---
 
