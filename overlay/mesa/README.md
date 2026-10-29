@@ -30,7 +30,8 @@ Rebased onto 26.2.5 by Io (noted in each patch): 0008 (calls changed
 upstream, sync type moved out of the winsys), 0009 and 0014 (RADV's driconf
 options are declared in `radv_drirc_gen.py` there), 0013 (small conflicts).
 Compile-tested (RADV and radeonsi, x86_64) before committing. All 14 apply
-to 26.2.6 unchanged, without fuzz (2026-10-29).
+to 26.2.6 unchanged, without fuzz, and compile (RADV and radeonsi, x86_64,
+2026-10-29).
 
 Left out: Valve's `radv: always consider some outputs as invariant` (in
 26.2.5 already), CI expectation files and Valve's pick script.
