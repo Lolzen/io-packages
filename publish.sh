@@ -123,12 +123,24 @@ bindir() {
     esac
 }
 
+# Only x86_64 and noarch files belong in Io's repository. xbps-src puts the
+# i686 build of a lib32 overlay (mesa) into the same binpkgs directory, with
+# the same version as the x86_64 one; without this check the i686 file could
+# win the comparison below and be published in its place (2026-10-29).
+is_repo_arch() {
+    case "$1" in
+        *."$ARCH".xbps|*.noarch.xbps) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # newest file of package $2 in directory $1 (x86_64 or noarch), by xbps's
 # own version order: sort -V puts 26.4.1_1 above 26.4.1.20261022_1
 newest_in() {
     best=""
     for f in "$1/$2"-[0-9]*.xbps; do
         [ -f "$f" ] || continue
+        is_repo_arch "$f" || continue
         [ "$(pkgname_of "$f")" = "$2" ] || continue
         if [ -z "$best" ]; then
             best=$f
@@ -146,6 +158,7 @@ latest_built_in() {
     best=""
     for f in "$1/$2"-[0-9]*.xbps; do
         [ -f "$f" ] || continue
+        is_repo_arch "$f" || continue
         [ "$(pkgname_of "$f")" = "$2" ] || continue
         if [ -z "$best" ] || [ "$f" -nt "$best" ]; then
             best=$f
