@@ -1,0 +1,18 @@
+# The boot splash's plymouthd runs from the initramfs and keeps running after
+# the switch to the real root, so a changed plymouthd only takes effect once
+# the initramfs is rebuilt: done here on an update (an image build creates
+# its initramfs itself, and a kernel installed later builds its own).
+case "${ACTION}" in
+post)
+	[ "${UPDATE}" = "yes" ] || exit 0
+	_hook=etc/kernel.d/post-install/20-initramfs
+	[ -x "${_hook}" ] || exit 0
+	for _dir in usr/lib/modules/*/; do
+		_ver=${_dir%/}
+		_ver=${_ver##*/}
+		[ -f "boot/initramfs-${_ver}.img" ] || continue
+		echo "Rebuilding the initramfs for ${_ver} (plymouth changed)"
+		"${_hook}" ${PKGNAME} "${_ver}"
+	done
+	;;
+esac

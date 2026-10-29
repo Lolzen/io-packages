@@ -1,9 +1,9 @@
 # Template file for 'io-branding'
 pkgname=io-branding
 version=0.3.1
-revision=1
+revision=2
 hostmakedepends="librsvg-utils"
-depends="plymouth"
+depends="plymouth-holo"
 short_desc="Io distribution branding: logo, boot splash, fastfetch config"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"

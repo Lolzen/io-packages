@@ -93,6 +93,8 @@ check "gamescope with stats pipe (-T)" sh -c 'tr "\0" " " < /proc/$(pgrep -x gam
 check "one steamos-manager session half" sh -c '[ "$(pgrep -c -u deck -f "^/usr/lib/steamos-manager$")" = 1 ]'
 check "one cecd" sh -c '[ "$(pgrep -c -u deck -x cecd)" = 1 ]'
 check "one steam_notif_daemon (notifications to Steam)" sh -c '[ "$(pgrep -c -u deck -f ^/usr/bin/steam_notif_daemon)" = 1 ]'
+check "plymouth from Io's overlay (splash kept until the session takes over)" sh -c 'xbps-query plymouth-holo > /dev/null'
+check "Orca from Io's overlay (reloads on SIGUSR1 from SteamOS Manager)" sh -c 'xbps-query orca-holo > /dev/null'
 check "KDE portal from Io's overlay (Steam shares the screen without a prompt)" sh -c 'xbps-query xdg-desktop-portal-kde-holo > /dev/null'
 check "holo portal first in game mode" grep -q "default=holo;gamescope" /usr/share/xdg-desktop-portal/gamescope-portals/gamescope-portals.conf
 check "mangoapp has Steam's config file" sh -c 'tr "\0" "\n" < /proc/$(pgrep -x mangoapp)/environ | grep -q ^MANGOHUD_CONFIGFILE='

@@ -1,0 +1,7 @@
+# Valve's System script plugin (patch 11) adds a source file to the script
+# plugin's Makefile.am, so the build system is regenerated first, as
+# Valve's PKGBUILD does (autoreconf).
+hostmakedepends+=" autoconf automake libtool gettext-devel-tools"
+pre_configure() {
+	autoreconf -fi
+}

@@ -1,14 +1,14 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
 version=26.4.1.20261024
-revision=1
+revision=2
 _commit=956be098795a09fa179f68d5ab54a0b275574661
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
 hostmakedepends="pkg-config clang llvm clang21-devel"
 makedepends="glib-devel eudev-libudev-devel speech-dispatcher-devel"
 depends="dbus iw wireless_tools gsettings-desktop-schemas dconf glib runit-void
- deck-hw-support holo-networkmanager-config scx orca speech-dispatcher espeak-ng at-spi2-core
+ deck-hw-support holo-networkmanager-config scx orca-holo speech-dispatcher espeak-ng at-spi2-core
  trace-cmd"
 conf_files="/etc/default/scx"
 short_desc="Valve's SteamOS Manager daemon, with runit support"

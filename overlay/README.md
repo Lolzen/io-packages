@@ -21,6 +21,7 @@ An overlay is a directory `overlay/<name>/`, named after the Void package:
 | `overlay.conf` | `base_version`: the Void version the patches are made for. `io_revision`: 1..99, raised whenever the patches change |
 | `patches/*.patch` | applied after Void's own patches (as `zz-io-*.patch`) |
 | `template.append` | optional: lines added at the end of the generated template, for build settings (`CFLAGS`, ...) |
+| `INSTALL` | optional: an xbps INSTALL script for the generated package (Void's package must not have one) |
 | `overlay.conf`: `lib32=yes` | optional: the overlay is built for i686 as well, and its `-32bit` packages replace Void's (see below) |
 | `README.md` | what each patch does, where it comes from, upstream state, way back |
 
@@ -104,6 +105,8 @@ one release, so the update removes the overlay package and installs Void's.
 | [elogind](elogind/README.md) | elogind, libelogind, elogind-devel | 252.39 | runit service sets `SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1`, as Valve's logind drop-in (hibernation); no segfault of `e-poweroff`/`e-reboot` (#341) | the variable: Valve's configuration; the fix: elogind main `e7c9887d`, not in 252 | 2026-10-26 |
 | [mesa](mesa/README.md) | mesa and all subpackages, and their -32bit packages | 26.2.6 | OpenGL frame limiter; explicit sync for VM operations (Forza); pageable device-local memory; no global BO list for gamescope (stutter) | Valve only | 2026-10-17 |
 | [xdg-desktop-portal-kde](xdg-desktop-portal-kde/README.md) | xdg-desktop-portal-kde | 6.7.5 | Steam may share the screen without Plasma's prompt (Valve's patch), recognised by its process without systemd | Valve only; the recognition Io only | 2026-10-29 |
+| [plymouth](plymouth/README.md) | plymouth, plymouth-devel, plymouth-data | 22.02.122 | Splash kept on screen when plymouth quits; HDR/content type for TVs; Valve's script and scraping extensions | Valve only | 2026-10-29 |
+| [orca](orca/README.md) | orca | 48.6 | SIGUSR1 reloads settings, SIGUSR2 stops speaking (SteamOS Manager sends them); language switching | Valve only | 2026-10-29 |
 
 ## Hand-written stand-ins
 
