@@ -5,3 +5,9 @@ hostmakedepends+=" autoconf automake libtool gettext-devel-tools"
 pre_configure() {
 	autoreconf -fi
 }
+# The regenerated configure (autoconf 2.72 and later) asks the compiler for
+# C23, and plymouth 22.02 does not build as C23: the X11 renderer returns
+# false from a function returning a pointer, an error with C23's bool. The
+# tarball's configure did not do this; GCC 14's default standard, as for
+# bluez.
+CFLAGS="-std=gnu17"
