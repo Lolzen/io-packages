@@ -49,7 +49,7 @@ pkg() {
     chown -R builder:builder "$WORK/io-packages"
     sudo -u builder env HOME="$WORK" IO_DIR="$WORK/io-packages" VP_DIR="$vp" sh "$WORK/io-packages/build.sh" io-release
     local f
-    f=$(ls "$vp"/hostdir/binpkgs/io-release-*.noarch.xbps)
+    f=$(ls "$vp"/hostdir/binpkgs/io-release-*.xbps)
     rm -rf "$WORK/localrepo"
     mkdir -p "$WORK/localrepo"
     cp "$f" "$WORK/localrepo/"
@@ -75,7 +75,7 @@ pack() {
 images() {
     local b=$WORK/build
     local want
-    want=$(cd "$WORK/localrepo" && ls io-release-*.noarch.xbps | sed 's/\.noarch\.xbps$//')
+    want=$(cd "$WORK/localrepo" && ls io-release-*.xbps | sed -E 's/\.(x86_64|noarch)\.xbps$//')
     mkdir -p "$b" "$WORK/out"
     rm -f "$WORK/out/"*
     export EXTRA_REPO=$WORK/localrepo WORKDIR=$b OUT=$b/io.img REC_OUT=$b/recovery.img
@@ -106,8 +106,8 @@ sign() {
     rm -rf "$pub"
     mkdir -p "$pub"
     curl -fsSL -o "$pub/x86_64-repodata" https://github.com/Lolzen/io-repo/releases/download/current/x86_64-repodata
-    cp "$WORK/localrepo/"io-release-*.noarch.xbps "$pub/"
-    f=$(ls "$pub"/io-release-*.noarch.xbps)
+    cp "$WORK/localrepo/"io-release-*.xbps "$pub/"
+    f=$(ls "$pub"/io-release-*.xbps)
     # adds the entry and drops the older io-release from the index; the other
     # packages' entries stay as they are (their files are not needed here)
     xbps-rindex -a "$f"

@@ -134,7 +134,7 @@ jobs:
           sudo rm -f "$WORK/privkey.pem"
           [ "$rc" = 0 ] || exit "$rc"
           cd "$WORK/pub"
-          new=$(ls io-release-*.noarch.xbps)
+          new=$(ls io-release-*.xbps)
           old=$(gh release view current --repo Lolzen/io-repo --json assets --jq '.assets[].name' | grep '^io-release-' | grep -v "^$new" || true)
           # package first, index last: no index entry without its file
           gh release upload current "$new" "$new.sig2" --repo Lolzen/io-repo --clobber
