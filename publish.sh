@@ -244,6 +244,25 @@ for pkg in $COLLECT; do
     fi
 done
 
+# ------------------------------------- what the release has, here as well
+# The release workflow (.github/workflows/create-next-release.yml) publishes
+# io-release from GitHub Actions, so the release can hold a package this
+# copy has never seen. Without fetching it, the index made here would lack
+# it and the comparison below would delete it from the release as stale.
+echo "== fetching what only the release has"
+if gh release view "$GHTAG" --repo "$GHREPO" --json assets --jq '.assets[].name' > "$TMP/remote-first.txt" 2> "$GHLOG"; then
+    grep '\.xbps$' "$TMP/remote-first.txt" | while read -r f; do
+        [ -f "$PUBDIR/$f" ] && continue
+        gh_run release download "$GHTAG" --repo "$GHREPO" --dir "$PUBDIR" --pattern "$f" --pattern "$f.sig2" --clobber
+        echo "$PUBDIR/$f" >> "$TMP/new.txt"
+        echo "  $f: fetched"
+    done
+elif ! grep -q -i 'release not found' "$GHLOG"; then
+    echo "publish: gh release view $GHTAG failed:" >&2
+    cat "$GHLOG" >&2
+    exit 1
+fi
+
 # ------------------------------------------ one version per package only
 echo "== pruning"
 : > "$TMP/keep.txt"
@@ -287,6 +306,11 @@ done
 
 # ------------------------------------------------------ index and sign
 echo "== indexing"
+# what pruning removed again (a fetched older version) is not indexed
+while read -r f; do
+    [ -f "$f" ] && echo "$f"
+done < "$TMP/new.txt" > "$TMP/new-kept.txt" || true
+mv "$TMP/new-kept.txt" "$TMP/new.txt"
 if [ "$FULL" = 1 ]; then
     xbps-rindex -a "$PUBDIR"/*.xbps
 elif [ -s "$TMP/new.txt" ]; then

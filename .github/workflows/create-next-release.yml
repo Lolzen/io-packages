@@ -1,0 +1,166 @@
+# Creates the next Io release in one run:
+#   1. raises io-release (a 0.0.1 or a 0.1 step, chosen when starting it)
+#   2. builds io-release, then a fresh rootfs, io.img and recovery.img in a
+#      Void container, with the new io-release in them
+#   3. publishes io-release to io-repo's current (signed with Io's key)
+#   4. commits the raised template to main, tags it and creates the release:
+#      the images (xz, in parts below GitHub's 2 GiB limit per file, with
+#      checksums) and the commits since the previous release as notes
+# A dry run does 1 and 2 only and changes nothing anywhere.
+#
+# Secrets (repository settings, Secrets and variables > Actions):
+#   IO_REPO_KEY    the content of privkey.pem (Io's repository signing key)
+#   IO_REPO_TOKEN  a token that may write releases of Lolzen/io-repo
+#                  (fine-grained: that repository only, Contents read/write)
+name: Create next release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version step (0.0.1: 0.8 -> 0.8.1, 0.1: 0.8.x -> 0.9)"
+        type: choice
+        options: ["0.0.1", "0.1"]
+        default: "0.0.1"
+      dry_run:
+        description: "Dry run: build only, publish nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: create-next-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      DRY_RUN: ${{ inputs.dry_run }}
+      VOID_IMAGE: ghcr.io/void-linux/void-glibc-full
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Next version
+        id: v
+        env:
+          BUMP: ${{ inputs.bump }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$DRY_RUN" != true ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::A release is made from main only (this run: $GITHUB_REF). Use a dry run on other branches."
+            exit 1
+          fi
+          python3 ci/release/version.py "$BUMP" --apply | tee -a "$GITHUB_OUTPUT"
+          tag=$(sed -n 's/^tag=//p' "$GITHUB_OUTPUT" | tail -n 1)
+          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            echo "::error::Tag $tag exists already."
+            exit 1
+          fi
+          prev=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+          prev_name=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .name)
+          echo "prev=$prev" >> "$GITHUB_OUTPUT"
+          echo "prev_name=$prev_name" >> "$GITHUB_OUTPUT"
+          git diff srcpkgs/io-release/template
+
+      - name: Check the secrets
+        if: inputs.dry_run == false
+        env:
+          IO_REPO_KEY: ${{ secrets.IO_REPO_KEY }}
+          IO_REPO_TOKEN: ${{ secrets.IO_REPO_TOKEN }}
+        run: |
+          [ -n "$IO_REPO_KEY" ] || { echo "::error::Secret IO_REPO_KEY is missing."; exit 1; }
+          [ -n "$IO_REPO_TOKEN" ] || { echo "::error::Secret IO_REPO_TOKEN is missing."; exit 1; }
+          GH_TOKEN=$IO_REPO_TOKEN gh release view current --repo Lolzen/io-repo --json name > /dev/null
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift
+          sudo docker image prune -af > /dev/null
+          df -h / /mnt
+          # the work directory goes where there is more room
+          root_free=$(df --output=avail / | tail -n 1)
+          mnt_free=$(df --output=avail /mnt | tail -n 1)
+          if [ "$mnt_free" -gt "$root_free" ]; then work=/mnt/io-release; else work=/home/runner/io-release; fi
+          sudo mkdir -p "$work"
+          echo "WORK=$work" >> "$GITHUB_ENV"
+
+      - name: Start the Void container
+        run: |
+          docker run -d --name void --privileged -v /dev:/dev -v "$GITHUB_WORKSPACE:/src:ro" -v "$WORK:/work" "$VOID_IMAGE" sleep infinity
+          docker exec void bash /src/ci/release/container.sh setup
+
+      - name: Build io-release
+        run: docker exec void bash /src/ci/release/container.sh pkg
+
+      - name: Build the rootfs and the images
+        run: docker exec void bash /src/ci/release/container.sh images
+
+      - name: Summary
+        env:
+          TITLE: ${{ steps.v.outputs.title }}
+          BUILD: ${{ steps.v.outputs.build }}
+        run: |
+          {
+            echo "## $TITLE (build $BUILD)"
+            [ "$DRY_RUN" = true ] && echo "Dry run: nothing published."
+            echo
+            echo '```'
+            ls -l "$WORK/out"
+            cat "$WORK/out/"*.sha256
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish io-release
+        if: inputs.dry_run == false
+        env:
+          IO_REPO_KEY: ${{ secrets.IO_REPO_KEY }}
+          GH_TOKEN: ${{ secrets.IO_REPO_TOKEN }}
+        run: |
+          printf '%s\n' "$IO_REPO_KEY" | sudo tee "$WORK/privkey.pem" > /dev/null
+          sudo chmod 600 "$WORK/privkey.pem"
+          rc=0
+          docker exec void bash /src/ci/release/container.sh sign || rc=$?
+          sudo rm -f "$WORK/privkey.pem"
+          [ "$rc" = 0 ] || exit "$rc"
+          cd "$WORK/pub"
+          new=$(ls io-release-*.noarch.xbps)
+          old=$(gh release view current --repo Lolzen/io-repo --json assets --jq '.assets[].name' | grep '^io-release-' | grep -v "^$new" || true)
+          # package first, index last: no index entry without its file
+          gh release upload current "$new" "$new.sig2" --repo Lolzen/io-repo --clobber
+          gh release upload current x86_64-repodata --repo Lolzen/io-repo --clobber
+          for f in $old; do
+            gh release delete-asset current "$f" --repo Lolzen/io-repo --yes
+          done
+
+      - name: Commit, tag and release
+        if: inputs.dry_run == false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.v.outputs.version }}
+          NAME: ${{ steps.v.outputs.name }}
+          BUILD: ${{ steps.v.outputs.build }}
+          TAG: ${{ steps.v.outputs.tag }}
+          TITLE: ${{ steps.v.outputs.title }}
+          PREV: ${{ steps.v.outputs.prev }}
+          PREV_NAME: ${{ steps.v.outputs.prev_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add srcpkgs/io-release/template
+          git commit -q -m "io-release $VERSION: $NAME (build $BUILD)"
+          git push origin HEAD:main || { git pull -q --rebase origin main && git push origin HEAD:main; }
+          bash ci/release/notes.sh "$TITLE" "$PREV" "$PREV_NAME" HEAD > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "$WORK/out/"*.part* "$WORK/out/"*.sha256 --target "$(git rev-parse HEAD)" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" --latest
+          echo "Released: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up
+        if: always()
+        run: |
+          sudo rm -f "$WORK/privkey.pem"
+          docker rm -f void > /dev/null 2>&1 || true

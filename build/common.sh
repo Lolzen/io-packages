@@ -154,9 +154,12 @@ unbind_install() {
 }
 
 pkglist() { grep -v '^[[:space:]]*#' "$1" | grep -v '^[[:space:]]*$' | tr '\n' ' '; }
+# EXTRA_REPO: a local repository searched as well (the release workflow
+# puts the new io-release there before it is published); xbps takes the
+# highest version from all of them.
 xbps_root() {
   # shellcheck disable=SC2086
-  XBPS_ARCH=x86_64 xbps-install -y -R "$IO_REPO" -R "$VOID" -R "$VOID/nonfree" -R "$VOID/multilib" -R "$VOID/multilib/nonfree" "$@"
+  XBPS_ARCH=x86_64 xbps-install -y ${EXTRA_REPO:+-R "$EXTRA_REPO"} -R "$IO_REPO" -R "$VOID" -R "$VOID/nonfree" -R "$VOID/multilib" -R "$VOID/multilib/nonfree" "$@"
 }
 # The repository keys (Void's two, Io's) go into a root before xbps first
 # talks to it: a fresh root has none, and xbps asks before importing each
