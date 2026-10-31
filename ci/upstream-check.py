@@ -7,7 +7,10 @@ Checks, each finding with a stable key so it is reported once:
   overlay    each overlay's Void package: new version (patches to check) or
              new revision / io_revision not published in io-repo's current
   watch      Void packages Io waits for (ci/void-watch.txt)
-  kernel     kernel.org stable releases of linux-neptune-72's series
+  kernel     Io's kernel against Valve's (linux-neptune on the mirror), Void's
+             (linux and linuxX.Y) and kernel.org's; a newer stable of Io's
+             series, a new Valve kernel, a newer series, end of life; the
+             three are listed in a table every run
   manager    Valve's steamos-manager main against the fork's runit branch;
              the fork's runit against srcpkgs/steamos-manager's _commit
 
@@ -16,6 +19,7 @@ Usage:
   ci/upstream-check.py --issue       also sync the GitHub issue (Actions:
                                      GITHUB_TOKEN, GITHUB_REPOSITORY)
 """
+import glob
 import io
 import json
 import os
@@ -25,6 +29,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import urllib.error
 import urllib.request
 import plistlib
 
@@ -57,7 +62,7 @@ def read(path):
 
 
 def vkey(v):
-    return [int(x) if x.isdigit() else x for x in re.split(r"[._-]", v)]
+    return [(1, int(x), "") if x.isdigit() else (0, 0, x) for x in re.split(r"[._-]", v)]
 
 
 def template_vars(text):
@@ -179,15 +184,92 @@ def check_watch():
                 "`%s`: Void has **%s** (was %s): %s" % (pkg, have, ver, why))
 
 
+KERNEL_RELEASES = "https://www.kernel.org/releases.json"
+VALVE_KERNEL_RE = re.compile(r"linux-neptune-(\d+)((?:-[a-z][a-z-]*?)?)-(\d+\.\d+[0-9a-z.]*?)-(\d+(?:\.\d+)?)\.src\.tar\.gz")
+kernel_overview = []  # lines for the kernel table, shown whether or not there is a finding
+
+
+def series_of(v):
+    return ".".join(v.split(".")[:2])
+
+
 def check_kernel():
-    v = template_vars(read("srcpkgs/linux-neptune-72/template"))["version"]
-    series = ".".join(v.split(".")[:2])
-    listing = fetch(KERNEL_DIR.format(v.split(".")[0]))
-    found = set(re.findall(r"patch-(%s\.\d+)\.xz" % re.escape(series), listing))
-    newer = sorted((x for x in found if vkey(x) > vkey(v)), key=vkey)
-    if newer:
-        add("kernel:" + newer[-1], "Kernel",
-            "stable **%s** is out, `linux-neptune-72` is on %s (see the wiki's Kernel page)" % (newer[-1], v))
+    """Io's kernel against Valve's, Void's and kernel.org's; lists all three."""
+    tpl = sorted(glob.glob(os.path.join(ROOT, "srcpkgs/linux-neptune-*/template")))[-1]
+    pkg = os.path.basename(os.path.dirname(tpl))
+    text = open(tpl).read()
+    io_ver = template_vars(text)["version"]
+    io_series = series_of(io_ver)
+    m = re.search(r"Valve's ([0-9.]+)-(valve\d+)", text)
+    io_valve = "%s.%s" % (m.group(1), m.group(2)) if m else "?"
+    kernel_overview.append("| Io | `%s` %s (Valve's %s on stable %s) |" % (pkg, io_ver, io_valve, io_ver))
+
+    # kernel.org: every maintained release, and the newest point release of Io's series
+    rel = json.loads(fetch(KERNEL_RELEASES))["releases"]
+    org = {r["moniker"] + " " + r["version"]: r for r in rel if r["moniker"] in ("mainline", "stable", "longterm")}
+    stable = sorted((r["version"] for r in rel if r["moniker"] in ("stable", "longterm")), key=vkey)
+    listing = fetch(KERNEL_DIR.format(io_ver.split(".")[0]))
+    found = sorted(set(re.findall(r"patch-(%s\.\d+)\.xz" % re.escape(io_series), listing)), key=vkey)
+    org_series = found[-1] if found else io_ver
+    eol = [r for r in rel if series_of(r["version"]) == io_series and r["iseol"]]
+    listed = any(series_of(r["version"]) == io_series for r in rel if r["moniker"] in ("stable", "longterm"))
+    kernel_overview.append("| kernel.org | %s; Io's series %s: %s%s |" % (
+        ", ".join("%s %s" % (r["moniker"], r["version"]) for r in rel if r["moniker"] in ("mainline", "stable")),
+        io_series, org_series, " (end of life)" if eol or not listed else ""))
+    if vkey(org_series) > vkey(io_ver):
+        add("kernel:" + org_series, "Kernel",
+            "stable **%s** is out, `%s` is on %s (see the wiki's Kernel page)" % (org_series, pkg, io_ver))
+    if eol or not listed:
+        add("kernel-eol:" + io_series, "Kernel", "kernel.org no longer maintains **%s** (end of life)" % io_series)
+
+    # Void: the default kernel (the linux metapackage) and every linuxX.Y from Io's series on
+    void_default = template_vars(fetch(VOID_RAW.format("linux")))["version"]
+    void = {}
+    major, minor = (int(x) for x in io_series.split("."))
+    for ma, mi in [(major, minor + i) for i in range(7)] + [(major + 1, i) for i in range(4)]:
+        try:
+            void["%d.%d" % (ma, mi)] = template_vars(fetch(VOID_RAW.format("linux%d.%d" % (ma, mi))))["version"]
+        except urllib.error.HTTPError:
+            pass
+    kernel_overview.append("| Void | default `linux` %s; %s |" % (
+        void_default, ", ".join("`linux%s` %s" % (k, v) for k, v in sorted(void.items(), key=lambda x: vkey(x[0])))
+        or "no linux%s" % io_series))
+
+    # Valve: linux-neptune packages on the mirror (main and the release branch)
+    release = re.search(r"RELEASE=\$\{RELEASE:-([0-9.]+)\}", read("pkgcheck.sh")).group(1)
+    valve = {}
+    for branch in ("jupiter-main", "jupiter-" + release):
+        for flavour_series, flavour, ver, prel in VALVE_KERNEL_RE.findall(fetch(VALVE_SOURCES + branch + "/")):
+            name = "linux-neptune-" + flavour_series + flavour
+            if name not in valve or vkey(ver + "-" + prel) > vkey(valve[name]):
+                valve[name] = ver + "-" + prel
+    regular = {n: v for n, v in valve.items() if re.fullmatch(r"linux-neptune-\d+", n)}
+    newest_name = max(regular, key=lambda n: vkey(regular[n]))
+    valve_ver = regular[newest_name].rsplit("-", 1)[0]
+    newest_any = max(valve, key=lambda n: vkey(valve[n]))
+    kernel_overview.append("| Valve | `%s` %s%s |" % (newest_name, regular[newest_name],
+                                                      "; newest of all: `%s` %s" % (newest_any, valve[newest_any])
+                                                      if newest_any != newest_name else ""))
+    if valve_ver != io_valve:
+        add("valve-kernel:" + valve_ver, "Kernel",
+            "Valve's kernel is **%s** (`%s`), Io carries %s" % (valve_ver, newest_name, io_valve))
+
+    # a newer series: one finding per series, its text follows the versions
+    newer = set()
+    for r in rel:
+        if r["moniker"] in ("stable", "longterm") and vkey(series_of(r["version"])) > vkey(io_series):
+            newer.add(series_of(r["version"]))
+    newer |= {k for k in void if vkey(k) > vkey(io_series)}
+    for n, v in valve.items():
+        if vkey(series_of(v)) > vkey(io_series):
+            newer.add(series_of(v))
+    for s in sorted(newer, key=vkey):
+        o = [r["version"] for r in rel if r["moniker"] in ("stable", "longterm") and series_of(r["version"]) == s]
+        vv = ["`%s` %s" % (n, v) for n, v in sorted(valve.items()) if series_of(v) == s]
+        add("kernel-series:" + s, "Kernel",
+            "**%s** is available: kernel.org %s, Void %s, Valve %s" % (
+                s, o[0] if o else "not stable yet", "`linux%s` %s" % (s, void[s]) if s in void else "not yet",
+                ", ".join(vv) if vv else "not yet"))
 
 
 # --- SteamOS Manager ---------------------------------------------------------
@@ -233,7 +315,7 @@ HOWTO = """
 - **New release branch:** raise `RELEASE` in `pkgcheck.sh`
 - **Overlays:** raise `base_version` after checking the patches; build and publish to current
 - **Waiting for Void:** take the change, then update or remove the line in `ci/void-watch.txt`
-- **Kernel:** update `linux-neptune-72`
+- **Kernel:** update the kernel package (a new stable or Valve version); a newer series stays listed until Io moves to it
 - **SteamOS Manager:** rebase `runit` onto Valve's main; raise `_commit` in the template
 </details>
 """
@@ -247,6 +329,8 @@ def report():
             out.append("### " + s)
             out += ["- [ ] " + t for t in items]
             out.append("")
+    if kernel_overview:
+        out += ["### Kernel versions", "", "| | |", "|---|---|"] + kernel_overview + [""]
     return "\n".join(out)
 
 
@@ -306,7 +390,7 @@ def main():
             check()
         except Exception as e:  # one broken source must not hide the others
             add("error:" + name, "Errors", "check `%s` failed: %s" % (name, str(e)[:200]))
-    text = report() or "Nothing to do.\n"
+    text = report() if findings else "Nothing to do.\n\n" + report()
     print(text)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
