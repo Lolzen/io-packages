@@ -96,6 +96,8 @@ jobs:
       - name: Start the Void container
         run: |
           docker run -d --name void --privileged -v /dev:/dev -v "$GITHUB_WORKSPACE:/src:ro" -v "$WORK:/work" "$VOID_IMAGE" sleep infinity
+          # the image has no bash yet
+          docker exec void sh -c 'xbps-install -Syu xbps && xbps-install -y bash'
           docker exec void bash /src/ci/release/container.sh setup
 
       - name: Build io-release
