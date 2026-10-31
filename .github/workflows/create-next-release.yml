@@ -26,9 +26,6 @@ on:
         description: "Dry run: build only, publish nothing"
         type: boolean
         default: false
-  # test branch only: every push is a dry run (removed before the merge)
-  push:
-    branches: [test-release-action]
 
 permissions:
   contents: write
@@ -42,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
-      DRY_RUN: ${{ github.event_name == 'push' || inputs.dry_run }}
+      DRY_RUN: ${{ inputs.dry_run }}
       VOID_IMAGE: ghcr.io/void-linux/void-glibc-full
     steps:
       - uses: actions/checkout@v7
@@ -52,7 +49,7 @@ jobs:
       - name: Next version
         id: v
         env:
-          BUMP: ${{ inputs.bump || '0.0.1' }}
+          BUMP: ${{ inputs.bump }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "$DRY_RUN" != true ] && [ "$GITHUB_REF" != refs/heads/main ]; then
