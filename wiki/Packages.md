@@ -105,8 +105,11 @@ The former GitLab mirror at `gitlab.com/evlaV` was shut down in August
 2025; `github.com/evlaV` succeeds it. Existing distfile URLs still resolve,
 but new versions should come from Valve's own mirror.
 
-`pkgcheck.sh` fetches both listings, keeps the newest version of each package
-in `docs/`, and reports what changed since the last run.
+`pkgcheck.sh` fetches the listings of `jupiter-main`, `holo-main` and of the
+current release's branches (`jupiter-3.9`, `holo-3.9`; `RELEASE` in the
+script), keeps the newest version of each package in `docs/`, and reports
+what changed since the last run. The release branches are read as well
+because a package can arrive there first.
 
 The kernel is not maintained as a fork: Valve's delta is a single patch
 against the official tarball. How the patch and the configuration come

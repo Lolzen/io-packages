@@ -125,6 +125,14 @@ the bus starts a second instance. Start it through the bus
 bus; borrow its address from a process in it
 (`DBUS_SESSION_BUS_ADDRESS` from `/proc/$(pgrep -o -x steam)/environ`).
 
+**Without systemd, xdg-desktop-portal knows no host application's id.** It
+takes the id of a program that is not sandboxed from its systemd user unit
+(`app-steam@….service` → `steam`); Void builds it without systemd, so
+every such program arrives at the portal backends with the id `""`. A
+check for an app id (Valve's portal patch for Steam) never matches; the
+caller has to be recognised another way (the request handle carries its
+bus name).
+
 **A service must not be both a runit service and D-Bus-activated.** At boot
 they race; the loser restarts every second, forever. Seen with elogind
 (runit service kept, activation file removed) and polkitd (runit service
@@ -674,6 +682,14 @@ files.
 ---
 
 ## Valve packages
+
+**A package can reach Valve's release branch before main.**
+`xdg-desktop-portal-kde` 6.7.3-1.2 was in `holo-3.9` (and in SteamOS
+3.9.3) while `holo-main` still had an old build. `pkgcheck.sh` therefore
+reads the release branches (`jupiter-3.9`, `holo-3.9`) too. Valve's rebuilds
+of Arch packages carry a pkgrel with a dot (`-1.2`); the image manifest
+(`steamdeck-images.steamos.cloud/steamdeck/<build>/…manifest.pacman`)
+lists every package of a release and shows them at a glance.
 
 **Orca's shortcuts are key presses on a virtual keyboard.** Steam sets the
 screen reader mode at every start; steamos-manager presses Orca's key for it

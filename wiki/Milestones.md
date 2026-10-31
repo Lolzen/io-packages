@@ -37,17 +37,24 @@ Work that is built but not on `main` yet:
 
 - **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
   Steam's patch notes for system updates
+- **`test-plymouth-orca`:** Valve's plymouth and Orca patches as overlays
+  (`plymouth-holo`: the splash stays on screen until the session takes
+  over, Valve's TV settings; `orca-holo`: Orca reloads its settings and
+  stops speaking on SteamOS Manager's signals instead of ending). Built,
+  testing on the Deck
+- **`test-torus-splash`:** the animated *Io Torus* boot splash
+  (`io-branding` 0.4.0); works, kept on the branch for now (cosmetic)
 
 ---
 
 ## Next (no theme yet)
 
-- **SteamOS Manager's runit support at Valve:** offered on Valve's GitLab
-  (2026-10-23), in the issue, with the fork's branch `runit`
-  ([Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager)) and
-  the commits as patches; Valve's GitLab does not let the account fork, so
-  there is no merge request yet. Waiting for Valve's answer; changes Valve
-  asks for, or bugs in Io's use of it, go into the branch
+Nothing scheduled. SteamOS Manager's runit support stays Io's own: Valve
+declined it (2026-10-31, issue 32 on Valve's GitLab: shipping what they do
+not test would cost every release time, for a niche case). The seven
+commits live in the branch `runit` of
+[Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager) and
+are rebased onto each Valve update (*Recurring*).
 
 ---
 
@@ -63,17 +70,23 @@ Work that is built but not on `main` yet:
 - **`€` from Steam's keyboard in the desktop** does not arrive (the AltGr
   level); German letters and emoji do. On SteamOS 3.9.2 the keyboard
   typed no umlauts or ß in the desktop at all (2026-10-04, see
-  [Deviations](Deviations)); `€` there is not checked
+  [Deviations](Deviations)); `€` was not checked there, and no longer can
+  be: the Deck runs only Io since 2026-10-31
 - **Controller navigation dead after boot** until the Steam button is
   pressed, now and then: Steam logs "Prevented loading a mapping that's
   being deleted" in `console_log.txt` at start, and only in those boots.
   The same line is in SteamOS's logs of a boot that hung the same way, so
   it is Steam's (Steam Input at start); reported as
-  [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921)
+  [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921),
+  with the client builds it happened with. Not seen yet with client
+  1793235415 (first boots, 2026-10-29); the entry goes when the issue is
+  fixed
 
 ---
 
 ## Tests pending
+
+Postponed (2026-10-28), not dropped.
 
 - **Steam's experimental SteamRT3 client** on Io: a capture with
   `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
@@ -129,7 +142,9 @@ have; they need someone with the hardware.
 
 ## Polish
 
-- Designed boot splash
+- Designed boot splash: the animated *Io Torus* is on `test-torus-splash`
+  (see *In branches*). On a static logo the screen goes black between the
+  splash and game mode; `plymouth-holo` keeps the splash image instead
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
   inside game mode; a first try with Valve's files: logging out of it did
   not end its session)
@@ -179,7 +194,16 @@ have; they need someone with the hardware.
   2026 plus 26 LAVD changes by its author that upstream does not have yet;
   LAVD is opt-in on the Deck (Steam offers no switch for it), so Io stays
   with Void's `scx` and takes them as Void updates (upstream 1.1.4 is out,
-  Void has 1.1.3)
+  Void has 1.1.3). SteamOS 3.9.4 and 3.9.5 (checked 2026-10-29 against
+  their image manifests): nothing Io did not have; `jupiter-staging` and
+  `holo-staging` have nothing newer. Of all Arch packages Valve rebuilds
+  for 3.9.5, plymouth and Orca carry patches Io needs (*In branches*);
+  three fixes wait for their upstream release and Void: SDDM comparing its
+  configuration's times in UTC (a session switch after a timezone change),
+  PipeWire 1.6.11's Bluetooth fixes, gamescope blanking the screen before
+  sleep. Mesa follows Void (26.2.6 since 2026-10-29). Comparisons are made
+  against Valve's manifests and source archives: the Deck runs only Io
+  since 2026-10-31, so there are no new SteamOS captures
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
   (a light desktop). The split is prepared: `io-base` is the core,
   `io-desktop` adds the desktop
@@ -198,7 +222,12 @@ have; they need someone with the hardware.
 
 ## Recurring
 
-- `pkgcheck.sh`: Valve's package versions against Io's
+- `pkgcheck.sh`: Valve's package versions against Io's (main and the
+  current release's branches)
+- SteamOS Manager: Io's seven runit commits rebased onto Valve's update,
+  every commit built (`cargo check --all-targets`), tests, fmt and clippy
+  on the result, then pushed to the fork's `runit` and the template raised
+  (version: 26.4.1 with the date of Valve's newest commit)
 - After Void updates: `./build.sh -p --overlays` (rebuilds what Void
   rebuilt; stops for a review when Void moved to a new version), see
   [Building](Building)

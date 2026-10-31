@@ -4,7 +4,10 @@ Reference: SteamOS 3.9.2 (Beta Candidate, build 20260925.101, kernel 7.2.7,
 Steam client beta) on the same Steam Deck LCD, captured on 2026-10-04
 (process environments and capabilities, SteamOS Manager D-Bus values and
 calls per step, sysfs, systemd units, configuration files, firmware); until
-then SteamOS 3.8.4, captured in September 2026. The Deck's SSD is a
+then SteamOS 3.8.4, captured in September 2026. It stays the reference:
+the Deck runs only Io since 2026-10-31, and later SteamOS releases are
+compared by their packages and sources (see
+[Milestones](Milestones), *Catching up with Valve*). The Deck's SSD is a
 retrofitted 1 TB KIOXIA, not the one it shipped with. Everything not listed
 here is meant to behave as on SteamOS; a difference that is not on this page
 is a bug.
@@ -120,8 +123,11 @@ its reason.
 Valve's `steamos-manager`, built from the branch `runit` of
 [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager):
 Valve's main branch of 2026-10-24 (`a3b2013`, newer than SteamOS 3.9.2's
-26.4.1) with seven commits that let it run without systemd, written to be
-offered to Valve. How it does without systemd is on
+26.4.1) with seven commits that let it run without systemd. They were
+offered to Valve, who declined them (2026-10-31: they do not want to ship
+what they do not test, and keeping it working would cost every release
+time for a niche case), so Io carries them and rebases them onto each of
+Valve's updates. How it does without systemd is on
 [Architecture](Architecture), *SteamOS Manager*. Until October 2026 Io ran
 its own implementation (`io-steamos-manager`).
 

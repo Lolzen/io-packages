@@ -20,7 +20,8 @@ checksum=b69c56bfc399b848b8a04f324ebdac6cd77e3f63920d87d12c1eba044cc092cc
 
 # Valve's steamos-manager from the branch "runit" of the fork
 # github.com/Lolzen/steamos-manager: Valve's main after 26.4.1 (a3b2013)
-# plus the runit support meant for Valve: system services through runit
+# plus Io's runit support (offered to Valve, declined 2026-10-31; rebased
+# onto each Valve update): system services through runit
 # (fan control, firmware debug, CPU scheduler, the Wi-Fi backend switch,
 # Wi-Fi debug mode), and without systemd --user the login mode from the
 # session, Orca as a child process (restarted on failure), logout through
