@@ -1,0 +1,9 @@
+# Void packages Io waits for: reported by ci/upstream-check.py as soon as
+# Void's version differs from the one here. When the change is taken (or not
+# needed after all), update or remove the line.
+#
+# package   Void version now   what Io waits for
+gamescope   3.17.0   gamescope release after 3.17.0: blank the screen before sleep (Valve's 3.9.5 patch, upstream PR 2480)
+pipewire    1.6.10   PipeWire 1.6.11: Bluetooth fixes from Valve's 3.9.5 build (MR 3004, MR 3054)
+sddm        0.21.0   SDDM release after 0.21.0: config times compared in UTC (upstream 633c1bf, Valve's 3.9.5)
+orca        48.6     Orca 49+: SIGUSR1 opens preferences, no SIGUSR2; Valve's patch (orca-holo) needs a new look

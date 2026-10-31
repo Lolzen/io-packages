@@ -1,0 +1,7 @@
+# Valve packages whose updates ci/upstream-check.py does not report: decided
+# to have nothing for Io (see the package audit and the 3.9.5 comparison).
+# One package name per line.
+brotli
+ca-certificates-mozilla
+dirlock
+fwupd-minimal

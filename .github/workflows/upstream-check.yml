@@ -1,0 +1,38 @@
+# Every 8 hours: what Valve, Void, kernel.org and Valve's steamos-manager have
+# that Io has not taken yet (ci/upstream-check.py). Findings go into one issue
+# labelled "upstream-check": opened when something turns up, a comment for each
+# new finding (GitHub notifies about both), closed when nothing is left.
+name: Upstream check
+
+on:
+  schedule:
+    - cron: "23 */8 * * *"
+  workflow_dispatch:
+  push:
+    branches: [test-upstream-check]
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+concurrency:
+  group: upstream-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check upstream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 ci/upstream-check.py --issue
+      # GitHub disables scheduled workflows after 60 days without commits;
+      # enabling it again on every run keeps the schedule alive.
+      - name: Keep the schedule alive
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/upstream-check.yml/enable"
