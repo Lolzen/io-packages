@@ -1,0 +1,22 @@
+#!/bin/bash
+# Io's port of Valve's steamos-firmware-update (steamos-customizations
+# 20260827.2), which the jupiter-biosupdate helper runs for Steam. On the
+# Steam Deck (Jupiter, Galileo) it hands over to jupiter-biosupdate with the
+# same arguments, as Valve's does. Valve updates other systems (Legion Go,
+# the Steam Machine's BIOS capsule) through fwupd and a list of firmware
+# GUIDs; that part is not ported, so they get "no updates", as on SteamOS for
+# vendors outside that list.
+
+set -euo pipefail
+
+estat() { echo ":: $*" >&2; }
+
+board_name="$(cat /sys/class/dmi/id/board_name || true)"
+board_vendor="$(cat /sys/class/dmi/id/board_vendor || true)"
+if [[ $board_vendor = "Valve" && ( $board_name = "Jupiter" || $board_name = "Galileo" ) ]]; then
+   estat "$board_vendor $board_name unit, using jupiter-biosupdate backend"
+   exec jupiter-biosupdate "$@"
+fi
+
+estat "No updates configured for this vendor"
+exit 0

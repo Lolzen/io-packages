@@ -3,10 +3,37 @@
 # /etc/plymouth/plymouthd.conf. The initramfs must be rebuilt afterwards to
 # carry the theme (mkimg.sh does that as its last step). Only on the first
 # install: an update must not undo a theme the user picked since.
+#
+# The boot splash runs from the initramfs, so a changed theme only shows
+# once the initramfs is rebuilt: done here when Io's theme is the one in
+# use and its files differ from those the initramfs was last built with
+# (as steamos-tuning does for its dracut files). A kernel installed later
+# builds its own initramfs with the theme anyway.
 case "${ACTION}" in
 post)
 	if [ "${UPDATE}" = "no" ] && [ -x usr/bin/plymouth-set-default-theme ]; then
 		usr/bin/plymouth-set-default-theme io || :
 	fi
+	_sum=var/lib/io-branding/initramfs-theme.sum
+	_hook=etc/kernel.d/post-install/20-initramfs
+	_theme=usr/share/plymouth/themes/io
+	_new=$(cat ${_theme}/io.plymouth ${_theme}/io.script ${_theme}/io.png | cksum)
+	_old=$(cat "${_sum}" 2>/dev/null)
+	_rebuild=no
+	if [ "${UPDATE}" = "yes" ] && [ "${_new}" != "${_old}" ]; then
+		grep -q '^Theme=io$' etc/plymouth/plymouthd.conf 2>/dev/null && _rebuild=yes
+	fi
+	if [ "${_rebuild}" = "yes" ]; then
+		for _dir in usr/lib/modules/*/; do
+			_ver=${_dir%/}
+			_ver=${_ver##*/}
+			[ -f "boot/initramfs-${_ver}.img" ] || continue
+			[ -x "${_hook}" ] || continue
+			echo "Rebuilding the initramfs for ${_ver} (Io's boot splash changed)"
+			"${_hook}" ${PKGNAME} "${_ver}"
+		done
+	fi
+	mkdir -p var/lib/io-branding
+	echo "${_new}" > "${_sum}"
 	;;
 esac

@@ -1,11 +1,11 @@
 # Io
 
-A Void Linux rebuild of SteamOS for the Steam Deck (LCD, "Jupiter"), with
-runit instead of systemd.
+A Void Linux rebuild of SteamOS for the Steam Deck (LCD, "Jupiter"; the
+OLED and the Steam Machine are untested), with runit instead of systemd.
 
 ## Pages
 
-- [Installation](Installation) — SD card image, recovery stick
+- [Installation](Installation) — SD card image, recovery stick for the internal SSD
 - [Milestones](Milestones) — what is open, and where it is headed
 - [Changelog](Changelog) — what each release brought
 - [Deviations from SteamOS](Deviations) — where Io differs from SteamOS, and why
@@ -20,6 +20,10 @@ runit instead of systemd.
 ## Principle
 
 Io is checked against a reference capture of SteamOS 3.9.2 (until October
-2026: 3.8.4) taken on the same hardware: process environments, D-Bus values and calls, sysfs values,
-configuration. Where Io matches SteamOS, the wiki does not repeat it. Where
-it differs, [Deviations](Deviations) says why.
+2026: 3.8.4) taken on the same hardware: process environments, D-Bus values
+and calls, sysfs values, configuration. Where Io matches SteamOS, the wiki
+does not repeat it. Where it differs, [Deviations](Deviations) says why.
+
+That capture is the last one: since 2026-10-31 the Deck runs only Io. Newer
+SteamOS releases are compared through Valve's image manifests (which package
+in which version) and Valve's source archives, not on the device.

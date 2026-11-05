@@ -134,10 +134,32 @@ unbind_chroot() {
   done
 }
 
+# The same for the package install, as void-mklive does (mount_pseudofs):
+# xbps-install -r runs the packages' INSTALL scripts chrooted, and some
+# need /dev, /proc or /sys (Python's byte-compiling with -j0 needs
+# /dev/shm). Read-only, so the install cannot change the host's own
+# directories; that applies to the top mount only, /dev/shm and /dev/pts
+# stay writable. /run stays out: base-files creates run/lock in the root.
+bind_install() {
+  for d in dev proc sys; do
+    mkdir -p "$1/$d"
+    mount -r --rbind "/$d" "$1/$d" --make-rslave
+    track_mount "$1/$d"
+  done
+}
+unbind_install() {
+  for d in sys proc dev; do
+    case " ${MOUNTS:-} " in *" $1/$d "*) umount_tracked "$1/$d" ;; esac
+  done
+}
+
 pkglist() { grep -v '^[[:space:]]*#' "$1" | grep -v '^[[:space:]]*$' | tr '\n' ' '; }
+# EXTRA_REPO: a local repository searched as well (the release workflow
+# puts the new io-release there before it is published); xbps takes the
+# highest version from all of them.
 xbps_root() {
   # shellcheck disable=SC2086
-  XBPS_ARCH=x86_64 xbps-install -y -R "$IO_REPO" -R "$VOID" -R "$VOID/nonfree" -R "$VOID/multilib" -R "$VOID/multilib/nonfree" "$@"
+  XBPS_ARCH=x86_64 xbps-install -y ${EXTRA_REPO:+-R "$EXTRA_REPO"} -R "$IO_REPO" -R "$VOID" -R "$VOID/nonfree" -R "$VOID/multilib" -R "$VOID/multilib/nonfree" "$@"
 }
 # The repository keys (Void's two, Io's) go into a root before xbps first
 # talks to it: a fresh root has none, and xbps asks before importing each
@@ -152,9 +174,11 @@ install_repo_keys() {
 # is brought up to date first: xbps-install without -u installs what is
 # missing but leaves installed packages at their old version, and the
 # tarball would quietly carry them. xbps updates itself first when needed.
+# The pseudo file systems are mounted for the whole install (bind_install).
 install_pkgfile() {
   _pkgs=$(pkglist "$2")
   install_repo_keys "$1"
+  bind_install "$1"
   if [ -x "$1/usr/bin/xbps-install" ]; then
     log "updating the existing root first"
     xbps_root -S -u -r "$1" xbps
@@ -162,6 +186,7 @@ install_pkgfile() {
   fi
   # shellcheck disable=SC2086
   xbps_root -S -r "$1" $_pkgs
+  unbind_install "$1"
 }
 
 # BUILD_ROOTFS=1 runs mkrootfs.sh first, BUILD_ROOTFS=clean runs it with
@@ -176,8 +201,8 @@ maybe_build_rootfs() {
   esac
 }
 
-# Configure any package the install step left unconfigured, now that /dev,
-# /proc and /sys are there (normally none; void-mklive runs the same step).
+# Configure any package the install step left unconfigured (normally none,
+# the install has /dev, /proc and /sys too; void-mklive runs the same step).
 chroot_reconfigure() {
   chroot "$1" xbps-reconfigure -a
 }
@@ -211,6 +236,28 @@ make_users() {
   fi
   chroot "$1" usermod -p "$4" "$2"
 }
+# The image's settings for a factory reset (io-factory-reset reads them):
+# what mkrootfs.sh set, so the reset returns to this image and not to a
+# hard-coded guess. Root only: it holds the password hashes.
+write_factory_defaults() {
+  mkdir -p "$1/var/lib/io"
+  _f="$1/var/lib/io/factory-defaults"
+  (
+    umask 077
+    {
+      echo "# Written by mkrootfs.sh: the image's settings, for io-factory-reset."
+      printf "IO_DEFAULT_USER='%s'\n" "$2"
+      printf "IO_DEFAULT_GROUPS='%s'\n" "$3"
+      printf "IO_DEFAULT_HOSTNAME='%s'\n" "$4"
+      printf "IO_DEFAULT_TIMEZONE='%s'\n" "$5"
+      printf "IO_DEFAULT_LANG='%s'\n" "$6"
+      printf "IO_DEFAULT_ROOTHASH='%s'\n" "$7"
+      printf "IO_DEFAULT_USERHASH='%s'\n" "$8"
+    } > "$_f"
+  )
+  chmod 600 "$_f"
+}
+
 # A missing hash would only show at the first password prompt (the
 # autologin skips authentication), so check it here.
 verify_passwords() {
@@ -256,7 +303,7 @@ grub_install_removable() {
 grub_mkconfig() { chroot "$1" grub-mkconfig -o /boot/grub/grub.cfg; }
 
 # The newest kernel: a reused root keeps the previous one next to it
-# (linux-neptune-72 is preserve=yes), and GRUB boots the newest by default.
+# (linux-neptune-* are preserve=yes), and GRUB boots the newest by default.
 newest_kernel() { ls "$1/usr/lib/modules" | sort -V | tail -n 1; }
 make_initramfs() {
   _kver=$(newest_kernel "$1")

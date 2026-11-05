@@ -1,9 +1,9 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=14
+revision=21
 hostmakedepends="xcursorgen"
-depends="polkit jq alsa-utils dmidecode elogind udisks2"
+depends="polkit jq alsa-utils dmidecode elogind-holo udisks2 parted e2fsprogs exfatprogs f3"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
 maintainer="Georg <funer@gmx.at>"
 license="MIT"
@@ -12,7 +12,7 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # Valve's changes from 20250728.1 to 20260807.1 are almost all renames
 # (steamos-* helpers became holo-*, with steamos-alias linking the old names
 # back). SteamOS 3.8.4 runs 20260327.1 with the steamos-* names, 3.9.2 runs
-# 20260807.1 with steamos-alias's links; Steam and io-steamos-manager call
+# 20260807.1 with steamos-alias's links; Steam and steamos-manager call
 # the steamos-* names, so Io keeps them and takes only the actual changes: a
 # sturdier jupiter-check-support and the restructured GPU reset rules. Valve's cursor theme (the images come from 20260327.1:
 # later versions moved them to a holo package) is new in Io.
@@ -20,10 +20,24 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # Automount of SD cards and USB drives as on SteamOS: Valve's udev rule and
 # scripts (udisks mounts ext4 under /run/media/deck/<label>), started through
 # io-detach instead of systemd-run, and leaving out the disk Io runs from.
+# Valve's rescan of misdetected SanDisk cards (99-sdcard-rescan) runs the
+# same way, only while Io is not on an SD card itself.
 # trim-devices.sh does not fall back to trimming /var and /home on a card
 # that is unsafe to trim: on Io they may be on that card.
 # While Io runs from the SD card, the internal SSD (SteamOS) is hidden from
 # udisks, so neither Steam nor Plasma offers it (90-io-hide-internal-disk).
+# Formatting from Steam runs Valve's format-device.sh (parted, mkfs.ext4,
+# and f3probe and mkfs.exfat for validating a card), which refuses the disk
+# Io runs from. The firmware helpers hand over to deck-firmware-updaters
+# (BIOS, controller) and jupiter-dock-updater-bin (Valve's dock), which
+# carry Valve's updaters and firmware files. steamos-factory-reset-config
+# requests a reset of the user data from io-factory-reset.
+#
+# Checked against 20261028.1: taken are the udisks error messages naming
+# the device object (common-functions). Left out: NVMe and virtio drives
+# automounted and formattable (for the Steam Machine and VMs; Io hides the
+# internal SSD and never formats it) and the GRUB command line, which
+# io-base carries (amdgpu.dcdebugmask=0x60000).
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers
@@ -47,11 +61,10 @@ do_install() {
 	vmkdir usr/share/polkit-1/rules.d
 	vinstall ${FILESDIR}/polkit-1/rules.d/org.valve.steamos.rules 644 usr/share/polkit-1/rules.d
 
-	# /usr/bin/steamos-update is the real script (io-steamos-manager); the
+	# /usr/bin/steamos-update is the real script (io-atomupd); the
 	# helper above re-runs itself through pkexec and calls it, as Valve's.
-	for f in steamos-select-branch jupiter-biosupdate; do
-		ln -sf steamos-polkit-helpers/$f ${DESTDIR}/usr/bin/$f
-	done
+	# /usr/bin/jupiter-biosupdate is Valve's updater (deck-firmware-updaters).
+	ln -sf steamos-polkit-helpers/steamos-select-branch ${DESTDIR}/usr/bin/steamos-select-branch
 
 	vbin ${FILESDIR}/bin/jupiter-check-support
 	# Steam asks it whether a "day one firmware update" screen is needed. Only

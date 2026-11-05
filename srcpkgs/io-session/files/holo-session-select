@@ -1,0 +1,33 @@
+#!/bin/bash
+# This script is now deprecated, please use steamosctl.
+# It exists for Steam client compatibility
+#
+# Valve's holo-session-select (holo-session-selection 1.0), which Steam calls
+# as steamos-session-select. Io: its one desktop session, io-desktop.desktop,
+# in place of Plasma's session files (plasma.desktop, plasmax11.desktop),
+# which start Plasma without Io's session setup.
+
+set -e
+
+session="${1:-gamescope}"
+
+die() { echo >&2 "!! $*"; exit 1; }
+
+case "$session" in
+  plasma-wayland-persistent|plasma-x11-persistent)
+    steamosctl set-default-login-mode desktop
+    steamosctl set-default-desktop-session io-desktop.desktop
+    steamosctl switch-to-desktop-mode
+  ;;
+  plasma|plasma-wayland)
+    steamosctl switch-to-desktop-mode io-desktop.desktop
+  ;;
+  gamescope)
+    steamosctl set-default-login-mode game
+    steamosctl switch-to-game-mode
+  ;;
+  *)
+    echo >&2 "!! Unrecognized session '$session'"
+    exit 1
+  ;;
+esac

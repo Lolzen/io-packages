@@ -1,0 +1,7 @@
+#!/bin/sh
+# Root half of Valve's steamos-manager (system bus), as Valve's
+# steamos-manager.service: "steamos-manager -r" with RUST_LOG=info.
+sv check dbus > /dev/null || exit 1
+export RUST_LOG=info
+exec 2>&1
+exec /usr/lib/steamos-manager -r

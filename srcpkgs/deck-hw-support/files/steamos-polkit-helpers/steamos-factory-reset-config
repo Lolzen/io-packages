@@ -1,2 +1,21 @@
-#!/bin/sh
-exit 1
+#!/bin/bash
+# Valve's helper (holo-factory-reset-config in jupiter-hw-support 20260807.1,
+# here under its steamos-* name): records the data partitions for SteamOS's
+# initramfs to format at the next boot, i.e. a reset of the user data; Steam
+# restarts the Deck afterwards. On Io, io-factory-reset records the same
+# request; the core service 04-io-factory-reset.sh erases the user data at
+# the next start.
+
+set -eu
+
+if [[ $EUID -ne 0 ]];
+then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+if [[ ! -x /usr/bin/io-factory-reset ]]; then
+    echo "No factory reset installed (io-factory-reset)" >&2
+    exit 1
+fi
+
+exec /usr/bin/io-factory-reset --prepare user

@@ -1,85 +1,93 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog). The latest release is [Alpha 6](Alpha-6); what
-has changed since is on [Alpha 7](Alpha-7).
+the [Changelog](Changelog). The latest release is [Beta 0.8](Beta-0.8).
 
 ---
 
-## Alpha 7 (in progress)
+## Beta
 
-- **Done:** *Restart* from Io starts Io again (`io-base` 0.6.0); GRUB
-  boots without its menu (`io-base` 0.7.0); the image scripts bring the
-  repository keys along; Steam's keyboard in the desktop, the brightness
-  through Valve's kwin patch and no black flash when returning to game mode
-  (`kwin-holo`, `xorg-server-xwayland-holo`); Valve's Wi-Fi fixes (`wpa_supplicant-holo`,
-  `iwd-holo`); Twemoji. See [Alpha 7](Alpha-7)
-- **Checked against SteamOS:** `zenity` (same behaviour, no `zenity-gtk3`
-  needed), `inputattach-cec-units` (no USB-CEC adapter, not needed),
-  Steam's patch notes for updates (Valve's; they stay, see
-  [Deviations](Deviations)), the screen sharing prompt (the permission
-  store looks as on SteamOS apart from the app ID; a fresh user is still to
-  be tried, see *Tests pending*), the question before switching to the
-  desktop (comes with Steam's beta client)
-- **Decided:** `void-artwork` stays (`plymouth-data` depends on it)
-- **Open:** a capture with Steam's experimental SteamRT3 client
+Beta 0.8 (October 2026) is the first beta release: Io on the internal SSD,
+Valve's own SteamOS Manager, and the parts that needed the NVMe tested. The
+beta is for making Io good. Its release versions go on from there: 0.0.1
+steps for ordinary releases (0.8.1, 0.8.2, ...), a 0.1 step for a larger
+change (0.9, ...; the middle number goes on past 9, as in 0.10 or
+0.102.3). 1.0 is the first stable release. SSH stays enabled in the images
+throughout the beta. Whether a beta release comes with a new image is
+decided per release. io-packages is public, but there is no call for
+testers yet.
+
+**Release by release**
+
+- Pull request #1 (Io's changelog in Steam's patch notes): the check of
+  Steam's update page
+- *Tests pending* and *Open observations* below
+- Valve's newer versions (*Catching up with Valve*)
+- Void's side: Mesa patches dropped as Void's Mesa takes them (the three
+  RADV fixes went with 26.2.6), wpa_supplicant's rescan patches with
+  the next hostap release, and the overlays rebuilt after Void updates
+  (*Recurring*)
+- *Polish* below
+
+---
+
+## In branches
+
+Work that is built but not on `main` yet:
+
+- **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
+  Steam's patch notes for system updates
+- **`test-plymouth-orca`:** Valve's plymouth and Orca patches as overlays
+  (`plymouth-holo`: the splash stays on screen until the session takes
+  over, Valve's TV settings; `orca-holo`: Orca reloads its settings and
+  stops speaking on SteamOS Manager's signals instead of ending). Built,
+  testing on the Deck
+- **`test-torus-splash`:** the animated *Io Torus* boot splash
+  (`io-branding` 0.4.0); works, kept on the branch for now (cosmetic)
 
 ---
 
 ## Next (no theme yet)
 
-- **Valve's Mesa as an overlay** ([overlay/README.md](https://github.com/Lolzen/io-packages/blob/main/overlay/README.md)):
-  looked at again on 2026-10-11 (the OpenGL frame limiter applies to
-  Void's 26.2.4, 6 of Valve's 14 RADV patches do not); to revisit with
-  Void's next Mesa update
-- **TOMOYO** activated by Void's `/sbin/init`, with the next kernel update
-- **steamos-manager refuses calls from games:** on Valve's main branch
-  after 26.4.1 (not in SteamOS 3.9.2), the session half rejects D-Bus calls
-  whose sender runs inside a game, recognised by the systemd cgroup
-  `/app-steam-app…` Steam starts games in. Io has no such cgroups, so it
-  needs its own way to tell a game's process; a larger change that can only
-  partly be tested. Left until Valve ships it
+Nothing scheduled. SteamOS Manager's runit support stays Io's own: Valve
+declined it (2026-10-31, issue 32 on Valve's GitLab: shipping what they do
+not test would cost every release time, for a niche case). The seven
+commits live in the branch `runit` of
+[Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager) and
+are rebased onto each Valve update (*Recurring*).
 
 ---
 
 ## Open observations
 
-- **Desktop responsiveness:** SteamOS 3.9.2's desktop felt more responsive
-  than Io's. Compared on 2026-10-04: the main difference is the disk (Io on
-  the SD card: random reads about 3 ms, SteamOS on the NVMe 0.12 ms); kwin's
-  missing realtime threads are fixed in Alpha 6. Same scheduler, governor
-  and preemption. To check again after the move to the NVMe
-- **vpower's shutdown at 0.5 %:** never tested on a real empty battery
-- **Wi-Fi next to the dock's Ethernet showed "can't reach network"** once,
-  during a day of heavy testing; plugging and unplugging the dock later
-  behaved correctly. If it comes back, record before reconnecting:
-  `nmcli -f DEVICE,STATE,IP4-CONNECTIVITY device; nmcli -f CONNECTIVITY
-  general; ip route`
 - **Touch only with the dock on SteamOS:** SteamOS switches the trackpads
   off while the dock is attached; Io does not (see [Deviations](Deviations))
 - **`€` from Steam's keyboard in the desktop** does not arrive (the AltGr
   level); German letters and emoji do. On SteamOS 3.9.2 the keyboard
   typed no umlauts or ß in the desktop at all (2026-10-04, see
-  [Deviations](Deviations)); `€` there is not checked
-- **Steam hung in its boot animation** on the first start after switching
-  to the beta client (the bootstrapper had installed the update;
-  steamwebhelper logged "SteamClient globals not available" and a
-  timeout waiting for `RegisterForStartupFinished`). A reboot fixed it.
-  If it happens again, copy the logs in `~/.local/share/Steam/logs`
-  (`bootstrap_log.txt`, `console_log.txt`, `cef_log.txt`,
-  `webhelper.txt`, `webhelper_js.txt`) over SSH before restarting
+  [Deviations](Deviations)); `€` was not checked there, and no longer can
+  be: the Deck runs only Io since 2026-10-31
+- **Controller navigation dead after boot** until the Steam button is
+  pressed, now and then: Steam logs "Prevented loading a mapping that's
+  being deleted" in `console_log.txt` at start, and only in those boots.
+  The same line is in SteamOS's logs of a boot that hung the same way, so
+  it is Steam's (Steam Input at start); reported as
+  [SteamOS#2921](https://github.com/ValveSoftware/SteamOS/issues/2921),
+  with the client builds it happened with. Not seen yet with client
+  1793235415 (first boots, 2026-10-29); the entry goes when the issue is
+  fixed
 
 ---
 
 ## Tests pending
 
+Postponed (2026-10-28), not dropped.
+
+- **Steam's experimental SteamRT3 client** on Io: a capture with
+  `io-rt3-capture.sh` (package `io-testsuite`, branch `testsuite`)
 - **Drives in Steam:** a drive that already carries a Steam library (Steam
   should take it over), and ejecting a drive from Steam
 - **Decky Loader**
-- **Screen sharing prompt for a new user:** set
-  `~/.local/share/flatpak/db/screencast` aside, reboot, switch to the
-  desktop: Steam should ask once and, with *Allow restoring*, never again
-  (as on SteamOS, which grants nothing in advance either)
 - **SteamOS Devkit Client:** pairing and deploying (the service answers and
   is visible on mDNS)
 - **Wake-on-Bluetooth** (a controller waking the Deck from suspend). Io
@@ -92,81 +100,132 @@ has changed since is on [Alpha 7](Alpha-7).
 
 ## Needs hardware to test
 
-Parts that can be built, but not tested without hardware Georg does not
-have. They are to become issues and draft pull requests, marked as needing
-someone with the hardware.
+Parts that are in Io but cannot be tested without hardware Georg does not
+have; they need someone with the hardware.
 
-- **Valve's Docking Station:** its firmware updater (`hub_update`, today a
-  stub that reports "up to date"), and HDMI-CEC with a dock that passes it
-  through (`/dev/cec*`; Georg's JSAUX dock does not, on SteamOS neither);
-  cecd 0.3.0 and Steam's CEC switches (`HdmiCec2`) work, the TV side is
-  untested
-- **Steam Deck OLED:** Io is built for the LCD model; the OLED needs its own
-  Wi-Fi driver path (ath11k), Valve's Galileo audio profile and firmware,
-  and the display quirks
+- **Valve's Docking Station:** its firmware updater (Valve's
+  `jupiter-dock-updater-bin`, with the real `--check` and `UpdateDock1`),
+  and HDMI-CEC with a dock that passes it through (`/dev/cec*`; Georg's
+  JSAUX dock does not, on SteamOS neither); cecd 0.3.0 and Steam's CEC
+  switches (`HdmiCec2`) work, the TV side is untested
+- **Steam Deck OLED:** Valve's packages and settings for it are in place:
+  Valve's audio profile differences and SOF firmware, the mura correction
+  (`galileo-mura`), the 45–90 Hz refresh range and HDR default, Wi-Fi debug
+  mode (`trace-cmd`), the regulatory domain of its ath11k card. The kernel
+  (Valve's tree) and fan control already covered it. Valve's
+  `modules-reload.sh` (reloading ath11k around hibernation) is not needed:
+  the Deck does not hibernate (`jupiter-hibernate-disable`)
+- **Steam Machine:** EC logging (`FirmwareDebug1`, `ec-log`), waking from
+  the TV through the embedded controller (steamos-manager), Valve's audio
+  profile (HDMI, AC3 for ARC), fan control. Not ported: CEC volume control
+  (needs Valve's PipeWire and WirePlumber patches), Valve's PipeWire HDMI
+  fixes (ports for the AC3 profiles, the HDMI profiles rechecked when the
+  connected display's ELD changes; from PipeWire's master, not in the 1.6
+  series Void ships), BIOS updates (`fremont-hw-support`, fwupd), Valve's
+  own USB Bluetooth firmware. The PipeWire fixes wait for a Void PipeWire
+  update that contains them, rather than an Io overlay, unless a Steam
+  Machine user needs them sooner
+- **A misdetected SanDisk microSD card** (named `SD032`, 30.6 MB): Valve's
+  rescan rule runs through `io-detach` now; checked with `udevadm test`
+  that a normal card is left alone and still mounts
+- **Other handhelds** (Legion Go, ROG Ally, MSI Claw, Zotac Zone):
+  steamos-manager brings Valve's device files for them, but Io is not
+  built for them (no InputPlumber for their controllers) and nothing is
+  tested
 
 ---
 
 ## Polish
 
-- Designed boot splash
+- Designed boot splash: the animated *Io Torus* is on `test-torus-splash`
+  (see *In branches*). On a static logo the screen goes black between the
+  splash and game mode; `plymouth-holo` keeps the splash image instead
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
-  inside game mode)
+  inside game mode; a first try with Valve's files: logging out of it did
+  not end its session)
 
 ---
 
 ## Later milestones
 
 - **Kernel metapackage** `linux-neptune`, with the next kernel update
-- **Installing to the internal NVMe**, once SteamOS on it is no longer needed
-  as the reference, with the recovery stick (built and booting; its
-  installer is tested with this move, see [Installation](Installation));
-  suspend-then-hibernate comes with it (Valve's resume path keeps the swap
-  file's position in an EFI variable through systemd; Valve's newer
-  configuration allows suspend-then-hibernate again, 20 minutes on battery)
-- **Formatting drives from Steam** (from Alpha 5): Valve's `format-device.sh`
-  is in place with Io's check against formatting the disk Io runs from;
-  `FormatDevice` and the format helpers still refuse. Tested together with
-  the move to the NVMe: first against the internal SSD while Io runs from
-  the card (its SteamOS is wiped then anyway; Valve's device list must
-  refuse it), then, with Io on the NVMe, against SD cards and USB drives
-- **Firmware updaters** (from Alpha 5): a check mode for `jupiter-biosupdate`,
-  `jupiter-controller-update` and `jupiter-dock-updater`, so Steam can show
-  whether an update is due, and flashing last, if at all. The BIOS updater
-  needs Valve's BIOS files and flash tool (`h2offt`); until then SteamOS on
-  the same Deck keeps the firmware current
+- **Firmware updates:** Valve's BIOS updater (`h2offt` and the BIOS
+  images) and controller updater (`deck-firmware-updaters`), the helpers,
+  `UpdateBios1` and the updates at boot are in place; their check modes
+  work as on SteamOS (tested 2026-10-19, at boot and from Steam), and the
+  update at boot with its splash (title, log lines, progress) runs through
+  with Valve's simulated controller update (`/etc/.simulate-firmware-update`,
+  2026-10-20). Still to test: a real controller update once Valve ships
+  newer firmware, a BIOS update last, if at all. Open: whether Valve's
+  binaries (BIOS images, `h2offt`, controller firmware) may be
+  redistributed in Io's repository
 - **Catching up with Valve, periodically:** after Io's beta, a regular
   review round against SteamOS and Valve's newest packages; in the long run
   Void's own packages wherever Valve's patches have gone upstream. Done
-  once for 3.9.2 in October 2026
-- **Repair Io** on the recovery stick: today a placeholder that lists the
-  disks ([Installation](Installation)); real repair tools to come
-- **A factory reset of Io's own** (fresh home directory): a design decision,
-  and destructive
-- **Live ISO with an installer**, once self-built void-mklive ISOs boot
-  (they drop to dracut's emergency shell, cause not found yet); the
-  recovery stick covers installing in the meantime. After it,
-  **flavours**: *Plasma* (today's image),
-  *Base* (game mode only), *Slim* (a light desktop). The split is prepared:
-  `io-base` is the core, `io-desktop` adds the desktop
+  once for 3.9.2 in October 2026; from SteamOS 3.9.3 (October 2026) Io has
+  `gpu-trace` 2.17, `holo-realtek-firmware-toggles` 1.4 and iwd's new band
+  scanning patch, `jupiter-hw-support` 20260930.1's firmware updaters and
+  the kernel `7.2.7-valve2` (as 7.2.11); from Valve's main branch
+  (2026-10-21) kwin 6.7.3-1.7's suspend patches and wpa_supplicant
+  2.12-1.3's rescan patches as merged in hostap, and Valve's steamos-manager
+  itself from its main branch after 26.4.1 (2026-10-22, with Io's runit
+  support; on 2026-10-28 Valve's main of 2026-10-24); on 2026-10-27
+  `jupiter-hibernate-disable` 0.1 (no hibernation on the Deck),
+  `steamdeck-dsp` 1.03 and gamescope 3.17.0 (Void's, with Io's 32-bit WSI
+  layer). Checked on 2026-10-27 and not needed:
+  `steamos-customizations-jupiter` 20260916.1 (A/B work and packaging
+  splits), the `holo-*` renames (`holo-systemreport` 1.24,
+  `holo-networking-tools` 1.4; `holo-networkmanager-config` 1.0 was taken
+  on 2026-10-28 in place of Io's `steamos-networking-tools`),
+  `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9 only adds
+  credentials for custom updates). WirePlumber
+  0.5.18 and PipeWire are Void's, newer than or equal to Valve's (Valve's
+  loopback patches only rebased; its one new patch is for smart filters);
+  Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it)
+  and follows when Void has it. Valve's Mesa on its main branch is what
+  Io's overlay was checked against (RADV `steamos-26.05.19`; radeonsi
+  26.1.2-4 only adds a virgl patch for virtual machines). Valve's `scx`
+  (`1.1.3.linux.steamos.2`) is a snapshot of upstream main of September
+  2026 plus 26 LAVD changes by its author that upstream does not have yet;
+  LAVD is opt-in on the Deck (Steam offers no switch for it), so Io stays
+  with Void's `scx` and takes them as Void updates (upstream 1.1.4 is out,
+  Void has 1.1.3). SteamOS 3.9.4 and 3.9.5 (checked 2026-10-29 against
+  their image manifests): nothing Io did not have; `jupiter-staging` and
+  `holo-staging` have nothing newer. Of all Arch packages Valve rebuilds
+  for 3.9.5, plymouth and Orca carry patches Io needs (*In branches*);
+  three fixes wait for their upstream release and Void: SDDM comparing its
+  configuration's times in UTC (a session switch after a timezone change),
+  PipeWire 1.6.11's Bluetooth fixes, gamescope blanking the screen before
+  sleep. Mesa follows Void (26.2.6 since 2026-10-29). Comparisons are made
+  against Valve's manifests and source archives: the Deck runs only Io
+  since 2026-10-31, so there are no new SteamOS captures
+- **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
+  (a light desktop). The split is prepared: `io-base` is the core,
+  `io-desktop` adds the desktop
 - **Automation, once Io changes less often:** GitHub Actions that build and
   publish the packages; man pages; a version check that writes Valve's
   newer versions to a file unless they are listed as already looked at
   (`pkgcheck.sh` today reports what changed since its last run)
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
-  default password on first boot. 1.0 is the beta (`beta1.img`,
-  `beta1.iso`)
+  default password on first boot; a sweep of Io's packages for Valve's
+  artwork and trademarks (`steamdeck-kde-presets`' wallpapers, avatars and
+  splash, the cursor in `deck-hw-support`); whether Valve's binaries
+  (firmware, updaters, Steam's bootstrap) may be passed on. 1.0 is the
+  first stable release
 
 ---
 
 ## Recurring
 
-- `pkgcheck.sh`: Valve's package versions against Io's
+- `pkgcheck.sh`: Valve's package versions against Io's (main and the
+  current release's branches)
+- SteamOS Manager: Io's seven runit commits rebased onto Valve's update,
+  every commit built (`cargo check --all-targets`), tests, fmt and clippy
+  on the result, then pushed to the fork's `runit` and the template raised
+  (version: 26.4.1 with the date of Valve's newest commit)
 - After Void updates: `./build.sh -p --overlays` (rebuilds what Void
   rebuilt; stops for a review when Void moved to a new version), see
   [Building](Building)
 - Valve's kernel updates, with the configuration review described on
   [Kernel](Kernel)
 - Boot logs, for regressions and new warnings
-- After each gamescope update: *Use Legacy X11* in Steam's developer
-  settings

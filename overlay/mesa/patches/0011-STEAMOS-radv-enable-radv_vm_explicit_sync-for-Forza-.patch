@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Mon, 1 Jun 2026 14:11:29 +0200
+Subject: [PATCH 11/17] STEAMOS: radv: enable radv_vm_explicit_sync for Forza
+ Horizon 4
+
+It's likely also affected but it's unverified.
+
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+(cherry picked from commit 36ac90bd73cf28d921350cb22e66190261c40317)
+---
+ src/amd/vulkan/00-radv-defaults.conf | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/amd/vulkan/00-radv-defaults.conf b/src/amd/vulkan/00-radv-defaults.conf
+index 1b5f9241d4e..e7ffed117ab 100644
+--- a/src/amd/vulkan/00-radv-defaults.conf
++++ b/src/amd/vulkan/00-radv-defaults.conf
+@@ -228,6 +228,11 @@ Application bugs worked around in this file:
+             <option name="radv_gfx12_hiz_wa" value="partial" />
+         </application>
+ 
++        <application name="Forza Horizon 4" application_name_match="ForzaHorizon4.exe">
++            <!-- Use explicit sync to mitigate stutters in gameplay -->
++            <option name="radv_vm_explicit_sync" value="true" />
++        </application>
++
+         <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
+             <!-- The full WA hurts performance too much, use the partial one
+                  that seems fine overall. -->

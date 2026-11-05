@@ -9,14 +9,6 @@ system. The sulphur it throws into space forms a plasma ring around Jupiter,
 the Io torus. Hence the logo: a ring around a gas giant, with the moon that
 creates it sitting on the ring.
 
-> **Status:** [Alpha 6](https://github.com/Lolzen/io-packages/releases/tag/alpha6)
-> released (SteamOS 3.9.2 parity, system updates from Steam) — see
-> [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) and the
-> [Changelog](https://github.com/Lolzen/io-packages/wiki/Changelog).
-> Io ships as a disk image, written straight to an SD card with `dd`. It
-> boots into Steam's game mode, plays games, and switches to the KDE Plasma
-> desktop and back.
-
 ```
                   ==
         ==================
@@ -63,8 +55,10 @@ reason is documented in
   status LED, power button, suspend and resume
 - Steam's performance menu: TDP limit, manual GPU clock, charge limit, fan
   control, Wi-Fi power management, adaptive brightness, performance overlay;
-  *Restart Steam* with Steam's developer mode on. Served by
-  `io-steamos-manager`, Io's own implementation of Valve's SteamOS Manager
+  *Restart Steam* with Steam's developer mode on. Served by Valve's
+  SteamOS Manager, with the runit support Io adds
+  ([Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager),
+  branch `runit`)
 - Battery: controlled shutdown through Steam when the battery runs empty
   (Valve's vpower)
 - Proton games, gamemode, screenshots, screen recording
@@ -75,9 +69,11 @@ reason is documented in
   (`plasma-keyboard`, switched on in System Settings), *Return to Gaming
   Mode*; the brightness set in game mode carries over
 - Storage expansion to the full card, as an explicit user step
-- SD cards and USB drives mount on their own (ext4, as on SteamOS); the
-  internal SSD with SteamOS stays hidden; storage trim from SteamOS
-  Manager
+- SD cards and USB drives mount on their own (ext4, as on SteamOS) and are
+  formatted from Steam; while Io runs from a card, the internal SSD stays
+  hidden; storage trim from SteamOS Manager
+- Valve's firmware updaters (BIOS, controller, dock) with Steam's checks,
+  and Valve's thumbstick and trigger calibration tools
 - zram swap, swap file, earlyoom, kernel and scheduler tuning as on
   SteamOS; the LAVD CPU scheduler for tools that switch it
 - Steam's system report, saved from Steam's own UI
@@ -85,9 +81,12 @@ reason is documented in
 - HDMI-CEC with Steam's switches, a firewall with Valve's rules (and
   Plasma's firewall page), and the SteamOS Devkit Client
 
-Not yet: formatting drives from Steam, firmware updates, installing to the
-internal SSD. Built for the Steam Deck LCD; the OLED model
-and Valve's own dock need someone with the hardware to test.
+Io runs from an SD card or, installed with the recovery stick, from the
+internal SSD (see
+[Installation](https://github.com/Lolzen/io-packages/wiki/Installation)).
+A real BIOS or controller update is untested. Built and tested on the
+Steam Deck LCD; Valve's packages for the OLED, the Steam Machine and Valve's
+own dock are in place, but need someone with the hardware to test.
 
 Open items and plans are tracked on the
 [Milestones](https://github.com/Lolzen/io-packages/wiki/Milestones) page.

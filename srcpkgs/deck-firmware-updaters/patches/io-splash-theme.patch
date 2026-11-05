@@ -1,0 +1,18 @@
+--- a/usr/lib/hwsupport/jupiter-controller-update-with-splash
++++ b/usr/lib/hwsupport/jupiter-controller-update-with-splash
+@@ -65,13 +65,13 @@
+ if fake_update_requested
+ then
+     # shellcheck disable=SC2086
+-    /usr/bin/plymouth-wrap "${EXTRA_WRAP_ARGS[@]}" ${EXPECTED_TTL} holo \
++    /usr/bin/plymouth-wrap "${EXTRA_WRAP_ARGS[@]}" ${EXPECTED_TTL} io \
+                            "Simulated Firmware Update..." \
+                            "${FAKE_CMD}"
+ elif firmware_update_required
+ then
+     # shellcheck disable=SC2086
+-    /usr/bin/plymouth-wrap "${EXTRA_WRAP_ARGS[@]}" ${EXPECTED_TTL} holo \
++    /usr/bin/plymouth-wrap "${EXTRA_WRAP_ARGS[@]}" ${EXPECTED_TTL} io \
+                            "Updating Controller Firmware" \
+                            "${UPDATE_CMD}"
+ else

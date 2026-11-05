@@ -1,11 +1,11 @@
 # Template file for 'io-session'
 pkgname=io-session
-version=0.7.2
-revision=3
+version=0.7.7
+revision=1
 # The desktop session (steamos-session-select plasma) needs kde-plasma,
 # which io-desktop pulls in.
 depends="bash gamescope kwin-holo steam-jupiter pipewire wireplumber dbus steamos-powerbuttond
- io-steamos-manager rtkit libcap-progs sddm cecd
+ steamos-manager rtkit libcap-progs sddm cecd
  cec-audio-control steam_notif_daemon drm_janitor"
 conf_files="/etc/elogind/logind.conf.d/10-io-kill-user-processes.conf"
 short_desc="Io game mode session scripts and session switching"
@@ -21,7 +21,11 @@ do_install() {
 	# whenever a session ends. SDDM starts io-start from the session files.
 	vsv io-sddm
 	vmkdir usr/lib/sddm/sddm.conf.d
-	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d 10-io.conf
+	# Valve's name (holo-session-selection): steamos-manager offers session
+	# management (switching modes, the default login mode) only where this
+	# file exists, and then writes /etc/sddm.conf.d/zz-holo-autologin.conf
+	# and zzt-holo-temp-login.conf (the zz-steamos-* names while those exist).
+	vinstall ${FILESDIR}/sddm-io.conf 644 usr/lib/sddm/sddm.conf.d holo.conf
 	vmkdir usr/share/wayland-sessions
 	vinstall ${FILESDIR}/gamescope-wayland.desktop 644 usr/share/wayland-sessions
 	vinstall ${FILESDIR}/io-desktop.desktop 644 usr/share/wayland-sessions
@@ -30,7 +34,9 @@ do_install() {
 	vmkdir etc/security/limits.d
 	vinstall ${FILESDIR}/90-io-memlock.conf 644 etc/security/limits.d
 	vbin ${FILESDIR}/io-plasma
-	vbin ${FILESDIR}/steamos-session-select
+	# Steam calls steamos-session-select (SteamOS: a steamos-alias link)
+	vbin ${FILESDIR}/holo-session-select
+	ln -s holo-session-select ${DESTDIR}/usr/bin/steamos-session-select
 	vmkdir etc/skel/Desktop
 	vbin ${FILESDIR}/io-grow-storage
 	vinstall ${FILESDIR}/io-grow-storage.desktop 644 usr/share/applications
@@ -55,4 +61,5 @@ do_install() {
 	vinstall ${FILESDIR}/steam-short-session-tracker 755 usr/lib/steamos
 	vmkdir usr/libexec/io
 	vinstall ${FILESDIR}/io-low-disk-cleanup 755 usr/libexec/io
+	vinstall ${FILESDIR}/io-manager-session 755 usr/libexec/io
 }

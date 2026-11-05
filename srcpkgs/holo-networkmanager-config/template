@@ -1,0 +1,33 @@
+# Template file for 'holo-networkmanager-config'
+pkgname=holo-networkmanager-config
+version=1.0
+revision=1
+wrksrc="${pkgname}"
+depends="NetworkManager-holo iwd-holo"
+short_desc="Valve's NetworkManager defaults: Wi-Fi backend, IPv6 privacy"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/holo/holo"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/holo-main/${pkgname}-${version}-1.src.tar.gz"
+checksum=1703b9c5a1e09bf811fbdcb9f9c54365543be2dd8224884df06e4bc0d7d7ac8c
+# Until October 2026 Io shipped these defaults as steamos-networking-tools
+# (Valve's name for its steamos-wifi-set-backend, which SteamOS Manager
+# replaced).
+replaces="steamos-networking-tools>=0"
+
+# wpa_supplicant as the backend (since Valve's change of 2026-08-27), iwd
+# selectable in Steam: steamos-manager writes its override to
+# /etc/NetworkManager/conf.d/99-valve-wifi-backend.conf and takes the default
+# from the conf.d directories. IPv6 privacy extensions. The interface must be
+# called wlan0 as on SteamOS (net.ifnames=0): iwd recreates it under the
+# kernel name, and a renamed interface leaves NetworkManager looking for one
+# that is gone. The connectivity check is io-base's.
+do_install() {
+	# Valve also enables systemd-resolved and points NetworkManager at it;
+	# Io has no resolved, so that line goes.
+	sed -i '/^dns=systemd-resolved$/d' 10-holo-defaults.conf
+	if grep -q '^dns=' 10-holo-defaults.conf; then
+		msg_error "10-holo-defaults.conf still sets dns=\n"
+	fi
+	vinstall 10-holo-defaults.conf 644 usr/lib/NetworkManager/conf.d
+}

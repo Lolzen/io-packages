@@ -1,7 +1,7 @@
 #!/bin/sh
 # Steam calls this helper directly (not over D-Bus) when the fan control
 # toggle is switched. On SteamOS it starts/stops jupiter-fan-control.service.
-# On Io it asks the root half of io-steamos-manager, which runs sv up/down;
+# On Io it asks the root half of steamos-manager, which runs sv up/down;
 # the service's finish script hands the fan back to the EC.
 #
 # Steam's runtime libraries must not leak into the host busctl.

@@ -1,0 +1,128 @@
+#!/bin/bash
+# io-hibernate - elogind system-sleep hook: Valve's hibernation setup of
+# SteamOS 3.9.2 (hibernate-prepare.service before systemd-hibernate.service,
+# system-sleep/hibernate-post.sh after it), plus what systemd does there and
+# elogind does not: telling the next boot where the image is.
+#
+# elogind runs it with <pre|post> <operation>; SYSTEMD_SLEEP_ACTION is the
+# step being taken (for suspend-then-hibernate: suspend, then hibernate).
+#
+# pre, hibernate:
+#   1. hibernate-swap-helper.sh create (Valve's): a swap file in /home large
+#      enough for RAM and VRAM, created only now (about 17 GB on the Deck),
+#      writes /sys/power/resume and resume_offset for it. elogind has picked
+#      a swap before this hook runs (Io's 1 GiB /home/swapfile) and written
+#      its location; the helper's values replace it, and the kernel writes
+#      the image where /sys/power/resume points.
+#   2. Writes where the image is (filesystem UUID and offset) to the EFI
+#      variable IoHibernateLocation, which the initramfs (dracut module
+#      io-resume) reads and deletes at the next boot. On SteamOS systemd
+#      writes its own variable (HibernateLocation) and its initramfs
+#      generator reads it; Io uses a variable of its own, so a SteamOS on the
+#      same Deck never tries to resume Io's image.
+#   3. io-bootnext: the next boot starts Io (UEFI BootNext), not the
+#      firmware's default system.
+#   Before 1, and again if 1 or 2 fails, /sys/power/resume points at a place
+#   without swap: the kernel then cannot write an image and hibernation
+#   fails before the power goes off (elogind suspends instead), rather than
+#   hibernating into an image that nothing reads back. elogind ignores the
+#   hook's exit status (AllowSuspendInterrupts is off, as Void ships it), so
+#   this is what stops it.
+# post, hibernate (after resuming, or after a failed attempt):
+#   hibernate-swap-helper.sh cleanup removes the swap file, the variable is
+#   deleted, /sys/power/resume is cleared again.
+#
+# Hibernation is only allowed where 61-io-hibernate-guard.sh allows it (/ on
+# the internal NVMe); elsewhere elogind never gets here with "hibernate".
+
+HELPER=/usr/libexec/holo/hibernate-swap-helper.sh
+EFIVARS=/sys/firmware/efi/efivars
+# GUID of Io's own EFI variables (not systemd's)
+IO_GUID=00693127-9e1a-4740-b3c3-13fdd5f0df56
+VAR="$EFIVARS/IoHibernateLocation-$IO_GUID"
+
+log() { logger -t io-hibernate "$*" 2> /dev/null || echo "io-hibernate: $*" >&2; }
+
+efivars_mounted() {
+    [ -d /sys/firmware/efi ] || return 1
+    mountpoint -q "$EFIVARS" || mount -t efivarfs efivarfs "$EFIVARS" 2> /dev/null
+}
+
+delete_var() {
+    [ -e "$VAR" ] || return 0
+    chattr -i "$VAR" 2> /dev/null
+    rm -f "$VAR"
+}
+
+# Points the kernel at block 0 of the root filesystem's device, where no
+# swap area starts: the kernel finds no swap there and stops the
+# hibernation before the power goes off (elogind then suspends, or the
+# system simply wakes up). Not "0:0": with no resume device set the kernel
+# takes the first active swap instead.
+block_hibernation() {
+    echo 0 > /sys/power/resume_offset 2> /dev/null
+    mountpoint -d / > /sys/power/resume 2> /dev/null
+}
+
+# Nothing set, so that elogind picks a swap itself next time (it refuses to
+# hibernate while /sys/power/resume names a swap that is not active).
+clear_resume() {
+    echo 0 > /sys/power/resume_offset 2> /dev/null
+    echo 0:0 > /sys/power/resume 2> /dev/null
+}
+
+write_var() {
+    local dev uuid offset devname tmp
+    dev=$(cat /sys/power/resume 2> /dev/null)
+    offset=$(cat /sys/power/resume_offset 2> /dev/null)
+    case "$dev" in
+        "" | 0:0) log "no resume device set"; return 1 ;;
+    esac
+    devname=$(sed -n 's/^DEVNAME=//p' "/sys/dev/block/$dev/uevent" 2> /dev/null)
+    [ -n "$devname" ] || { log "no block device for $dev"; return 1; }
+    uuid=$(blkid -s UUID -o value "/dev/$devname")
+    [ -n "$uuid" ] || { log "no UUID on /dev/$devname"; return 1; }
+    efivars_mounted || { log "no EFI variables"; return 1; }
+    delete_var
+    # efivarfs: 4 bytes of attributes (non-volatile, boot service, runtime),
+    # then the value, written in one go.
+    tmp=$(mktemp) || return 1
+    printf '\x07\x00\x00\x00UUID=%s OFFSET=%s' "$uuid" "${offset:-0}" > "$tmp"
+    if ! cat "$tmp" > "$VAR"; then
+        rm -f "$tmp"
+        log "writing $VAR failed"
+        return 1
+    fi
+    rm -f "$tmp"
+    log "image location: /dev/$devname (UUID $uuid), offset ${offset:-0}"
+}
+
+action=${SYSTEMD_SLEEP_ACTION:-$2}
+
+case "$1/$action" in
+    pre/hibernate | pre/hybrid-sleep)
+        # First, so that a hook stopped half-way (elogind's 90 s limit)
+        # leaves no swap the kernel could write an unreadable image to.
+        block_hibernation
+        out=$("$HELPER" create 2>&1)
+        rc=$?
+        printf '%s\n' "$out" | logger -t io-hibernate
+        if [ "$rc" != 0 ]; then
+            log "hibernate-swap-helper.sh create failed ($rc)"
+            block_hibernation
+            exit 1
+        fi
+        if ! write_var; then
+            "$HELPER" cleanup 2>&1 | logger -t io-hibernate
+            block_hibernation
+            exit 1
+        fi
+        [ -x /usr/libexec/io/io-bootnext ] && /usr/libexec/io/io-bootnext
+        ;;
+    post/hibernate | post/hybrid-sleep)
+        "$HELPER" cleanup 2>&1 | logger -t io-hibernate
+        efivars_mounted && delete_var
+        clear_resume
+        ;;
+esac
+exit 0

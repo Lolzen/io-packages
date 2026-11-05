@@ -1,0 +1,24 @@
+#!/bin/sh
+# Kernel post-install hook (/etc/kernel.d/post-install, run by xbps's
+# kernel-hooks trigger after the initramfs and GRUB hooks): removes the
+# kernels a kernel update left behind, as "vkpurge rm all" does by hand.
+#
+# Io's kernel packages keep the files of the version they replace
+# (preserve=yes, as Void's kernels), so every new version or revision of
+# linux-neptune-72 left the old kernel, its modules and its initramfs in
+# place. SteamOS keeps no old kernels in its image either.
+#
+# vkpurge only removes kernels that no installed package owns any more,
+# and never the running one: that one stays until the next update, so
+# the running system keeps its modules until it is restarted. Removing a
+# kernel runs the post-remove hooks (initramfs deleted, GRUB menu
+# rewritten).
+#
+# Arguments from the trigger: $1 package name, $2 kernel version.
+
+VERSION="$2"
+
+[ -x /usr/bin/vkpurge ] || exit 0
+echo "Removing kernels left behind by earlier versions (installed: ${VERSION})"
+/usr/bin/vkpurge rm all
+exit 0

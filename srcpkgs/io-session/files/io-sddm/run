@@ -2,6 +2,13 @@
 # Io: SDDM, as on SteamOS the display manager that logs deck in - into game
 # mode by default, and again whenever a session ends (Relogin=true).
 exec 2>&1
+# SDDM's autologin opens its session through pam_elogind, which asks elogind
+# on the system bus. Before elogind owns org.freedesktop.login1, the login
+# gets no session and no XDG_RUNTIME_DIR, and game mode never starts: the
+# screen keeps the boot splash (seen first with kernel 7.3, which reaches
+# this point sooner). runsv starts this script again after a second.
+sv check dbus > /dev/null || exit 1
+dbus-send --system --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner string:org.freedesktop.login1 2> /dev/null | grep -q "boolean true" || exit 1
 # A one-shot login left over from a switch that never completed would
 # otherwise decide the first session (SteamOS: reset-oneshot-boot.conf).
 rm -f /etc/sddm.conf.d/zzt-steamos-temp-login.conf

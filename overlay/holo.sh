@@ -7,11 +7,15 @@
 #   overlay/holo.sh gen <name>   write srcpkgs/<name>-holo into void-packages
 #   overlay/holo.sh names [name] package names the overlays produce
 #   overlay/holo.sh tobuild      overlays whose current build is missing
+#   overlay/holo.sh lib32 <name> exit 0 if the overlay is built for i686 too
 #
 # An overlay is overlay/<name>/ with:
 #   overlay.conf   base_version=<Void version the patches are made for>
 #                  io_revision=<1..99, raised when Io's patches change>
 #   patches/       *.patch, applied after Void's own patches
+#                  lib32=yes  optional: also build for i686 and publish the
+#                  -32bit packages (<sub>-holo-32bit), which then replace
+#                  Void's <sub>-32bit as the 64-bit packages replace Void's
 #   template.append  optional: template lines added at the end (build
 #                  settings such as CFLAGS)
 #   README.md      what the patches do, where they come from, upstream state
@@ -25,6 +29,11 @@
 #     after a revision bump in Void
 #   - revision = Void's revision * 100 + io_revision, so both a rebuild in
 #     Void (revision bump) and a change of Io's patches give a newer package
+#   - a subpackage list set by the template itself (subpackages="...",
+#     subpackages+=" ...") gets the new names as well
+#   - a dependency on a package of another overlay (NetworkManager's
+#     "wpa_supplicant") names its stand-in ("wpa_supplicant-holo"): xbps
+#     could otherwise satisfy it with Void's package and drop the stand-in
 #   - ${pkgname} keeps meaning the Void name outside functions (distfiles,
 #     wrksrc, ...) and in the build functions (do_install, post_install:
 #     paths such as ${FILESDIR}/${pkgname}.conf); only inside a subpackage's
@@ -33,8 +42,10 @@
 # have to be checked against the new version by hand, then base_version
 # raised. A revision bump in Void only gives a new build.
 #
-# Void's -32bit package of an overlaid package stays Void's: overlays are
-# built for x86_64 only.
+# Void's -32bit package of an overlaid package stays Void's, unless the
+# overlay sets lib32=yes: then build.sh builds it for i686 as well, and
+# xbps-src turns that build into <sub>-holo-32bit for the multilib
+# repository, with replaces and provides of Void's <sub>-32bit.
 
 set -eu
 
@@ -82,6 +93,9 @@ subpkgs_of() {
     sed -n 's/^\([A-Za-z0-9._+-]*\)_package() *{.*$/\1/p' "$1"
 }
 
+# lib32=yes in overlay.conf: the overlay is built for i686 too
+is_lib32() { [ "$(conf_get "$OVERLAY/$1/overlay.conf" lib32)" = yes ]; }
+
 # Sets: base iorev vver vrev newrev state
 inspect() {
     conf="$OVERLAY/$1/overlay.conf"
@@ -103,7 +117,8 @@ inspect() {
     esac
     newrev=$((vrev * 100 + iorev))
     if vercmp "$vver" "$base"; then
-        if [ -f "$BINPKGS/$1-holo-${vver}_$newrev.x86_64.xbps" ]; then
+        if [ -f "$BINPKGS/$1-holo-${vver}_$newrev.x86_64.xbps" ] &&
+            { ! is_lib32 "$1" || [ -f "$BINPKGS/multilib/$1-holo-32bit-${vver}_$newrev.x86_64.xbps" ]; }; then
             state=built
         else
             state=build
@@ -150,6 +165,14 @@ cmd_names() {
         for s in $(subpkgs_of "$t"); do
             echo "$s-holo"
         done
+        # the -32bit packages xbps-src makes from the i686 build (those of
+        # subpackages it does not make are skipped by publish.sh as unbuilt)
+        if is_lib32 "$o"; then
+            echo "$o-holo-32bit"
+            for s in $(subpkgs_of "$t"); do
+                echo "$s-holo-32bit"
+            done
+        fi
     done
 }
 
@@ -179,7 +202,14 @@ cmd_gen() {
     fi
 
     subs=$(subpkgs_of "$src/template" | tr "\n" " ")
-    awk -v name="$o" -v ver="$vver" -v vrev="$vrev" -v newrev="$newrev" -v subs="$subs" '
+    # the packages of the other overlays (their Void names)
+    others=""
+    for o2 in $(overlays); do
+        [ "$o2" = "$o" ] && continue
+        t2=$(void_template "$o2") || continue
+        others="$others $o2 $(subpkgs_of "$t2" | tr "\n" " ")"
+    done
+    awk -v name="$o" -v ver="$vver" -v vrev="$vrev" -v newrev="$newrev" -v subs="$subs" -v others="$others" '
         # replace every literal occurrence of f in str by t
         function lit(str, f, t,    out, i) {
             out = ""
@@ -203,7 +233,26 @@ cmd_gen() {
             }
             return out str
         }
+        # in a depends string: a token naming a package of another overlay
+        # ("wpa_supplicant", "wpa_supplicant>=2.10") gets its -holo name
+        function deps(str,    out, tok, nm, rest, c) {
+            out = ""
+            while (match(str, /[A-Za-z0-9._+-]+/)) {
+                out = out substr(str, 1, RSTART - 1)
+                tok = substr(str, RSTART, RLENGTH)
+                str = substr(str, RSTART + RLENGTH)
+                c = substr(str, 1, 1)
+                # a bare name, or a name followed by a version constraint
+                if ((tok in other) && (c == "" || c ~ /[ \t"<>=]/))
+                    tok = tok "-holo"
+                out = out tok
+            }
+            return out str
+        }
         BEGIN {
+            m = split(others, ow, " ")
+            for (i = 1; i <= m; i++) if (ow[i] != "") other[ow[i]] = 1
+            indeps = 0
             n = split(subs, s, " ")
             for (i = 1; i <= n; i++) if (s[i] != "") issub[s[i]] = 1
             for (sp in issub) sib[sp] = 1
@@ -237,6 +286,21 @@ cmd_gen() {
             infunc = 0; inpkg = 0
             print; next
         }
+        # depends="..." / depends+=" ...", also over several lines
+        indeps || /(^|[ \t])depends\+?="/ {
+            if (indeps) {
+                q = index($0, "\"")
+                if (q > 0) { $0 = deps(substr($0, 1, q - 1)) substr($0, q); indeps = 0 }
+                else $0 = deps($0)
+            } else {
+                match($0, /depends\+?="/)
+                head = substr($0, 1, RSTART + RLENGTH - 1)
+                rest = substr($0, RSTART + RLENGTH)
+                q = index(rest, "\"")
+                if (q > 0) $0 = head deps(substr(rest, 1, q - 1)) substr(rest, q)
+                else { $0 = head deps(rest); indeps = 1 }
+            }
+        }
         # dependencies between the packages of this template, at the exact
         # build version ("libnm-${version}_${revision}"), follow the rename
         {
@@ -244,6 +308,27 @@ cmd_gen() {
                 $0 = lit($0, nm ">=" vr, nm "-holo>=" vr)
                 $0 = lit($0, nm "-" vr, nm "-holo-" vr)
             }
+        }
+        # a subpackage list the template sets itself
+        !infunc && /^[ \t]*subpackages\+?="/ {
+            q1 = index($0, "\"")
+            rest = substr($0, q1 + 1)
+            q2 = index(rest, "\"")
+            if (q2 > 0) {
+                inner = substr(rest, 1, q2 - 1)
+                after = substr(rest, q2)
+                lead = (inner ~ /^[ \t]/) ? " " : ""
+                nw = split(inner, w, /[ \t]+/)
+                out = ""
+                for (k = 1; k <= nw; k++) {
+                    if (w[k] == "") continue
+                    t = w[k]
+                    if (t in issub) t = t "-holo"
+                    out = out (out == "" ? "" : " ") t
+                }
+                $0 = substr($0, 1, q1) lead out after
+            }
+            print; next
         }
         !infunc && /^pkgname=/ { print "pkgname=" name "-holo"; next }
         !infunc && /^revision=/ { print "revision=" newrev; next }
@@ -265,6 +350,35 @@ cmd_gen() {
             cat "$OVERLAY/$o/template.append"
         } >> "$dst/template"
     fi
+    if is_lib32 "$o"; then
+        # xbps-src gives a -32bit package only the provides it reads from
+        # $XBPS_STATEDIR/<pkg>-32bit-provides (do-pkg/00-gen-pkg.sh), and
+        # no hook writes that file (pre-pkg/04-generate-provides.sh writes
+        # <pkg>-provides only). Without it libgbm-holo-32bit would not
+        # stand in for libgbm-32bit, and Void's -32bit packages depending
+        # on it (gst-plugins-base1-32bit) would be broken. The file is
+        # written here in the i686 build, before do-pkg reads it.
+        {
+            echo
+            echo "# Io overlay (lib32=yes, overlay/holo.sh): provides of the -32bit packages"
+            echo "_io_lib32_provides() {"
+            echo "	[ \"\$XBPS_TARGET_MACHINE\" = i686 ] || return 0"
+            echo "	local _n"
+            echo "	for _n in $o $subs; do"
+            echo "		echo \"\${_n}-32bit-\${version}_\${revision}\" > \"\${XBPS_STATEDIR}/\${_n}-holo-32bit-provides\""
+            echo "	done"
+            echo "}"
+            echo "if declare -f post_install > /dev/null; then"
+            echo "	eval \"_io_lib32_void_\$(declare -f post_install)\""
+            echo "else"
+            echo "	_io_lib32_void_post_install() { :; }"
+            echo "fi"
+            echo "post_install() {"
+            echo "	_io_lib32_void_post_install"
+            echo "	_io_lib32_provides"
+            echo "}"
+        } >> "$dst/template"
+    fi
     sed -i "1s/.*/# Template file for '$o-holo' (generated from Void's '$o')/" "$dst/template"
 
     for s in $subs; do
@@ -278,6 +392,7 @@ case "${1:-}" in
     check) cmd_check ;;
     gen) [ $# -eq 2 ] || die "usage: holo.sh gen <name>"; cmd_gen "$2" ;;
     names) cmd_names "${2:-}" ;;
+    lib32) [ $# -eq 2 ] || die "usage: holo.sh lib32 <name>"; is_lib32 "$2" ;;
     tobuild) cmd_tobuild ;;
-    *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+    *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

@@ -1,0 +1,39 @@
+# Template file for 'galileo-mura'
+pkgname=galileo-mura
+version=0.10
+revision=1
+_tag=v${version}
+_pkgrel=2
+wrksrc="${pkgname}"
+archs="x86_64*"
+build_style=meson
+hostmakedepends="git tar"
+depends="bash tar sed wget xprop"
+short_desc="Mura correction for the Steam Deck OLED panel (Valve's tools)"
+maintainer="Georg <funer@gmx.at>"
+license="MIT"
+homepage="https://gitlab.steamos.cloud/jupiter/galileo-mura-extractor"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/${pkgname}-${_tag}-${_pkgrel}.src.tar.gz"
+checksum=834805e59e8f642779e16b343acef9b924ded0f7364dae90c7d92d815da6693f
+
+# Galileo (Steam Deck OLED) only; untested on Io (no hardware). Valve's
+# galileo-mura (jupiter-3.9 v0.10-2): galileo-mura-extractor reads the
+# panel's serial over DP AUX and the factory mura data from firmware memory
+# (/dev/mem), which is why Valve installs it setuid root;
+# galileo-mura-download fetches the correction for this unit from Valve
+# once; galileo-mura-setup combines both and hands the result to gamescope
+# (X property GAMESCOPE_COLOR_MURA_CORRECTION_IMAGE). SteamOS runs it as a
+# user service of the game mode session on Galileo only; io-session's
+# io-gamemode does the same. On Jupiter it is never started.
+#
+# Valve's source archive carries the git repository; the tagged tree is
+# checked out here, as Valve's PKGBUILD builds it.
+post_extract() {
+	git --git-dir=galileo-mura-extractor archive --format=tar ${_tag} | tar -x
+}
+
+post_install() {
+	# Valve's galileo-mura.install: root-owned and setuid
+	chmod 4755 ${DESTDIR}/usr/bin/galileo-mura-extractor
+	vlicense LICENSE
+}

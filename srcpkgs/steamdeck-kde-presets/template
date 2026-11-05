@@ -1,10 +1,10 @@
 # Template file for 'steamdeck-kde-presets'
 pkgname=steamdeck-kde-presets
 version=3.9.4
-revision=2
+revision=3
 wrksrc="steamdeck-kde-presets"
 hostmakedepends="git tar"
-depends="kdialog jq python3 ibus steam-jupiter"
+depends="kdialog jq python3 ibus steam-jupiter bash qt6-tools steamos-manager"
 short_desc="Valve's Plasma defaults for the Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="GPL-2.0-only"
@@ -27,8 +27,11 @@ checksum=bf6ec9404e96b6357b447a6b9722dbbd3ff0984cc3ff45b2bb5fe5770c9e954d
 # - steamos-set-plasma-theme (a systemd service that picks the Deck variant
 #   of the theme on Jupiter/Galileo): Io runs on the Deck only, so the Deck
 #   variant is written into kdeglobals here.
-# - Return.desktop calls steamosctl; Io switches with steamos-session-select.
-#   It replaces io-session's own return-to-gamemode entry.
+# - Return.desktop: Valve's command as it is (steamosctl's default login
+#   mode decides between switch-to-game-mode and Plasma's logout), run by
+#   bash instead of sh (it uses [[, and Void's sh is dash), with Qt 6's
+#   qdbus from /usr/lib/qt6/bin (Void installs it only there). It replaces
+#   io-session's own return-to-gamemode entry.
 # - IBus: the autostart stays, with Void's path to Plasma's IBus panel
 #   (/usr/libexec instead of /usr/lib). The X11-only environment is left
 #   out, Io's desktop is Wayland.
@@ -52,7 +55,8 @@ do_install() {
 	sed -i 's/com\.valve\.vapor\.desktop/com.valve.vapor.deck.desktop/' etc/xdg/kdeglobals
 	grep -q 'LookAndFeelPackage=com.valve.vapor.deck.desktop' etc/xdg/kdeglobals
 
-	sed -i 's|^Exec=.*|Exec=/usr/bin/steamos-session-select gamescope|' etc/skel/Desktop/Return.desktop
+	sed -i -e "s|^Exec=sh -c |Exec=bash -c |" -e "s| qdbus | /usr/lib/qt6/bin/qdbus |" etc/skel/Desktop/Return.desktop
+	grep -q '^Exec=bash -c .*steamosctl get-default-login-mode.*/usr/lib/qt6/bin/qdbus ' etc/skel/Desktop/Return.desktop
 
 	cp -a etc usr ${DESTDIR}/
 	chmod 755 ${DESTDIR}/etc/skel/Desktop/Return.desktop

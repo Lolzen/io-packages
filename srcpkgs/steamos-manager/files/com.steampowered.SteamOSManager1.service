@@ -1,0 +1,7 @@
+# Session half of steamos-manager, started by the session's bus when the
+# session first calls it (io-gamemode and io-plasma do at session start).
+# Valve's file names the systemd user unit instead (Exec=/bin/false); the
+# environment is the unit's.
+[D-BUS Service]
+Name=com.steampowered.SteamOSManager1
+Exec=/usr/bin/env RUST_LOG=info /usr/lib/steamos-manager

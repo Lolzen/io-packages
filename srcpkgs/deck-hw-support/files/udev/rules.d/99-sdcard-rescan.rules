@@ -1,8 +1,13 @@
 # Work around the misdetection of some SanDisk microSD cards
+# Io: io-detach instead of systemd-run (no systemd). Left out while Io runs
+# from an SD card: the rescan rebinds the card reader, which would take the
+# running system's disk away (a misdetected boot card never gets this far
+# anyway). With Io on the internal SSD it works as on SteamOS.
 
-# Io: disabled. The rule starts the script through systemd-run, which Io
-# does not have. While Io boots from the card in the slot it has nothing to
-# do: a misdetected boot card never gets as far as this rule. It matters
-# once Io runs from the internal SSD (replace systemd-run then).
+ACTION!="add", GOTO="sdcard_rescan_end"
+SUBSYSTEM!="mmc", GOTO="sdcard_rescan_end"
+ENV{MMC_NAME}!="SD032", GOTO="sdcard_rescan_end"
+PROGRAM="/usr/lib/hwsupport/io-root-disk", RESULT=="mmcblk*", GOTO="sdcard_rescan_end"
+RUN+="/usr/lib/hwsupport/io-detach /usr/lib/hwsupport/sdcard-rescan.sh %k"
 
-#ACTION=="add", SUBSYSTEM=="mmc", ENV{MMC_NAME}=="SD032", RUN+="/bin/systemd-run --no-block --collect /usr/lib/hwsupport/sdcard-rescan.sh %k"
+LABEL="sdcard_rescan_end"

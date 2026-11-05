@@ -20,3 +20,7 @@ CONFIG_DEFAULT_HOSTNAME="(none)"
 # SteamOS 3.8.4 has the C Binder, 3.9.2 the Rust Binder, which needs Rust.
 CONFIG_ANDROID_BINDER_IPC=y
 CONFIG_ANDROID_BINDERFS=y
+# Towards Void: TOMOYO (built, as in Valve's config, but not in the LSM
+# list, so inactive) would be switched on when this program runs; Valve's
+# value is Arch's systemd path, Io's init is Void's runit at /sbin/init.
+CONFIG_SECURITY_TOMOYO_ACTIVATION_TRIGGER="/sbin/init"

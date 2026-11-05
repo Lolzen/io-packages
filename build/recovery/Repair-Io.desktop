@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Repair Io
-Comment=Inspect the system and recovery tools
+Comment=Repair an Io installation that no longer starts
 Exec=konsole --hold -e /usr/sbin/io-repair
 Icon=applications-system
 Terminal=false

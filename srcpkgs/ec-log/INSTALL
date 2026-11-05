@@ -1,0 +1,10 @@
+# Link the service on installed systems (an image links it from its service
+# list). The down file comes with the package, so runit supervises it without
+# starting it; steamos-manager starts and stops it.
+case "${ACTION}" in
+post)
+	if [ -d var/service ] && [ ! -e var/service/ec-log ]; then
+		ln -sf /etc/sv/ec-log var/service/
+	fi
+	;;
+esac

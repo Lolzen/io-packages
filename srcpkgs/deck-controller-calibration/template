@@ -1,0 +1,46 @@
+# Template file for 'deck-controller-calibration'
+pkgname=deck-controller-calibration
+version=20260930.1
+revision=1
+_pkgrel=1
+# The same source as deck-firmware-updaters: Valve's jupiter-hw-support of
+# SteamOS 3.9.3 (git tag jupiter-3.9-20260930.1).
+_srcver=3.9.${version}
+_srctag=jupiter-3.9-${version}
+archs="x86_64"
+wrksrc="jupiter-hw-support"
+hostmakedepends="git tar"
+depends="hidapi psmisc"
+short_desc="Valve's Steam Deck thumbstick and trigger calibration tools"
+maintainer="Georg <funer@gmx.at>"
+license="custom:Proprietary"
+homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/jupiter-hw-support-${_srcver}-${_pkgrel}.src.tar.gz"
+checksum=38d025af2ddb22cfc3c94d23264bcc6136571f1c3ad585f4dc5cf3eb52fe3973
+# PyInstaller executables: stripping cuts off the archive appended to them.
+nostrip=yes
+
+# Valve's controller calibration tools from jupiter-hw-support, installed
+# on SteamOS in /usr/bin and run by hand in a terminal (Valve's support
+# steps for drifting sticks and triggers):
+#   thumbstick_cal       both thumbsticks (range and centre)
+#   thumbstick_fine_cal  the thumbsticks' fine calibration
+#   trigger_cal          both triggers
+# Each stops Steam first ("killall steam", hence psmisc), talks to the
+# controller over hidraw and writes the new calibration to the controller.
+# They are PyInstaller bundles with their own Python 3.8; the only library
+# they take from the system is hidapi (libhidapi-hidraw.so.0, through
+# pyhidapi's ctypes loader), which SteamOS has through python-hid.
+# Valve publishes the binaries in its source mirror; no licence states
+# whether others may redistribute them (as the firmware updaters).
+
+post_extract() {
+	git --git-dir=jupiter-hw-support archive --format=tar "${_srctag}" | tar -x
+}
+
+do_install() {
+	local f
+	for f in thumbstick_cal thumbstick_fine_cal trigger_cal; do
+		vbin usr/bin/$f
+	done
+}

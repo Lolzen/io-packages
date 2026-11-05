@@ -1,0 +1,24 @@
+# Template file for 'python3-progressbar2'
+pkgname=python3-progressbar2
+version=4.6.0
+revision=1
+build_style=python3-pep517
+hostmakedepends="python3-setuptools python3-setuptools_scm python3-wheel"
+depends="python3-utils"
+short_desc="Text progress bar library for Python (progressbar2)"
+maintainer="Georg <funer@gmx.at>"
+license="BSD-3-Clause"
+homepage="https://github.com/wolph/python-progressbar"
+distfiles="${PYPI_SITE}/p/progressbar2/progressbar2-${version}.tar.gz"
+checksum=fe48c8955a84428af77bff2642ba47041e1b8f7c867a5b7cc94f8bc255a8f0cf
+make_check=no
+
+# Valve's controller firmware updater (deck-firmware-updaters) uses the
+# progressbar2 API (max_value, DataSize), as Arch's python-progressbar is.
+# Void's python3-progressbar is the older "progressbar" 2.5 with the same
+# module name, so the two cannot be installed together.
+conflicts="python3-progressbar>=0"
+
+post_install() {
+	vlicense LICENSE
+}

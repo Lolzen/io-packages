@@ -335,6 +335,73 @@ index a480bc781565..fd2afdd7b405 100644
  
  
  
+diff --git a/Documentation/power/basic-pm-debugging.rst b/Documentation/power/basic-pm-debugging.rst
+index 69862e759c30..daaaca0a9ee4 100644
+--- a/Documentation/power/basic-pm-debugging.rst
++++ b/Documentation/power/basic-pm-debugging.rst
+@@ -47,7 +47,7 @@ a) Test modes of hibernation
+ To find out why hibernation fails on your system, you can use a special testing
+ facility available if the kernel is compiled with CONFIG_PM_DEBUG set.  Then,
+ there is the file /sys/power/pm_test that can be used to make the hibernation
+-core run in a test mode.  There are 5 test modes available:
++core run in a test mode.  There are 8 test modes available:
+ 
+ freezer
+ 	- test the freezing of processes
+@@ -68,6 +68,26 @@ core
+ 	  control methods\ [1]_, the disabling of nonboot CPUs and suspending
+ 	  of platform/system devices
+ 
++disk-snapshot
++	- test the freezing of processes, suspending of devices, platform global
++	  control methods\ [1]_, the disabling of nonboot CPUs, suspending
++	  of platform/system devices and creation of a snapshot of the system
++	  memory
++
++disk-write
++	- test the freezing of processes, suspending of devices, platform global
++	  control methods\ [1]_, the disabling of nonboot CPUs, suspending
++	  of platform/system devices, creation of a snapshot of the system
++	  memory and write of the hibernation image to disk
++
++disk-platform-prepare
++	- test the freezing of processes, suspending of devices, platform global
++	  control methods\ [1]_, the disabling of nonboot CPUs, suspending
++	  of platform/system devices, creation of a snapshot of the system
++	  memory, write of the hibernation image to disk and platform prepare
++	  global control method. This test mode is only applicable to the
++	  "platform" hibernation mode.
++
+ .. [1]
+ 
+     the platform global control methods are only available on ACPI systems
+@@ -154,6 +174,16 @@ system to hang or become unstable, so please beware.  Such a failure usually
+ indicates a serious problem that very well may be related to the hardware, but
+ please report it anyway.
+ 
++The "disk-snapshot" and "disk-write" tests can be used not only to detect issues
++in the hibernation image creation and write to disk, respectively, but also to
++benchmark how long those processes are taking, which is not possible to do after
++resume.
++
++When using the "platform" hibernation mode, the "disk-platform-prepare" test
++will abort hibernation at the very last step possible, just before calling the
++platform global control method to enter low power state, and can thus be
++useful to test and/or benchmark the entire hibernation flow.
++
+ b) Testing minimal configuration
+ --------------------------------
+ 
+@@ -228,7 +258,8 @@ to given string.  The STR test modes are defined in the same way as for
+ hibernation, so please refer to Section 1 for more information about them.  In
+ particular, the "core" test allows you to test everything except for the actual
+ invocation of the platform firmware in order to put the system into the sleep
+-state.
++state. Note that the "disk-\*" modes are specific to hibernation and not
++applicable to STR.
+ 
+ Among other things, the testing with the help of /sys/power/pm_test may allow
+ you to identify drivers that fail to suspend or resume their devices.  They
 diff --git a/Documentation/wmi/devices/msi-wmi-platform.rst b/Documentation/wmi/devices/msi-wmi-platform.rst
 index 73197b31926a..704bfdac5203 100644
 --- a/Documentation/wmi/devices/msi-wmi-platform.rst
@@ -424,47 +491,18 @@ index 95cd976a068c..2187d95154a0 100644
  M:	Mauro Carvalho Chehab <mchehab@kernel.org>
  L:	linux-media@vger.kernel.org
 diff --git a/Makefile b/Makefile
-index c28f11c617a4..b0e1a50ecfc5 100644
+index 4b60c83ab75c..3df7153aff8b 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -2,7 +2,7 @@
  VERSION = 7
  PATCHLEVEL = 2
- SUBLEVEL = 7
+ SUBLEVEL = 11
 -EXTRAVERSION =
-+EXTRAVERSION = -valve1
++EXTRAVERSION = -valve2
  NAME = Baby Opossum Posse
  
  # *DOCUMENTATION*
-diff --git a/arch/x86/entry/entry_fred.c b/arch/x86/entry/entry_fred.c
-index fb3594ddf731..854899bfec5d 100644
---- a/arch/x86/entry/entry_fred.c
-+++ b/arch/x86/entry/entry_fred.c
-@@ -10,6 +10,7 @@
- #include <asm/desc.h>
- #include <asm/fred.h>
- #include <asm/idtentry.h>
-+#include <asm/processor-flags.h>
- #include <asm/syscall.h>
- #include <asm/trapnr.h>
- #include <asm/traps.h>
-@@ -71,7 +72,15 @@ static noinstr void fred_intx(struct pt_regs *regs)
- #endif
- 
- 	default:
--		return exc_general_protection(regs, 0);
-+		/*
-+		 * Reconstruct the #GP fault state that IDT delivery would produce.
-+		 * Clear the software event flag so ERETU with TF set does not trap
-+		 * before the resumed instruction. See prevent_single_step_upon_eretu().
-+		 */
-+		regs->ip -= regs->fred_ss.insnlen;
-+		regs->flags |= X86_EFLAGS_RF;
-+		regs->fred_ss.swevent = 0;
-+		return exc_general_protection(regs, (regs->fred_ss.vector << 3) | 2);
- 	}
- }
- 
 diff --git a/arch/x86/include/asm/tsc.h b/arch/x86/include/asm/tsc.h
 index 4d2d2f21ff06..77fa6e627ae0 100644
 --- a/arch/x86/include/asm/tsc.h
@@ -646,10 +684,10 @@ index ec3aa340d351..1ca8b601a92b 100644
  
  }
 diff --git a/arch/x86/pci/fixup.c b/arch/x86/pci/fixup.c
-index b301c6c8df75..9da7ae0b2437 100644
+index 795d81c7a4de..38b38d67107c 100644
 --- a/arch/x86/pci/fixup.c
 +++ b/arch/x86/pci/fixup.c
-@@ -1080,4 +1080,20 @@ static void quirk_tuxeo_rp_d3(struct pci_dev *pdev)
+@@ -1179,4 +1179,20 @@ static void quirk_tuxeo_rp_d3(struct pci_dev *pdev)
  	}
  }
  DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_AMD, 0x1502, quirk_tuxeo_rp_d3);
@@ -1680,10 +1718,10 @@ index d29813331603..0aa69d19d986 100644
  MODULE_DESCRIPTION("Bluetooth support for Realtek devices ver " VERSION);
  MODULE_VERSION(VERSION);
 diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
-index 84f55f67523e..641cea45801a 100644
+index bf9a93d5c9ef..73d92ffa2418 100644
 --- a/drivers/bluetooth/btusb.c
 +++ b/drivers/bluetooth/btusb.c
-@@ -413,6 +413,8 @@ static const struct usb_device_id quirks_table[] = {
+@@ -424,6 +424,8 @@ static const struct usb_device_id quirks_table[] = {
  						     BTUSB_WIDEBAND_SPEECH },
  	{ USB_DEVICE(0x2c7c, 0x0132), .driver_info = BTUSB_QCA_WCN6855 |
  						     BTUSB_WIDEBAND_SPEECH },
@@ -1693,10 +1731,10 @@ index 84f55f67523e..641cea45801a 100644
  	/* Broadcom BCM2035 */
  	{ USB_DEVICE(0x0a5c, 0x2009), .driver_info = BTUSB_BCM92035 },
 diff --git a/drivers/bluetooth/hci_qca.c b/drivers/bluetooth/hci_qca.c
-index 1222f97800f4..a2b0de45faa9 100644
+index 875093e61c68..7197de7f94ae 100644
 --- a/drivers/bluetooth/hci_qca.c
 +++ b/drivers/bluetooth/hci_qca.c
-@@ -2797,6 +2797,7 @@ static const struct acpi_device_id qca_bluetooth_acpi_match[] = {
+@@ -2803,6 +2803,7 @@ static const struct acpi_device_id qca_bluetooth_acpi_match[] = {
  	{ "DLA16390", (kernel_ulong_t)&qca_soc_data_qca6390 },
  	{ "DLB16390", (kernel_ulong_t)&qca_soc_data_qca6390 },
  	{ "DLB26390", (kernel_ulong_t)&qca_soc_data_qca6390 },
@@ -2016,7 +2054,7 @@ index 000000000000..74f190adc8ea
 +MODULE_DESCRIPTION("Steam Deck extcon driver");
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu.h b/drivers/gpu/drm/amd/amdgpu/amdgpu.h
-index 7b09410d6d8f..77252a62728d 100644
+index 6b0c1ad5a053..9fc9485f4c67 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu.h
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu.h
 @@ -51,6 +51,7 @@
@@ -2043,7 +2081,7 @@ index 7b09410d6d8f..77252a62728d 100644
  #ifdef CONFIG_HSA_AMD
  extern int sched_policy;
  extern bool debug_evictions;
-@@ -1066,6 +1069,7 @@ struct amdgpu_device {
+@@ -1069,6 +1072,7 @@ struct amdgpu_device {
  
  	int asic_reset_res;
  	struct work_struct		xgmi_reset_work;
@@ -2051,7 +2089,7 @@ index 7b09410d6d8f..77252a62728d 100644
  	struct list_head		reset_list;
  
  	long				gfx_timeout;
-@@ -1101,6 +1105,7 @@ struct amdgpu_device {
+@@ -1104,6 +1108,7 @@ struct amdgpu_device {
  	bool				barrier_has_auto_waitcnt;
  
  	struct amdgpu_reset_control     *reset_cntl;
@@ -2059,7 +2097,7 @@ index 7b09410d6d8f..77252a62728d 100644
  	uint32_t                        ip_versions[MAX_HWIP][HWIP_MAX_INSTANCE];
  
  	bool				ram_is_direct_mapped;
-@@ -1125,6 +1130,8 @@ struct amdgpu_device {
+@@ -1128,6 +1133,8 @@ struct amdgpu_device {
  	/* Mask of active clusters */
  	uint32_t			aid_mask;
  
@@ -2069,7 +2107,7 @@ index 7b09410d6d8f..77252a62728d 100644
  	bool                            debug_vm;
  	bool                            debug_largebar;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.c
-index da325863ad76..f9a10e1bdcf9 100644
+index 299baecb83eb..2235804d0b3d 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd.c
 @@ -381,7 +381,7 @@ int amdgpu_amdkfd_alloc_kernel_mem(struct amdgpu_device *adev, size_t size,
@@ -2679,7 +2717,7 @@ index 11d70fe4f75a..e1c85e3b211b 100644
  	drm_exec_fini(&exec);
  	return r;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
-index ddfc51a92d79..38eb4e938b95 100644
+index ea9a6ed4bcc9..894812a0f5fc 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
 @@ -84,6 +84,7 @@
@@ -2690,7 +2728,7 @@ index ddfc51a92d79..38eb4e938b95 100644
  
  #if IS_ENABLED(CONFIG_X86)
  #include <asm/intel-family.h>
-@@ -3540,6 +3541,17 @@ bool amdgpu_device_has_dc_support(struct amdgpu_device *adev)
+@@ -3618,6 +3619,17 @@ bool amdgpu_device_has_dc_support(struct amdgpu_device *adev)
  	return amdgpu_device_asic_has_dc_support(adev->pdev, adev->asic_type);
  }
  
@@ -2708,7 +2746,7 @@ index ddfc51a92d79..38eb4e938b95 100644
  static void amdgpu_device_xgmi_reset_func(struct work_struct *__work)
  {
  	struct amdgpu_device *adev =
-@@ -3891,6 +3903,7 @@ int amdgpu_device_init(struct amdgpu_device *adev,
+@@ -3970,6 +3982,7 @@ int amdgpu_device_init(struct amdgpu_device *adev,
  	}
  
  	INIT_WORK(&adev->xgmi_reset_work, amdgpu_device_xgmi_reset_func);
@@ -2716,7 +2754,7 @@ index ddfc51a92d79..38eb4e938b95 100644
  
  	amdgpu_coredump_init(adev);
  
-@@ -4594,6 +4607,11 @@ int amdgpu_device_suspend(struct drm_device *dev, bool notify_clients)
+@@ -4671,6 +4684,11 @@ int amdgpu_device_suspend(struct drm_device *dev, bool notify_clients)
  	if (amdgpu_sriov_vf(adev))
  		amdgpu_virt_release_full_gpu(adev, false);
  
@@ -2728,7 +2766,7 @@ index ddfc51a92d79..38eb4e938b95 100644
  	return 0;
  
  unwind_evict:
-@@ -4781,6 +4799,11 @@ int amdgpu_device_resume(struct drm_device *dev, bool notify_clients)
+@@ -4858,6 +4876,11 @@ int amdgpu_device_resume(struct drm_device *dev, bool notify_clients)
  	if (amdgpu_acpi_smart_shift_update(adev, AMDGPU_SS_DEV_D0))
  		dev_warn(adev->dev, "smart shift update failed\n");
  
@@ -2740,7 +2778,7 @@ index ddfc51a92d79..38eb4e938b95 100644
  	return 0;
  }
  
-@@ -5337,6 +5360,20 @@ int amdgpu_device_reinit_after_reset(struct amdgpu_reset_context *reset_context)
+@@ -5414,6 +5437,20 @@ int amdgpu_device_reinit_after_reset(struct amdgpu_reset_context *reset_context)
  				if (!test_bit(AMDGPU_SKIP_COREDUMP, &reset_context->flags))
  					amdgpu_coredump(tmp_adev, false, vram_lost, reset_context->job);
  
@@ -2889,10 +2927,10 @@ index f5cd68542442..d94522fc7253 100644
  
  	drm_helper_resume_force_mode(dev);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_dma_buf.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_dma_buf.c
-index b33c300e26e2..5704bc4e77e3 100644
+index 9adf3eed8822..f12a1ff3d715 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_dma_buf.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_dma_buf.c
-@@ -144,7 +144,7 @@ static int amdgpu_dma_buf_pin(struct dma_buf_attachment *attach)
+@@ -184,7 +184,7 @@ static int amdgpu_dma_buf_pin(struct dma_buf_attachment *attach)
  	if (WARN_ON(!domains))
  		return -EINVAL;
  
@@ -2901,7 +2939,7 @@ index b33c300e26e2..5704bc4e77e3 100644
  }
  
  /**
-@@ -329,7 +329,8 @@ static int amdgpu_dma_buf_vmap(struct dma_buf *dma_buf, struct iosys_map *map)
+@@ -369,7 +369,8 @@ static int amdgpu_dma_buf_vmap(struct dma_buf *dma_buf, struct iosys_map *map)
  	 * domain is not that important as long as it's mapable. Using
  	 * GTT and VRAM should be compatible with most use cases.
  	 */
@@ -2911,7 +2949,7 @@ index b33c300e26e2..5704bc4e77e3 100644
  	if (ret)
  		return ret;
  	ret = drm_gem_dmabuf_vmap(dma_buf, map);
-@@ -467,6 +468,7 @@ amdgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
+@@ -508,6 +509,7 @@ amdgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
  	struct amdgpu_bo *bo = gem_to_amdgpu_bo(obj);
  	struct amdgpu_device *adev = amdgpu_ttm_adev(bo->tbo.bdev);
  	struct ttm_operation_ctx ctx = { false, false };
@@ -2919,7 +2957,7 @@ index b33c300e26e2..5704bc4e77e3 100644
  	struct ttm_placement placement = {};
  	struct amdgpu_vm_bo_base *bo_base;
  	int r;
-@@ -506,10 +508,12 @@ amdgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
+@@ -547,10 +549,12 @@ amdgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
  				continue;
  		}
  
@@ -2933,7 +2971,7 @@ index b33c300e26e2..5704bc4e77e3 100644
  
  		/* Don't pass 'ticket' to amdgpu_vm_handle_moved: we want the clear=true
  		 * path to be used otherwise we might update the PT of another process
-@@ -525,6 +529,7 @@ amdgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
+@@ -566,6 +570,7 @@ amdgpu_dma_buf_move_notify(struct dma_buf_attachment *attach)
  				  r);
  
  		dma_resv_unlock(resv);
@@ -2942,7 +2980,7 @@ index b33c300e26e2..5704bc4e77e3 100644
  }
  
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
-index e814701bc8fd..19c37eda0427 100644
+index 14b539d50efa..9ea152bbfb59 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
 @@ -127,9 +127,10 @@
@@ -3009,7 +3047,7 @@ index e814701bc8fd..19c37eda0427 100644
  /**
   * DOC: partition_mode (int)
   * Used to override the default SPX mode.
-@@ -2711,7 +2736,7 @@ static int amdgpu_pmops_thaw(struct device *dev)
+@@ -2719,7 +2744,7 @@ static int amdgpu_pmops_thaw(struct device *dev)
  	if (console_suspend_enabled &&
  	    !pm_hibernate_is_recovering() &&
  	    !pm_hibernation_mode_is_suspend())
@@ -3321,7 +3359,7 @@ index f754a4a3a1c2..e08e1f2789b3 100644
  		drm_exec_fini(&exec);
  		r = -EINVAL;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_gmc.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_gmc.c
-index 5d6149ba7ab7..179c77a49000 100644
+index 8fb3ebe4c299..d601347c5f48 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_gmc.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_gmc.c
 @@ -80,7 +80,7 @@ int amdgpu_gmc_pdb0_alloc(struct amdgpu_device *adev)
@@ -3375,10 +3413,10 @@ index a6419246e9c2..09d4a76fbda8 100644
  }
  
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_kms.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_kms.c
-index 8bb9c198ddec..108eaf1fccaa 100644
+index 872cce1115a9..6b9172ad5f13 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_kms.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_kms.c
-@@ -1548,6 +1548,7 @@ void amdgpu_driver_postclose_kms(struct drm_device *dev,
+@@ -1549,6 +1549,7 @@ void amdgpu_driver_postclose_kms(struct drm_device *dev,
  {
  	struct amdgpu_device *adev = drm_to_adev(dev);
  	struct amdgpu_fpriv *fpriv = file_priv->driver_priv;
@@ -3386,7 +3424,7 @@ index 8bb9c198ddec..108eaf1fccaa 100644
  	struct amdgpu_bo_list *list;
  	struct amdgpu_bo *pd;
  	u32 pasid;
-@@ -1576,7 +1577,9 @@ void amdgpu_driver_postclose_kms(struct drm_device *dev,
+@@ -1577,7 +1578,9 @@ void amdgpu_driver_postclose_kms(struct drm_device *dev,
  	pasid = fpriv->vm.pasid;
  	pd = amdgpu_bo_ref(fpriv->vm.root.bo);
  	if (!WARN_ON(amdgpu_bo_reserve(pd, true))) {
@@ -3528,7 +3566,7 @@ index 4d68732d6223..c8a7e29f77eb 100644
  int amdgpu_bo_init(struct amdgpu_device *adev);
  void amdgpu_bo_fini(struct amdgpu_device *adev);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_ring.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_ring.c
-index b97fa35bac23..62dec6fa8510 100644
+index 4d5d95e74bb5..f65887f50495 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_ring.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_ring.c
 @@ -181,7 +181,7 @@ void amdgpu_ring_commit(struct amdgpu_ring *ring)
@@ -3621,7 +3659,7 @@ index 21a225b0116a..910c187a34e0 100644
  	fpriv->seq64_va = NULL;
  
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
-index ea416749138d..b0ca38114f1c 100644
+index 7375fc8b0641..c3ad90c5779b 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
 @@ -1503,10 +1503,18 @@ static bool amdgpu_ttm_bo_eviction_valuable(struct ttm_buffer_object *bo,
@@ -3646,10 +3684,10 @@ index ea416749138d..b0ca38114f1c 100644
  	 * If true, then return false as any KFD process needs all its BOs to
  	 * be resident to run successfully
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_userq.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_userq.c
-index b18d78720656..727688ea4552 100644
+index 0c3fa2d60555..2c2c1c2faf43 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_userq.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_userq.c
-@@ -457,7 +457,7 @@ amdgpu_userq_get_doorbell_index(struct amdgpu_userq_mgr *uq_mgr,
+@@ -468,7 +468,7 @@ amdgpu_userq_get_doorbell_index(struct amdgpu_userq_mgr *uq_mgr,
  	}
  
  	/* Pin the BO before generating the index, unpin in queue destroy */
@@ -3658,7 +3696,7 @@ index b18d78720656..727688ea4552 100644
  	if (r) {
  		drm_file_err(uq_mgr->file, "[Usermode queues] Failed to pin doorbell object\n");
  		goto unresv_bo;
-@@ -925,6 +925,7 @@ amdgpu_userq_bo_validate(struct amdgpu_device *adev, struct drm_exec *exec,
+@@ -936,6 +936,7 @@ amdgpu_userq_bo_validate(struct amdgpu_device *adev, struct drm_exec *exec,
  			 struct amdgpu_vm *vm)
  {
  	struct ttm_operation_ctx ctx = { false, false };
@@ -3666,7 +3704,7 @@ index b18d78720656..727688ea4552 100644
  	struct amdgpu_bo_va *bo_va;
  	struct amdgpu_bo *bo;
  	int ret;
-@@ -946,8 +947,10 @@ amdgpu_userq_bo_validate(struct amdgpu_device *adev, struct drm_exec *exec,
+@@ -957,8 +958,10 @@ amdgpu_userq_bo_validate(struct amdgpu_device *adev, struct drm_exec *exec,
  		if (ret)
  			return ret;
  
@@ -3678,7 +3716,7 @@ index b18d78720656..727688ea4552 100644
  		if (ret)
  			return ret;
  
-@@ -969,6 +972,7 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
+@@ -980,6 +983,7 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
  	struct amdgpu_hmm_range *range;
  	struct amdgpu_vm *vm = &fpriv->vm;
  	unsigned long key, tmp_key;
@@ -3686,7 +3724,7 @@ index b18d78720656..727688ea4552 100644
  	struct amdgpu_bo_va *bo_va;
  	struct amdgpu_usermode_queue *queue;
  	struct amdgpu_bo *bo;
-@@ -980,6 +984,8 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
+@@ -991,6 +995,8 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
  
  retry_lock:
  	drm_exec_init(&exec, DRM_EXEC_IGNORE_DUPLICATES, 0);
@@ -3695,7 +3733,7 @@ index b18d78720656..727688ea4552 100644
  	drm_exec_until_all_locked(&exec) {
  		ret = amdgpu_vm_lock_pd(vm, &exec, 1);
  		drm_exec_retry_on_contention(&exec);
-@@ -1073,7 +1079,7 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
+@@ -1084,7 +1090,7 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
  		goto retry_lock;
  	}
  
@@ -3704,7 +3742,7 @@ index b18d78720656..727688ea4552 100644
  	if (ret)
  		goto unlock_all;
  
-@@ -1109,6 +1115,7 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
+@@ -1120,6 +1126,7 @@ amdgpu_userq_vm_validate(struct amdgpu_userq_mgr *uq_mgr)
  		drm_file_err(uq_mgr->file, "Failed to replace eviction fence\n");
  
  unlock_all:
@@ -3756,7 +3794,7 @@ index 170adaf7e76a..d922179209ba 100644
  		if (r != -ERESTARTSYS)
  			DRM_ERROR("Failed to pin framebuffer with error %d\n", r);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c
-index 816800f596cd..dfdca4e56d30 100644
+index 5edf00a8273b..608ceacf3664 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c
 @@ -142,6 +142,7 @@ static void amdgpu_vm_assert_locked(struct amdgpu_vm *vm)
@@ -3848,7 +3886,19 @@ index 816800f596cd..dfdca4e56d30 100644
  /**
   * amdgpu_vm_bo_needs_update - vm_bo needs pagetable update
   *
-@@ -392,9 +447,72 @@ void amdgpu_vm_update_stats(struct amdgpu_vm_bo_base *base,
+@@ -276,6 +331,11 @@ static void amdgpu_vm_bo_reset_state_machine(struct amdgpu_vm *vm)
+ 		amdgpu_vm_bo_needs_update(vm_bo);
+ 	list_for_each_entry_safe(vm_bo, tmp, &vm->always_valid.idle, vm_status)
+ 		amdgpu_vm_bo_needs_update(vm_bo);
++	list_for_each_entry_safe(vm_bo, tmp, &vm->always_valid.soft_evicted,
++				 vm_status) {
++		vm_bo->moved = true;
++		amdgpu_vm_bo_needs_update(vm_bo);
++	}
+ 
+ 	spin_lock(&vm->individual_lock);
+ 	list_for_each_entry_safe(vm_bo, tmp, &vm->individual.idle, vm_status) {
+@@ -392,9 +452,72 @@ void amdgpu_vm_update_stats(struct amdgpu_vm_bo_base *base,
  	spin_unlock(&vm->stats_lock);
  }
  
@@ -3921,7 +3971,7 @@ index 816800f596cd..dfdca4e56d30 100644
   * @base: base structure for tracking BO usage in a VM
   * @vm: vm to which bo is to be added
   * @bo: amdgpu buffer object
-@@ -402,9 +520,12 @@ void amdgpu_vm_update_stats(struct amdgpu_vm_bo_base *base,
+@@ -402,9 +525,12 @@ void amdgpu_vm_update_stats(struct amdgpu_vm_bo_base *base,
   * Initialize a bo_va_base structure and add it to the appropriate lists
   *
   */
@@ -3935,7 +3985,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	base->vm = vm;
  	base->bo = bo;
  	base->next = NULL;
-@@ -427,7 +548,9 @@ void amdgpu_vm_bo_base_init(struct amdgpu_vm_bo_base *base,
+@@ -427,7 +553,9 @@ void amdgpu_vm_bo_base_init(struct amdgpu_vm_bo_base *base,
  		return;
  	}
  
@@ -3946,7 +3996,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	/*
  	 * When a per VM isn't in the desired domain put it into the evicted
-@@ -437,7 +560,7 @@ void amdgpu_vm_bo_base_init(struct amdgpu_vm_bo_base *base,
+@@ -437,7 +565,7 @@ void amdgpu_vm_bo_base_init(struct amdgpu_vm_bo_base *base,
  	    amdgpu_mem_type_to_domain(bo->tbo.resource->mem_type))
  		amdgpu_vm_bo_needs_update(base);
  	else
@@ -3955,7 +4005,7 @@ index 816800f596cd..dfdca4e56d30 100644
  }
  
  /**
-@@ -629,35 +752,54 @@ int amdgpu_vm_validate(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -629,34 +757,53 @@ int amdgpu_vm_validate(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  		amdgpu_vm_bo_needs_update(bo_base);
  	}
  
@@ -4002,31 +4052,31 @@ index 816800f596cd..dfdca4e56d30 100644
  		if (r)
  			return r;
  
- 		bo_base->moved = true;
- 		amdgpu_vm_bo_needs_update(bo_base);
- 
--		/* It's a bit inefficient to always jump back to the start, but
--		 * we would need to re-structure the KFD for properly fixing
--		 * that.
 +		/*
 +		 * If the vm_bo is still in a suboptimal place after
 +		 * validate(), we failed to find enough space in the
 +		 * optimal place, so back off for now and retry on the
-+		 * next submission.
- 		 */
++		 * next submission. Its PTEs still match its placement, so
++		 * don't mark it moved.
++		 */
++		if (amdgpu_vm_bo_needs_eviction(adev, bo_base))
++			break;
++
+ 		bo_base->moved = true;
+ 		amdgpu_vm_bo_needs_update(bo_base);
+-
+-		/* It's a bit inefficient to always jump back to the start, but
+-		 * we would need to re-structure the KFD for properly fixing
+-		 * that.
+-		 */
 -		spin_lock(&vm->individual_lock);
 -		goto restart;
--	}
+ 	}
 -	spin_unlock(&vm->individual_lock);
-+		if (amdgpu_vm_bo_needs_eviction(adev, bo_base))
-+			goto out;
  
-+	}
-+out:
  	return 0;
  }
- 
-@@ -972,33 +1114,31 @@ uint64_t amdgpu_vm_map_gart(const dma_addr_t *pages_addr, uint64_t addr)
+@@ -972,33 +1119,31 @@ uint64_t amdgpu_vm_map_gart(const dma_addr_t *pages_addr, uint64_t addr)
   * Returns:
   * 0 for success, error for failure.
   */
@@ -4068,7 +4118,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		/* vm_flush_needed after updating moved PDEs */
  		flush_tlb_needed |= entry->moved;
  
-@@ -1007,14 +1147,14 @@ int amdgpu_vm_update_pdes(struct amdgpu_device *adev,
+@@ -1007,14 +1152,14 @@ int amdgpu_vm_update_pdes(struct amdgpu_device *adev,
  			goto error;
  	}
  
@@ -4086,7 +4136,7 @@ index 816800f596cd..dfdca4e56d30 100644
  				 vm_status)
  		amdgpu_vm_bo_idle(entry);
  
-@@ -1054,7 +1194,7 @@ amdgpu_vm_tlb_flush(struct amdgpu_vm_update_params *params,
+@@ -1054,7 +1199,7 @@ amdgpu_vm_tlb_flush(struct amdgpu_vm_update_params *params,
  		    struct dma_fence **fence,
  		    struct amdgpu_vm_tlb_seq_struct *tlb_cb)
  {
@@ -4095,7 +4145,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	tlb_cb->vm = vm;
  	if (!fence || !*fence) {
-@@ -1075,7 +1215,7 @@ amdgpu_vm_tlb_flush(struct amdgpu_vm_update_params *params,
+@@ -1075,7 +1220,7 @@ amdgpu_vm_tlb_flush(struct amdgpu_vm_update_params *params,
  	 * sort out the issues with KIQ/MES TLB invalidation timeouts.
  	 */
  	if (!params->unlocked && vm->need_tlb_fence) {
@@ -4104,7 +4154,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  		/* Makes sure no PD/PT is freed before the flush */
  		dma_resv_add_fence(vm->root.bo->tbo.base.resv, *fence,
-@@ -1107,9 +1247,8 @@ amdgpu_vm_tlb_flush(struct amdgpu_vm_update_params *params,
+@@ -1107,9 +1252,8 @@ amdgpu_vm_tlb_flush(struct amdgpu_vm_update_params *params,
   * Returns:
   * 0 for success, negative erro code for failure.
   */
@@ -4116,7 +4166,7 @@ index 816800f596cd..dfdca4e56d30 100644
  			   uint64_t start, uint64_t last, uint64_t flags,
  			   uint64_t offset, uint64_t vram_base,
  			   struct ttm_resource *res, dma_addr_t *pages_addr,
-@@ -1120,7 +1259,7 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -1120,7 +1264,7 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	struct amdgpu_res_cursor cursor;
  	int r, idx;
  
@@ -4125,7 +4175,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		return -ENODEV;
  
  	tlb_cb = kmalloc_obj(*tlb_cb);
-@@ -1132,40 +1271,41 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -1132,40 +1276,41 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	/* Vega20+XGMI where PTEs get inadvertently cached in L2 texture cache,
  	 * heavy-weight flush TLB unconditionally.
  	 */
@@ -4180,7 +4230,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		goto error_free;
  
-@@ -1208,7 +1348,8 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -1208,7 +1353,8 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  				params.pages_addr = NULL;
  			}
  
@@ -4190,7 +4240,7 @@ index 816800f596cd..dfdca4e56d30 100644
  			addr = vram_base + cursor.start;
  		} else {
  			addr = 0;
-@@ -1223,7 +1364,7 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -1223,7 +1369,7 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  		start = tmp;
  	}
  
@@ -4199,7 +4249,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		goto error_free;
  
-@@ -1232,11 +1373,11 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -1232,11 +1378,11 @@ int amdgpu_vm_update_range(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  		tlb_cb = NULL;
  	}
  
@@ -4213,7 +4263,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	drm_dev_exit(idx);
  	return r;
  }
-@@ -1261,37 +1402,32 @@ void amdgpu_vm_get_memory(struct amdgpu_vm *vm,
+@@ -1261,37 +1407,32 @@ void amdgpu_vm_get_memory(struct amdgpu_vm *vm,
   * Returns:
   * 0 for success, -EINVAL for failure.
   */
@@ -4260,7 +4310,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		}
  	} else if (!bo) {
  		mem = NULL;
-@@ -1316,16 +1452,16 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
+@@ -1316,16 +1457,16 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
  			pages_addr = bo->tbo.ttm->dma_address;
  
  		/* Implicitly sync to moving fences before mapping anything */
@@ -4280,7 +4330,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  		if (amdgpu_bo_encrypted(bo))
  			flags |= AMDGPU_PTE_TMZ;
-@@ -1364,18 +1500,18 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
+@@ -1364,18 +1505,18 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
  			update_flags &= ~AMDGPU_PTE_WRITEABLE;
  
  		/* Apply ASIC specific mapping flags */
@@ -4303,7 +4353,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	}
  
  	/* If the BO is not in its preferred location add it back to
-@@ -1383,10 +1519,12 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
+@@ -1383,10 +1524,12 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
  	 * next command submission.
  	 */
  	if (amdgpu_vm_is_bo_always_valid(vm, bo)) {
@@ -4320,7 +4370,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		else
  			amdgpu_vm_bo_idle(&bo_va->base);
  	} else {
-@@ -1402,8 +1540,7 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
+@@ -1402,8 +1545,7 @@ int amdgpu_vm_bo_update(struct amdgpu_device *adev, struct amdgpu_bo_va *bo_va,
  			trace_amdgpu_vm_bo_mapping(mapping);
  	}
  
@@ -4330,7 +4380,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	return r;
  }
  
-@@ -1535,53 +1672,43 @@ static void amdgpu_vm_prt_fini(struct amdgpu_device *adev, struct amdgpu_vm *vm)
+@@ -1535,53 +1677,43 @@ static void amdgpu_vm_prt_fini(struct amdgpu_device *adev, struct amdgpu_vm *vm)
  /**
   * amdgpu_vm_clear_freed - clear freed BOs in the PT
   *
@@ -4399,7 +4449,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	}
  
  	if (fence && f) {
-@@ -1591,12 +1718,33 @@ int amdgpu_vm_clear_freed(struct amdgpu_device *adev,
+@@ -1591,12 +1723,33 @@ int amdgpu_vm_clear_freed(struct amdgpu_device *adev,
  		dma_fence_put(f);
  	}
  
@@ -4435,7 +4485,7 @@ index 816800f596cd..dfdca4e56d30 100644
  /**
   * amdgpu_vm_handle_moved - handle moved BOs in the PT
   *
-@@ -1616,17 +1764,21 @@ int amdgpu_vm_handle_moved(struct amdgpu_device *adev,
+@@ -1616,17 +1769,21 @@ int amdgpu_vm_handle_moved(struct amdgpu_device *adev,
  			   struct ww_acquire_ctx *ticket)
  {
  	struct amdgpu_bo_va *bo_va, *tmp;
@@ -4459,7 +4509,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	}
  
  	spin_lock(&vm->individual_lock);
-@@ -1652,7 +1804,7 @@ int amdgpu_vm_handle_moved(struct amdgpu_device *adev,
+@@ -1652,7 +1809,7 @@ int amdgpu_vm_handle_moved(struct amdgpu_device *adev,
  			unlock = false;
  		}
  
@@ -4468,7 +4518,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  		if (unlock)
  			dma_resv_unlock(resv);
-@@ -1666,13 +1818,26 @@ int amdgpu_vm_handle_moved(struct amdgpu_device *adev,
+@@ -1666,13 +1823,26 @@ int amdgpu_vm_handle_moved(struct amdgpu_device *adev,
  		    drm_gem_is_imported(&bo_va->base.bo->tbo.base) &&
  		    (!bo_va->base.bo->tbo.resource ||
  		     bo_va->base.bo->tbo.resource->mem_type == TTM_PL_SYSTEM))
@@ -4497,7 +4547,7 @@ index 816800f596cd..dfdca4e56d30 100644
  }
  
  /**
-@@ -1747,10 +1912,11 @@ struct amdgpu_bo_va *amdgpu_vm_bo_add(struct amdgpu_device *adev,
+@@ -1747,10 +1917,11 @@ struct amdgpu_bo_va *amdgpu_vm_bo_add(struct amdgpu_device *adev,
  	if (bo_va == NULL) {
  		return NULL;
  	}
@@ -4510,7 +4560,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	INIT_LIST_HEAD(&bo_va->valids);
  	INIT_LIST_HEAD(&bo_va->invalids);
  
-@@ -1831,7 +1997,7 @@ static int amdgpu_vm_verify_parameters(struct amdgpu_device *adev,
+@@ -1831,7 +2002,7 @@ static int amdgpu_vm_verify_parameters(struct amdgpu_device *adev,
  /**
   * amdgpu_vm_bo_map - map bo inside a vm
   *
@@ -4519,7 +4569,7 @@ index 816800f596cd..dfdca4e56d30 100644
   * @bo_va: bo_va to store the address
   * @saddr: where to map the BO
   * @offset: requested offset in the BO
-@@ -1845,7 +2011,7 @@ static int amdgpu_vm_verify_parameters(struct amdgpu_device *adev,
+@@ -1845,7 +2016,7 @@ static int amdgpu_vm_verify_parameters(struct amdgpu_device *adev,
   *
   * Object has to be reserved and unreserved outside!
   */
@@ -4528,7 +4578,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		     struct amdgpu_bo_va *bo_va,
  		     uint64_t saddr, uint64_t offset,
  		     uint64_t size, uint32_t flags)
-@@ -1856,7 +2022,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
+@@ -1856,7 +2027,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
  	uint64_t eaddr;
  	int r;
  
@@ -4537,7 +4587,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		return r;
  
-@@ -1866,7 +2032,8 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
+@@ -1866,7 +2037,8 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
  	tmp = amdgpu_vm_it_iter_first(&vm->va, saddr, eaddr);
  	if (tmp) {
  		/* bo and tmp overlap, invalid addr */
@@ -4547,7 +4597,7 @@ index 816800f596cd..dfdca4e56d30 100644
  			"0x%010Lx-0x%010Lx\n", bo, saddr, eaddr,
  			tmp->start, tmp->last + 1);
  		return -EINVAL;
-@@ -1881,7 +2048,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
+@@ -1881,7 +2053,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
  	mapping->offset = offset;
  	mapping->flags = flags;
  
@@ -4556,7 +4606,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	return 0;
  }
-@@ -1889,7 +2056,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
+@@ -1889,7 +2061,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
  /**
   * amdgpu_vm_bo_replace_map - map bo inside a vm, replacing existing mappings
   *
@@ -4565,7 +4615,7 @@ index 816800f596cd..dfdca4e56d30 100644
   * @bo_va: bo_va to store the address
   * @saddr: where to map the BO
   * @offset: requested offset in the BO
-@@ -1904,7 +2071,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
+@@ -1904,7 +2076,7 @@ int amdgpu_vm_bo_map(struct amdgpu_device *adev,
   *
   * Object has to be reserved and unreserved outside!
   */
@@ -4574,7 +4624,7 @@ index 816800f596cd..dfdca4e56d30 100644
  			     struct amdgpu_bo_va *bo_va,
  			     uint64_t saddr, uint64_t offset,
  			     uint64_t size, uint32_t flags)
-@@ -1914,7 +2081,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
+@@ -1914,7 +2086,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
  	uint64_t eaddr;
  	int r;
  
@@ -4583,7 +4633,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		return r;
  
-@@ -1923,7 +2090,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
+@@ -1923,7 +2095,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
  	if (!mapping)
  		return -ENOMEM;
  
@@ -4592,7 +4642,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r) {
  		kfree(mapping);
  		return r;
-@@ -1937,7 +2104,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
+@@ -1937,7 +2109,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
  	mapping->offset = offset;
  	mapping->flags = flags;
  
@@ -4601,7 +4651,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	return 0;
  }
-@@ -1945,7 +2112,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
+@@ -1945,7 +2117,7 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
  /**
   * amdgpu_vm_bo_unmap - remove bo mapping from vm
   *
@@ -4610,7 +4660,7 @@ index 816800f596cd..dfdca4e56d30 100644
   * @bo_va: bo_va to remove the address from
   * @saddr: where to the BO is mapped
   *
-@@ -1956,12 +2123,12 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
+@@ -1956,12 +2128,12 @@ int amdgpu_vm_bo_replace_map(struct amdgpu_device *adev,
   *
   * Object has to be reserved and unreserved outside!
   */
@@ -4625,7 +4675,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	bool valid = true;
  
  	saddr /= AMDGPU_GPU_PAGE_SIZE;
-@@ -1988,7 +2155,7 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
+@@ -1988,7 +2160,7 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
  	 * from user space.
  	 */
  	if (unlikely(bo_va->userq_va_mapped))
@@ -4634,7 +4684,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	list_del(&mapping->list);
  	amdgpu_vm_it_remove(mapping, &vm->va);
-@@ -1996,9 +2163,9 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
+@@ -1996,9 +2168,9 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
  	trace_amdgpu_vm_bo_unmap(bo_va, mapping);
  
  	if (valid)
@@ -4646,7 +4696,7 @@ index 816800f596cd..dfdca4e56d30 100644
  				       bo_va->last_pt_update);
  
  	return 0;
-@@ -2007,8 +2174,7 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
+@@ -2007,8 +2179,7 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
  /**
   * amdgpu_vm_bo_clear_mappings - remove all mappings in a specific range
   *
@@ -4656,7 +4706,7 @@ index 816800f596cd..dfdca4e56d30 100644
   * @saddr: start of the range
   * @size: size of the range
   *
-@@ -2017,16 +2183,16 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
+@@ -2017,16 +2188,16 @@ int amdgpu_vm_bo_unmap(struct amdgpu_device *adev,
   * Returns:
   * 0 for success, error for failure.
   */
@@ -4676,7 +4726,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		return r;
  
-@@ -2047,7 +2213,7 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
+@@ -2047,7 +2218,7 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
  	INIT_LIST_HEAD(&after->list);
  
  	/* Now gather all removed mappings */
@@ -4685,7 +4735,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	while (tmp) {
  		/* Remember mapping split at the start */
  		if (tmp->start < saddr) {
-@@ -2078,7 +2244,7 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
+@@ -2078,7 +2249,7 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
  
  	/* And free them up */
  	list_for_each_entry_safe(tmp, next, &removed, list) {
@@ -4694,7 +4744,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		list_del(&tmp->list);
  
  		if (tmp->start < saddr)
-@@ -2086,8 +2252,9 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
+@@ -2086,8 +2257,9 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
  		if (tmp->last > eaddr)
  		    tmp->last = eaddr;
  
@@ -4705,7 +4755,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		trace_amdgpu_vm_bo_unmap(NULL, tmp);
  	}
  
-@@ -2095,11 +2262,11 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
+@@ -2095,11 +2267,11 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
  	if (!list_empty(&before->list)) {
  		struct amdgpu_bo *bo = before->bo_va->base.bo;
  
@@ -4720,7 +4770,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		    !before->bo_va->base.moved)
  			amdgpu_vm_bo_needs_update(&before->bo_va->base);
  	} else {
-@@ -2110,11 +2277,11 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
+@@ -2110,11 +2282,11 @@ int amdgpu_vm_bo_clear_mappings(struct amdgpu_device *adev,
  	if (!list_empty(&after->list)) {
  		struct amdgpu_bo *bo = after->bo_va->base.bo;
  
@@ -4735,7 +4785,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		    !after->bo_va->base.moved)
  			amdgpu_vm_bo_needs_update(&after->bo_va->base);
  	} else {
-@@ -2175,14 +2342,14 @@ void amdgpu_vm_bo_trace_cs(struct amdgpu_vm *vm, struct ww_acquire_ctx *ticket)
+@@ -2175,14 +2347,14 @@ void amdgpu_vm_bo_trace_cs(struct amdgpu_vm *vm, struct ww_acquire_ctx *ticket)
  /**
   * amdgpu_vm_bo_del - remove a bo from a specific vm
   *
@@ -4752,7 +4802,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		      struct amdgpu_bo_va *bo_va)
  {
  	struct amdgpu_bo_va_mapping *mapping, *next;
-@@ -2215,21 +2382,22 @@ void amdgpu_vm_bo_del(struct amdgpu_device *adev,
+@@ -2215,21 +2387,22 @@ void amdgpu_vm_bo_del(struct amdgpu_device *adev,
  	list_for_each_entry_safe(mapping, next, &bo_va->valids, list) {
  		list_del(&mapping->list);
  		amdgpu_vm_it_remove(mapping, &vm->va);
@@ -4778,7 +4828,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	kfree(bo_va);
  }
-@@ -2284,7 +2452,7 @@ void amdgpu_vm_bo_invalidate(struct amdgpu_bo *bo, bool evicted)
+@@ -2284,7 +2457,7 @@ void amdgpu_vm_bo_invalidate(struct amdgpu_bo *bo, bool evicted)
  		struct amdgpu_vm *vm = bo_base->vm;
  
  		if (evicted && amdgpu_vm_is_bo_always_valid(vm, bo)) {
@@ -4787,7 +4837,7 @@ index 816800f596cd..dfdca4e56d30 100644
  			continue;
  		}
  
-@@ -2305,7 +2473,7 @@ void amdgpu_vm_bo_invalidate(struct amdgpu_bo *bo, bool evicted)
+@@ -2305,7 +2478,7 @@ void amdgpu_vm_bo_invalidate(struct amdgpu_bo *bo, bool evicted)
   * Update the memory stats for the new placement and mark @bo as invalid.
   */
  void amdgpu_vm_bo_move(struct amdgpu_bo *bo, struct ttm_resource *new_mem,
@@ -4796,7 +4846,7 @@ index 816800f596cd..dfdca4e56d30 100644
  {
  	struct amdgpu_vm_bo_base *bo_base;
  
-@@ -2318,7 +2486,7 @@ void amdgpu_vm_bo_move(struct amdgpu_bo *bo, struct ttm_resource *new_mem,
+@@ -2318,7 +2491,7 @@ void amdgpu_vm_bo_move(struct amdgpu_bo *bo, struct ttm_resource *new_mem,
  		spin_unlock(&vm->stats_lock);
  	}
  
@@ -4805,7 +4855,7 @@ index 816800f596cd..dfdca4e56d30 100644
  }
  
  /**
-@@ -2567,6 +2735,7 @@ void amdgpu_vm_set_task_info(struct amdgpu_vm *vm)
+@@ -2567,6 +2740,7 @@ void amdgpu_vm_set_task_info(struct amdgpu_vm *vm)
  int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  		   int32_t xcp_id, uint32_t pasid)
  {
@@ -4813,7 +4863,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	struct amdgpu_bo *root_bo;
  	struct amdgpu_bo_vm *root;
  	int r, i;
-@@ -2579,7 +2748,7 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2579,7 +2753,7 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	amdgpu_vm_bo_status_init(&vm->always_valid);
  	spin_lock_init(&vm->individual_lock);
  	amdgpu_vm_bo_status_init(&vm->individual);
@@ -4822,7 +4872,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	INIT_KFIFO(vm->faults);
  	spin_lock_init(&vm->stats_lock);
  
-@@ -2587,7 +2756,8 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2587,7 +2761,8 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	if (r)
  		return r;
  
@@ -4832,7 +4882,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	vm->is_compute_context = false;
  	vm->need_tlb_fence = amdgpu_userq_enabled(&adev->ddev);
-@@ -2595,6 +2765,8 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2595,6 +2770,8 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	vm->use_cpu_for_update = !!(adev->vm_manager.vm_update_mode &
  				    AMDGPU_VM_USE_CPU_FOR_GFX);
  
@@ -4841,7 +4891,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	dev_dbg(adev->dev, "VM update mode is %s\n",
  		vm->use_cpu_for_update ? "CPU" : "SDMA");
  	WARN_ONCE((vm->use_cpu_for_update &&
-@@ -2615,8 +2787,8 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2615,8 +2792,8 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	vm->evicting = false;
  	vm->tlb_fence_context = dma_fence_context_alloc(1);
  
@@ -4852,7 +4902,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		goto error_free_delayed;
  
-@@ -2627,12 +2799,12 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2627,12 +2804,12 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  		goto error_free_delayed;
  	}
  
@@ -4867,7 +4917,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	if (r)
  		goto error_free_root;
  
-@@ -2651,6 +2823,7 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2651,6 +2828,7 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  
  	amdgpu_bo_unreserve(vm->root.bo);
  	amdgpu_bo_unref(&root_bo);
@@ -4875,7 +4925,7 @@ index 816800f596cd..dfdca4e56d30 100644
  
  	return 0;
  
-@@ -2668,6 +2841,7 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
+@@ -2669,6 +2847,7 @@ int amdgpu_vm_init(struct amdgpu_device *adev, struct amdgpu_vm *vm,
  	dma_fence_put(vm->last_tlb_flush);
  	dma_fence_put(vm->last_unlocked);
  	ttm_lru_bulk_move_fini(&adev->mman.bdev, &vm->lru_bulk_move);
@@ -4883,7 +4933,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	amdgpu_vm_fini_entities(vm);
  
  	return r;
-@@ -2779,7 +2953,7 @@ void amdgpu_vm_fini(struct amdgpu_device *adev, struct amdgpu_vm *vm)
+@@ -2780,7 +2959,7 @@ void amdgpu_vm_fini(struct amdgpu_device *adev, struct amdgpu_vm *vm)
  	dma_fence_unlock_irqrestore(vm->last_tlb_flush, flags);
  	dma_fence_put(vm->last_tlb_flush);
  
@@ -4892,7 +4942,7 @@ index 816800f596cd..dfdca4e56d30 100644
  		if (mapping->flags & AMDGPU_VM_PAGE_PRT && prt_fini_needed) {
  			amdgpu_vm_prt_fini(adev, vm);
  			prt_fini_needed = false;
-@@ -2996,6 +3170,7 @@ bool amdgpu_vm_handle_fault(struct amdgpu_device *adev, u32 pasid,
+@@ -2997,6 +3176,7 @@ bool amdgpu_vm_handle_fault(struct amdgpu_device *adev, u32 pasid,
  	struct drm_exec exec;
  	uint64_t value, flags;
  	struct amdgpu_vm *vm;
@@ -4900,7 +4950,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	int r;
  
  	drm_exec_init(&exec, 0, 1);
-@@ -3041,6 +3216,7 @@ bool amdgpu_vm_handle_fault(struct amdgpu_device *adev, u32 pasid,
+@@ -3042,6 +3222,7 @@ bool amdgpu_vm_handle_fault(struct amdgpu_device *adev, u32 pasid,
  	}
  
  	addr /= AMDGPU_GPU_PAGE_SIZE;
@@ -4908,7 +4958,7 @@ index 816800f596cd..dfdca4e56d30 100644
  	flags = AMDGPU_PTE_VALID | AMDGPU_PTE_SNOOPED |
  		AMDGPU_PTE_SYSTEM;
  
-@@ -3067,18 +3243,22 @@ bool amdgpu_vm_handle_fault(struct amdgpu_device *adev, u32 pasid,
+@@ -3068,18 +3249,22 @@ bool amdgpu_vm_handle_fault(struct amdgpu_device *adev, u32 pasid,
  		goto error_unlock;
  	}
  
@@ -6141,18 +6191,20 @@ index 1727d25646cc..2b7226a74c31 100644
 +
  endmenu
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-index 5ba196dd9d7a..a9c81af29167 100644
+index b92d129962b2..d7d642ce8b7a 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-@@ -69,6 +69,7 @@
+@@ -69,8 +69,8 @@
  
  #include "ivsrcid/ivsrcid_vislands30.h"
  
 +#include <linux/i2c.h>
  #include <linux/backlight.h>
+-#include <linux/minmax.h>
  #include <linux/module.h>
  #include <linux/moduleparam.h>
-@@ -161,6 +162,101 @@ MODULE_FIRMWARE(FIRMWARE_DCN_42_DMUB);
+ #include <linux/types.h>
+@@ -162,6 +162,101 @@ MODULE_FIRMWARE(FIRMWARE_DCN_42_DMUB);
  #define FIRMWARE_DCN_42B_DMUB "amdgpu/dcn_4_2_1_dmcub.bin"
  MODULE_FIRMWARE(FIRMWARE_DCN_42B_DMUB);
  
@@ -6254,7 +6306,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  /**
   * DOC: overview
   *
-@@ -248,6 +344,8 @@ static void handle_hpd_rx_irq(void *param);
+@@ -249,6 +344,8 @@ static void handle_hpd_rx_irq(void *param);
  static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
  					 int bl_idx,
  					 u32 user_brightness);
@@ -6263,16 +6315,18 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  static bool
  is_timing_unchanged_for_freesync(struct drm_crtc_state *old_crtc_state,
-@@ -1973,7 +2071,7 @@ static int amdgpu_dm_init_power_module(struct amdgpu_display_manager *dm)
+@@ -1974,9 +2071,7 @@ static int amdgpu_dm_init_power_module(struct amdgpu_display_manager *dm)
  			!(amdgpu_dc_feature_mask & DC_DISABLE_FRACTIONAL_PWM_MASK);
  		init_data[i].use_custom_backlight_caps = false;
  		init_data[i].custom_backlight_caps_config_no = 0;
 -		init_data[i].use_linear_backlight_curve = false;
+-		if (amdgpu_dc_debug_mask & DC_DISABLE_CUSTOM_BRIGHTNESS_CURVE)
+-			init_data[i].use_linear_backlight_curve = true;
 +		init_data[i].use_linear_backlight_curve = true;
  		init_data[i].def_varibright_enable = 0;
  		init_data[i].varibright_level = 0;
  		/*
-@@ -2255,6 +2353,9 @@ static int amdgpu_dm_init(struct amdgpu_device *adev)
+@@ -2258,6 +2353,9 @@ static int amdgpu_dm_init(struct amdgpu_device *adev)
  	if (amdgpu_dc_debug_mask & DC_SKIP_DETECTION_LT)
  		adev->dm.dc->debug.skip_detection_link_training = true;
  
@@ -6282,25 +6336,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	adev->dm.dc->debug.visual_confirm = amdgpu_dc_visual_confirm;
  
  	/* TODO: Remove after DP2 receiver gets proper support of Cable ID feature */
-@@ -3344,7 +3445,7 @@ static void dm_gpureset_toggle_interrupts(struct amdgpu_device *adev,
- 		if (acrtc && state->stream_status[i].plane_count != 0 &&
- 		    amdgpu_ip_version(adev, DCE_HWIP, 0) == 0) {
- 			irq_source = IRQ_TYPE_PFLIP + acrtc->otg_inst;
--			rc = dc_interrupt_set(adev->dm.dc, irq_source, enable) ? 0 : -EBUSY;
-+			rc = amdgpu_dm_irq_set(adev, irq_source, enable) ? 0 : -EBUSY;
- 			if (rc)
- 				drm_warn(adev_to_drm(adev), "Failed to %s pflip interrupts\n",
- 					 enable ? "enable" : "disable");
-@@ -3368,7 +3469,7 @@ static void dm_gpureset_toggle_interrupts(struct amdgpu_device *adev,
- 			/* During gpu-reset we disable and then enable vblank irq, so
- 			 * don't use amdgpu_irq_get/put() to avoid refcount change.
- 			 */
--			if (!dc_interrupt_set(adev->dm.dc, irq_source, enable))
-+			if (!amdgpu_dm_irq_set(adev, irq_source, enable))
- 				drm_warn(adev_to_drm(adev), "Failed to %sable vblank interrupt\n", enable ? "en" : "dis");
- 
- 		} else if (acrtc && state->stream_status[i].plane_count != 0) {
-@@ -3501,6 +3602,7 @@ static int dm_suspend(struct amdgpu_ip_block *ip_block)
+@@ -3504,6 +3602,7 @@ static int dm_suspend(struct amdgpu_ip_block *ip_block)
  {
  	struct amdgpu_device *adev = ip_block->adev;
  	struct amdgpu_display_manager *dm = &adev->dm;
@@ -6308,7 +6344,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	if (amdgpu_in_reset(adev)) {
  		enum dc_status res;
-@@ -3554,8 +3656,14 @@ static int dm_suspend(struct amdgpu_ip_block *ip_block)
+@@ -3562,8 +3661,14 @@ static int dm_suspend(struct amdgpu_ip_block *ip_block)
  	 * themselves; syncing under it would deadlock).
  	 */
  	amdgpu_dm_ism_disable(dm);
@@ -6324,7 +6360,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	hpd_rx_irq_work_suspend(dm);
  
-@@ -3788,6 +3896,48 @@ static void amdgpu_dm_dump_links_and_sinks(struct amdgpu_device *adev)
+@@ -3796,6 +3901,48 @@ static void amdgpu_dm_dump_links_and_sinks(struct amdgpu_device *adev)
  	}
  }
  
@@ -6373,7 +6409,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  static int dm_resume(struct amdgpu_ip_block *ip_block)
  {
  	struct amdgpu_device *adev = ip_block->adev;
-@@ -3875,6 +4025,20 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
+@@ -3883,6 +4030,20 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
  
  		dm_gpureset_toggle_interrupts(adev, dm->cached_dc_state, true);
  
@@ -6394,7 +6430,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		dc_state_release(dm->cached_dc_state);
  		dm->cached_dc_state = NULL;
  
-@@ -3883,9 +4047,11 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
+@@ -3891,9 +4052,11 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
  		mutex_unlock(&dm->dc_lock);
  
  		/* set the backlight after a reset */
@@ -6409,7 +6445,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		}
  
  		return 0;
-@@ -4018,6 +4184,7 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
+@@ -4026,6 +4189,7 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
  
  	drm_kms_helper_hotplug_event(ddev);
  
@@ -6417,7 +6453,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	return 0;
  }
  
-@@ -4216,6 +4383,8 @@ void amdgpu_dm_update_connector_after_detect(
+@@ -4224,6 +4388,8 @@ void amdgpu_dm_update_connector_after_detect(
  	struct drm_connector *connector = &aconnector->base;
  	struct dc_sink *sink __free(sink_release) = NULL;
  	struct drm_device *dev = connector->dev;
@@ -6426,7 +6462,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	/* MST handled by drm_mst framework */
  	if (aconnector->mst_mgr.mst_state == true)
-@@ -4349,6 +4518,13 @@ void amdgpu_dm_update_connector_after_detect(
+@@ -4357,6 +4523,13 @@ void amdgpu_dm_update_connector_after_detect(
  		/* Set CP to DESIRED if it was ENABLED, so we can re-enable it again on hotplug */
  		if (connector->state->content_protection == DRM_MODE_CONTENT_PROTECTION_ENABLED)
  			connector->state->content_protection = DRM_MODE_CONTENT_PROTECTION_DESIRED;
@@ -6440,7 +6476,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	}
  
  	update_subconnector_property(aconnector);
-@@ -5212,7 +5388,7 @@ static int amdgpu_dm_mode_config_init(struct amdgpu_device *adev)
+@@ -5220,7 +5393,7 @@ static int amdgpu_dm_mode_config_init(struct amdgpu_device *adev)
  	if (r)
  		return r;
  
@@ -6449,19 +6485,93 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	if (amdgpu_dm_create_color_properties(adev))
  		return -ENOMEM;
  #endif
-@@ -5421,6 +5597,11 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
- 	struct dc_stream_state *stream;
- 	unsigned int min, max;
+@@ -5307,68 +5480,6 @@ static inline u32 scale_fw_to_input(int min, int max, u64 input)
+ 	return min + DIV_ROUND_CLOSEST_ULL(input * (max - min), AMDGPU_MAX_BL_LEVEL);
+ }
  
+-static u32 backlight_signal_to_luminance(const struct amdgpu_dm_backlight_caps *caps,
+-					 u32 signal)
+-{
+-	u32 lower_signal, upper_signal;
+-	u32 lower_lum, upper_lum;
+-	int i;
+-
+-	if (!caps->data_points)
+-		return DIV_ROUND_CLOSEST(signal * 100, AMDGPU_MAX_BL_LEVEL);
+-
+-	if (signal < caps->luminance_data[0].input_signal) {
+-		lower_signal = 0;
+-		lower_lum = 0;
+-		upper_signal = caps->luminance_data[0].input_signal;
+-		upper_lum = caps->luminance_data[0].luminance;
+-	} else if (signal >=
+-		   caps->luminance_data[caps->data_points - 1].input_signal) {
+-		lower_signal = caps->luminance_data[caps->data_points - 1].input_signal;
+-		lower_lum = caps->luminance_data[caps->data_points - 1].luminance;
+-		upper_signal = caps->max_input_signal;
+-		upper_lum = 100;
+-	} else {
+-		for (i = 1;
+-		     i < caps->data_points &&
+-		     signal > caps->luminance_data[i].input_signal;
+-		     i++)
+-			;
+-
+-		lower_signal = caps->luminance_data[i - 1].input_signal;
+-		upper_signal = caps->luminance_data[i].input_signal;
+-		lower_lum = caps->luminance_data[i - 1].luminance;
+-		upper_lum = caps->luminance_data[i].luminance;
+-	}
+-
+-	if (upper_signal == lower_signal)
+-		return upper_lum;
+-
+-	return lower_lum + DIV_ROUND_CLOSEST((upper_lum - lower_lum) *
+-					     (signal - lower_signal),
+-					     upper_signal - lower_signal);
+-}
+-
+-static u32 convert_brightness_to_millipercent(const struct amdgpu_dm_backlight_caps *caps,
+-					      u32 user_brightness)
+-{
+-	unsigned int min, max;
+-	u32 signal, luminance;
+-
+-	if (!get_brightness_range(caps, &min, &max))
+-		return DIV_ROUND_CLOSEST_ULL((u64)user_brightness * 100000,
+-					     MAX_BACKLIGHT_LEVEL);
+-
+-	user_brightness = clamp(user_brightness, min, max);
+-	if (amdgpu_dc_debug_mask & DC_DISABLE_CUSTOM_BRIGHTNESS_CURVE)
+-		return DIV_ROUND_CLOSEST_ULL((u64)user_brightness * 100000, max);
+-
+-	signal = scale_input_to_fw(max, user_brightness);
+-	luminance = backlight_signal_to_luminance(caps, signal);
+-
+-	return min_t(u32, luminance * 1000, 100000);
+-}
+-
+ static void convert_custom_brightness(const struct amdgpu_dm_backlight_caps *caps,
+ 				      unsigned int min, unsigned int max,
+ 				      uint32_t *user_brightness)
+@@ -5486,10 +5597,15 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
+ 	struct amdgpu_dm_backlight_caps *caps;
+ 	struct dc_link *link;
+ 	u32 brightness = 0;
+-	u32 millipercent = 0;
+ 	bool rc = false, reallow_idle = false;
+ 	struct drm_connector *connector;
+ 	struct dc_stream_state *stream;
++	unsigned int min, max;
++
 +	lockdep_assert_held(&dm->dc_lock);
 +
 +	dm->brightness[bl_idx] = user_brightness;
 +	dm->backlight_update_pending[bl_idx] = true;
-+
+ 
  	list_for_each_entry(connector, &dm->ddev->mode_config.connector_list, head) {
  		struct amdgpu_dm_connector *aconnector = to_amdgpu_dm_connector(connector);
- 
-@@ -5428,17 +5609,13 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
+@@ -5498,35 +5614,22 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
  			continue;
  
  		/* if connector is off, save the brightness for next time it's on */
@@ -6480,25 +6590,54 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	/* update scratch register */
  	if (bl_idx == 0)
  		amdgpu_atombios_scratch_regs_set_backlight_level(dm->adev, dm->brightness[bl_idx]);
-@@ -5461,7 +5638,6 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
- 	if (!stream)
- 		return;
+-
++	brightness = convert_brightness_from_user(caps, dm->brightness[bl_idx]);
+ 	link = (struct dc_link *)dm->backlight_link[bl_idx];
+-	stream = dm_find_stream_with_link(dm, link);
+-	if (!stream)
+-		return;
+ 
+-	if (caps->aux_support) {
+-		brightness = convert_brightness_from_user(caps, dm->brightness[bl_idx]);
+-		/* Apply brightness quirk */
+-		if (caps->brightness_mask)
+-			brightness |= caps->brightness_mask;
+-	} else {
+-		millipercent = convert_brightness_to_millipercent(caps,
+-								  user_brightness);
+-	}
++	/* Apply brightness quirk */
++	if (caps->brightness_mask)
++		brightness |= caps->brightness_mask;
+ 
+ 	if (trace_amdgpu_dm_brightness_enabled()) {
+ 		trace_amdgpu_dm_brightness(__builtin_return_address(0),
+@@ -5536,7 +5639,10 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
+ 					   power_supply_is_system_supplied() > 0);
+ 	}
  
 -	mutex_lock(&dm->dc_lock);
++	stream = dm_find_stream_with_link(dm, link);
++	if (!stream)
++		return;
++
  	if (dm->dc->caps.ips_support && dm->dc->ctx->dmub_srv->idle_allowed) {
  		dc_allow_idle_optimizations(dm->dc, false);
  		reallow_idle = true;
-@@ -5473,7 +5649,8 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
+@@ -5547,8 +5653,11 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
+ 			AUX_BL_DEFAULT_TRANSITION_TIME_MS, false, true);
  	} else {
  		/* power module uses millipercent */
- 		get_brightness_range(caps, &min, &max);
--		brightness = DIV_ROUND_CLOSEST(brightness * 100, (max - min)) * 1000;
++		get_brightness_range(caps, &min, &max);
 +		brightness = DIV_ROUND_CLOSEST_ULL((u64)(brightness - min) * 100000,
 +						   max - min);
  		rc = mod_power_set_backlight_percent(dm->power_module, stream,
- 						     brightness, 0, false);
+-						     millipercent, 0, false);
++						     brightness, 0, false);
  	}
-@@ -5499,10 +5676,32 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
+ 
+ 	/*
+@@ -5572,10 +5681,32 @@ static void amdgpu_dm_backlight_set_level(struct amdgpu_display_manager *dm,
  	if (dm->dc->caps.ips_support && reallow_idle)
  		dc_allow_idle_optimizations(dm->dc, true);
  
@@ -6534,7 +6673,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  }
  
  static int amdgpu_dm_backlight_update_status(struct backlight_device *bd)
-@@ -5516,7 +5715,15 @@ static int amdgpu_dm_backlight_update_status(struct backlight_device *bd)
+@@ -5589,7 +5720,15 @@ static int amdgpu_dm_backlight_update_status(struct backlight_device *bd)
  	}
  	if (i >= AMDGPU_DM_MAX_NUM_EDP)
  		i = 0;
@@ -6551,7 +6690,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	return 0;
  }
-@@ -5618,6 +5825,9 @@ amdgpu_dm_register_backlight_device(struct amdgpu_dm_connector *aconnector)
+@@ -5691,6 +5830,9 @@ amdgpu_dm_register_backlight_device(struct amdgpu_dm_connector *aconnector)
  		backlight_device_register(bl_name, aconnector->base.kdev, dm,
  					  &amdgpu_dm_backlight_ops, &props);
  	dm->brightness[aconnector->bl_idx] = props.brightness;
@@ -6561,7 +6700,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	if (IS_ERR(dm->backlight_dev[aconnector->bl_idx])) {
  		drm_err(drm, "DM: Backlight registration failed!\n");
-@@ -5630,10 +5840,8 @@ amdgpu_dm_register_backlight_device(struct amdgpu_dm_connector *aconnector)
+@@ -5703,10 +5845,8 @@ amdgpu_dm_register_backlight_device(struct amdgpu_dm_connector *aconnector)
  		real_brightness =
  			amdgpu_dm_backlight_ops.get_brightness(dm->backlight_dev[aconnector->bl_idx]);
  
@@ -6573,7 +6712,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		drm_dbg_driver(drm, "DM: Registered Backlight device: %s\n", bl_name);
  	}
  }
-@@ -7015,11 +7223,7 @@ static void fill_stream_properties_from_drm_display_mode(
+@@ -7088,11 +7228,7 @@ static void fill_stream_properties_from_drm_display_mode(
  	timing_out->v_border_top = 0;
  	timing_out->v_border_bottom = 0;
  	/* TODO: un-hardcode */
@@ -6586,7 +6725,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		timing_out->pixel_encoding = PIXEL_ENCODING_YCBCR420;
  	else if (drm_mode_is_420_also(info, mode_in)
  			&& aconnector
-@@ -7772,7 +7976,7 @@ create_stream_for_sink(struct drm_connector *connector,
+@@ -7850,7 +7986,7 @@ create_stream_for_sink(struct drm_connector *connector,
  
  	if (stream->signal == SIGNAL_TYPE_HDMI_TYPE_A ||
  	    stream->signal == SIGNAL_TYPE_HDMI_FRL)
@@ -6595,7 +6734,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	if (stream->signal == SIGNAL_TYPE_DISPLAY_PORT ||
  	    stream->signal == SIGNAL_TYPE_DISPLAY_PORT_MST ||
-@@ -8267,6 +8471,8 @@ amdgpu_dm_connector_atomic_duplicate_state(struct drm_connector *connector)
+@@ -8345,6 +8481,8 @@ amdgpu_dm_connector_atomic_duplicate_state(struct drm_connector *connector)
  	__drm_atomic_helper_connector_duplicate_state(connector, &new_state->base);
  
  	new_state->freesync_capable = state->freesync_capable;
@@ -6604,7 +6743,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	new_state->abm_level = state->abm_level;
  	new_state->scaling = state->scaling;
  	new_state->underscan_enable = state->underscan_enable;
-@@ -9392,7 +9598,7 @@ static int amdgpu_dm_connector_get_modes(struct drm_connector *connector)
+@@ -9470,7 +9608,7 @@ static int amdgpu_dm_connector_get_modes(struct drm_connector *connector)
  		}
  	} else {
  		amdgpu_dm_connector_ddc_get_modes(connector, drm_edid);
@@ -6613,7 +6752,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  			amdgpu_dm_connector_add_common_modes(encoder, connector);
  		amdgpu_dm_connector_add_freesync_modes(connector, drm_edid);
  	}
-@@ -9433,6 +9639,7 @@ void amdgpu_dm_connector_init_helper(struct amdgpu_display_manager *dm,
+@@ -9511,6 +9649,7 @@ void amdgpu_dm_connector_init_helper(struct amdgpu_display_manager *dm,
  	aconnector->audio_inst = -1;
  	aconnector->pack_sdp_v1_3 = false;
  	aconnector->as_type = ADAPTIVE_SYNC_TYPE_NONE;
@@ -6621,7 +6760,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	memset(&aconnector->vsdb_info, 0, sizeof(aconnector->vsdb_info));
  	mutex_init(&aconnector->hpd_lock);
  	mutex_init(&aconnector->handle_mst_msg_ready);
-@@ -9523,8 +9730,10 @@ void amdgpu_dm_connector_init_helper(struct amdgpu_display_manager *dm,
+@@ -9601,8 +9740,10 @@ void amdgpu_dm_connector_init_helper(struct amdgpu_display_manager *dm,
  	    connector_type == DRM_MODE_CONNECTOR_eDP) {
  		drm_connector_attach_hdr_output_metadata_property(&aconnector->base);
  
@@ -6633,7 +6772,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  		if (adev->dm.hdcp_workqueue)
  			drm_connector_attach_content_protection_property(&aconnector->base, true);
-@@ -9630,6 +9839,10 @@ int amdgpu_dm_initialize_hdmi_connector(struct amdgpu_dm_connector *aconnector)
+@@ -9708,6 +9849,10 @@ int amdgpu_dm_initialize_hdmi_connector(struct amdgpu_dm_connector *aconnector)
  	struct drm_device *ddev = aconnector->base.dev;
  	struct device *hdmi_dev = ddev->dev;
  
@@ -6644,7 +6783,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	if (amdgpu_dc_debug_mask & DC_DISABLE_HDMI_CEC) {
  		drm_info(ddev, "HDMI-CEC feature masked\n");
  		return -EINVAL;
-@@ -9808,41 +10021,44 @@ static void manage_dm_interrupts(struct amdgpu_device *adev,
+@@ -9886,41 +10031,44 @@ static void manage_dm_interrupts(struct amdgpu_device *adev,
  		drm_crtc_vblank_on_config(&acrtc->base,
  					  &config);
  		/*
@@ -6705,7 +6844,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  		drm_crtc_vblank_off(&acrtc->base);
  	}
-@@ -10065,20 +10281,45 @@ static void update_freesync_state_on_stream(
+@@ -10143,20 +10291,45 @@ static void update_freesync_state_on_stream(
  
  	aconn = (struct amdgpu_dm_connector *)new_stream->dm_stream_context;
  
@@ -6758,7 +6897,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	mod_freesync_build_vrr_infopacket(
  		dm->freesync_module,
  		new_stream,
-@@ -10097,13 +10338,19 @@ static void update_freesync_state_on_stream(
+@@ -10175,13 +10348,19 @@ static void update_freesync_state_on_stream(
  	new_crtc_state->vrr_infopacket = vrr_infopacket;
  
  	new_stream->vrr_infopacket = vrr_infopacket;
@@ -6781,7 +6920,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	spin_unlock_irqrestore(&adev_to_drm(adev)->event_lock, flags);
  }
-@@ -10426,6 +10673,7 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
+@@ -10511,6 +10690,7 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
  	unsigned long flags;
  	u32 target_vblank, last_flip_vblank;
  	bool vrr_active = amdgpu_dm_crtc_vrr_active(acrtc_state);
@@ -6789,7 +6928,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	bool cursor_update = false;
  	bool pflip_present = false;
  	bool immediate_flip = false;
-@@ -10440,6 +10688,13 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
+@@ -10525,6 +10705,13 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
  		struct dc_stream_update stream_update;
  	} *bundle;
  
@@ -6803,17 +6942,17 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	bundle = kzalloc_obj(*bundle);
  
  	if (!bundle) {
-@@ -10737,6 +10992,9 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
+@@ -10822,6 +11009,9 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
  			spin_unlock_irqrestore(&pcrtc->dev->event_lock, flags);
  		}
  		mutex_lock(&dm->dc_lock);
 +		if (acrtc_state->update_type == UPDATE_TYPE_FULL &&
 +		    allow_freesync != acrtc_state->stream->allow_freesync)
 +			bundle->stream_update.allow_freesync = &allow_freesync;
- 		update_planes_and_stream_adapter(dm->dc,
- 					 acrtc_state->update_type,
- 					 planes_count,
-@@ -11101,6 +11359,23 @@ static void amdgpu_dm_mod_power_setup_streams(struct drm_atomic_commit *state,
+ 		/*
+ 		 * Tearing (immediate) flips cannot work with panel self-refresh
+ 		 * features. The event is cleared by
+@@ -11198,6 +11388,23 @@ static void amdgpu_dm_mod_power_setup_streams(struct drm_atomic_commit *state,
  
  }
  
@@ -6837,7 +6976,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  					struct dc_state *dc_state)
  {
-@@ -11115,7 +11390,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -11212,7 +11419,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  	bool mode_set_reset_required = false;
  	u32 i;
  	struct dc_commit_streams_params params = {dc_state->streams, dc_state->stream_count};
@@ -6845,7 +6984,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	/* Disable writeback */
  	for_each_old_connector_in_state(state, connector, old_con_state, i) {
-@@ -11237,7 +11511,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -11334,7 +11540,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  			acrtc->hw_mode = new_crtc_state->mode;
  			crtc->hwmode = new_crtc_state->mode;
  			mode_set_reset_required = true;
@@ -6853,7 +6992,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		} else if (modereset_required(new_crtc_state)) {
  			drm_dbg_atomic(dev,
  				       "Atomic commit: RESET. crtc id %d:[%p]\n",
-@@ -11261,6 +11534,19 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -11358,6 +11563,19 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  	dc_exit_ips_for_hw_access(dm->dc);
  	WARN_ON(!dc_commit_streams(dm->dc, &params));
  
@@ -6873,7 +7012,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	bool frl_stream_found = false;
  
  	for (i = 0; i < params.stream_count; i++) {
-@@ -11305,19 +11591,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -11402,19 +11620,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  				acrtc->otg_inst = status->primary_otg_inst;
  		}
  	}
@@ -6893,7 +7032,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  }
  
  static void dm_set_writeback(struct amdgpu_display_manager *dm,
-@@ -11567,6 +11840,31 @@ static int amdgpu_dm_atomic_setup_commit(struct drm_atomic_commit *state)
+@@ -11664,6 +11869,31 @@ static int amdgpu_dm_atomic_setup_commit(struct drm_atomic_commit *state)
  	return 0;
  }
  
@@ -6925,7 +7064,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  /**
   * amdgpu_dm_atomic_commit_tail() - AMDgpu DM's commit tail implementation.
   * @state: The atomic state to commit
-@@ -11609,12 +11907,14 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -11706,12 +11936,14 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  	for_each_oldnew_connector_in_state(state, connector, old_con_state, new_con_state, i) {
  		struct dm_connector_state *dm_new_con_state = to_dm_connector_state(new_con_state);
  		struct dm_connector_state *dm_old_con_state = to_dm_connector_state(old_con_state);
@@ -6940,7 +7079,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  		memset(&stream_update, 0, sizeof(stream_update));
  
-@@ -11644,7 +11944,11 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -11741,7 +11973,11 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  		hdr_changed =
  			!drm_connector_atomic_hdr_metadata_equal(old_con_state, new_con_state);
  
@@ -6953,7 +7092,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  			continue;
  
  		stream_update.stream = dm_new_crtc_state->stream;
-@@ -11674,6 +11978,17 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -11771,6 +12007,17 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  			stream_update.hdr_static_metadata = &hdr_packet;
  		}
  
@@ -6971,7 +7110,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		status = dc_stream_get_status(dm_new_crtc_state->stream);
  
  		if (WARN_ON(!status))
-@@ -11825,11 +12140,12 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -11922,11 +12169,12 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  	/* Update audio instances for each connector. */
  	amdgpu_dm_commit_audio(dev, state);
  
@@ -6989,7 +7128,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	}
  
  	/*
-@@ -11849,9 +12165,7 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -11946,9 +12194,7 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  	/* Signal HW programming completion */
  	drm_atomic_helper_commit_hw_done(state);
  
@@ -7000,7 +7139,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	drm_atomic_helper_cleanup_planes(dev, state);
  
  	/* Don't free the memory if we are hitting this as part of suspend.
-@@ -12055,6 +12369,12 @@ static void get_freesync_config_for_crtc(
+@@ -12152,6 +12398,12 @@ static void get_freesync_config_for_crtc(
  		config.vsif_supported = true;
  		config.btr = true;
  
@@ -7013,7 +7152,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		if (fs_vid_mode) {
  			config.state = VRR_STATE_ACTIVE_FIXED;
  			config.fixed_refresh_in_uhz = new_crtc_state->freesync_config.fixed_refresh_in_uhz;
-@@ -12066,6 +12386,7 @@ static void get_freesync_config_for_crtc(
+@@ -12163,6 +12415,7 @@ static void get_freesync_config_for_crtc(
  		}
  	} else {
  		config.state = VRR_STATE_UNSUPPORTED;
@@ -7021,7 +7160,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	}
  out:
  	new_crtc_state->freesync_config = config;
-@@ -12138,6 +12459,7 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+@@ -12235,6 +12488,7 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
  	struct dc_stream_state *new_stream;
  	struct amdgpu_device *adev = dm->adev;
  	int ret = 0;
@@ -7029,7 +7168,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	/*
  	 * TODO Move this code into dm_crtc_atomic_check once we get rid of dc_validation_set
-@@ -12393,6 +12715,27 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+@@ -12492,6 +12746,27 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
  	get_freesync_config_for_crtc(dm_new_crtc_state,
  				     dm_new_conn_state);
  
@@ -7057,7 +7196,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  	return ret;
  
  fail:
-@@ -13944,13 +14287,13 @@ static int get_amd_vsdb(struct amdgpu_dm_connector *aconnector,
+@@ -14043,13 +14318,13 @@ static int get_amd_vsdb(struct amdgpu_dm_connector *aconnector,
  	return connector->display_info.amd_vsdb.version != 0;
  }
  
@@ -7073,15 +7212,14 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	/*----- drm_find_cea_extension() -----*/
  	/* No EDID or EDID extensions */
-@@ -13971,9 +14314,99 @@ static int parse_hdmi_amd_vsdb(struct amdgpu_dm_connector *aconnector,
+@@ -14070,9 +14345,99 @@ static int parse_hdmi_amd_vsdb(struct amdgpu_dm_connector *aconnector,
  	if (edid_ext[0] != CEA_EXT)
  		return -ENODEV;
  
 -	valid_vsdb_found = parse_edid_cea(aconnector, edid_ext, EDID_LENGTH, vsdb_info);
 +	if (!parse_edid_cea(aconnector, edid_ext, EDID_LENGTH, &vsdb_local))
 +		return -ENODEV;
- 
--	return valid_vsdb_found ? i : -ENODEV;
++
 +	*vsdb_info = vsdb_local;
 +	return false;
 +}
@@ -7142,7 +7280,8 @@ index 5ba196dd9d7a..a9c81af29167 100644
 +
 +	aconn->min_vfreq = range->min_vfreq;
 +	aconn->max_vfreq = range->max_vfreq;
-+
+ 
+-	return valid_vsdb_found ? i : -ENODEV;
 +	return is_freesync_capable(range);
 +}
 +
@@ -7175,7 +7314,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  }
  
  /**
-@@ -13994,16 +14427,20 @@ static int parse_hdmi_amd_vsdb(struct amdgpu_dm_connector *aconnector,
+@@ -14093,16 +14458,20 @@ static int parse_hdmi_amd_vsdb(struct amdgpu_dm_connector *aconnector,
  void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
  				    const struct drm_edid *drm_edid, bool do_mccs)
  {
@@ -7198,7 +7337,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	if (!connector->state) {
  		drm_err(adev_to_drm(adev), "%s - Connector has no state", __func__);
-@@ -14031,75 +14468,77 @@ void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
+@@ -14130,75 +14499,77 @@ void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
  	if (!adev->dm.freesync_module || !dc_supports_vrr(sink->ctx->dce_version))
  		goto update;
  
@@ -7304,7 +7443,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
 -		if (i >= 0) {
 -			amdgpu_dm_connector->vsdb_info = vsdb_info;
 -			sink->edid_caps.freesync_vcp_code = vsdb_info.freesync_mccs_vcp_code;
- 
+-
 -			if (vsdb_info.freesync_supported && vsdb_info.amd_vsdb_version > 0) {
 -				amdgpu_dm_connector->pack_sdp_v1_3 = true;
 -				amdgpu_dm_connector->as_type = as_type;
@@ -7313,7 +7452,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
 -				amdgpu_dm_connector->max_vfreq = vsdb_info.max_refresh_rate_hz;
 -				if (amdgpu_dm_connector->max_vfreq - amdgpu_dm_connector->min_vfreq > 10)
 -					freesync_capable = true;
--
+ 
 -				connector->display_info.monitor_range.min_vfreq = vsdb_info.min_refresh_rate_hz;
 -				connector->display_info.monitor_range.max_vfreq = vsdb_info.max_refresh_rate_hz;
 -			}
@@ -7331,7 +7470,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  		dm_helpers_read_mccs_caps(adev->dm.dc->ctx, amdgpu_dm_connector->dc_link, sink);
  
  		if (sink->edid_caps.freesync_vcp_code && !sink->mccs_caps.freesync_supported)
-@@ -14110,8 +14549,10 @@ void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
+@@ -14209,8 +14580,10 @@ void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
  	}
  
  update:
@@ -7343,7 +7482,7 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  	if (connector->state && amdgpu_dm_connector->dc_link && !freesync_capable &&
  	    amdgpu_dm_connector->dc_link->replay_settings.config.replay_supported) {
-@@ -14120,8 +14561,15 @@ void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
+@@ -14219,8 +14592,15 @@ void amdgpu_dm_update_freesync_caps(struct drm_connector *connector,
  	}
  
  	if (connector->vrr_capable_property)
@@ -7362,29 +7501,10 @@ index 5ba196dd9d7a..a9c81af29167 100644
  
  void amdgpu_dm_trigger_timing_sync(struct drm_device *dev)
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h
-index 797f94471810..2a57d34ce9ed 100644
+index d2602c0310b2..2a57d34ce9ed 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h
-@@ -550,6 +550,18 @@ struct amdgpu_display_manager {
- 	struct common_irq_params
- 	vupdate_params[DC_IRQ_SOURCE_VUPDATE6 - DC_IRQ_SOURCE_VUPDATE1 + 1];
- 
-+	/**
-+	 * @irq_reg_lock:
-+	 *
-+	 * Serializes the read-modify-writes of the HW interrupt control
-+	 * registers. Several interrupt sources share one register - e.g. the
-+	 * enable and clear bits of both VSTARTUP (vblank) and VUPDATE_NO_LOCK
-+	 * live in OTG_GLOBAL_SYNC_STATUS. Therefore, enabling one source must
-+	 * not race with acking another. Held only across amdgpu_dm_irq_set()
-+	 * and amdgpu_dm_irq_ack().
-+	 */
-+	spinlock_t irq_reg_lock;
-+
- 	/**
- 	 * @dmub_trace_params:
- 	 *
-@@ -654,9 +666,24 @@ struct amdgpu_display_manager {
+@@ -666,9 +666,24 @@ struct amdgpu_display_manager {
  	/**
  	 * @actual_brightness:
  	 *
@@ -7410,7 +7530,7 @@ index 797f94471810..2a57d34ce9ed 100644
  
  	/**
  	 * @aux_hpd_discon_quirk:
-@@ -884,6 +911,9 @@ struct amdgpu_dm_connector {
+@@ -896,6 +911,9 @@ struct amdgpu_dm_connector {
  	unsigned int hdmi_hpd_debounce_delay_ms;
  	struct delayed_work hdmi_hpd_debounce_work;
  	struct dc_sink *hdmi_prev_sink;
@@ -7420,7 +7540,7 @@ index 797f94471810..2a57d34ce9ed 100644
  };
  
  static inline void amdgpu_dm_set_mst_status(uint8_t *status,
-@@ -1058,6 +1088,7 @@ struct dm_connector_state {
+@@ -1070,6 +1088,7 @@ struct dm_connector_state {
  	uint8_t underscan_hborder;
  	bool underscan_enable;
  	bool freesync_capable;
@@ -7475,27 +7595,10 @@ index 46a74f895430..ee7d96e63a12 100644
  	return 0;
  }
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_crtc.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_crtc.c
-index f47ee9937ada..b0e140d86e8e 100644
+index 7206439ea5d5..b0e140d86e8e 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_crtc.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_crtc.c
-@@ -31,6 +31,7 @@
- #include "amdgpu_dm_psr.h"
- #include "amdgpu_dm_replay.h"
- #include "amdgpu_dm_crtc.h"
-+#include "amdgpu_dm_irq.h"
- #include "amdgpu_dm_plane.h"
- #include "amdgpu_dm_trace.h"
- #include "amdgpu_dm_debugfs.h"
-@@ -87,7 +88,7 @@ int amdgpu_dm_crtc_set_vupdate_irq(struct drm_crtc *crtc, bool enable)
- 
- 	irq_source = IRQ_TYPE_VUPDATE + acrtc->otg_inst;
- 
--	rc = dc_interrupt_set(adev->dm.dc, irq_source, enable) ? 0 : -EBUSY;
-+	rc = amdgpu_dm_irq_set(adev, irq_source, enable) ? 0 : -EBUSY;
- 
- 	DRM_DEBUG_VBL("crtc %d - vupdate irq %sabling: r=%d\n",
- 		      acrtc->crtc_id, enable ? "en" : "dis", rc);
-@@ -483,7 +484,7 @@ static int amdgpu_dm_crtc_late_register(struct drm_crtc *crtc)
+@@ -484,7 +484,7 @@ static int amdgpu_dm_crtc_late_register(struct drm_crtc *crtc)
  }
  #endif
  
@@ -7504,7 +7607,7 @@ index f47ee9937ada..b0e140d86e8e 100644
  /**
   * dm_crtc_additional_color_mgmt - enable additional color properties
   * @crtc: DRM CRTC
-@@ -565,7 +566,7 @@ static const struct drm_crtc_funcs amdgpu_dm_crtc_funcs = {
+@@ -566,7 +566,7 @@ static const struct drm_crtc_funcs amdgpu_dm_crtc_funcs = {
  #if defined(CONFIG_DEBUG_FS)
  	.late_register = amdgpu_dm_crtc_late_register,
  #endif
@@ -7513,7 +7616,7 @@ index f47ee9937ada..b0e140d86e8e 100644
  	.atomic_set_property = amdgpu_dm_atomic_crtc_set_property,
  	.atomic_get_property = amdgpu_dm_atomic_crtc_get_property,
  #endif
-@@ -791,7 +792,7 @@ int amdgpu_dm_crtc_init(struct amdgpu_display_manager *dm,
+@@ -792,7 +792,7 @@ int amdgpu_dm_crtc_init(struct amdgpu_display_manager *dm,
  
  	drm_mode_crtc_set_gamma_size(&acrtc->base, MAX_COLOR_LEGACY_LUT_ENTRIES);
  
@@ -7599,7 +7702,7 @@ index 8b0fe5c3a3e8..e5bc9c051587 100644
  	debugfs_create_file_unsafe("amdgpu_dm_visual_confirm", 0644, root, adev,
  				   &visual_confirm_fops);
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c
-index fe5b97e6f960..5fa0c23a940e 100644
+index ee7140d8dda8..5fa0c23a940e 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c
 @@ -194,7 +194,12 @@ enum dc_edid_status dm_helpers_parse_edid_caps(
@@ -7616,22 +7719,7 @@ index fe5b97e6f960..5fa0c23a940e 100644
  
  	if (edid_caps->edid_hdmi) {
  		edid_caps->qs_bit = connector->display_info.rgb_quant_range_selectable;
-@@ -1378,12 +1383,13 @@ void dm_helpers_free_gpu_mem(
- 
- bool dm_helpers_dmub_outbox_interrupt_control(struct dc_context *ctx, bool enable)
- {
-+	struct amdgpu_device *adev = ctx->driver_context;
- 	enum dc_irq_source irq_source;
- 	bool ret;
- 
- 	irq_source = DC_IRQ_SOURCE_DMCUB_OUTBOX;
- 
--	ret = dc_interrupt_set(ctx->dc, irq_source, enable);
-+	ret = amdgpu_dm_irq_set(adev, irq_source, enable);
- 
- 	DRM_DEBUG_DRIVER("Dmub trace irq %sabling: r=%d\n",
- 			 enable ? "en" : "dis", ret);
-@@ -1578,6 +1584,11 @@ void dm_helpers_dp_mst_update_branch_bandwidth(
+@@ -1579,6 +1584,11 @@ void dm_helpers_dp_mst_update_branch_bandwidth(
  
  static bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id)
  {
@@ -7643,7 +7731,7 @@ index fe5b97e6f960..5fa0c23a940e 100644
  	bool ret_val = false;
  
  	switch (branch_dev_id) {
-@@ -1586,6 +1597,7 @@ static bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id)
+@@ -1587,6 +1597,7 @@ static bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id)
  	case DP_BRANCH_DEVICE_ID_90CC24:
  	case DP_BRANCH_DEVICE_ID_001CF8:
  	case DP_BRANCH_DEVICE_ID_001FF2:
@@ -7651,7 +7739,7 @@ index fe5b97e6f960..5fa0c23a940e 100644
  		ret_val = true;
  		break;
  	default:
-@@ -1595,23 +1607,24 @@ static bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id)
+@@ -1596,23 +1607,24 @@ static bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id)
  	return ret_val;
  }
  
@@ -7690,232 +7778,8 @@ index fe5b97e6f960..5fa0c23a940e 100644
  }
  
  bool dm_helpers_is_fullscreen(struct dc_context *ctx, struct dc_stream_state *stream)
-diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.c
-index e49803a90eda..d59434e01dfd 100644
---- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.c
-+++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.c
-@@ -424,6 +424,7 @@ int amdgpu_dm_irq_init(struct amdgpu_device *adev)
- 	DRM_DEBUG_KMS("DM_IRQ\n");
- 
- 	spin_lock_init(&adev->dm.irq_handler_list_table_lock);
-+	spin_lock_init(&adev->dm.irq_reg_lock);
- 
- 	for (src = 0; src < DAL_IRQ_SOURCES_NUMBER; src++) {
- 		/* low context handler list init */
-@@ -496,7 +497,7 @@ void amdgpu_dm_irq_suspend(struct amdgpu_device *adev)
- 		hnd_list_l = &adev->dm.irq_handler_list_low_tab[src];
- 		hnd_list_h = &adev->dm.irq_handler_list_high_tab[src];
- 		if (!list_empty(hnd_list_l) || !list_empty(hnd_list_h))
--			dc_interrupt_set(adev->dm.dc, src, false);
-+			amdgpu_dm_irq_set(adev, src, false);
- 
- 		DM_IRQ_TABLE_UNLOCK(adev, irq_table_flags);
- 
-@@ -533,7 +534,7 @@ void amdgpu_dm_irq_resume_early(struct amdgpu_device *adev)
- 		hnd_list_l = &adev->dm.irq_handler_list_low_tab[src];
- 		hnd_list_h = &adev->dm.irq_handler_list_high_tab[src];
- 		if (!list_empty(hnd_list_l) || !list_empty(hnd_list_h))
--			dc_interrupt_set(adev->dm.dc, src, true);
-+			amdgpu_dm_irq_set(adev, src, true);
- 	}
- 
- 	DM_IRQ_TABLE_UNLOCK(adev, irq_table_flags);
-@@ -558,7 +559,7 @@ void amdgpu_dm_irq_resume_late(struct amdgpu_device *adev)
- 		hnd_list_l = &adev->dm.irq_handler_list_low_tab[src];
- 		hnd_list_h = &adev->dm.irq_handler_list_high_tab[src];
- 		if (!list_empty(hnd_list_l) || !list_empty(hnd_list_h))
--			dc_interrupt_set(adev->dm.dc, src, true);
-+			amdgpu_dm_irq_set(adev, src, true);
- 	}
- 
- 	DM_IRQ_TABLE_UNLOCK(adev, irq_table_flags);
-@@ -645,6 +646,21 @@ static void amdgpu_dm_irq_immediate_work(struct amdgpu_device *adev,
- 	DM_IRQ_TABLE_UNLOCK(adev, irq_table_flags);
- }
- 
-+bool amdgpu_dm_irq_set(struct amdgpu_device *adev, enum dc_irq_source src,
-+		       bool enable)
-+{
-+	guard(spinlock_irqsave)(&adev->dm.irq_reg_lock);
-+
-+	return dc_interrupt_set(adev->dm.dc, src, enable);
-+}
-+
-+void amdgpu_dm_irq_ack(struct amdgpu_device *adev, enum dc_irq_source src)
-+{
-+	guard(spinlock_irqsave)(&adev->dm.irq_reg_lock);
-+
-+	dc_interrupt_ack(adev->dm.dc, src);
-+}
-+
- /**
-  * amdgpu_dm_irq_handler - Generic DM IRQ handler
-  * @adev: amdgpu base driver device containing the DM device
-@@ -665,7 +681,7 @@ static int amdgpu_dm_irq_handler(struct amdgpu_device *adev,
- 			entry->src_id,
- 			entry->src_data[0]);
- 
--	dc_interrupt_ack(adev->dm.dc, src);
-+	amdgpu_dm_irq_ack(adev, src);
- 
- 	/* Call high irq work immediately */
- 	amdgpu_dm_irq_immediate_work(adev, src);
-@@ -703,7 +719,7 @@ static int amdgpu_dm_set_hpd_irq_state(struct amdgpu_device *adev,
- 	enum dc_irq_source src = amdgpu_dm_hpd_to_dal_irq_source(type);
- 	bool st = (state == AMDGPU_IRQ_STATE_ENABLE);
- 
--	dc_interrupt_set(adev->dm.dc, src, st);
-+	amdgpu_dm_irq_set(adev, src, st);
- 	return 0;
- }
- 
-@@ -737,7 +753,7 @@ static inline int dm_irq_state(struct amdgpu_device *adev,
- 	if (dc && dc->caps.ips_support && dc->idle_optimizations_allowed)
- 		dc_allow_idle_optimizations(dc, false);
- 
--	dc_interrupt_set(adev->dm.dc, irq_source, st);
-+	amdgpu_dm_irq_set(adev, irq_source, st);
- 	return 0;
- }
- 
-@@ -791,7 +807,7 @@ static int amdgpu_dm_set_dmub_outbox_irq_state(struct amdgpu_device *adev,
- 	enum dc_irq_source irq_source = DC_IRQ_SOURCE_DMCUB_OUTBOX;
- 	bool st = (state == AMDGPU_IRQ_STATE_ENABLE);
- 
--	dc_interrupt_set(adev->dm.dc, irq_source, st);
-+	amdgpu_dm_irq_set(adev, irq_source, st);
- 	return 0;
- }
- 
-@@ -817,7 +833,7 @@ static int amdgpu_dm_set_dmub_trace_irq_state(struct amdgpu_device *adev,
- 	enum dc_irq_source irq_source = DC_IRQ_SOURCE_DMCUB_OUTBOX0;
- 	bool st = (state == AMDGPU_IRQ_STATE_ENABLE);
- 
--	dc_interrupt_set(adev->dm.dc, irq_source, st);
-+	amdgpu_dm_irq_set(adev, irq_source, st);
- 	return 0;
- }
- 
-@@ -881,9 +897,7 @@ void amdgpu_dm_set_irq_funcs(struct amdgpu_device *adev)
- }
- void amdgpu_dm_outbox_init(struct amdgpu_device *adev)
- {
--	dc_interrupt_set(adev->dm.dc,
--		DC_IRQ_SOURCE_DMCUB_OUTBOX,
--		true);
-+	amdgpu_dm_irq_set(adev, DC_IRQ_SOURCE_DMCUB_OUTBOX, true);
- }
- 
- /**
-@@ -905,7 +919,7 @@ void amdgpu_dm_hpd_init(struct amdgpu_device *adev)
- 
- 	/* First, clear all hpd and hpdrx interrupts */
- 	for (i = DC_IRQ_SOURCE_HPD1; i <= DC_IRQ_SOURCE_HPD6RX; i++) {
--		if (!dc_interrupt_set(adev->dm.dc, i, false))
-+		if (!amdgpu_dm_irq_set(adev, i, false))
- 			drm_err(dev, "Failed to clear hpd(rx) source=%d on init\n",
- 				i);
- 	}
-@@ -934,7 +948,7 @@ void amdgpu_dm_hpd_init(struct amdgpu_device *adev)
- 		 * of dm. Note that only hpd interrupt types are registered with
- 		 * base driver; hpd_rx types aren't. IOW, amdgpu_irq_get/put on
- 		 * hpd_rx isn't available. DM currently controls hpd_rx
--		 * explicitly with dc_interrupt_set()
-+		 * explicitly with amdgpu_dm_irq_set()
- 		 */
- 		if (dc_link->irq_source_hpd != DC_IRQ_SOURCE_INVALID) {
- 			irq_type = dc_link->irq_source_hpd - DC_IRQ_SOURCE_HPD1;
-@@ -943,23 +957,21 @@ void amdgpu_dm_hpd_init(struct amdgpu_device *adev)
- 			 * and what bios reports as the # of connectors with hpd
- 			 * sources. Since the # of hpd source types registered
- 			 * with base driver == mode_info.num_hpd, we have to
--			 * fallback to dc_interrupt_set for the remaining types.
-+			 * fallback to amdgpu_dm_irq_set for the remaining types.
- 			 */
- 			if (irq_type < adev->mode_info.num_hpd) {
- 				if (amdgpu_irq_get(adev, &adev->hpd_irq, irq_type))
- 					drm_err(dev, "DM_IRQ: Failed get HPD for source=%d)!\n",
- 						dc_link->irq_source_hpd);
- 			} else {
--				dc_interrupt_set(adev->dm.dc,
--						 dc_link->irq_source_hpd,
--						 true);
-+				amdgpu_dm_irq_set(adev, dc_link->irq_source_hpd,
-+						  true);
- 			}
- 		}
- 
- 		if (dc_link->irq_source_hpd_rx != DC_IRQ_SOURCE_INVALID) {
--			dc_interrupt_set(adev->dm.dc,
--					dc_link->irq_source_hpd_rx,
--					true);
-+			amdgpu_dm_irq_set(adev, dc_link->irq_source_hpd_rx,
-+					  true);
- 		}
- 	}
- 	drm_connector_list_iter_end(&iter);
-@@ -1003,16 +1015,14 @@ void amdgpu_dm_hpd_fini(struct amdgpu_device *adev)
- 					drm_err(dev, "DM_IRQ: Failed put HPD for source=%d!\n",
- 						dc_link->irq_source_hpd);
- 			} else {
--				dc_interrupt_set(adev->dm.dc,
--						 dc_link->irq_source_hpd,
--						 false);
-+				amdgpu_dm_irq_set(adev, dc_link->irq_source_hpd,
-+						  false);
- 			}
- 		}
- 
- 		if (dc_link->irq_source_hpd_rx != DC_IRQ_SOURCE_INVALID) {
--			dc_interrupt_set(adev->dm.dc,
--					dc_link->irq_source_hpd_rx,
--					false);
-+			amdgpu_dm_irq_set(adev, dc_link->irq_source_hpd_rx,
-+					  false);
- 		}
- 	}
- 	drm_connector_list_iter_end(&iter);
-diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.h b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.h
-index 4f6b58f4f90d..f0a4577848f3 100644
---- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.h
-+++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_irq.h
-@@ -81,6 +81,34 @@ void amdgpu_dm_irq_unregister_interrupt(struct amdgpu_device *adev,
- 					enum dc_irq_source irq_source,
- 					void *ih_index);
- 
-+/**
-+ * amdgpu_dm_irq_set - enable or disable a DC interrupt source.
-+ *
-+ * @adev: AMD DRM device
-+ * @src: DC interrupt source to toggle
-+ * @enable: true to enable the source, false to disable it
-+ *
-+ * DM-wide replacement for dc_interrupt_set(). As locking is DM's
-+ * responsibility, this is a thin wrapper serializes the underlying
-+ * read-modify-write against the other interrupt sources sharing HW control
-+ * registers with @src, so DM must never call dc_interrupt_set() directly.
-+ *
-+ * Returns: true if the source was toggled.
-+ */
-+bool amdgpu_dm_irq_set(struct amdgpu_device *adev, enum dc_irq_source src,
-+		       bool enable);
-+
-+/**
-+ * amdgpu_dm_irq_ack - acknowledge a DC interrupt source.
-+ *
-+ * @adev: AMD DRM device
-+ * @src: DC interrupt source to acknowledge
-+ *
-+ * DM-wide replacement for dc_interrupt_ack(), serialized the same way as
-+ * amdgpu_dm_irq_set().
-+ */
-+void amdgpu_dm_irq_ack(struct amdgpu_device *adev, enum dc_irq_source src);
-+
- void amdgpu_dm_set_irq_funcs(struct amdgpu_device *adev);
- 
- void amdgpu_dm_outbox_init(struct amdgpu_device *adev);
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_plane.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_plane.c
-index cfd76c54f652..5c9d2b7ae014 100644
+index 1d69ecae10a4..2f2b7fcce23b 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_plane.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_plane.c
 @@ -26,6 +26,7 @@
@@ -7926,7 +7790,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  #include "drm/drm_framebuffer.h"
  #include <drm/drm_gem_atomic_helper.h>
  #include <drm/drm_plane_helper.h>
-@@ -930,6 +931,7 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
+@@ -912,6 +913,7 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
  	struct drm_gem_object *obj;
  	struct amdgpu_device *adev;
  	struct amdgpu_bo *rbo;
@@ -7934,7 +7798,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  	struct dm_plane_state *dm_plane_state_new, *dm_plane_state_old;
  	uint32_t domain;
  	int r;
-@@ -948,27 +950,31 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
+@@ -930,27 +932,31 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
  
  	rbo = gem_to_amdgpu_bo(obj);
  	adev = amdgpu_ttm_adev(rbo->tbo.bdev);
@@ -7986,7 +7850,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  	}
  
  	r = amdgpu_ttm_alloc_gart(&rbo->tbo);
-@@ -981,7 +987,7 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
+@@ -963,7 +969,7 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
  	if (unlikely(r != 0))
  		goto error_unpin;
  
@@ -7995,7 +7859,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  
  	afb->address = amdgpu_bo_gpu_offset(rbo);
  
-@@ -1017,7 +1023,7 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
+@@ -999,7 +1005,7 @@ static int amdgpu_dm_plane_helper_prepare_fb(struct drm_plane *plane,
  	amdgpu_bo_unpin(rbo);
  
  error_unlock:
@@ -8004,7 +7868,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  	return r;
  }
  
-@@ -1628,7 +1634,7 @@ static void amdgpu_dm_plane_drm_plane_destroy_state(struct drm_plane *plane,
+@@ -1610,7 +1616,7 @@ static void amdgpu_dm_plane_drm_plane_destroy_state(struct drm_plane *plane,
  	drm_atomic_helper_plane_destroy_state(plane, state);
  }
  
@@ -8013,7 +7877,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  static void
  dm_atomic_plane_attach_color_mgmt_properties(struct amdgpu_display_manager *dm,
  					     struct drm_plane *plane)
-@@ -1858,7 +1864,7 @@ static const struct drm_plane_funcs dm_plane_funcs = {
+@@ -1840,7 +1846,7 @@ static const struct drm_plane_funcs dm_plane_funcs = {
  	.atomic_destroy_state = amdgpu_dm_plane_drm_plane_destroy_state,
  	.format_mod_supported = amdgpu_dm_plane_format_mod_supported,
  	.format_mod_supported_async = amdgpu_dm_plane_format_mod_supported,
@@ -8022,7 +7886,7 @@ index cfd76c54f652..5c9d2b7ae014 100644
  	.atomic_set_property = dm_atomic_plane_set_property,
  	.atomic_get_property = dm_atomic_plane_get_property,
  #endif
-@@ -1955,7 +1961,7 @@ int amdgpu_dm_plane_init(struct amdgpu_display_manager *dm,
+@@ -1937,7 +1943,7 @@ int amdgpu_dm_plane_init(struct amdgpu_display_manager *dm,
  	else
  		drm_plane_helper_add(plane, &dm_plane_helper_funcs);
  
@@ -8396,7 +8260,7 @@ index 7edeed52cc32..3a34cb295989 100644
  		const struct pipe_ctx *pipe_ctx)
  {
 diff --git a/drivers/gpu/drm/amd/display/dc/dc.h b/drivers/gpu/drm/amd/display/dc/dc.h
-index 1dc85f6b6689..f9ec12e66a17 100644
+index 79184384cdfd..845f05fc0656 100644
 --- a/drivers/gpu/drm/amd/display/dc/dc.h
 +++ b/drivers/gpu/drm/amd/display/dc/dc.h
 @@ -70,7 +70,7 @@ struct dcn_dccg_reg_state;
@@ -8427,7 +8291,7 @@ index 1dc85f6b6689..f9ec12e66a17 100644
  	bool alloc_extra_way_for_cursor;
  	uint32_t subvp_extra_lines;
  	bool disable_force_pstate_allow_on_hw_release;
-@@ -1799,6 +1804,7 @@ struct dc_scratch_space {
+@@ -1800,6 +1805,7 @@ struct dc_scratch_space {
  	enum edp_revision edp_revision;
  	union dpcd_sink_ext_caps dpcd_sink_ext_caps;
  
@@ -8435,7 +8299,7 @@ index 1dc85f6b6689..f9ec12e66a17 100644
  	struct psr_settings psr_settings;
  	struct replay_settings replay_settings;
  
-@@ -1857,6 +1863,10 @@ struct dc {
+@@ -1858,6 +1864,10 @@ struct dc {
  	struct dc_cap_funcs cap_funcs;
  	struct dc_config config;
  	struct dc_bounding_box_overrides bb_overrides;
@@ -8446,7 +8310,7 @@ index 1dc85f6b6689..f9ec12e66a17 100644
  	struct dc_bug_wa work_arounds;
  	struct dc_context *ctx;
  	struct dc_phy_addr_space_config vm_pa_config;
-@@ -2614,6 +2624,20 @@ void dc_link_edp_panel_backlight_power_on(struct dc_link *link,
+@@ -2615,6 +2625,20 @@ void dc_link_edp_panel_backlight_power_on(struct dc_link *link,
  bool dc_link_set_backlight_level(const struct dc_link *dc_link,
  		struct set_backlight_level_params *backlight_level_params);
  
@@ -8467,7 +8331,7 @@ index 1dc85f6b6689..f9ec12e66a17 100644
  /* Set/get nits-based backlight level of an embedded panel (eDP, LVDS). */
  bool dc_link_set_backlight_level_nits(struct dc_link *link,
  		bool isHDR,
-@@ -2884,6 +2908,7 @@ enum dc_irq_source dc_interrupt_to_irq_source(
+@@ -2885,6 +2909,7 @@ enum dc_irq_source dc_interrupt_to_irq_source(
  bool dc_interrupt_set(struct dc *dc, enum dc_irq_source src, bool enable);
  void dc_interrupt_ack(struct dc *dc, enum dc_irq_source src);
  bool dc_get_flip_pending_on_otg(struct dc *dc, int otg_inst);
@@ -8475,7 +8339,7 @@ index 1dc85f6b6689..f9ec12e66a17 100644
  enum dc_irq_source dc_get_hpd_irq_source_at_index(
  		struct dc *dc, uint32_t link_index);
  
-@@ -2926,6 +2951,9 @@ bool dc_dmub_is_ips_idle_state(struct dc *dc);
+@@ -2927,6 +2952,9 @@ bool dc_dmub_is_ips_idle_state(struct dc *dc);
  /* set min and max memory clock to lowest and highest DPM level, respectively */
  void dc_unlock_memory_clock_frequency(struct dc *dc);
  
@@ -9088,7 +8952,7 @@ index 49521ac4b0e8..997403ff7fa6 100644
  						 sizeof(state));
  
 diff --git a/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c b/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c
-index 80a372ceaa51..26596b0bb34b 100644
+index 20157f67be07..d3c277190e52 100644
 --- a/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c
 +++ b/drivers/gpu/drm/amd/display/dc/link/protocols/link_edp_panel_control.c
 @@ -40,6 +40,7 @@
@@ -9099,7 +8963,7 @@ index 80a372ceaa51..26596b0bb34b 100644
  #define DC_LOGGER \
  	link->ctx->logger
  #define DC_LOGGER_INIT(logger)
-@@ -148,6 +149,49 @@ enum dp_panel_mode dp_get_panel_mode(struct dc_link *link)
+@@ -149,6 +150,49 @@ enum dp_panel_mode dp_get_panel_mode(struct dc_link *link)
  	return DP_PANEL_MODE_DEFAULT;
  }
  
@@ -9149,7 +9013,7 @@ index 80a372ceaa51..26596b0bb34b 100644
  bool edp_set_backlight_level_nits(struct dc_link *link,
  		bool isHDR,
  		uint32_t backlight_millinits,
-@@ -157,6 +201,9 @@ bool edp_set_backlight_level_nits(struct dc_link *link,
+@@ -158,6 +202,9 @@ bool edp_set_backlight_level_nits(struct dc_link *link,
  			link->connector_signal != SIGNAL_TYPE_DISPLAY_PORT))
  		return false;
  
@@ -9159,7 +9023,7 @@ index 80a372ceaa51..26596b0bb34b 100644
  	if (link->is_dds && !link->dpcd_caps.panel_luminance_control)
  		return true;
  
-@@ -225,6 +272,12 @@ bool edp_set_backlight_level_nits(struct dc_link *link,
+@@ -226,6 +273,12 @@ bool edp_set_backlight_level_nits(struct dc_link *link,
  		if (core_link_write_dpcd(link, DP_SOURCE_BACKLIGHT_CONTROL,
  			&backlight_control, 1) != DC_OK)
  			return false;
@@ -9172,7 +9036,7 @@ index 80a372ceaa51..26596b0bb34b 100644
  	}
  
  	return true;
-@@ -272,6 +325,11 @@ bool edp_backlight_enable_aux(struct dc_link *link, bool enable)
+@@ -273,6 +326,11 @@ bool edp_backlight_enable_aux(struct dc_link *link, bool enable)
  
  	if (link->is_dds)
  		return true;
@@ -9184,7 +9048,7 @@ index 80a372ceaa51..26596b0bb34b 100644
  	if (core_link_write_dpcd(link, DP_SOURCE_BACKLIGHT_ENABLE,
  		&backlight_enable, 1) != DC_OK)
  		return false;
-@@ -310,12 +368,26 @@ bool set_default_brightness_aux(struct dc_link *link)
+@@ -311,12 +369,26 @@ bool set_default_brightness_aux(struct dc_link *link)
  	uint32_t default_backlight;
  
  	if (link && link->dpcd_sink_ext_caps.bits.oled == 1) {
@@ -10313,7 +10177,7 @@ index 515aceac22b1..37d4549fe31d 100644
  
  		ret = drm_fbdev_client_setup(dev, format);
 diff --git a/drivers/gpu/drm/drm_atomic_uapi.c b/drivers/gpu/drm/drm_atomic_uapi.c
-index 7b951af5ab32..eed076526cec 100644
+index 66b591b39a51..1af0fa84a3c6 100644
 --- a/drivers/gpu/drm/drm_atomic_uapi.c
 +++ b/drivers/gpu/drm/drm_atomic_uapi.c
 @@ -420,6 +420,8 @@ static int drm_atomic_crtc_set_property(struct drm_crtc *crtc,
@@ -10740,7 +10604,7 @@ index 2abc5c623fff..12a0cb5cfd88 100644
   * drm_exec_unlock_obj - unlock a GEM object in this exec context
   * @exec: the drm_exec object with the state
 diff --git a/drivers/gpu/drm/drm_fb_helper.c b/drivers/gpu/drm/drm_fb_helper.c
-index 80ca785bdb26..19def59e79a9 100644
+index 3dfa64dc3109..e0abe55bca1e 100644
 --- a/drivers/gpu/drm/drm_fb_helper.c
 +++ b/drivers/gpu/drm/drm_fb_helper.c
 @@ -27,6 +27,7 @@
@@ -11319,7 +11183,7 @@ index 5cfe8f3f80d7..b7ab19e0e4b2 100644
  }
  EXPORT_SYMBOL_GPL(ttm_bo_kunit_init);
 diff --git a/drivers/gpu/drm/ttm/ttm_bo.c b/drivers/gpu/drm/ttm/ttm_bo.c
-index bcd76f6bb7f0..63ce6df8f633 100644
+index ca6fc5cddacb..2cbbe05ce041 100644
 --- a/drivers/gpu/drm/ttm/ttm_bo.c
 +++ b/drivers/gpu/drm/ttm/ttm_bo.c
 @@ -86,6 +86,16 @@ void ttm_bo_move_to_lru_tail(struct ttm_buffer_object *bo)
@@ -12063,7 +11927,7 @@ index bcd76f6bb7f0..63ce6df8f633 100644
  	if (ttm_tt_is_populated(tt)) {
 -		ret = ttm_tt_swapout(bdev, tt, swapout_walk->gfp_flags);
 +		ret = ttm_tt_swapout(bdev, tt, gfp_flags);
- 		if (!ret) {
+ 		if (ret > 0) {
  			spin_lock(&bdev->lru_lock);
  			ttm_resource_del_bulk_move_unevictable(bo->resource, bo);
 @@ -1194,41 +1367,6 @@ ttm_bo_swapout_cb(struct ttm_lru_walk *walk, struct ttm_buffer_object *bo)
@@ -12726,10 +12590,10 @@ index 154d6739256f..071779e7c8e6 100644
   * ttm_resource_manager_next() - Continue iterating over the resource manager
   * resources
 diff --git a/drivers/gpu/drm/xe/xe_bo.c b/drivers/gpu/drm/xe/xe_bo.c
-index 7ed76349075f..b8cc4391ae41 100644
+index f4c5151d61c7..f0a237e4ce06 100644
 --- a/drivers/gpu/drm/xe/xe_bo.c
 +++ b/drivers/gpu/drm/xe/xe_bo.c
-@@ -1654,31 +1654,6 @@ static unsigned long xe_ttm_io_mem_pfn(struct ttm_buffer_object *ttm_bo,
+@@ -1756,31 +1756,6 @@ static unsigned long xe_ttm_io_mem_pfn(struct ttm_buffer_object *ttm_bo,
  
  static void __xe_bo_vunmap(struct xe_bo *bo);
  
@@ -12761,7 +12625,7 @@ index 7ed76349075f..b8cc4391ae41 100644
  static void xe_ttm_bo_release_notify(struct ttm_buffer_object *ttm_bo)
  {
  	struct dma_resv_iter cursor;
-@@ -1692,8 +1667,11 @@ static void xe_ttm_bo_release_notify(struct ttm_buffer_object *ttm_bo)
+@@ -1794,8 +1769,11 @@ static void xe_ttm_bo_release_notify(struct ttm_buffer_object *ttm_bo)
  	bo = ttm_to_xe_bo(ttm_bo);
  	xe_assert(xe_bo_device(bo), !(bo->created && kref_read(&ttm_bo->base.refcount)));
  
@@ -12776,7 +12640,7 @@ index 7ed76349075f..b8cc4391ae41 100644
  	/*
  	 * Scrub the preempt fences if any. The unbind fence is already
 diff --git a/drivers/gpu/drm/xe/xe_vm.c b/drivers/gpu/drm/xe/xe_vm.c
-index 67819deb45e3..6c9f2d6415ef 100644
+index 84ced696f46b..bdd70d0e9d93 100644
 --- a/drivers/gpu/drm/xe/xe_vm.c
 +++ b/drivers/gpu/drm/xe/xe_vm.c
 @@ -1655,7 +1655,7 @@ struct xe_vm *xe_vm_create(struct xe_device *xe, u32 flags, struct xe_file *xef)
@@ -15693,7 +15557,7 @@ index 000000000000..f67dd5a3a1bc
 +
 +#endif	/* __HID_ASUS_H */
 diff --git a/drivers/hid/hid-ids.h b/drivers/hid/hid-ids.h
-index 1059922baaac..f3eeb4789fb2 100644
+index dd31757601b6..f7a3070741f4 100644
 --- a/drivers/hid/hid-ids.h
 +++ b/drivers/hid/hid-ids.h
 @@ -1071,7 +1071,12 @@
@@ -15709,7 +15573,7 @@ index 1059922baaac..f3eeb4789fb2 100644
  
  #define USB_VENDOR_ID_NATIONAL_SEMICONDUCTOR 0x0400
  #define USB_DEVICE_ID_N_S_HARMONY	0xc359
-@@ -1374,6 +1379,10 @@
+@@ -1377,6 +1382,10 @@
  #define USB_DEVICE_ID_STEAM_CONTROLLER		0x1102
  #define USB_DEVICE_ID_STEAM_CONTROLLER_WIRELESS	0x1142
  #define USB_DEVICE_ID_STEAM_DECK	0x1205
@@ -15720,7 +15584,7 @@ index 1059922baaac..f3eeb4789fb2 100644
  
  #define USB_VENDOR_ID_STEELSERIES	0x1038
  #define USB_DEVICE_ID_STEELSERIES_SRWS1	0x1410
-@@ -1599,6 +1608,10 @@
+@@ -1602,6 +1611,10 @@
  #define USB_VENDOR_ID_ZYTRONIC		0x14c8
  #define USB_DEVICE_ID_ZYTRONIC_ZXY100	0x0005
  
@@ -15731,7 +15595,7 @@ index 1059922baaac..f3eeb4789fb2 100644
  #define USB_VENDOR_ID_PRIMAX	0x0461
  #define USB_DEVICE_ID_PRIMAX_MOUSE_4D22	0x4d22
  #define USB_DEVICE_ID_PRIMAX_MOUSE_4E2A	0x4e2a
-@@ -1640,4 +1653,7 @@
+@@ -1643,4 +1656,7 @@
  #define USB_VENDOR_ID_HUAWEI			0x12d1
  #define USB_DEVICE_ID_HUAWEI_CD30KBD		0x109b
  
@@ -19051,10 +18915,10 @@ index 000000000000..cd0c15d5445f
 +MODULE_AUTHOR("Derek J. Clark <derekjohn.clark@gmail.com>");
 +MODULE_DESCRIPTION("HID driver for MSI Claw Handheld PC gamepads");
 diff --git a/drivers/hid/hid-multitouch.c b/drivers/hid/hid-multitouch.c
-index 571166a769b9..bad05ea17bf4 100644
+index 29d7e33ee812..496f3db90d49 100644
 --- a/drivers/hid/hid-multitouch.c
 +++ b/drivers/hid/hid-multitouch.c
-@@ -1715,6 +1715,28 @@ static void mt_yogabook9_fixup(struct hid_device *hdev, __u8 *rdesc,
+@@ -1734,6 +1734,28 @@ static void mt_yogabook9_fixup(struct hid_device *hdev, __u8 *rdesc,
  	}
  }
  
@@ -19083,7 +18947,7 @@ index 571166a769b9..bad05ea17bf4 100644
  static const __u8 *mt_report_fixup(struct hid_device *hdev, __u8 *rdesc,
  			     unsigned int *size)
  {
-@@ -1748,6 +1770,23 @@ got: %x\n",
+@@ -1767,6 +1789,23 @@ got: %x\n",
  	    hdev->product == USB_DEVICE_ID_LENOVO_YOGABOOK9I)
  		mt_yogabook9_fixup(hdev, rdesc, size);
  
@@ -19108,7 +18972,7 @@ index 571166a769b9..bad05ea17bf4 100644
  }
  
 diff --git a/drivers/hid/hid-oxp.c b/drivers/hid/hid-oxp.c
-index 20a54f337220..757cef88e6c6 100644
+index d8fb6a69d40d..757cef88e6c6 100644
 --- a/drivers/hid/hid-oxp.c
 +++ b/drivers/hid/hid-oxp.c
 @@ -16,13 +16,17 @@
@@ -21514,9 +21378,9 @@ index 20a54f337220..757cef88e6c6 100644
  
  static void oxp_hid_remove(struct hid_device *hdev)
  {
--	cancel_delayed_work(&drvdata.oxp_rgb_queue);
--	cancel_delayed_work(&drvdata.oxp_btn_queue);
--	cancel_delayed_work(&drvdata.oxp_mcu_init);
+-	cancel_delayed_work_sync(&drvdata.oxp_rgb_queue);
+-	cancel_delayed_work_sync(&drvdata.oxp_btn_queue);
+-	cancel_delayed_work_sync(&drvdata.oxp_mcu_init);
 +	struct oxp_hid_cfg *cfg = hid_get_drvdata(hdev);
 +
 +	if (cfg)
@@ -21585,7 +21449,7 @@ index 20a54f337220..757cef88e6c6 100644
  module_hid_driver(hid_oxp);
  
 diff --git a/drivers/hid/hid-steam.c b/drivers/hid/hid-steam.c
-index 80d2eabc930e..6f0eaf9636a1 100644
+index 84c90091d45f..6f0eaf9636a1 100644
 --- a/drivers/hid/hid-steam.c
 +++ b/drivers/hid/hid-steam.c
 @@ -44,11 +44,13 @@
@@ -21695,19 +21559,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  /* Pad identifiers for the deck */
  #define STEAM_PAD_LEFT 0
  #define STEAM_PAD_RIGHT 1
-@@ -327,34 +403,41 @@ struct steam_device {
- 	spinlock_t lock;
- 	struct hid_device *hdev, *client_hdev;
- 	struct mutex report_mutex;
-+	struct mutex registration_mutex;
- 	unsigned long client_opened;
- 	struct input_dev __rcu *input;
- 	struct input_dev __rcu *sensors;
- 	unsigned long quirks;
- 	struct work_struct work_connect;
- 	bool connected;
-+	bool registered;
- 	char serial_no[STEAM_SERIAL_LEN + 1];
+@@ -339,23 +415,29 @@ struct steam_device {
  	struct power_supply_desc battery_desc;
  	struct power_supply __rcu *battery;
  	u8 battery_charge;
@@ -21725,7 +21577,6 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	u16 rumble_right;
  	unsigned int sensor_timestamp_us;
  	unsigned int sensor_update_rate_us;
--	struct work_struct unregister_work;
  };
  
 -static int steam_recv_report(struct steam_device *steam,
@@ -21741,7 +21592,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  
  	/*
  	 * All reports start with a two byte header.
-@@ -363,13 +446,14 @@ static int steam_recv_report(struct steam_device *steam,
+@@ -364,13 +446,14 @@ static int steam_recv_report(struct steam_device *steam,
  	if (size < 2)
  		return -EINVAL;
  
@@ -21759,7 +21610,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		return -EINVAL;
  
  	buf = hid_alloc_report_buf(r, GFP_KERNEL);
-@@ -377,25 +461,43 @@ static int steam_recv_report(struct steam_device *steam,
+@@ -378,25 +461,43 @@ static int steam_recv_report(struct steam_device *steam,
  		return -ENOMEM;
  
  	/*
@@ -21810,7 +21661,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		hid_dbg(steam->hdev, "Received report %*ph\n", size, data);
  	if (ret < 0)
  		return ret;
-@@ -412,41 +514,47 @@ static int steam_recv_report(struct steam_device *steam,
+@@ -413,41 +514,47 @@ static int steam_recv_report(struct steam_device *steam,
  	return size;
  }
  
@@ -21867,7 +21718,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  				HID_FEATURE_REPORT, HID_REQ_SET_REPORT);
  		if (ret != -EPIPE)
  			break;
-@@ -454,12 +562,29 @@ static int steam_send_report(struct steam_device *steam,
+@@ -455,12 +562,29 @@ static int steam_send_report(struct steam_device *steam,
  	} while (--retries);
  
  	kfree(buf);
@@ -21898,7 +21749,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  static inline int steam_send_report_byte(struct steam_device *steam, u8 cmd)
  {
  	return steam_send_report(steam, &cmd, 1);
-@@ -472,7 +597,6 @@ static int steam_write_settings(struct steam_device *steam,
+@@ -473,7 +597,6 @@ static int steam_write_settings(struct steam_device *steam,
  	u8 reg;
  	u16 val;
  	u8 cmd[64] = {ID_SET_SETTINGS_VALUES, 0x00};
@@ -21906,7 +21757,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	va_list args;
  
  	va_start(args, steam);
-@@ -488,16 +612,56 @@ static int steam_write_settings(struct steam_device *steam,
+@@ -489,16 +612,56 @@ static int steam_write_settings(struct steam_device *steam,
  	}
  	va_end(args);
  
@@ -21972,14 +21823,13 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  }
  
  static int steam_get_serial(struct steam_device *steam)
-@@ -508,22 +672,16 @@ static int steam_get_serial(struct steam_device *steam)
+@@ -509,21 +672,16 @@ static int steam_get_serial(struct steam_device *steam)
  	 */
  	int ret = 0;
  	u8 cmd[] = {ID_GET_STRING_ATTRIBUTE, sizeof(steam->serial_no), ATTRIB_STR_UNIT_SERIAL};
 -	u8 reply[3 + STEAM_SERIAL_LEN + 1];
 +	u8 reply[3 + STEAM_SERIAL_LEN + 1] = {0};
  
--	guard(mutex)(&steam->report_mutex);
 -	ret = steam_send_report(steam, cmd, sizeof(cmd));
 -	if (ret < 0)
 -		return ret;
@@ -21998,11 +21848,10 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	strscpy(steam->serial_no, reply + 3, reply[1]);
  	return ret;
  }
-@@ -537,14 +695,10 @@ static int steam_get_attributes(struct steam_device *steam)
+@@ -537,13 +695,10 @@ static int steam_get_attributes(struct steam_device *steam)
  	int i;
  	struct steam_controller_attribute *attr;
  
--	guard(mutex)(&steam->report_mutex);
 -	ret = steam_send_report(steam, cmd, sizeof(cmd));
 -	if (ret < 0)
 -		return ret;
@@ -22015,7 +21864,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		hid_err(steam->hdev, "%s: invalid reply (%*ph)\n", __func__,
  				(int)sizeof(reply), reply);
  		return -EIO;
-@@ -563,15 +717,29 @@ static int steam_get_attributes(struct steam_device *steam)
+@@ -562,15 +717,29 @@ static int steam_get_attributes(struct steam_device *steam)
  	return 0;
  }
  
@@ -22052,7 +21901,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  }
  
  /*
-@@ -584,24 +752,41 @@ static inline int steam_haptic_pulse(struct steam_device *steam, u8 pad,
+@@ -583,22 +752,41 @@ static inline int steam_haptic_pulse(struct steam_device *steam, u8 pad,
  				u16 duration, u16 interval, u16 count, u8 gain)
  {
  	int ret;
@@ -22100,18 +21949,16 @@ index 80d2eabc930e..6f0eaf9636a1 100644
 +		ret = steam_send_report(steam, report, 10);
 +	}
  
--	mutex_lock(&steam->report_mutex);
 -	ret = steam_send_report(steam, report, sizeof(report));
--	mutex_unlock(&steam->report_mutex);
  	return ret;
  }
  
-@@ -610,20 +795,38 @@ static inline int steam_haptic_rumble(struct steam_device *steam,
+@@ -607,18 +795,38 @@ static inline int steam_haptic_rumble(struct steam_device *steam,
  				u8 left_gain, u8 right_gain)
  {
  	int ret;
 -	u8 report[11] = {ID_TRIGGER_RUMBLE_CMD, 9};
- 
+-
 -	report[3] = intensity & 0xFF;
 -	report[4] = intensity >> 8;
 -	report[5] = left_speed & 0xFF;
@@ -22120,13 +21967,13 @@ index 80d2eabc930e..6f0eaf9636a1 100644
 -	report[8] = right_speed >> 8;
 -	report[9] = left_gain;
 -	report[10] = right_gain;
+-
+-	ret = steam_send_report(steam, report, sizeof(report));
++
 +	if (steam->quirks & STEAM_QUIRK_IBEX) {
 +		struct steam_ibex_output_report *report =
 +			kzalloc(sizeof(struct steam_ibex_output_report), GFP_KERNEL);
- 
--	mutex_lock(&steam->report_mutex);
--	ret = steam_send_report(steam, report, sizeof(report));
--	mutex_unlock(&steam->report_mutex);
++
 +		if (!report)
 +			return -ENOMEM;
 +
@@ -22157,17 +22004,10 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	return ret;
  }
  
-@@ -631,8 +834,26 @@ static void steam_haptic_rumble_cb(struct work_struct *work)
- {
- 	struct steam_device *steam = container_of(work, struct steam_device,
- 							rumble_work);
-+
-+	mutex_lock(&steam->report_mutex);
- 	steam_haptic_rumble(steam, 0, steam->rumble_left,
- 		steam->rumble_right, 2, 0);
-+	mutex_unlock(&steam->report_mutex);
-+}
-+
+@@ -633,6 +841,21 @@ static void steam_haptic_rumble_cb(struct work_struct *work)
+ 	mutex_unlock(&steam->report_mutex);
+ }
+ 
 +static void steam_coalesce_rumble_cb(struct work_struct *work)
 +{
 +	struct steam_device *steam = container_of(to_delayed_work(work),
@@ -22181,10 +22021,12 @@ index 80d2eabc930e..6f0eaf9636a1 100644
 +
 +	if (steam->rumble_left || steam->rumble_right)
 +		schedule_delayed_work(&steam->coalesce_rumble_work, HZ / 20);
- }
- 
++}
++
  #ifdef CONFIG_STEAM_FF
-@@ -644,6 +865,14 @@ static int steam_play_effect(struct input_dev *dev, void *data,
+ static int steam_play_effect(struct input_dev *dev, void *data,
+ 				struct ff_effect *effect)
+@@ -642,6 +865,14 @@ static int steam_play_effect(struct input_dev *dev, void *data,
  	steam->rumble_left = effect->u.rumble.strong_magnitude;
  	steam->rumble_right = effect->u.rumble.weak_magnitude;
  
@@ -22199,15 +22041,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	return schedule_work(&steam->rumble_work);
  }
  #endif
-@@ -653,7 +882,6 @@ static void steam_set_lizard_mode(struct steam_device *steam, bool enable)
- 	if (steam->gamepad_mode)
- 		enable = false;
- 
--	mutex_lock(&steam->report_mutex);
- 	if (enable) {
- 		/* enable esc, enter, cursors */
- 		steam_send_report_byte(steam, ID_SET_DEFAULT_DIGITAL_MAPPINGS);
-@@ -663,40 +891,38 @@ static void steam_set_lizard_mode(struct steam_device *steam, bool enable)
+@@ -660,20 +891,18 @@ static void steam_set_lizard_mode(struct steam_device *steam, bool enable)
  		/* disable esc, enter, cursor */
  		steam_send_report_byte(steam, ID_CLEAR_DIGITAL_MAPPINGS);
  
@@ -22232,91 +22066,27 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  				0);
 -		}
  	}
--	mutex_unlock(&steam->report_mutex);
  }
  
- static int steam_input_open(struct input_dev *dev)
- {
- 	struct steam_device *steam = input_get_drvdata(dev);
- 	unsigned long flags;
--	bool set_lizard_mode;
-+	bool client_opened;
- 
- 	/*
- 	 * Disabling lizard mode automatically is only done on the Steam
+@@ -688,7 +917,7 @@ static int steam_input_open(struct input_dev *dev)
  	 * Controller. On the Steam Deck, this is toggled manually by holding
  	 * the options button instead, handled by steam_mode_switch_cb.
  	 */
 -	if (!(steam->quirks & STEAM_QUIRK_DECK)) {
 +	if (!(steam->quirks & (STEAM_QUIRK_DECK | STEAM_QUIRK_IBEX))) {
  		spin_lock_irqsave(&steam->lock, flags);
--		set_lizard_mode = !steam->client_opened && lizard_mode;
-+		client_opened = steam->client_opened;
+ 		client_opened = steam->client_opened;
  		spin_unlock_irqrestore(&steam->lock, flags);
--		if (set_lizard_mode)
-+		guard(mutex)(&steam->report_mutex);
-+		if (!client_opened && lizard_mode)
- 			steam_set_lizard_mode(steam, false);
- 	}
- 
-@@ -707,13 +933,14 @@ static void steam_input_close(struct input_dev *dev)
- {
- 	struct steam_device *steam = input_get_drvdata(dev);
+@@ -706,7 +935,7 @@ static void steam_input_close(struct input_dev *dev)
  	unsigned long flags;
--	bool set_lizard_mode;
-+	bool client_opened;
+ 	bool client_opened;
  
 -	if (!(steam->quirks & STEAM_QUIRK_DECK)) {
 +	if (!(steam->quirks & (STEAM_QUIRK_DECK | STEAM_QUIRK_IBEX))) {
  		spin_lock_irqsave(&steam->lock, flags);
--		set_lizard_mode = !steam->client_opened && lizard_mode;
-+		client_opened = steam->client_opened;
+ 		client_opened = steam->client_opened;
  		spin_unlock_irqrestore(&steam->lock, flags);
--		if (set_lizard_mode)
-+		guard(mutex)(&steam->report_mutex);
-+		if (!client_opened && lizard_mode)
- 			steam_set_lizard_mode(steam, true);
- 	}
- }
-@@ -721,14 +948,11 @@ static void steam_input_close(struct input_dev *dev)
- static int steam_sensor_open(struct input_dev *dev)
- {
- 	struct steam_device *steam = input_get_drvdata(dev);
--	unsigned long flags;
--	bool client_opened;
- 
--	spin_lock_irqsave(&steam->lock, flags);
--	client_opened = steam->client_opened;
--	spin_unlock_irqrestore(&steam->lock, flags);
--	if (client_opened)
--		return 0;
-+	scoped_guard(spinlock_irqsave, &steam->lock) {
-+		if (steam->client_opened)
-+			return 0;
-+	}
- 
- 	guard(mutex)(&steam->report_mutex);
- 	steam_write_settings(steam, SETTING_IMU_MODE,
-@@ -741,14 +965,11 @@ static int steam_sensor_open(struct input_dev *dev)
- static void steam_sensor_close(struct input_dev *dev)
- {
- 	struct steam_device *steam = input_get_drvdata(dev);
--	unsigned long flags;
--	bool client_opened;
- 
--	spin_lock_irqsave(&steam->lock, flags);
--	client_opened = steam->client_opened;
--	spin_unlock_irqrestore(&steam->lock, flags);
--	if (client_opened)
--		return;
-+	scoped_guard(spinlock_irqsave, &steam->lock) {
-+		if (steam->client_opened)
-+			return;
-+	}
- 
- 	guard(mutex)(&steam->report_mutex);
- 	steam_write_settings(steam, SETTING_IMU_MODE, 0, 0);
-@@ -767,25 +988,40 @@ static int steam_battery_get_property(struct power_supply *psy,
+@@ -759,25 +988,40 @@ static int steam_battery_get_property(struct power_supply *psy,
  {
  	struct steam_device *steam = power_supply_get_drvdata(psy);
  	unsigned long flags;
@@ -22359,7 +22129,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	case POWER_SUPPLY_PROP_CAPACITY:
  		val->intval = batt;
  		break;
-@@ -796,6 +1032,16 @@ static int steam_battery_get_property(struct power_supply *psy,
+@@ -788,6 +1032,16 @@ static int steam_battery_get_property(struct power_supply *psy,
  	return ret;
  }
  
@@ -22376,7 +22146,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  static int steam_battery_register(struct steam_device *steam)
  {
  	struct power_supply *battery;
-@@ -804,25 +1050,42 @@ static int steam_battery_register(struct steam_device *steam)
+@@ -796,19 +1050,35 @@ static int steam_battery_register(struct steam_device *steam)
  	int ret;
  
  	steam->battery_desc.type = POWER_SUPPLY_TYPE_BATTERY;
@@ -22418,14 +22188,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	spin_unlock_irqrestore(&steam->lock, flags);
  
  	battery = power_supply_register(&steam->hdev->dev,
- 			&steam->battery_desc, &battery_cfg);
- 	if (IS_ERR(battery)) {
- 		ret = PTR_ERR(battery);
-+		devm_kfree(&steam->hdev->dev, steam->battery_desc.name);
- 		hid_err(steam->hdev,
- 				"%s:power_supply_register failed with error %d\n",
- 				__func__, ret);
-@@ -887,7 +1150,7 @@ static int steam_input_register(struct steam_device *steam)
+@@ -880,7 +1150,7 @@ static int steam_input_register(struct steam_device *steam)
  	input_set_capability(input, EV_KEY, BTN_THUMB2);
  	input_set_capability(input, EV_KEY, BTN_GRIPL);
  	input_set_capability(input, EV_KEY, BTN_GRIPR);
@@ -22434,7 +22197,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		input_set_capability(input, EV_KEY, BTN_BASE);
  		input_set_capability(input, EV_KEY, BTN_GRIPL2);
  		input_set_capability(input, EV_KEY, BTN_GRIPR2);
-@@ -901,7 +1164,7 @@ static int steam_input_register(struct steam_device *steam)
+@@ -894,7 +1164,7 @@ static int steam_input_register(struct steam_device *steam)
  	input_set_abs_params(input, ABS_HAT0Y, -32767, 32767,
  			STEAM_PAD_FUZZ, 0);
  
@@ -22443,7 +22206,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		input_set_abs_params(input, ABS_HAT2Y, 0, 32767, 0, 0);
  		input_set_abs_params(input, ABS_HAT2X, 0, 32767, 0, 0);
  
-@@ -941,7 +1204,7 @@ static int steam_input_register(struct steam_device *steam)
+@@ -934,7 +1204,7 @@ static int steam_input_register(struct steam_device *steam)
  	input_abs_set_res(input, ABS_HAT0Y, STEAM_PAD_RESOLUTION);
  
  #ifdef CONFIG_STEAM_FF
@@ -22452,7 +22215,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		input_set_capability(input, EV_FF, FF_RUMBLE);
  		ret = input_ff_create_memless(input, NULL, steam_play_effect);
  		if (ret)
-@@ -966,6 +1229,7 @@ static int steam_sensors_register(struct steam_device *steam)
+@@ -959,6 +1229,7 @@ static int steam_sensors_register(struct steam_device *steam)
  	struct hid_device *hdev = steam->hdev;
  	struct input_dev *sensors;
  	int ret;
@@ -22460,7 +22223,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  
  	rcu_read_lock();
  	sensors = rcu_dereference(steam->sensors);
-@@ -986,6 +1250,30 @@ static int steam_sensors_register(struct steam_device *steam)
+@@ -979,6 +1250,30 @@ static int steam_sensors_register(struct steam_device *steam)
  		sensors->close = steam_sensor_close;
  	}
  
@@ -22491,208 +22254,81 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	sensors->name = steam->quirks & STEAM_QUIRK_DECK ?
  		"Steam Deck Motion Sensors" :
  		"Steam Controller Motion Sensors";
-@@ -1082,103 +1370,119 @@ static void steam_battery_unregister(struct steam_device *steam)
- 	RCU_INIT_POINTER(steam->battery, NULL);
- 	synchronize_rcu();
- 	power_supply_unregister(battery);
-+	devm_kfree(&steam->hdev->dev, steam->battery_desc.name);
- }
- 
- static int steam_register(struct steam_device *steam)
- {
- 	int ret;
--	unsigned long client_opened;
--	unsigned long flags;
- 
-+	mutex_lock(&steam->registration_mutex);
- 	/*
+@@ -1087,7 +1382,6 @@ static int steam_register(struct steam_device *steam)
  	 * This function can be called several times in a row with the
  	 * wireless adaptor, without steam_unregister() between them, because
  	 * another client send a get_connection_status command, for example.
 -	 * The battery and serial number are set just once per device.
  	 */
--	if (!steam->serial_no[0]) {
--		/*
--		 * Unlikely, but getting the serial could fail, and it is not so
--		 * important, so make up a serial number and go on.
--		 */
--		if (steam_get_serial(steam) < 0)
--			strscpy(steam->serial_no, "XXXXXXXXXX",
--					sizeof(steam->serial_no));
-+	if (steam->registered) {
-+		mutex_unlock(&steam->registration_mutex);
-+		return 0;
-+	}
+ 	if (steam->registered) {
+ 		mutex_unlock(&steam->registration_mutex);
+@@ -1109,14 +1403,15 @@ static int steam_register(struct steam_device *steam)
+ 			"%s:steam_get_attributes failed with error %d\n",
+ 			__func__, ret);
  
--		ret = steam_get_attributes(steam);
--		if (ret < 0)
--			hid_err(steam->hdev,
--				"%s:steam_get_attributes failed with error %d\n",
--				__func__, ret);
-+	mutex_lock(&steam->report_mutex);
-+	/*
-+	 * Unlikely, but getting the serial could fail, and it is not so
-+	 * important, so make up a serial number and go on.
-+	 */
-+	if (steam_get_serial(steam) < 0 || !steam->serial_no[0])
-+		strscpy(steam->serial_no, "XXXXXXXXXX",
-+				sizeof(steam->serial_no));
- 
--		hid_info(steam->hdev, "Steam Controller '%s' connected",
--				steam->serial_no);
-+	ret = steam_get_attributes(steam);
-+	if (ret < 0)
-+		hid_err(steam->hdev,
-+			"%s:steam_get_attributes failed with error %d\n",
-+			__func__, ret);
-+
+-	hid_info(steam->hdev, "Steam Controller '%s' connected",
 +	hid_info(steam->hdev, "Steam %s '%s' connected",
 +			steam->quirks & STEAM_QUIRK_DECK ? "Deck" : "Controller",
-+			steam->serial_no);
+ 			steam->serial_no);
  
--		/* ignore battery errors, we can live without it */
--		if (steam->quirks & STEAM_QUIRK_WIRELESS)
--			steam_battery_register(steam);
-+	steam_set_lizard_mode(steam, lizard_mode);
-+	mutex_unlock(&steam->report_mutex);
+ 	steam_set_lizard_mode(steam, lizard_mode);
+ 	mutex_unlock(&steam->report_mutex);
  
--		mutex_lock(&steam_devices_lock);
--		if (list_empty(&steam->list))
--			list_add(&steam->list, &steam_devices);
--		mutex_unlock(&steam_devices_lock);
--	}
-+	/* ignore battery errors, we can live without it */
+ 	/* ignore battery errors, we can live without it */
+-	if (steam->quirks & STEAM_QUIRK_WIRELESS)
 +	if (steam->quirks & (STEAM_QUIRK_WIRELESS | STEAM_QUIRK_IBEX))
-+		steam_battery_register(steam);
+ 		steam_battery_register(steam);
  
--	spin_lock_irqsave(&steam->lock, flags);
--	client_opened = steam->client_opened;
--	spin_unlock_irqrestore(&steam->lock, flags);
-+	ret = steam_input_register(steam);
-+	if (ret != 0)
-+		goto steam_register_input_fail;
-+	ret = steam_sensors_register(steam);
-+	if (ret != 0)
-+		goto steam_register_sensors_fail;
- 
--	if (!client_opened) {
--		steam_set_lizard_mode(steam, lizard_mode);
--		ret = steam_input_register(steam);
--		if (ret != 0)
--			goto steam_register_input_fail;
--		ret = steam_sensors_register(steam);
--		if (ret != 0)
--			goto steam_register_sensors_fail;
--	}
-+	steam->registered = true;
-+	mutex_unlock(&steam->registration_mutex);
-+	mutex_lock(&steam_devices_lock);
-+	if (list_empty(&steam->list))
-+		list_add(&steam->list, &steam_devices);
-+	mutex_unlock(&steam_devices_lock);
- 	return 0;
- 
- steam_register_sensors_fail:
- 	steam_input_unregister(steam);
- steam_register_input_fail:
-+	steam_battery_unregister(steam);
-+	mutex_unlock(&steam->registration_mutex);
-+	cancel_work_sync(&steam->rumble_work);
-+	cancel_delayed_work_sync(&steam->mode_switch);
+ 	ret = steam_input_register(steam);
+@@ -1141,6 +1436,7 @@ static int steam_register(struct steam_device *steam)
+ 	mutex_unlock(&steam->registration_mutex);
+ 	cancel_work_sync(&steam->rumble_work);
+ 	cancel_delayed_work_sync(&steam->mode_switch);
 +	cancel_delayed_work_sync(&steam->coalesce_rumble_work);
  	return ret;
  }
  
- static void steam_unregister(struct steam_device *steam)
- {
-+	if (!steam->registered)
-+		return;
-+
+@@ -1149,7 +1445,8 @@ static void steam_unregister(struct steam_device *steam)
+ 	if (!steam->registered)
+ 		return;
+ 
+-	hid_info(steam->hdev, "Steam Controller '%s' disconnected",
 +	hid_info(steam->hdev, "Steam %s '%s' disconnected",
 +			steam->quirks & STEAM_QUIRK_DECK ? "Deck" : "Controller",
-+			steam->serial_no);
-+	mutex_lock(&steam->registration_mutex);
-+	steam->registered = false;
- 	steam_battery_unregister(steam);
- 	steam_sensors_unregister(steam);
- 	steam_input_unregister(steam);
--	if (steam->serial_no[0]) {
--		hid_info(steam->hdev, "Steam Controller '%s' disconnected",
--				steam->serial_no);
--		mutex_lock(&steam_devices_lock);
--		list_del_init(&steam->list);
--		mutex_unlock(&steam_devices_lock);
--		steam->serial_no[0] = 0;
--	}
-+	mutex_unlock(&steam->registration_mutex);
-+	cancel_work_sync(&steam->rumble_work);
-+	cancel_delayed_work_sync(&steam->mode_switch);
+ 			steam->serial_no);
+ 	mutex_lock(&steam->registration_mutex);
+ 	steam->registered = false;
+@@ -1159,10 +1456,10 @@ static void steam_unregister(struct steam_device *steam)
+ 	mutex_unlock(&steam->registration_mutex);
+ 	cancel_work_sync(&steam->rumble_work);
+ 	cancel_delayed_work_sync(&steam->mode_switch);
 +	cancel_delayed_work_sync(&steam->coalesce_rumble_work);
-+	mutex_lock(&steam_devices_lock);
-+	list_del_init(&steam->list);
-+	mutex_unlock(&steam_devices_lock);
+ 	mutex_lock(&steam_devices_lock);
+ 	list_del_init(&steam->list);
+ 	mutex_unlock(&steam_devices_lock);
+-	steam->serial_no[0] = 0;
  }
  
  static void steam_work_connect_cb(struct work_struct *work)
- {
- 	struct steam_device *steam = container_of(work, struct steam_device,
- 							work_connect);
-+
- 	unsigned long flags;
- 	bool connected;
-+	bool opened;
- 	int ret;
- 
- 	spin_lock_irqsave(&steam->lock, flags);
-+	opened = steam->client_opened;
- 	connected = steam->connected;
+@@ -1208,13 +1505,83 @@ static void steam_mode_switch_cb(struct work_struct *work)
+ 	client_opened = steam->client_opened;
  	spin_unlock_irqrestore(&steam->lock, flags);
  
--	if (connected) {
-+	if (connected && !opened) {
- 		ret = steam_register(steam);
--		if (ret) {
-+		if (ret)
- 			hid_err(steam->hdev,
- 				"%s:steam_register failed with error %d\n",
- 				__func__, ret);
--		}
- 	} else {
- 		steam_unregister(steam);
- 	}
-@@ -1190,69 +1494,142 @@ static void steam_mode_switch_cb(struct work_struct *work)
- 							struct steam_device, mode_switch);
- 	unsigned long flags;
- 	bool client_opened;
-+	bool gamepad_mode;
-+
- 	if (!lizard_mode)
- 		return;
- 
-+	spin_lock_irqsave(&steam->lock, flags);
- 	steam->gamepad_mode = !steam->gamepad_mode;
--	hid_dbg(steam->hdev, "%s: switching gamepad mode to %i\n", __func__, steam->gamepad_mode);
--	if (steam->gamepad_mode)
-+	gamepad_mode = steam->gamepad_mode;
-+	client_opened = steam->client_opened;
-+	spin_unlock_irqrestore(&steam->lock, flags);
-+
-+	hid_dbg(steam->hdev, "%s: switching gamepad mode to %i\n", __func__, gamepad_mode);
+-	guard(mutex)(&steam->report_mutex);
+ 	hid_dbg(steam->hdev, "%s: switching gamepad mode to %i\n", __func__, gamepad_mode);
+-	if (gamepad_mode)
 +	if (gamepad_mode) {
 +		guard(mutex)(&steam->report_mutex);
  		steam_set_lizard_mode(steam, false);
--	else {
--		spin_lock_irqsave(&steam->lock, flags);
--		client_opened = steam->client_opened;
--		spin_unlock_irqrestore(&steam->lock, flags);
--		if (!client_opened)
+-	else if (!client_opened)
+-		steam_set_lizard_mode(steam, lizard_mode);
 +	} else {
 +		struct input_dev *input;
 +		struct input_dev *sensors;
 +
 +		if (!client_opened) {
 +			guard(mutex)(&steam->report_mutex);
- 			steam_set_lizard_mode(steam, lizard_mode);
++			steam_set_lizard_mode(steam, lizard_mode);
 +		}
 +
 +		/*
@@ -22752,47 +22388,20 @@ index 80d2eabc930e..6f0eaf9636a1 100644
 +			input_report_abs(sensors, ABS_RX, 0);
 +			input_report_abs(sensors, ABS_RY, 0);
 +			input_report_abs(sensors, ABS_RZ, 0);
-+
+ 
 +			input_sync(sensors);
 +		}
 +		rcu_read_unlock();
- 	}
- 
++	}
++
 +	guard(mutex)(&steam->report_mutex);
  	steam_haptic_pulse(steam, STEAM_PAD_RIGHT, 0x190, 0, 1, 0);
--	if (steam->gamepad_mode) {
-+	if (gamepad_mode) {
+ 	if (gamepad_mode) {
  		steam_haptic_pulse(steam, STEAM_PAD_LEFT, 0x14D, 0x14D, 0x2D, 0);
- 	} else {
- 		steam_haptic_pulse(steam, STEAM_PAD_LEFT, 0x1F4, 0x1F4, 0x1E, 0);
+@@ -1223,21 +1590,46 @@ static void steam_mode_switch_cb(struct work_struct *work)
  	}
  }
  
--static void steam_work_unregister_cb(struct work_struct *work)
--{
--	struct steam_device *steam = container_of(work, struct steam_device,
--							unregister_work);
--	unsigned long flags;
--	bool connected;
--	bool opened;
--
--	spin_lock_irqsave(&steam->lock, flags);
--	opened = steam->client_opened;
--	connected = steam->connected;
--	spin_unlock_irqrestore(&steam->lock, flags);
--
--	if (connected) {
--		if (opened) {
--			steam_sensors_unregister(steam);
--			steam_input_unregister(steam);
--		} else {
--			steam_set_lizard_mode(steam, lizard_mode);
--			steam_input_register(steam);
--			steam_sensors_register(steam);
--		}
--	}
--}
--
 -static bool steam_is_valve_interface(struct hid_device *hdev)
 +static bool steam_is_valve_interface(struct hid_device *hdev, int quirks)
  {
@@ -22842,25 +22451,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	rep_enum = &hdev->report_enum[HID_FEATURE_REPORT];
  	return !list_empty(&rep_enum->report_list);
  }
-@@ -1283,7 +1660,7 @@ static int steam_client_ll_open(struct hid_device *hdev)
- 	steam->client_opened++;
- 	spin_unlock_irqrestore(&steam->lock, flags);
- 
--	schedule_work(&steam->unregister_work);
-+	schedule_work(&steam->work_connect);
- 
- 	return 0;
- }
-@@ -1298,7 +1675,7 @@ static void steam_client_ll_close(struct hid_device *hdev)
- 	steam->client_opened--;
- 	spin_unlock_irqrestore(&steam->lock, flags);
- 
--	schedule_work(&steam->unregister_work);
-+	schedule_work(&steam->work_connect);
- }
- 
- static int steam_client_ll_raw_request(struct hid_device *hdev,
-@@ -1312,6 +1689,14 @@ static int steam_client_ll_raw_request(struct hid_device *hdev,
+@@ -1297,6 +1689,14 @@ static int steam_client_ll_raw_request(struct hid_device *hdev,
  			report_type, reqtype);
  }
  
@@ -22875,7 +22466,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  static const struct hid_ll_driver steam_client_ll_driver = {
  	.parse = steam_client_ll_parse,
  	.start = steam_client_ll_start,
-@@ -1319,6 +1704,7 @@ static const struct hid_ll_driver steam_client_ll_driver = {
+@@ -1304,6 +1704,7 @@ static const struct hid_ll_driver steam_client_ll_driver = {
  	.open = steam_client_ll_open,
  	.close = steam_client_ll_close,
  	.raw_request = steam_client_ll_raw_request,
@@ -22883,7 +22474,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  };
  
  static struct hid_device *steam_create_client_hid(struct hid_device *hdev)
-@@ -1373,7 +1759,7 @@ static int steam_probe(struct hid_device *hdev,
+@@ -1358,7 +1759,7 @@ static int steam_probe(struct hid_device *hdev,
  	 * The non-valve interfaces (mouse and keyboard emulation) are
  	 * connected without changes.
  	 */
@@ -22892,13 +22483,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		return hid_hw_start(hdev, HID_CONNECT_DEFAULT);
  
  	steam = devm_kzalloc(&hdev->dev, sizeof(*steam), GFP_KERNEL);
-@@ -1384,17 +1770,18 @@ static int steam_probe(struct hid_device *hdev,
- 	hid_set_drvdata(hdev, steam);
- 	spin_lock_init(&steam->lock);
- 	mutex_init(&steam->report_mutex);
-+	mutex_init(&steam->registration_mutex);
- 	steam->quirks = id->driver_data;
- 	INIT_WORK(&steam->work_connect, steam_work_connect_cb);
+@@ -1375,6 +1776,7 @@ static int steam_probe(struct hid_device *hdev,
  	INIT_DELAYED_WORK(&steam->mode_switch, steam_mode_switch_cb);
  	INIT_LIST_HEAD(&steam->list);
  	INIT_WORK(&steam->rumble_work, steam_haptic_rumble_cb);
@@ -22906,13 +22491,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	steam->sensor_timestamp_us = 0;
  	if (steam->quirks & STEAM_QUIRK_DECK)
  		steam->sensor_update_rate_us = 4000;
- 	else
- 		steam->sensor_update_rate_us = 9000;
--	INIT_WORK(&steam->unregister_work, steam_work_unregister_cb);
- 
- 	/*
- 	 * With the real steam controller interface, do not connect hidraw.
-@@ -1412,14 +1799,21 @@ static int steam_probe(struct hid_device *hdev,
+@@ -1397,14 +1799,21 @@ static int steam_probe(struct hid_device *hdev,
  		goto err_hw_stop;
  	}
  
@@ -22938,59 +22517,15 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  		ret = steam_register(steam);
  		if (ret) {
  			hid_err(hdev,
-@@ -1455,7 +1849,7 @@ static int steam_probe(struct hid_device *hdev,
+@@ -1440,6 +1849,7 @@ static int steam_probe(struct hid_device *hdev,
  	cancel_work_sync(&steam->work_connect);
  	cancel_delayed_work_sync(&steam->mode_switch);
  	cancel_work_sync(&steam->rumble_work);
--	cancel_work_sync(&steam->unregister_work);
 +	cancel_delayed_work_sync(&steam->coalesce_rumble_work);
  
  	return ret;
  }
-@@ -1463,36 +1857,32 @@ static int steam_probe(struct hid_device *hdev,
- static void steam_remove(struct hid_device *hdev)
- {
- 	struct steam_device *steam = hid_get_drvdata(hdev);
-+	unsigned long flags;
- 
- 	if (!steam || hdev->group == HID_GROUP_STEAM) {
- 		hid_hw_stop(hdev);
- 		return;
- 	}
- 
-+	hid_hw_close(hdev);
- 	hid_destroy_device(steam->client_hdev);
--	cancel_delayed_work_sync(&steam->mode_switch);
--	cancel_work_sync(&steam->work_connect);
--	cancel_work_sync(&steam->rumble_work);
--	cancel_work_sync(&steam->unregister_work);
--	steam->client_hdev = NULL;
-+	spin_lock_irqsave(&steam->lock, flags);
- 	steam->client_opened = 0;
-+	spin_unlock_irqrestore(&steam->lock, flags);
-+	cancel_work_sync(&steam->work_connect);
- 	if (steam->quirks & STEAM_QUIRK_WIRELESS) {
- 		hid_info(hdev, "Steam wireless receiver disconnected");
- 	}
--	hid_hw_close(hdev);
--	hid_hw_stop(hdev);
- 	steam_unregister(steam);
-+	hid_hw_stop(hdev);
- }
- 
- static void steam_do_connect_event(struct steam_device *steam, bool connected)
- {
--	unsigned long flags;
- 	bool changed;
- 
--	spin_lock_irqsave(&steam->lock, flags);
- 	changed = steam->connected != connected;
- 	steam->connected = connected;
--	spin_unlock_irqrestore(&steam->lock, flags);
- 
- 	if (changed && schedule_work(&steam->work_connect) == 0)
- 		dbg_hid("%s: connected=%d event already queued\n",
-@@ -1595,9 +1985,9 @@ static void steam_map_axes(struct input_dev *input,
+@@ -1575,9 +1985,9 @@ static void steam_map_axes(struct input_dev *input,
   *  9.1  | BTN_DPAD_RIGHT | left-pad right
   *  9.2  | BTN_DPAD_LEFT  | left-pad left
   *  9.3  | BTN_DPAD_DOWN  | left-pad down
@@ -23002,7 +22537,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
   *  9.7  | BTN_GRIPL  | left back lever
   * 10.0  | BTN_GRIPR  | right back lever
   * 10.1  | --         | left-pad clicked
-@@ -1747,9 +2137,9 @@ static void steam_do_sensors_event(struct steam_device *steam,
+@@ -1727,9 +2137,9 @@ static void steam_do_sensors_event(struct steam_device *steam,
   *  9.1  | BTN_DPAD_RIGHT | left-pad right
   *  9.2  | BTN_DPAD_LEFT  | left-pad left
   *  9.3  | BTN_DPAD_DOWN  | left-pad down
@@ -23014,24 +22549,13 @@ index 80d2eabc930e..6f0eaf9636a1 100644
   *  9.7  | BTN_GRIPL2 | left bottom grip button
   *  10.0 | BTN_GRIPR2 | right bottom grip button
   *  10.1 | BTN_THUMB  | left pad pressed
-@@ -1921,8 +2311,6 @@ static void steam_do_deck_sensors_event(struct steam_device *steam,
- static void steam_do_battery_event(struct steam_device *steam,
- 		struct power_supply *battery, u8 *data)
- {
--	unsigned long flags;
--
- 	s16 volts = steam_le16(data + 12);
- 	u8 batt = data[14];
- 
-@@ -1930,15 +2318,219 @@ static void steam_do_battery_event(struct steam_device *steam,
+@@ -1908,13 +2318,219 @@ static void steam_do_battery_event(struct steam_device *steam,
  	rcu_read_lock();
  	battery = rcu_dereference(steam->battery);
  	if (likely(battery)) {
--		spin_lock_irqsave(&steam->lock, flags);
 -		steam->voltage = volts;
 +		steam->battery_voltage = volts;
  		steam->battery_charge = batt;
--		spin_unlock_irqrestore(&steam->lock, flags);
  		power_supply_changed(battery);
  	}
  	rcu_read_unlock();
@@ -23246,11 +22770,9 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  static int steam_raw_event(struct hid_device *hdev,
  			struct hid_report *report, u8 *data,
  			int size)
-@@ -1951,9 +2543,86 @@ static int steam_raw_event(struct hid_device *hdev,
- 	if (!steam)
- 		return 0;
+@@ -1929,8 +2545,84 @@ static int steam_raw_event(struct hid_device *hdev,
  
-+	guard(spinlock_irqsave)(&steam->lock);
+ 	guard(spinlock_irqsave)(&steam->lock);
  	if (steam->client_opened)
 -		hid_input_report(steam->client_hdev, HID_FEATURE_REPORT,
 -				data, size, 0);
@@ -23335,31 +22857,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	/*
  	 * All messages are size=64, all values little-endian.
  	 * The format is:
-@@ -2038,6 +2707,8 @@ static int steam_param_set_lizard_mode(const char *val,
- {
- 	struct steam_device *steam;
- 	int ret;
-+	bool client_opened;
-+	unsigned long flags;
- 
- 	ret = param_set_bool(val, kp);
- 	if (ret)
-@@ -2045,8 +2716,13 @@ static int steam_param_set_lizard_mode(const char *val,
- 
- 	mutex_lock(&steam_devices_lock);
- 	list_for_each_entry(steam, &steam_devices, list) {
--		if (!steam->client_opened)
-+		spin_lock_irqsave(&steam->lock, flags);
-+		client_opened = steam->client_opened;
-+		spin_unlock_irqrestore(&steam->lock, flags);
-+		if (!client_opened) {
-+			guard(mutex)(&steam->report_mutex);
- 			steam_set_lizard_mode(steam, lizard_mode);
-+		}
- 	}
- 	mutex_unlock(&steam_devices_lock);
- 	return 0;
-@@ -2062,11 +2738,11 @@ MODULE_PARM_DESC(lizard_mode,
+@@ -2046,11 +2738,11 @@ MODULE_PARM_DESC(lizard_mode,
  	"Enable mouse and keyboard emulation (lizard mode) when the gamepad is not in use");
  
  static const struct hid_device_id steam_controllers[] = {
@@ -23373,7 +22871,7 @@ index 80d2eabc930e..6f0eaf9636a1 100644
  	  HID_USB_DEVICE(USB_VENDOR_ID_VALVE,
  		USB_DEVICE_ID_STEAM_CONTROLLER_WIRELESS),
  	  .driver_data = STEAM_QUIRK_WIRELESS
-@@ -2076,6 +2752,26 @@ static const struct hid_device_id steam_controllers[] = {
+@@ -2060,6 +2752,26 @@ static const struct hid_device_id steam_controllers[] = {
  		USB_DEVICE_ID_STEAM_DECK),
  	  .driver_data = STEAM_QUIRK_DECK
  	},
@@ -33166,7 +32664,7 @@ index 000000000000..27aacfcb26d5
 +extern const struct gip_driver gip_driver_pdp_jaguar;
 +#endif
 diff --git a/drivers/input/joystick/xpad.c b/drivers/input/joystick/xpad.c
-index 2da0b7f1722a..69b6b516c25d 100644
+index 810e52782ae8..9ac7c2c4a3bf 100644
 --- a/drivers/input/joystick/xpad.c
 +++ b/drivers/input/joystick/xpad.c
 @@ -17,7 +17,6 @@
@@ -33276,14 +32774,14 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x0c12, 0x0005, "Intec wireless", 0, XTYPE_XBOX },
  	{ 0x0c12, 0x8801, "Nyko Xbox Controller", 0, XTYPE_XBOX },
  	{ 0x0c12, 0x8802, "Zeroplus Xbox Controller", 0, XTYPE_XBOX },
-@@ -212,34 +185,10 @@ static const struct xpad_device {
+@@ -212,35 +185,11 @@ static const struct xpad_device {
  	{ 0x0e6f, 0x011f, "Rock Candy Gamepad Wired Controller", 0, XTYPE_XBOX360 },
  	{ 0x0e6f, 0x0131, "PDP EA Sports Controller", 0, XTYPE_XBOX360 },
  	{ 0x0e6f, 0x0133, "Xbox 360 Wired Controller", 0, XTYPE_XBOX360 },
 -	{ 0x0e6f, 0x0139, "Afterglow Prismatic Wired Controller", 0, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x013a, "PDP Xbox One Controller", 0, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x0146, "Rock Candy Wired Controller for Xbox One", 0, XTYPE_XBOXONE },
--	{ 0x0e6f, 0x0147, "PDP Marvel Xbox One Controller", 0, XTYPE_XBOXONE },
+ 	{ 0x0e6f, 0x0147, "PDP Marvel Xbox 360 Controller", 0, XTYPE_XBOX360 },
 -	{ 0x0e6f, 0x015c, "PDP Xbox One Arcade Stick", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x015d, "PDP Mirror's Edge Official Wired Controller for Xbox One", 0, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x0161, "PDP Xbox One Controller", 0, XTYPE_XBOXONE },
@@ -33295,6 +32793,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x0e6f, 0x0213, "Afterglow Gamepad for Xbox 360", 0, XTYPE_XBOX360 },
  	{ 0x0e6f, 0x021f, "Rock Candy Gamepad for Xbox 360", 0, XTYPE_XBOX360 },
 -	{ 0x0e6f, 0x0246, "Rock Candy Gamepad for Xbox One 2015", 0, XTYPE_XBOXONE },
+-	{ 0x0e6f, 0x024c, "PDP Victrix Pro BFG Wired Controller for Xbox", 0, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x02a0, "PDP Xbox One Controller", 0, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x02a1, "PDP Xbox One Controller", 0, XTYPE_XBOXONE },
 -	{ 0x0e6f, 0x02a2, "PDP Wired Controller for Xbox One - Crimson Red", 0, XTYPE_XBOXONE },
@@ -33311,7 +32810,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x0e6f, 0x0401, "Logic3 Controller", 0, XTYPE_XBOX360 },
  	{ 0x0e6f, 0x0413, "Afterglow AX.1 Gamepad for Xbox 360", 0, XTYPE_XBOX360 },
  	{ 0x0e6f, 0x0501, "PDP Xbox 360 Controller", 0, XTYPE_XBOX360 },
-@@ -251,23 +200,13 @@ static const struct xpad_device {
+@@ -252,23 +201,13 @@ static const struct xpad_device {
  	{ 0x0f0d, 0x000d, "Hori Fighting Stick EX2", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
  	{ 0x0f0d, 0x0016, "Hori Real Arcade Pro.EX", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
  	{ 0x0f0d, 0x001b, "Hori Real Arcade Pro VX", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
@@ -33335,7 +32834,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x11c9, 0x55f0, "Nacon GC-100XF", 0, XTYPE_XBOX360 },
  	{ 0x11ff, 0x0511, "PXN V900", 0, XTYPE_XBOX360 },
  	{ 0x1209, 0x2882, "Ardwiino Controller", 0, XTYPE_XBOX360 },
-@@ -280,9 +219,6 @@ static const struct xpad_device {
+@@ -281,9 +220,6 @@ static const struct xpad_device {
  	{ 0x1430, 0xf801, "RedOctane Controller", 0, XTYPE_XBOX360 },
  	{ 0x146b, 0x0601, "BigBen Interactive XBOX 360 Controller", 0, XTYPE_XBOX360 },
  	{ 0x146b, 0x0604, "Bigben Interactive DAIJA Arcade Stick", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
@@ -33345,7 +32844,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x1532, 0x0a57, "Razer Wolverine V3 Pro (Wired)", 0, XTYPE_XBOX360 },
  	{ 0x1532, 0x0a59, "Razer Wolverine V3 Pro (2.4 GHz Dongle)", 0, XTYPE_XBOX360 },
  	{ 0x15e4, 0x3f00, "Power A Mini Pro Elite", 0, XTYPE_XBOX360 },
-@@ -331,15 +267,12 @@ static const struct xpad_device {
+@@ -340,15 +276,12 @@ static const struct xpad_device {
  	{ 0x1bad, 0xfa01, "MadCatz GamePad", 0, XTYPE_XBOX360 },
  	{ 0x1bad, 0xfd00, "Razer Onza TE", 0, XTYPE_XBOX360 },
  	{ 0x1bad, 0xfd01, "Razer Onza", 0, XTYPE_XBOX360 },
@@ -33363,7 +32862,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x2345, 0xe00b, "Machenike G5 Pro Controller", 0, XTYPE_XBOX360 },
  	{ 0x24c6, 0x5000, "Razer Atrox Arcade Stick", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
  	{ 0x24c6, 0x5300, "PowerA MINI PROEX Controller", 0, XTYPE_XBOX360 },
-@@ -347,9 +280,6 @@ static const struct xpad_device {
+@@ -356,9 +289,6 @@ static const struct xpad_device {
  	{ 0x24c6, 0x530a, "Xbox 360 Pro EX Controller", 0, XTYPE_XBOX360 },
  	{ 0x24c6, 0x531a, "PowerA Pro Ex", 0, XTYPE_XBOX360 },
  	{ 0x24c6, 0x5397, "FUS1ON Tournament Controller", 0, XTYPE_XBOX360 },
@@ -33373,7 +32872,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x24c6, 0x5500, "Hori XBOX 360 EX 2 with Turbo", 0, XTYPE_XBOX360 },
  	{ 0x24c6, 0x5501, "Hori Real Arcade Pro VX-SA", 0, XTYPE_XBOX360 },
  	{ 0x24c6, 0x5502, "Hori Fighting Stick VX Alt", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
-@@ -358,29 +288,18 @@ static const struct xpad_device {
+@@ -367,30 +297,18 @@ static const struct xpad_device {
  	{ 0x24c6, 0x550d, "Hori GEM Xbox controller", 0, XTYPE_XBOX360 },
  	{ 0x24c6, 0x550e, "Hori Real Arcade Pro V Kai 360", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
  	{ 0x24c6, 0x5510, "Hori Fighting Commander ONE (Xbox 360/PC Mode)", MAP_TRIGGERS_TO_BUTTONS, XTYPE_XBOX360 },
@@ -33391,6 +32890,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x2993, 0x2001, "TECNO Pocket Go", 0, XTYPE_XBOX360 },
 -	{ 0x2dc8, 0x2000, "8BitDo Pro 2 Wired Controller fox Xbox", 0, XTYPE_XBOXONE },
 -	{ 0x2dc8, 0x200f, "8BitDo Ultimate 3-mode Controller for Xbox", MAP_SHARE_BUTTON, XTYPE_XBOXONE },
+-	{ 0x2dc8, 0x201e, "8BitDo Pro 2 Wired Controller for Xbox", MAP_SHARE_BUTTON, XTYPE_XBOXONE },
  	{ 0x2dc8, 0x3106, "8BitDo Ultimate Wireless / Pro 2 Wired Controller", 0, XTYPE_XBOX360 },
  	{ 0x2dc8, 0x3109, "8BitDo Ultimate Wireless Bluetooth", 0, XTYPE_XBOX360 },
  	{ 0x2dc8, 0x310a, "8BitDo Ultimate 2C Wireless Controller", 0, XTYPE_XBOX360 },
@@ -33403,7 +32903,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x31e3, 0x1100, "Wooting One", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1200, "Wooting Two", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1210, "Wooting Lekker", 0, XTYPE_XBOX360 },
-@@ -388,18 +307,12 @@ static const struct xpad_device {
+@@ -398,18 +316,12 @@ static const struct xpad_device {
  	{ 0x31e3, 0x1230, "Wooting Two HE (ARM)", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1300, "Wooting 60HE (AVR)", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1310, "Wooting 60HE (ARM)", 0, XTYPE_XBOX360 },
@@ -33422,7 +32922,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	{ 0x3767, 0x0101, "Fanatec Speedster 3 Forceshock Wheel", 0, XTYPE_XBOX },
  	{ 0x37d7, 0x2501, "Flydigi Apex 5", 0, XTYPE_XBOX360 },
  	{ 0x413d, 0x2104, "Black Shark Green Ghost Gamepad", 0, XTYPE_XBOX360 },
-@@ -457,13 +370,6 @@ static const signed short xpad_abs_triggers[] = {
+@@ -467,13 +379,6 @@ static const signed short xpad_abs_triggers[] = {
  	-1
  };
  
@@ -33436,7 +32936,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  /*
   * Xbox 360 has a vendor-specific class, so we cannot match it with only
   * USB_INTERFACE_INFO (also specifically refused by USB subsystem), so we
-@@ -480,49 +386,31 @@ static const signed short xpad_btn_paddles[] = {
+@@ -490,49 +395,31 @@ static const signed short xpad_btn_paddles[] = {
  	{ XPAD_XBOX360_VENDOR_PROTOCOL((vend), 1) }, \
  	{ XPAD_XBOX360_VENDOR_PROTOCOL((vend), 129) }
  
@@ -33488,7 +32988,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	XPAD_XBOX360_VENDOR(0x11c9),		/* Nacon GC100XF */
  	XPAD_XBOX360_VENDOR(0x11ff),		/* PXN V900 */
  	XPAD_XBOX360_VENDOR(0x1209),		/* Ardwiino Controllers */
-@@ -530,7 +418,6 @@ static const struct usb_device_id xpad_table[] = {
+@@ -540,7 +427,6 @@ static const struct usb_device_id xpad_table[] = {
  	XPAD_XBOX360_VENDOR(0x1430),		/* RedOctane Xbox 360 controllers */
  	XPAD_XBOX360_VENDOR(0x146b),		/* Bigben Interactive controllers */
  	XPAD_XBOX360_VENDOR(0x1532),		/* Razer Sabertooth */
@@ -33496,9 +32996,9 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	XPAD_XBOX360_VENDOR(0x15e4),		/* Numark Xbox 360 controllers */
  	XPAD_XBOX360_VENDOR(0x162e),		/* Joytech Xbox 360 controllers */
  	XPAD_XBOX360_VENDOR(0x1689),		/* Razer Onza */
-@@ -538,31 +425,24 @@ static const struct usb_device_id xpad_table[] = {
- 	XPAD_XBOX360_VENDOR(0x1949),		/* Amazon controllers */
+@@ -550,31 +436,24 @@ static const struct usb_device_id xpad_table[] = {
  	XPAD_XBOX360_VENDOR(0x1a86),		/* Nanjing Qinheng Microelectronics (WCH) */
+ 	XPAD_XBOX360_VENDOR(0x1b1c),		/* Corsair controllers */
  	XPAD_XBOX360_VENDOR(0x1bad),		/* Harmonix Rock Band guitar and drums */
 +	#if !IS_REACHABLE(CONFIG_ZOTAC_ZONE_HID)
  	XPAD_XBOX360_VENDOR(0x1ee9),		/* ZOTAC Technology Limited */
@@ -33530,7 +33030,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	XPAD_XBOX360_VENDOR(0x37d7),		/* Flydigi Controllers */
  	XPAD_XBOX360_VENDOR(0x3958),		/* RedOctane Games Controllers */
  	XPAD_XBOX360_VENDOR(0x413d),		/* Black Shark Green Ghost Controller */
-@@ -571,162 +451,6 @@ static const struct usb_device_id xpad_table[] = {
+@@ -583,162 +462,6 @@ static const struct usb_device_id xpad_table[] = {
  
  MODULE_DEVICE_TABLE(usb, xpad_table);
  
@@ -33693,7 +33193,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  struct xpad_output_packet {
  	u8 data[XPAD_PKT_LEN];
  	u8 len;
-@@ -756,7 +480,6 @@ struct usb_xpad {
+@@ -768,7 +491,6 @@ struct usb_xpad {
  	struct urb *irq_out;		/* urb for interrupt out report */
  	struct usb_anchor irq_out_anchor;
  	bool irq_out_active;		/* we must not use an active URB */
@@ -33701,7 +33201,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	unsigned char *odata;		/* output data */
  	dma_addr_t odata_dma;
  	spinlock_t odata_lock;
-@@ -778,14 +501,10 @@ struct usb_xpad {
+@@ -790,14 +512,10 @@ struct usb_xpad {
  	const char *name;		/* name of the device */
  	struct work_struct work;	/* init/remove device from callback */
  	time64_t mode_btn_down_ts;
@@ -33716,7 +33216,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  static void xpad360w_poweroff_controller(struct usb_xpad *xpad);
  
  /*
-@@ -1023,187 +742,6 @@ static void xpad360w_process_packet(struct usb_xpad *xpad, u16 cmd, unsigned cha
+@@ -1035,187 +753,6 @@ static void xpad360w_process_packet(struct usb_xpad *xpad, u16 cmd, unsigned cha
  	rcu_read_unlock();
  }
  
@@ -33904,7 +33404,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  static void xpad_irq_in(struct urb *urb)
  {
  	struct usb_xpad *xpad = urb->context;
-@@ -1236,9 +774,6 @@ static void xpad_irq_in(struct urb *urb)
+@@ -1248,9 +785,6 @@ static void xpad_irq_in(struct urb *urb)
  	case XTYPE_XBOX360W:
  		xpad360w_process_packet(xpad, 0, xpad->idata);
  		break;
@@ -33914,7 +33414,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	default:
  		xpad_process_packet(xpad, 0, xpad->idata);
  	}
-@@ -1250,56 +785,12 @@ static void xpad_irq_in(struct urb *urb)
+@@ -1262,56 +796,12 @@ static void xpad_irq_in(struct urb *urb)
  			__func__, retval);
  }
  
@@ -33971,7 +33471,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	for (i = 0; i < XPAD_NUM_OUT_PACKETS; i++) {
  		if (++xpad->last_out_packet >= XPAD_NUM_OUT_PACKETS)
  			xpad->last_out_packet = 0;
-@@ -1475,57 +966,6 @@ static int xpad_inquiry_pad_presence(struct usb_xpad *xpad)
+@@ -1487,57 +977,6 @@ static int xpad_inquiry_pad_presence(struct usb_xpad *xpad)
  	return xpad_try_sending_next_out_packet(xpad);
  }
  
@@ -34029,7 +33529,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  #ifdef CONFIG_JOYSTICK_XPAD_FF
  static int xpad_play_effect(struct input_dev *dev, void *data, struct ff_effect *effect)
  {
-@@ -1584,24 +1024,6 @@ static int xpad_play_effect(struct input_dev *dev, void *data, struct ff_effect
+@@ -1596,24 +1035,6 @@ static int xpad_play_effect(struct input_dev *dev, void *data, struct ff_effect
  		packet->pending = true;
  		break;
  
@@ -34054,7 +33554,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	default:
  		dev_dbg(&xpad->dev->dev,
  			"%s - rumble command sent to unsupported xpad type: %d\n",
-@@ -1780,13 +1202,6 @@ static int xpad_start_input(struct usb_xpad *xpad)
+@@ -1792,13 +1213,6 @@ static int xpad_start_input(struct usb_xpad *xpad)
  	if (usb_submit_urb(xpad->irq_in, GFP_KERNEL))
  		return -EIO;
  
@@ -34068,7 +33568,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	if (xpad->xtype == XTYPE_XBOX360) {
  		/*
  		 * Some third-party controllers Xbox 360-style controllers
-@@ -1892,8 +1307,6 @@ static void xpad_close(struct input_dev *dev)
+@@ -1904,8 +1318,6 @@ static void xpad_close(struct input_dev *dev)
  
  static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs)
  {
@@ -34077,7 +33577,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	switch (abs) {
  	case ABS_X:
  	case ABS_Y:
-@@ -1903,18 +1316,12 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs)
+@@ -1915,18 +1327,12 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs)
  		break;
  	case ABS_Z:
  	case ABS_RZ:	/* the triggers (if mapped to axes) */
@@ -34097,7 +33597,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	default:
  		input_set_abs_params(input_dev, abs, 0, 0, 0, 0);
  		break;
-@@ -1969,12 +1376,9 @@ static int xpad_init_input(struct usb_xpad *xpad)
+@@ -1981,12 +1387,9 @@ static int xpad_init_input(struct usb_xpad *xpad)
  		input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
  
  	/* set up model-specific ones */
@@ -34111,7 +33611,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	} else {
  		for (i = 0; xpad_btn[i] >= 0; i++)
  			input_set_capability(input_dev, EV_KEY, xpad_btn[i]);
-@@ -1986,12 +1390,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
+@@ -1998,12 +1401,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
  					     xpad_btn_pad[i]);
  	}
  
@@ -34124,7 +33624,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	/*
  	 * This should be a simple else block. However historically
  	 * xbox360w has mapped DPAD to buttons while xbox360 did not. This
-@@ -2013,10 +1411,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
+@@ -2025,10 +1422,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
  			xpad_set_up_abs(input_dev, xpad_abs_triggers[i]);
  	}
  
@@ -34135,7 +33635,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	error = xpad_init_ff(xpad);
  	if (error)
  		goto err_free_input;
-@@ -2082,8 +1476,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
+@@ -2094,8 +1487,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
  	xpad->mapping = xpad_device[i].mapping;
  	xpad->xtype = xpad_device[i].xtype;
  	xpad->name = xpad_device[i].name;
@@ -34144,7 +33644,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  
  	xpad->packet_type = PKT_XB;
  	INIT_WORK(&xpad->work, xpad_presence_work);
-@@ -2092,8 +1484,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
+@@ -2104,8 +1495,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
  		if (intf->cur_altsetting->desc.bInterfaceClass == USB_CLASS_VENDOR_SPEC) {
  			if (intf->cur_altsetting->desc.bInterfaceProtocol == 129)
  				xpad->xtype = XTYPE_XBOX360W;
@@ -34153,7 +33653,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  			else
  				xpad->xtype = XTYPE_XBOX360;
  		} else {
-@@ -2108,17 +1498,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
+@@ -2120,17 +1509,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
  			xpad->mapping |= MAP_STICKS_TO_NULL;
  	}
  
@@ -34171,7 +33671,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	ep_irq_in = ep_irq_out = NULL;
  
  	for (i = 0; i < 2; i++) {
-@@ -2284,7 +1663,6 @@ static int xpad_resume(struct usb_interface *intf)
+@@ -2296,7 +1674,6 @@ static int xpad_resume(struct usb_interface *intf)
  	struct usb_xpad *xpad = usb_get_intfdata(intf);
  	struct input_dev *input = xpad->dev;
  
@@ -34179,7 +33679,7 @@ index 2da0b7f1722a..69b6b516c25d 100644
  	if (xpad->xtype == XTYPE_XBOX360W)
  		return xpad360w_start_input(xpad);
  
-@@ -2293,15 +1671,6 @@ static int xpad_resume(struct usb_interface *intf)
+@@ -2305,15 +1682,6 @@ static int xpad_resume(struct usb_interface *intf)
  	if (input_device_enabled(input))
  		return xpad_start_input(xpad);
  
@@ -35600,7 +35100,7 @@ index 54a923ba4f1e..6183758e8ac9 100644
  }
  
 diff --git a/drivers/mmc/core/host.c b/drivers/mmc/core/host.c
-index b7ce3137d452..2625d918081b 100644
+index 828078b3f962..b53909b3edd1 100644
 --- a/drivers/mmc/core/host.c
 +++ b/drivers/mmc/core/host.c
 @@ -22,6 +22,7 @@
@@ -35611,7 +35111,7 @@ index b7ce3137d452..2625d918081b 100644
  #include "core.h"
  #include "crypto.h"
  #include "host.h"
-@@ -703,3 +704,17 @@ void mmc_free_host(struct mmc_host *host)
+@@ -704,3 +705,17 @@ void mmc_free_host(struct mmc_host *host)
  }
  
  EXPORT_SYMBOL(mmc_free_host);
@@ -35681,7 +35181,7 @@ index 948948ca9b4a..5335220f651d 100644
  };
  
 diff --git a/drivers/mmc/host/rtsx_pci_sdmmc.c b/drivers/mmc/host/rtsx_pci_sdmmc.c
-index 8dfbc62f165b..a1502e7ab8a6 100644
+index d25d4cb59bc9..b9bfd1e6bfa4 100644
 --- a/drivers/mmc/host/rtsx_pci_sdmmc.c
 +++ b/drivers/mmc/host/rtsx_pci_sdmmc.c
 @@ -7,6 +7,7 @@
@@ -35864,8 +35364,8 @@ index 8dfbc62f165b..a1502e7ab8a6 100644
 +
  	mmc->caps2 = MMC_CAP2_NO_PRESCAN_POWERUP | MMC_CAP2_FULL_PWR_CYCLE |
  		MMC_CAP2_NO_SDIO;
- 	mmc->max_current_330 = 400;
-@@ -1492,6 +1626,7 @@ static int rtsx_pci_sdmmc_drv_probe(struct platform_device *pdev)
+ 
+@@ -1497,6 +1631,7 @@ static int rtsx_pci_sdmmc_drv_probe(struct platform_device *pdev)
  
  	ret = mmc_add_host(mmc);
  	if (ret) {
@@ -35873,7 +35373,7 @@ index 8dfbc62f165b..a1502e7ab8a6 100644
  		pm_runtime_dont_use_autosuspend(&pdev->dev);
  		pm_runtime_disable(&pdev->dev);
  		return ret;
-@@ -1507,10 +1642,15 @@ static void rtsx_pci_sdmmc_drv_remove(struct platform_device *pdev)
+@@ -1512,10 +1647,15 @@ static void rtsx_pci_sdmmc_drv_remove(struct platform_device *pdev)
  	struct mmc_host *mmc;
  
  	pcr = host->pcr;
@@ -36076,7 +35576,7 @@ index 93f9a03c48dc..e799f24754bc 100644
  
  static void ath11k_hw_ipq8074_reo_setup(struct ath11k_base *ab)
 diff --git a/drivers/net/wireless/ath/ath11k/mac.c b/drivers/net/wireless/ath/ath11k/mac.c
-index 2d55cdc4d165..325ced7055a5 100644
+index c1fa42edd363..1b7c383ef309 100644
 --- a/drivers/net/wireless/ath/ath11k/mac.c
 +++ b/drivers/net/wireless/ath/ath11k/mac.c
 @@ -9,6 +9,7 @@
@@ -36106,7 +35606,7 @@ index 2d55cdc4d165..325ced7055a5 100644
  enum nl80211_he_ru_alloc ath11k_mac_phy_he_ru_to_nl80211_he_ru_alloc(u16 ru_phy)
  {
  	enum nl80211_he_ru_alloc ret;
-@@ -3080,6 +3086,27 @@ static bool ath11k_mac_vif_recalc_sta_he_txbf(struct ath11k *ar,
+@@ -3097,6 +3103,27 @@ static bool ath11k_mac_vif_recalc_sta_he_txbf(struct ath11k *ar,
  			hemode |= FIELD_PREP(HE_MODE_SU_TX_BFER, HE_SU_BFER_ENABLE);
  	}
  
@@ -36134,7 +35634,7 @@ index 2d55cdc4d165..325ced7055a5 100644
  	ret = ath11k_wmi_vdev_set_param_cmd(ar, arvif->vdev_id, param, hemode);
  	if (ret) {
  		ath11k_warn(ar->ab, "failed to submit vdev param txbf 0x%x: %d\n",
-@@ -6541,6 +6568,10 @@ static void ath11k_mac_op_tx(struct ieee80211_hw *hw,
+@@ -6558,6 +6585,10 @@ static void ath11k_mac_op_tx(struct ieee80211_hw *hw,
  
  	ret = ath11k_dp_tx(ar, arvif, arsta, skb);
  	if (unlikely(ret)) {
@@ -36145,7 +35645,7 @@ index 2d55cdc4d165..325ced7055a5 100644
  		ath11k_warn(ar->ab, "failed to transmit frame %d\n", ret);
  		ieee80211_free_txskb(ar->hw, skb);
  	}
-@@ -9269,9 +9300,14 @@ ath11k_mac_op_reconfig_complete(struct ieee80211_hw *hw,
+@@ -9287,9 +9318,14 @@ ath11k_mac_op_reconfig_complete(struct ieee80211_hw *hw,
  			 * the recovery has to be done for each radio
  			 */
  			if (recovery_count == ab->num_radios) {
@@ -36160,7 +35660,7 @@ index 2d55cdc4d165..325ced7055a5 100644
  				atomic_set(&ab->fail_cont_count, 0);
  				ath11k_dbg(ab, ATH11K_DBG_BOOT, "reset success\n");
  			}
-@@ -10606,6 +10642,8 @@ static int __ath11k_mac_register(struct ath11k *ar)
+@@ -10618,6 +10654,8 @@ static int __ath11k_mac_register(struct ath11k *ar)
  	ar->hw->wiphy->iftype_ext_capab = ath11k_iftypes_ext_capa;
  	ar->hw->wiphy->num_iftype_ext_capab =
  		ARRAY_SIZE(ath11k_iftypes_ext_capa);
@@ -65031,10 +64531,10 @@ index b02876f1ae38..7859a5078728 100644
  #define PM_HIBERNATION_PREPARE	0x0001 /* Going to hibernate */
  #define PM_POST_HIBERNATION	0x0002 /* Hibernation finished */
 diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
-index f5abf1db7558..1ce103516aaf 100644
+index 7354ba079363..1183aff95614 100644
 --- a/include/net/cfg80211.h
 +++ b/include/net/cfg80211.h
-@@ -5690,7 +5690,6 @@ struct cfg80211_ops {
+@@ -5691,7 +5691,6 @@ struct cfg80211_ops {
   *	set this flag to update channels on beacon hints.
   * @WIPHY_FLAG_SUPPORTS_NSTR_NONPRIMARY: support connection to non-primary link
   *	of an NSTR mobile AP MLD.
@@ -65042,7 +64542,7 @@ index f5abf1db7558..1ce103516aaf 100644
   */
  enum wiphy_flags {
  	WIPHY_FLAG_SUPPORTS_EXT_KEK_KCK		= BIT(0),
-@@ -5702,7 +5701,7 @@ enum wiphy_flags {
+@@ -5703,7 +5702,7 @@ enum wiphy_flags {
  	WIPHY_FLAG_4ADDR_STATION		= BIT(6),
  	WIPHY_FLAG_CONTROL_PORT_PROTOCOL	= BIT(7),
  	WIPHY_FLAG_IBSS_RSN			= BIT(8),
@@ -65193,61 +64693,30 @@ index 4753a67d0f0f..2c7ba6a36446 100644
  {
  	struct dmem_cgroup_region *region;
 diff --git a/kernel/power/hibernate.c b/kernel/power/hibernate.c
-index d2479c69d71a..bd28975b8cad 100644
+index c13f68ab7f6e..03eeaa96b67c 100644
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
-@@ -408,9 +408,18 @@ int hibernation_snapshot(int platform_mode)
- 	if (error)
- 		goto Close;
+@@ -75,6 +75,7 @@ enum {
+ static int hibernation_mode = HIBERNATION_SHUTDOWN;
  
-+	error = dpm_prepare(PMSG_FREEZE);
-+	if (error)
-+		goto Complete;
-+
-+	/* Preallocate image memory before freezing kernel threads and shutting down devices. */
-+	error = hibernate_preallocate_memory();
-+	if (error)
-+		goto Complete;
-+
- 	error = freeze_kernel_threads();
- 	if (error)
--		goto Close;
-+		goto Cleanup;
+ bool freezer_test_done;
++static bool platform_prepare_test_done;
  
- 	if (hibernation_test(TEST_FREEZER)) {
+ static const struct platform_hibernation_ops *hibernation_ops;
  
-@@ -422,15 +431,6 @@ int hibernation_snapshot(int platform_mode)
- 		goto Thaw;
+@@ -638,6 +639,11 @@ int hibernation_platform_enter(void)
+ 		goto Power_up;
  	}
  
--	error = dpm_prepare(PMSG_FREEZE);
--	if (error)
--		goto Complete;
--
--	/* Preallocate image memory before shutting down devices. */
--	error = hibernate_preallocate_memory();
--	if (error)
--		goto Complete;
--
- 	console_suspend_all();
- 	pm_restrict_gfp_mask();
- 
-@@ -464,10 +464,12 @@ int hibernation_snapshot(int platform_mode)
- 	platform_end(platform_mode);
- 	return error;
- 
-- Complete:
--	dpm_complete(PMSG_RECOVER);
-  Thaw:
- 	thaw_kernel_threads();
-+ Cleanup:
-+	swsusp_free();
-+ Complete:
-+	dpm_complete(PMSG_RECOVER);
- 	goto Close;
- }
- 
-@@ -672,9 +674,16 @@ int hibernation_platform_enter(void)
++	if (hibernation_test(TEST_HIBERNATE_PLATFORM_PREPARE)) {
++		platform_prepare_test_done = true;
++		goto Power_up;
++	}
++
+ 	hibernation_ops->enter();
+ 	/* We should never get here */
+ 	while (1);
+@@ -674,9 +680,16 @@ int hibernation_platform_enter(void)
   * state corresponding to hibernation, or try to power it off or reboot,
   * depending on the value of hibernation_mode.
   */
@@ -65266,7 +64735,16 @@ index d2479c69d71a..bd28975b8cad 100644
  
  #ifdef CONFIG_SUSPEND
  	if (hibernation_mode == HIBERNATION_SUSPEND) {
-@@ -718,9 +727,9 @@ static void power_down(void)
+@@ -695,6 +708,8 @@ static void power_down(void)
+ 		break;
+ 	case HIBERNATION_PLATFORM:
+ 		error = hibernation_platform_enter();
++		if (platform_prepare_test_done)
++			goto exit;
+ 		if (error == -EAGAIN || error == -EBUSY) {
+ 			events_check_enabled = false;
+ 			pr_info("Wakeup event detected during hibernation, rolling back.\n");
+@@ -720,9 +735,9 @@ static void power_down(void)
  
  exit:
  	/* Restore swap signature. */
@@ -65278,24 +64756,77 @@ index d2479c69d71a..bd28975b8cad 100644
  }
  
  static int load_image_and_restore(void)
-@@ -842,7 +851,11 @@ int hibernate(void)
+@@ -817,6 +832,15 @@ int hibernate(void)
+ 	if (in_suspend) {
+ 		unsigned int flags = 0;
+ 
++		if (hibernation_test(TEST_HIBERNATE_SNAPSHOT)) {
++			swsusp_free();
++			/* recover any devices that refused to thaw */
++			dpm_resume_suspended_devices(PMSG_RECOVER);
++			in_suspend = 0;
++			pm_restore_gfp_mask();
++			goto Free_bitmaps;
++		}
++
+ 		if (hibernation_mode == HIBERNATION_PLATFORM)
+ 			flags |= SF_PLATFORM_MODE;
+ 		if (nocompress) {
+@@ -840,11 +864,27 @@ int hibernate(void)
+ 		pm_pr_dbg("Writing hibernation image.\n");
+ 		error = swsusp_write(flags);
+ 		swsusp_free();
++
++		if (hibernation_test(TEST_HIBERNATE_IMAGE_WRITE)) {
++			/* Restore swap signature. */
++			if (swsusp_unmark())
++				pr_err("Swap will be unusable! Try swapon -a.\n");
++			/* recover any devices that refused to thaw */
++			dpm_resume_suspended_devices(PMSG_RECOVER);
++			in_suspend = 0;
++			pm_restore_gfp_mask();
++			goto Free_bitmaps;
++		}
++
+ 		if (!error) {
  			if (hibernation_mode == HIBERNATION_TEST_RESUME)
  				snapshot_test = true;
  			else
 -				power_down();
 +				error = power_down();
 +		}
-+		if (error) {
++		if (error || platform_prepare_test_done) {
 +			/* recover any devices that refused to thaw */
 +			dpm_resume_suspended_devices(PMSG_RECOVER);
  		}
  		in_suspend = 0;
  		pm_restore_gfp_mask();
+@@ -864,8 +904,9 @@ int hibernate(void)
+ 	}
+ 	thaw_processes();
+ 
+-	/* Don't bother checking whether freezer_test_done is true */
++	/* Don't bother checking whether any of the test_done flags are true */
+ 	freezer_test_done = false;
++	platform_prepare_test_done = false;
+  Exit:
+ 	filesystems_thaw();
+  Notify:
 diff --git a/kernel/power/main.c b/kernel/power/main.c
-index 5429e9f19b65..7f8a44470a5e 100644
+index 5429e9f19b65..47a8d7c56c2b 100644
 --- a/kernel/power/main.c
 +++ b/kernel/power/main.c
-@@ -639,6 +639,7 @@ bool pm_sleep_transition_in_progress(void)
+@@ -325,6 +325,9 @@ int pm_test_level = TEST_NONE;
+ 
+ static const char * const pm_tests[__TEST_AFTER_LAST] = {
+ 	[TEST_NONE] = "none",
++	[TEST_HIBERNATE_PLATFORM_PREPARE] = "disk-platform-prepare",
++	[TEST_HIBERNATE_IMAGE_WRITE] = "disk-write",
++	[TEST_HIBERNATE_SNAPSHOT] = "disk-snapshot",
+ 	[TEST_CORE] = "core",
+ 	[TEST_CPUS] = "processors",
+ 	[TEST_PLATFORM] = "platform",
+@@ -639,6 +642,7 @@ bool pm_sleep_transition_in_progress(void)
  {
  	return pm_suspend_in_progress() || hibernation_in_progress();
  }
@@ -65303,6 +64834,177 @@ index 5429e9f19b65..7f8a44470a5e 100644
  #endif /* CONFIG_PM_SLEEP */
  
  #ifdef CONFIG_PM_SLEEP_DEBUG
+diff --git a/kernel/power/power.h b/kernel/power/power.h
+index 75b63843886e..9d11fdf28d4a 100644
+--- a/kernel/power/power.h
++++ b/kernel/power/power.h
+@@ -255,6 +255,9 @@ static inline int restore_highmem(void) { return 0; }
+ enum {
+ 	/* keep first */
+ 	TEST_NONE,
++	TEST_HIBERNATE_PLATFORM_PREPARE,
++	TEST_HIBERNATE_IMAGE_WRITE,
++	TEST_HIBERNATE_SNAPSHOT,
+ 	TEST_CORE,
+ 	TEST_CPUS,
+ 	TEST_PLATFORM,
+diff --git a/kernel/power/snapshot.c b/kernel/power/snapshot.c
+index 4a73927cc55b..a9d385d4fb6d 100644
+--- a/kernel/power/snapshot.c
++++ b/kernel/power/snapshot.c
+@@ -13,6 +13,7 @@
+ #include <linux/version.h>
+ #include <linux/module.h>
+ #include <linux/mm.h>
++#include <linux/sched/clock.h>
+ #include <linux/suspend.h>
+ #include <linux/delay.h>
+ #include <linux/bitops.h>
+@@ -39,6 +40,9 @@
+ 
+ #include "power.h"
+ 
++static bool zerocheck;
++module_param(zerocheck, bool, 0644);
++
+ #if defined(CONFIG_STRICT_KERNEL_RWX) && defined(CONFIG_ARCH_HAS_SET_MEMORY)
+ static bool hibernate_restore_protection;
+ static bool hibernate_restore_protection_active;
+@@ -1424,11 +1428,9 @@ static unsigned int count_data_pages(void)
+ }
+ 
+ /*
+- * This is needed, because copy_page and memcpy are not usable for copying
+- * task structs. Returns true if the page was filled with only zeros,
+- * otherwise false.
++ * Returns true if the page was filled with only zeros, otherwise false.
+  */
+-static inline bool do_copy_page(long *dst, long *src)
++static inline bool do_copy_page_zerocheck(long *dst, long *src)
+ {
+ 	long z = 0;
+ 	int n;
+@@ -1440,6 +1442,12 @@ static inline bool do_copy_page(long *dst, long *src)
+ 	return !z;
+ }
+ 
++static inline bool do_copy_page_nozerocheck(long *dst, long *src)
++{
++	copy_page(dst, src);
++	return false;
++}
++
+ /**
+  * safe_copy_page - Copy a page in a safe way.
+  *
+@@ -1449,15 +1457,22 @@ static inline bool do_copy_page(long *dst, long *src)
+  * always returns 'true'. Returns true if the page was entirely composed of
+  * zeros, otherwise it will return false.
+  */
+-static bool safe_copy_page(void *dst, struct page *s_page)
++static bool safe_copy_page(void *dst, struct page *s_page,
++			   bool zero_check)
+ {
+ 	bool zeros_only;
+ 
+ 	if (kernel_page_present(s_page)) {
+-		zeros_only = do_copy_page(dst, page_address(s_page));
++		if (zero_check)
++			zeros_only = do_copy_page_zerocheck(dst, page_address(s_page));
++		else
++			zeros_only = do_copy_page_nozerocheck(dst, page_address(s_page));
+ 	} else {
+ 		hibernate_map_page(s_page);
+-		zeros_only = do_copy_page(dst, page_address(s_page));
++		if (zero_check)
++			zeros_only = do_copy_page_zerocheck(dst, page_address(s_page));
++		else
++			zeros_only = do_copy_page_nozerocheck(dst, page_address(s_page));
+ 		hibernate_unmap_page(s_page);
+ 	}
+ 	return zeros_only;
+@@ -1470,7 +1485,8 @@ static inline struct page *page_is_saveable(struct zone *zone, unsigned long pfn
+ 		saveable_highmem_page(zone, pfn) : saveable_page(zone, pfn);
+ }
+ 
+-static bool copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
++static bool copy_data_page(unsigned long dst_pfn, unsigned long src_pfn,
++			   bool zero_check)
+ {
+ 	struct page *s_page, *d_page;
+ 	void *src, *dst;
+@@ -1481,7 +1497,8 @@ static bool copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
+ 	if (PageHighMem(s_page)) {
+ 		src = kmap_local_page(s_page);
+ 		dst = kmap_local_page(d_page);
+-		zeros_only = do_copy_page(dst, src);
++		zeros_only = zero_check ? do_copy_page_zerocheck(dst, src) :
++					  do_copy_page_nozerocheck(dst, src);
+ 		kunmap_local(dst);
+ 		kunmap_local(src);
+ 	} else {
+@@ -1490,12 +1507,13 @@ static bool copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
+ 			 * The page pointed to by src may contain some kernel
+ 			 * data modified by kmap_atomic()
+ 			 */
+-			zeros_only = safe_copy_page(buffer, s_page);
++			zeros_only = safe_copy_page(buffer, s_page, zero_check);
+ 			dst = kmap_local_page(d_page);
+ 			copy_page(dst, buffer);
+ 			kunmap_local(dst);
+ 		} else {
+-			zeros_only = safe_copy_page(page_address(d_page), s_page);
++			zeros_only = safe_copy_page(page_address(d_page), s_page,
++						    zero_check);
+ 		}
+ 	}
+ 	return zeros_only;
+@@ -1503,10 +1521,11 @@ static bool copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
+ #else
+ #define page_is_saveable(zone, pfn)	saveable_page(zone, pfn)
+ 
+-static inline int copy_data_page(unsigned long dst_pfn, unsigned long src_pfn)
++static inline int copy_data_page(unsigned long dst_pfn, unsigned long src_pfn,
++				 bool zero_check)
+ {
+ 	return safe_copy_page(page_address(pfn_to_page(dst_pfn)),
+-				pfn_to_page(src_pfn));
++				pfn_to_page(src_pfn), zero_check);
+ }
+ #endif /* CONFIG_HIGHMEM */
+ 
+@@ -1540,7 +1559,7 @@ static unsigned long copy_data_pages(struct memory_bitmap *copy_bm,
+ 		pfn = memory_bm_next_pfn(orig_bm);
+ 		if (unlikely(pfn == BM_END_OF_MAP))
+ 			break;
+-		if (copy_data_page(copy_pfn, pfn)) {
++		if (copy_data_page(copy_pfn, pfn, zerocheck)) {
+ 			memory_bm_set_bit(zero_bm, pfn);
+ 			/* Use this copy_pfn for a page that is not full of zeros */
+ 			continue;
+@@ -2109,6 +2128,7 @@ static int swsusp_alloc(struct memory_bitmap *copy_bm,
+ asmlinkage __visible int swsusp_save(void)
+ {
+ 	unsigned int nr_pages, nr_highmem;
++	ktime_t start, stop;
+ 
+ 	pm_deferred_pr_dbg("Creating image\n");
+ 
+@@ -2130,7 +2150,14 @@ asmlinkage __visible int swsusp_save(void)
+ 	 * Kill them.
+ 	 */
+ 	drain_local_pages(NULL);
++	start = ns_to_ktime(local_clock());
+ 	nr_copy_pages = copy_data_pages(&copy_bm, &orig_bm, &zero_bm);
++	stop = ns_to_ktime(local_clock());
++	/*
++	 * Zero pages are overwritten but still copied, so account for them
++	 * in speed calculation.
++	 */
++	swsusp_show_speed(start, stop, nr_pages + nr_highmem, "Copied");
+ 
+ 	/*
+ 	 * End of critical section. From now on, we can write to memory,
 diff --git a/kernel/power/suspend.c b/kernel/power/suspend.c
 index 57c44268698f..7ccec8425b75 100644
 --- a/kernel/power/suspend.c
@@ -65408,10 +65110,10 @@ index c626e9dc3c1c..12cb21ee5cbc 100644
  			}
  			if (!off)
 diff --git a/net/bluetooth/hci_sync.c b/net/bluetooth/hci_sync.c
-index a8d2a3f076e9..4809b3245ed1 100644
+index 110135848bd6..34fdb3b2b4d3 100644
 --- a/net/bluetooth/hci_sync.c
 +++ b/net/bluetooth/hci_sync.c
-@@ -2854,6 +2854,7 @@ static u8 hci_update_accept_list_sync(struct hci_dev *hdev)
+@@ -2862,6 +2862,7 @@ static u8 hci_update_accept_list_sync(struct hci_dev *hdev)
  	struct bdaddr_list *b, *t;
  	u8 num_entries = 0;
  	bool pend_conn, pend_report;
@@ -65419,7 +65121,7 @@ index a8d2a3f076e9..4809b3245ed1 100644
  	u8 filter_policy;
  	size_t i, n;
  	int err;
-@@ -2942,6 +2943,15 @@ static u8 hci_update_accept_list_sync(struct hci_dev *hdev)
+@@ -2950,6 +2951,15 @@ static u8 hci_update_accept_list_sync(struct hci_dev *hdev)
  			continue;
  		}
  
@@ -65435,7 +65137,7 @@ index a8d2a3f076e9..4809b3245ed1 100644
  		num_entries++;
  	}
  
-@@ -6450,7 +6460,7 @@ int hci_suspend_sync(struct hci_dev *hdev)
+@@ -6473,7 +6483,7 @@ int hci_suspend_sync(struct hci_dev *hdev)
  
  	if (hci_conn_count(hdev)) {
  		/* Soft disconnect everything (power off) */
@@ -65445,7 +65147,7 @@ index a8d2a3f076e9..4809b3245ed1 100644
  			/* Set state to BT_RUNNING so resume doesn't notify */
  			hdev->suspend_state = BT_RUNNING;
 diff --git a/net/wireless/reg.c b/net/wireless/reg.c
-index 1e8214d6b6d8..fd26fab065b3 100644
+index 3454afa038bf..e14a73f26dbb 100644
 --- a/net/wireless/reg.c
 +++ b/net/wireless/reg.c
 @@ -231,7 +231,7 @@ static DECLARE_WORK(reg_work, reg_todo);

@@ -1,0 +1,16 @@
+# Io: Valve's drop-in for systemd-logind (systemd-logind.service.d/
+# homedir-override.conf in steamos-customizations) sets
+# SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1. The swap file for hibernation
+# is created only when hibernating (steamos-tuning's io-hibernate hook), so
+# the swap that exists before (1 GiB) is too small for logind's check, and
+# CanHibernate and CanSuspendThenHibernate would answer "na". Here the runit
+# service sets it: Void's post_install runs as before, then the run script
+# gets the variable.
+eval "_io_void_$(declare -f post_install)"
+post_install() {
+	_io_void_post_install
+	vsed -i ${DESTDIR}/etc/sv/elogind/run \
+		-e 's|^exec /usr/libexec/elogind/elogind.wrapper$|export SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1\n&|'
+	grep -q '^export SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1$' ${DESTDIR}/etc/sv/elogind/run ||
+		msg_error "elogind-holo: run script not changed (Void's run script changed?)\n"
+}

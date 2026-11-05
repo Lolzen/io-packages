@@ -1,9 +1,6 @@
 case "${ACTION}" in
 post)
 	usr/libexec/io/io-i18n-supported 2>/dev/null || true
-	# Io's earlier timedatectl also wrote /etc/timezone (not used on Void
-	# or SteamOS); it would keep a stale zone from now on.
-	rm -f etc/timezone
 	# GRUB without its menu: Io boots at once, as SteamOS does. A boot that
 	# goes wrong ends in dracut's emergency shell anyway; the recovery stick
 	# keeps its menu. grub (a dependency) is configured before this runs.
@@ -15,6 +12,12 @@ post)
 		else
 			echo 'GRUB_TIMEOUT_STYLE=hidden' >> etc/default/grub
 		fi
+		# amdgpu.dcdebugmask 0x20000 -> 0x60000, as SteamOS since
+		# jupiter-hw-support 20261028.1: bit 0x40000 turns the firmware's
+		# custom brightness curve off, so brightness stays linear and reaches
+		# 100 % (Valve's kernel 7.3 no longer forces the linear curve). Only
+		# the value Io's images wrote is changed, not one set by hand.
+		sed -i 's/amdgpu\.dcdebugmask=0x20000\([ "]\)/amdgpu.dcdebugmask=0x60000\1/' etc/default/grub
 		# Into grub.cfg now on an installed system (an image build runs
 		# grub-mkconfig itself).
 		if [ -f boot/grub/grub.cfg ] && command -v grub-mkconfig > /dev/null 2>&1; then

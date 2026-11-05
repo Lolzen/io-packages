@@ -1,0 +1,101 @@
+#!/bin/bash
+# steamos-reset-tool - the command Steam runs for its factory reset, on Io
+# handed to io-factory-reset.
+#
+# Recorded on SteamOS 3.9.3 (2026-10-18): Steam runs, as deck,
+#   steamos-reset-tool os-status                        (only its exit status)
+#   steamos-reset-tool factory-reset --reset-os --reset-user-data
+# keeps every output line in its log, and on success restarts the Deck
+# itself. Valve's tool (steamos-reset, holo-reset-tool) runs its backends as
+# root through a setuid wrapper; Io's asks polkit instead (pkexec, the active
+# local session without a password, as the other Steam helpers).
+#
+#   os-status       is the system changed? (SteamOS: rootfs vs its image
+#                   index). Io's answer comes from the package check inside
+#                   the OS part, which needs minutes, so this only reports
+#                   that a check will run.
+#   factory-reset [--reset-os] [--reset-user-data] [--reset-all] [scanuuid=..]
+#                   io-factory-reset --prepare os|user|all; no argument means
+#                   all, as Valve's
+#   boot-status     what is pending for the next start
+#   cleanup, status sessions: Io keeps none ([] / {})
+# Output: messages on stderr, a JSON answer on stdout, as Valve's tool.
+# Exit status: 0 done (Steam restarts), 1 failed.
+
+set -u
+IO_RESET=/usr/bin/io-factory-reset
+VERSION=io-0.2
+
+if [ "$(id -u)" -ne 0 ]; then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+answer() {
+    # answer SERVICE STATUS MESSAGE [EXTRA-JSON]
+    local fmt='{"service": "%s",\n "version": "%s",\n "status": %s,\n "message": "%s"%s}\n'
+    printf "$fmt" "$1" "$VERSION" "$2" "$(json_escape "$3")" "${4:+, $4}"
+}
+
+boot_status() {
+    local list="" status=200
+    if "$IO_RESET" --status 2> /dev/null | grep -q '^pending'; then
+        list='{"device": "/home, /root, /var (the user state)", "label": "User-data"}'
+    fi
+    answer boot-status "$status" "Boot Status" "\"boot\": {\"current\": \"io\", \"next\": \"io\", \"reset-list\": [${list}]}"
+}
+
+verb=${1:-boot-status}
+[ $# -gt 0 ] && shift
+
+case $verb in
+    os-status)
+        [ -x "$IO_RESET" ] || { answer os-status 500 "io-factory-reset is not installed"; exit 1; }
+        echo "OS-Status started at $(date '+%F %T %z')" >&2
+        echo "Io checks the installed packages during the OS reset" >&2
+        answer os-status 200 "OS Status Check Complete" '"update": {"needed": 0, "id": ""}'
+        ;;
+    factory-reset)
+        [ -x "$IO_RESET" ] || { answer factory-reset 500 "io-factory-reset is not installed"; exit 1; }
+        os=0
+        user=0
+        for arg in "$@"; do
+            case $arg in
+                --reset-os) os=1 ;;
+                --reset-user-data) user=1 ;;
+                --reset-all) os=1; user=1 ;;
+                scanuuid=*) ;;
+                *) echo "$0: ignoring unknown argument $arg" >&2 ;;
+            esac
+        done
+        [ $os -eq 0 ] && [ $user -eq 0 ] && { os=1; user=1; }
+        case $os$user in
+            11) kind=all ;;
+            10) kind=os ;;
+            *) kind=user ;;
+        esac
+        echo "Factory-Reset $kind started at $(date '+%F %T %z')" >&2
+        if "$IO_RESET" --prepare "$kind"; then
+            echo "Factory reset ready" >&2
+            boot_status
+            exit 0
+        fi
+        echo "Factory reset failed, see /var/log/io-factory-reset.log" >&2
+        answer factory-reset 500 "Factory reset failed"
+        exit 1
+        ;;
+    boot-status)
+        boot_status
+        ;;
+    cleanup)
+        echo "[]"
+        ;;
+    status | debug)
+        echo "{}"
+        ;;
+    *)
+        echo "$0: Unrecognised action \"$verb\""
+        exit 1
+        ;;
+esac

@@ -1,7 +1,7 @@
 #!/bin/sh
 # io-start <gamemode|desktop> - start a session under its own D-Bus session
 # bus. SDDM runs it from the session files (gamescope-wayland.desktop,
-# io-desktop.desktop); which one it picks, io-steamos-manager decides.
+# io-desktop.desktop); which one it picks, steamos-manager decides.
 #
 # All output of the session (gamescope, Steam, Plasma, PipeWire, ...) goes
 # to a size-limited log instead of tty1:

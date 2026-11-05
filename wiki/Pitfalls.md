@@ -34,6 +34,12 @@ output.
 update check fails with a generic `http error 0` that reads like a network
 problem.
 
+**Steam's FPS counter shows the frames gamescope displays, not the frames
+a game renders.** An OpenGL game with V-Sync off under Steam's frame limit
+reads 30 FPS on any Mesa, whether or not it renders more frames that are
+never shown. To see what Mesa does, measure the game's own rate
+(`glxgears` prints it) or the power draw.
+
 **gamescope's process name is `gamescope-wl`**, not `gamescope`.
 
 **An empty `package/beta` means the desktop client's branch.** Steam on
@@ -56,6 +62,23 @@ converters) in `streaming_log.txt`.
 *Trying to create an encoder* line in `streaming_log.txt` means no frame
 ever came — look at PipeWire, not at VA-API.
 
+**Steam sets the Wi-Fi backend itself at every start.** With
+`STEAM_USE_WPASUPPLICANT=1` it keeps the backend set in Steam; without it it
+switches NetworkManager to iwd within seconds (Wi-Fi drops while
+NetworkManager restarts). SteamOS sets the variable in gamescope-session
+only, Io in the desktop session too (see [Deviations](Deviations)). A
+backend that changes on its own, or a desktop that asks for a known Wi-Fi
+password, points here: `steamosctl get-wifi-backend` in both modes.
+
+**After a hard power-off Steam may start its first setup again.** Steam
+writes `~/.steam/registry.vdf` without syncing it; switched off with the
+power button while Steam hung, the file came back as a fresh one, without
+the mark that setup is complete (`SetOOBEComplete` on SteamOS). Settings
+in `~/.local/share/Steam/config` (`config.vdf`, `loginusers.vdf`) survive,
+so the setup knows the account. Going through it again loses nothing.
+The file is Steam's own; to avoid it, stop a hung Steam over SSH instead
+(`steam -shutdown`, a reboot from the shell).
+
 **The question before switching to the desktop is Steam's.** Whether
 *Switch to Desktop* asks "Are you sure?" depends on the client: on Io the
 stable client of October 2026 switches after a two-second countdown
@@ -76,17 +99,39 @@ session, it leaves the bus and everything started with `setsid` running.
 `KillUserProcesses=yes` in elogind ends the session's processes, as on
 SteamOS.
 
+**steamos-manager offers `SessionManagement1` only with SDDM's
+`holo.conf`.** It checks for `/usr/lib/sddm/sddm.conf.d/holo.conf` (or the
+older `steamos.conf`); without it there is no mode switch and no default
+login mode, and no error says why. It writes `zz-holo-*` files in
+`/etc/sddm.conf.d`, or the older `zz-steamos-*` names while a file of that
+name exists.
+
+**steamos-manager's session half starts cecd.** It reads cecd's settings as
+it starts, and the call D-Bus-activates cecd. What has to be in cecd's
+configuration first (`steamosctl configure-cecd`, the device's name for the
+TV) must run before the session half starts.
+
+**Without a user service manager, the login mode comes from
+`XDG_CURRENT_DESKTOP`.** steamos-manager on runit takes game mode from
+`gamescope` in it (SDDM sets it from the session file's `DesktopNames`);
+the screen reader's interfaces appear only in game mode, as on SteamOS.
+
 **A daemon that is D-Bus activatable must not also be started by hand.**
 If a client asks for its name before the hand-started one has claimed it,
 the bus starts a second instance. Start it through the bus
 (`StartServiceByName`), so there is one way it comes up.
 
-**A child started with `Popen` and never waited for stays a zombie.**
-Start detached helpers with `setsid -f`, so the system reaps them.
-
 **`busctl --user` over SSH has no session bus.** Each Io session has its own
 bus; borrow its address from a process in it
 (`DBUS_SESSION_BUS_ADDRESS` from `/proc/$(pgrep -o -x steam)/environ`).
+
+**Without systemd, xdg-desktop-portal knows no host application's id.** It
+takes the id of a program that is not sandboxed from its systemd user unit
+(`app-steam@….service` → `steam`); Void builds it without systemd, so
+every such program arrives at the portal backends with the id `""`. A
+check for an app id (Valve's portal patch for Steam) never matches; the
+caller has to be recognised another way (the request handle carries its
+bus name).
 
 **A service must not be both a runit service and D-Bus-activated.** At boot
 they race; the loser restarts every second, forever. Seen with elogind
@@ -116,10 +161,26 @@ sources `core-services/*.sh` with `.`; a core service ending in
 `exec something` replaces runit's stage 1 process, and all remaining core
 services are silently skipped.
 
+**xbps does not restart a runit service when its package is updated.** The
+service keeps running the old program until a reboot or `sv restart`; a
+test right after an update of `steamos-manager` tests the old root half.
+
+**`sv down` returns before the `finish` script has run.**
+`jupiter-fan-control`'s `finish` hands the fan back to the embedded
+controller, which also resets the fan target; a speed set right after
+`sv down` was undone (download mode's 2000 rpm read back as 0, the fan ran
+at 4100 rpm). `sv -w <seconds> down` waits for the service to be down,
+`finish` included. A stop job of steamos-manager's runit backend is done
+only when `supervise/stat` reads `down`, after `finish`.
+
+**Steam stops `jupiter-fan-control` when its fan control setting is off**
+(Settings → System), when Steam starts (`down … normally up`). With a fresh
+Steam profile the setting was off here. Not a failure.
+
 **`sv status` only works as root.** Run as a user it fails with
 `access denied` — a wait loop on it simply runs into its timeout, every
-time. `io-netcheck` lost 10 s per boot this way. Use a tool the user may run
-(`nm-online`, `pgrep`).
+time (an early Io network check lost 10 s per boot this way). Use a tool the
+user may run (`nm-online`, `pgrep`).
 
 **X sockets in `/tmp/.X11-unix/` survive a session.** Waiting for `X0` to
 appear before starting an overlay or helper therefore succeeds immediately,
@@ -136,11 +197,6 @@ moves. Log out through `org.kde.Shutdown` (`busctl --user call
 org.kde.Shutdown /Shutdown org.kde.Shutdown logout`), as SteamOS does.
 
 **`busctl` is there without systemd** — elogind ships it.
-
-**dbus_fast answers `GetManagedObjects` itself**, for every path, from
-everything exported below it. An `org.freedesktop.DBus.ObjectManager`
-interface of one's own is never called; `io-steamos-manager` still exports
-one at `/`, unused.
 
 **Never start WirePlumber by hand.** Void's PipeWire starts it through a
 symlink in `/etc/pipewire/pipewire.conf.d/`; a second instance gives an
@@ -182,7 +238,9 @@ sessions.** Its developer page reads `SessionManagement1`'s session list:
 when it is exactly `plasma.desktop` and `plasmax11.desktop`, Steam shows the
 X11 switch, otherwise a session menu (or nothing for an empty list). It has
 nothing to do with gamescope. SteamOS 3.9.2 reports exactly these two and
-shows the switch; Io reports its one session, `io-desktop.desktop`.
+shows the switch. steamos-manager lists every session file in
+`wayland-sessions` and `xsessions`, so the list depends on what is
+installed.
 
 **Steam's developer *Speaker Test* only sends a counter** to the client's
 audio controller (`AudioDevices.UpdateSomething`); it looks like a
@@ -196,7 +254,7 @@ same. Not a bug of Io; Steam presumably shows only notifications of
 processes it knows.
 
 **Steam's HDMI-CEC switches are in the power menu**, not under display
-settings. The current Steam beta sets them through `HdmiCec2`.
+settings. Steam sets them through SteamOS Manager's `HdmiCec2`.
 
 **SDDM ignores `InputMethod=qtvirtualkeyboard` on a Wayland greeter.**
 SDDM 0.21 drops it there (the compositor has to provide the keyboard), and
@@ -249,6 +307,13 @@ file patched at image build time (as `mkimg.sh` once did to
 update. Use drop-in directories, own service directories, or ship the file
 in the package that owns it.
 
+**A fix to the factory reset cannot be tried from the testing channel.**
+Steam's reset runs its OS part first: it resets the update channel and
+installs every package whose version is not the default channel's, so the
+testing build of `io-factory-reset` is replaced by the published one before
+the user-data part runs at the next start. Publish the fix first, or try it
+with `io-factory-reset --prepare user` (user data only).
+
 **Bump `revision` for every change.** Same version and revision means the
 same file name; the new build is treated as already published.
 
@@ -268,10 +333,13 @@ never on the target at install time. Code for install time goes into
 `srcpkgs/<pkg>/INSTALL`, using `$ACTION`.
 
 **`xbps-install -r` runs the packages' `INSTALL` scripts chrooted, but
-without `/proc`, `/dev` and `/sys`** unless they are bind-mounted first.
-The image build (`build/`) runs `xbps-reconfigure -a` after the mounts (configures whatever
-was left unconfigured, as void-mklive does); a script that needs the
-pseudo file systems has to be forced with `xbps-reconfigure -f`.
+without `/proc`, `/dev` and `/sys`** unless they are mounted first; Python's
+byte-compiling (`compileall -j0`, it needs `/dev/shm`) then fails for some
+modules. The image build (`build/common.sh`, `install_pkgfile`) mounts
+them read-only for the install, as void-mklive does (`mount -r --rbind`:
+read-only applies to the top mount only, so `/dev/shm` stays writable, and
+the install cannot change the host's own directories), and runs
+`xbps-reconfigure -a` afterwards for whatever was left unconfigured.
 
 **`/etc/sysctl.d` is rejected by Void's package linter.** Packages ship
 defaults in `/usr/lib/sysctl.d`.
@@ -283,6 +351,28 @@ defaults in `/usr/lib/sysctl.d`.
 resolves crates itself. Crates that generate bindings (`clang-sys`) also need
 `clang`, `llvm` and `clang21-devel`: the versioned `-devel` package is the only
 one shipping the unversioned `libclang.so` that `clang-sys` looks for.
+
+**xbps-src drops the `provides` of `-32bit` packages.** It reads them from
+`<pkg>-32bit-provides` in the state directory, which no hook writes;
+`replaces` survive. A package that stands in for one of Void's `-32bit`
+packages needs that file written (`overlay/holo.sh` does it for
+`lib32=yes`), or Void's packages that depend on it stay broken
+(`xbps-pkgdb`: dependency not satisfied).
+
+**A dependency on a Void name can drop a stand-in.** NetworkManager's
+template depends on `wpa_supplicant`; `wpa_supplicant-holo` provides that
+name, yet an update on the Deck installed Void's `wpa_supplicant` and
+`wpa_supplicant-holo` went, leaving io-desktop's dependency on it unmet
+(`xbps-pkgdb -a`). `holo.sh` therefore gives a dependency on a package of
+another overlay its `-holo` name; Io's own templates name the `-holo`
+packages anyway. After an update, `xbps-pkgdb -a` shows whether a stand-in
+is missing.
+
+**Void rebuilds its own packages for a new soname, not Io's.** After Void's
+`libdisplay-info` 0.3.0, `kwin-holo` 6.7.5_201 still needed
+`libdisplay-info.so.2`, and every update aborted with an unresolvable
+shlib. Rebuild overlays with `build.sh -p --overlays`; Io's own packages
+that link the library need a revision bump.
 
 **xbps-src no longer builds `archs=noarch`.** A template with it stops
 with "this package cannot be built for x86_64"; leave `archs` out.
@@ -435,9 +525,9 @@ pulse layer), which is why it went unnoticed.
 **A restart from the recovery stick boots the firmware's default system.**
 The stick has no `io-bootnext` (it lacks `io-base`), and neither does Io with
 `IO_BOOTNEXT=no`: GRUB at the removable path has no boot entry of its own,
-so a warm reboot skips the boot selector and starts the internal SteamOS.
-From the outside it looks like a broken Io service until you see the other
-system's login prompt.
+so a warm reboot skips the boot selector and starts the firmware's default,
+the system on the internal SSD. With SteamOS there, it looks like a broken
+Io service until you see the other system's login prompt.
 
 ---
 
@@ -481,12 +571,18 @@ eject through udisks would show up on the system bus as `Unmount` or
 
 **Valve's `format-device.sh` accepts any SD card or USB drive.** On SteamOS
 the system is on the internal SSD, which its device list leaves out; Io
-runs from an SD card or a USB drive, which the list lets through. Io adds a
-check that refuses the disk `/` is on.
+may run from an SD card or a USB drive, which the list lets through. Io
+adds a check that refuses the disk `/` is on.
 
 ---
 
 ## First boot
+
+**In a Plymouth script, a global named `image` leaks into `Sprite()`.**
+Plymouth's `Sprite(image)` called without an argument looks up `image`,
+finds no local one and takes the script's global: with the logo stored as
+`image`, every empty `Sprite()` showed the logo again at 0,0. Do not name
+globals after the parameters of Plymouth's own functions.
 
 **`plymouth quit --retain-splash` leaves the console in graphics mode.**
 Text written to tty1 afterwards is not drawn at all — during Alpha 2 a
@@ -494,21 +590,6 @@ first-boot network prompt waited invisibly for input on every fresh image,
 and only there, because a development card already knows its Wi-Fi. The
 fallback shell would be just as invisible. Test first boot with a fresh
 image, not on a development card.
-
-**xbps does not restart a runit service when its package is updated.** The
-service keeps running the old program until a reboot or `sv restart`; a
-test right after an update of `io-steamos-manager` tests the old root half.
-
-**`sv down` returns before the `finish` script has run.**
-`jupiter-fan-control`'s `finish` hands the fan back to the embedded
-controller, which also resets the fan target; a speed set right after
-`sv down` was undone (download mode's 2000 rpm read back as 0, the fan ran
-at 4100 rpm). `sv -w <seconds> down` waits for the service to be down,
-`finish` included.
-
-**Steam stops `jupiter-fan-control` when its fan control setting is off**
-(Settings → System), when Steam starts (`down … normally up`). With a fresh
-Steam profile the setting was off here. Not a failure.
 
 ---
 
@@ -551,6 +632,20 @@ applications. On SteamOS the first switch after boot trips the loopback
 once (`cannot set PortConfig param: node already started`), later ones
 work.
 
+**PipeWire reads the drop-ins of the name given with `-c`.**
+`pipewire -c filter-chain-galileo.conf` loads `filter-chain-galileo.conf`
+(here a symlink to PipeWire's `filter-chain.conf`) and the fragments in
+`filter-chain-galileo.conf.d/`, not those of `filter-chain.conf.d/`. That
+gives a model its own filter chain without touching the other's.
+
+**`WIREPLUMBER_CONFIG_DIR` replaces WirePlumber's search path.** With it
+set, only the listed directories are read (no `/etc/wireplumber`). As
+always, a fragment in a higher-priority directory hides a lower one of the
+same file name instead of being added to it. Io uses both on the Steam
+Machine: the Deck's fragments in `/etc` are left out, and an empty
+`91-io-sink-loopback.conf` hides Io's sink loopback rule. WirePlumber gets
+the variable from PipeWire, which starts it (`context.exec`).
+
 **Valve's `filter-chain.conf.d/` belongs to a second PipeWire instance.** It
 only takes effect when that instance runs (`pipewire -c filter-chain.conf`,
 `filter-chain.service` on SteamOS). Valve's two `context-properties` files are
@@ -588,11 +683,13 @@ files.
 
 ## Valve packages
 
-**Orca stops at start when its settings file lacks a section**
-(`KeyError: 'pronunciations'`). Orca writes all of them itself when it
-creates the file; steamos-manager writes only what it changes, which on
-SteamOS is fine because Orca ran first. Io's manager adds the missing
-sections.
+**A package can reach Valve's release branch before main.**
+`xdg-desktop-portal-kde` 6.7.3-1.2 was in `holo-3.9` (and in SteamOS
+3.9.3) while `holo-main` still had an old build. `pkgcheck.sh` therefore
+reads the release branches (`jupiter-3.9`, `holo-3.9`) too. Valve's rebuilds
+of Arch packages carry a pkgrel with a dot (`-1.2`); the image manifest
+(`steamdeck-images.steamos.cloud/steamdeck/<build>/…manifest.pacman`)
+lists every package of a release and shows them at a glance.
 
 **Orca's shortcuts are key presses on a virtual keyboard.** Steam sets the
 screen reader mode at every start; steamos-manager presses Orca's key for it
@@ -600,8 +697,8 @@ screen reader mode at every start; steamos-manager presses Orca's key for it
 `aa` in Plasma's search field. Press them only while Orca runs.
 
 **`jupiter-dock-updater --check`: 0 means "update available", 7 "up to
-date"** (Valve's mock script). A stub that simply exits 0 makes Steam
-announce a dock update at every start.
+date".** Without Valve's updater the helper has to answer 7: an answer of 0
+makes Steam announce a dock update at every start.
 
 **`sv up` right after linking a service fails.** runsvdir notices a new
 link in `/var/service` only on its next scan (up to 5 s); until then the
@@ -618,8 +715,9 @@ interface's `change` event only when a port really trips. A rule in
 interface, produces the same event for `UdevEvents1` without touching the
 hardware; remove the rule afterwards.
 
-**SteamOS does not offer `WifiDebug1`** on the Deck (3.8.4 and 3.9.2),
-although Valve's interface file describes it. On 3.9.2 neither
+**SteamOS does not offer `WifiDebug1`** on the LCD (3.8.4 and 3.9.2),
+although Valve's interface file describes it; steamos-manager exports it
+on Galileo only. On 3.9.2 neither
 `FirmwareDebug1`, `PerformanceProfile1` nor `GameStreaming1` is exported
 on the LCD.
 
@@ -640,8 +738,8 @@ charge limit.
 
 **Valve's udev rules call `/bin/systemd-run`**, which does not exist under
 runit. The automount rule runs through `io-detach` instead (see *Drives and
-udisks*); `99-sdcard-rescan.rules` (a workaround for misdetected SanDisk
-cards) stays disabled until Io runs from the internal SSD.
+udisks*), and so does `99-sdcard-rescan.rules` (a workaround for
+misdetected SanDisk cards).
 
 **`steamos-priv-write` needs two edits:** `chgrp deck` becomes `chgrp wheel`
 (the user name is chosen when the image is built), and `systemd-cat` becomes
@@ -685,6 +783,18 @@ only in the binary repositories' databases
 (`archlinux-mirror/<repo>/os/x86_64/<repo>.db`). A name check should read
 those.
 
+**gamescope only notices its mura property when it changes.** It reads
+`GAMESCOPE_COLOR_MURA_CORRECTION_IMAGE` from a PropertyNotify, and selects
+those events on the root window only during its X setup; a value set
+before that is never seen. The X socket is no sign of readiness (the
+previous session's survives in `/tmp`); `GAMESCOPE_XWAYLAND_SERVER_ID` on
+the root window, set right before gamescope starts listening, is.
+
+**Orca's "AT-SPI: Unable to open bus connection" for `at-spi2-…` is
+harmless.** The address is steamwebhelper's direct socket, which exists only
+inside the Steam Runtime's container (`/proc/<pid>/root`), not on the host;
+Orca falls back to the accessibility bus and reads Steam's interface.
+
 **Valve's Xwayland reverts for a seamless start cause a black flash on
 Io.** Valve's `xorg-xwayland` reverts two upstream commits (only the
 window manager may set `_XWAYLAND_ALLOW_COMMITS`; Present flips honour
@@ -699,6 +809,12 @@ leaves them out.
 ## Shell and tools
 
 **`avahi-browse` is in `avahi-utils`**, not in `avahi`.
+
+**Files in `/sys/firmware/efi/efivars` cannot seek.** `tail -c +5 <var>`
+(to drop the 4 attribute bytes) fails with "Illegal seek" and prints
+nothing; in a script with `2> /dev/null` that looks like an empty variable.
+Read through a pipe: `cat <var> | tail -c +5`. `cat`, `od` and `efivar`
+are fine.
 
 **`prlimit -n` means `--nofile`**, not "no headings" (`--noheadings`).
 

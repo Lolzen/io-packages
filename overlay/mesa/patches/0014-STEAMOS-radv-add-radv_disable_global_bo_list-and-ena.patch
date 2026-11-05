@@ -1,0 +1,92 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Tue, 11 Aug 2026 16:31:06 +0200
+Subject: [PATCH 14/17] STEAMOS: radv: add radv_disable_global_bo_list and
+ enable it for Gamescope
+
+This fixes stuttering caused by GFX bubbles when a BO is both shared
+with the application and Gamescope. This is because AMDGPU requires to
+sync all DMA fences attached to the DMA-buf.
+
+The workaround is just to disable the global BO list by default for
+Gamescope because it doesn't need any features that require it. Writing
+a proper fix would be hard but for the time being this should be just
+fine.
+
+Related SteamOS ticket
+holo-team/tasks#2011
+
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+(cherry picked from commit 035ae2f854d7508cfcd76719f2bf4f0838c7ef57)
+
+Io: rebased onto Mesa 26.2.5 (the option is declared in
+radv_drirc_gen.py, which generates the driconf table there).
+---
+ src/amd/vulkan/00-radv-defaults.conf |  9 +++++++++
+ src/amd/vulkan/radv_device.c         | 19 +++++++++++++++++++
+ src/amd/vulkan/radv_drirc_gen.py     |  3 +++
+ 3 files changed, 31 insertions(+)
+
+diff --git a/src/amd/vulkan/00-radv-defaults.conf b/src/amd/vulkan/00-radv-defaults.conf
+index e7ffed117ab..762a76c9aed 100644
+--- a/src/amd/vulkan/00-radv-defaults.conf
++++ b/src/amd/vulkan/00-radv-defaults.conf
+@@ -350,5 +350,14 @@ Application bugs worked around in this file:
+         <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
+             <option name="vk_x11_override_min_image_count" value="4" />
+         </application>
++
++        <application name="Gamescope" application_name_match="gamescope">
++            <!-- Disable the global BO list for Gamescope to workaround
++                 stuttering caused by GFX bubbles when a BO is both shared by
++                 Gamescope and the game. This is because it requires AMDGPU to
++                 synchronize submissions when a BO is shared by two different
++                 processes. -->
++            <option name="radv_disable_global_bo_list" value="true"/>
++        </application>
+     </device>
+ </driconf>
+diff --git a/src/amd/vulkan/radv_device.c b/src/amd/vulkan/radv_device.c
+index 86a8c1b015d..4dad571be87 100644
+--- a/src/amd/vulkan/radv_device.c
++++ b/src/amd/vulkan/radv_device.c
+@@ -1534,6 +1534,25 @@ radv_CreateDevice(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo *pCr
+ 
+    device->use_global_bo_list = true;
+ 
++   /* Disable it only if no features require it. */
++   if (instance->drirc.performance.disable_global_bo_list) {
++      if (!device->vk.enabled_features.bufferDeviceAddress && !device->vk.enabled_features.descriptorIndexing &&
++          !device->vk.enabled_features.descriptorBindingUniformBufferUpdateAfterBind &&
++          !device->vk.enabled_features.descriptorBindingSampledImageUpdateAfterBind &&
++          !device->vk.enabled_features.descriptorBindingStorageImageUpdateAfterBind &&
++          !device->vk.enabled_features.descriptorBindingStorageBufferUpdateAfterBind &&
++          !device->vk.enabled_features.descriptorBindingUniformTexelBufferUpdateAfterBind &&
++          !device->vk.enabled_features.descriptorBindingStorageTexelBufferUpdateAfterBind &&
++          !device->vk.enabled_features.descriptorBindingUpdateUnusedWhilePending &&
++          !device->vk.enabled_features.descriptorBindingPartiallyBound &&
++          !device->vk.enabled_features.indirectMemoryCopy && !device->vk.enabled_features.indirectMemoryToImageCopy &&
++          !device->vk.enabled_features.deviceAddressCommands && !device->vk.enabled_features.descriptorHeap) {
++         device->use_global_bo_list = false;
++      } else {
++         fprintf(stderr, "radv: Can't disable the global BO list because some features require it!\n");
++      }
++   }
++
+    device->overallocation_disallowed = overallocation_disallowed;
+    mtx_init(&device->overallocation_mutex, mtx_plain);
+ 
+diff --git a/src/amd/vulkan/radv_drirc_gen.py b/src/amd/vulkan/radv_drirc_gen.py
+index a2d96837ff9..22db583cd7f 100644
+--- a/src/amd/vulkan/radv_drirc_gen.py
++++ b/src/amd/vulkan/radv_drirc_gen.py
+@@ -111,6 +111,9 @@ def declare_options():
+         B("radv_prefer_2d_swizzle_for_3d_storage", False,
+           "Prefer 2D swizzle mode for 3D storage images.",
+           c_name="prefer_2d_swizzle_for_3d_storage"),
++        B("radv_disable_global_bo_list", False,
++          "Disable the global BO list for apps that don't require it.",
++          c_name="disable_global_bo_list"),
+         S("radv_gfx12_hiz_wa",
+           description="Choose the specific HiZ workaround to apply on GFX12 (RDNA4). Accepted values are: disabled, partial or full",
+           c_name="gfx12_hiz_wa"),

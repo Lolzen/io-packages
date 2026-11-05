@@ -21,6 +21,7 @@ An overlay is a directory `overlay/<name>/`, named after the Void package:
 | `overlay.conf` | `base_version`: the Void version the patches are made for. `io_revision`: 1..99, raised whenever the patches change |
 | `patches/*.patch` | applied after Void's own patches (as `zz-io-*.patch`) |
 | `template.append` | optional: lines added at the end of the generated template, for build settings (`CFLAGS`, ...) |
+| `overlay.conf`: `lib32=yes` | optional: the overlay is built for i686 as well, and its `-32bit` packages replace Void's (see below) |
 | `README.md` | what each patch does, where it comes from, upstream state, way back |
 
 `overlay/holo.sh gen <name>` copies Void's `srcpkgs/<name>` in
@@ -53,13 +54,28 @@ overlay/holo.sh check            status of all overlays, changes nothing
 `publish.sh` publishes the overlay packages with Io's own; their names come
 from `holo.sh names`.
 
-Io's own templates (`io-desktop`, `steamos-networking-tools`, ...) depend on
+Io's own templates (`io-desktop`, `holo-networkmanager-config`, ...) depend on
 the `-holo` names, not on Void's: a dependency on the Void name is met by
 the `provides` on an installed system, but when an image is built from
 scratch xbps could pick Void's package for it, next to the stand-in.
 
-Only x86_64 is built: Void's `-32bit` package of an overlaid package stays
-Void's (its dependency on the 64-bit package is met by the `provides`).
+The same holds between overlays: holo.sh gives a dependency on a package
+of another overlay its `-holo` name (NetworkManager-holo depends on
+`wpa_supplicant-holo`, not on Void's `wpa_supplicant`). With the Void name
+an update replaced wpa_supplicant-holo with Void's wpa_supplicant on the
+Deck (2026-10-21), and io-desktop's dependency was left unmet.
+
+By default only x86_64 is built: Void's `-32bit` package of an overlaid
+package stays Void's (its dependency on the 64-bit package is met by the
+`provides`). With `lib32=yes` in `overlay.conf` (mesa), build.sh
+builds the overlay for i686 too; xbps-src turns that build into
+`<sub>-holo-32bit` packages for the multilib repository, with `replaces`
+and `provides` of Void's `<sub>-32bit`, and publish.sh publishes them with
+the 64-bit ones. Io's templates then depend on the `-holo-32bit` names.
+xbps-src itself drops the `provides` of `-32bit` packages (it reads them
+from a state file no hook writes), so holo.sh adds a `post_install` step
+that writes that file in the i686 build; without it Void's `-32bit`
+packages that depend on, say, `libgbm-32bit` would be left broken.
 
 After a Void update, run `./build.sh -p --overlays` before updating the
 Deck: between a Void revision bump and Io's rebuild, Void's `-32bit`
@@ -84,6 +100,10 @@ one release, so the update removes the overlay package and installs Void's.
 | [kwin](kwin/README.md) | kwin, kwin-devel | 6.7.5 | brightness from the device; Steam keyboard input from libei past a grabbing input method; libei 1.6 keysyms and text; no modes below 480p | 0002/0006 not upstream; 0011/0013 in 6.8 | 2026-10-11 |
 | [wpa_supplicant](wpa_supplicant/README.md) | wpa_supplicant | 2.12 | SAE wrong-password detection; 2 rescan fixes (6 GHz); WNM, MBO and other options from Valve's configuration | not in hostap | 2026-10-11 |
 | [xorg-server-xwayland](xorg-server-xwayland/README.md) | xorg-server-xwayland | 24.1.13 | libei: text as keysyms (Steam keyboard in the desktop, with kwin-holo); Valve's two seamless-start reverts left out (black flash on Io) | not in 24.1.13 | 2026-10-11 |
+| [python3-hid](python3-hid/README.md) | python3-hid | 1.0.4 | pyhidapi 1.0.6 (`BusType`, `bus_type`), as Valve's controller updater needs | released in 1.0.6 | 2026-10-12 |
+| [elogind](elogind/README.md) | elogind, libelogind, elogind-devel | 252.39 | runit service sets `SYSTEMD_BYPASS_HIBERNATION_MEMORY_CHECK=1`, as Valve's logind drop-in (hibernation); no segfault of `e-poweroff`/`e-reboot` (#341) | the variable: Valve's configuration; the fix: elogind main `e7c9887d`, not in 252 | 2026-10-26 |
+| [mesa](mesa/README.md) | mesa and all subpackages, and their -32bit packages | 26.2.6 | OpenGL frame limiter; explicit sync for VM operations (Forza); pageable device-local memory; no global BO list for gamescope (stutter) | Valve only | 2026-10-17 |
+| [xdg-desktop-portal-kde](xdg-desktop-portal-kde/README.md) | xdg-desktop-portal-kde | 6.7.5 | Steam may share the screen without Plasma's prompt (Valve's patch), recognised by its process without systemd | Valve only; the recognition Io only | 2026-10-29 |
 
 ## Hand-written stand-ins
 
@@ -99,12 +119,8 @@ template (other source, other version), in `srcpkgs/`:
 
 Valve patches that were set aside because each would have cost a fork of
 a Void package (evaluation of 2026-10-04,
-`claude/reports/eval-patched-arch.md` in the project). With the overlay a
-fork is cheap; these deserve a second look:
-
-| Package | Valve patch | Earlier verdict |
-|---|---|---|
-| mesa (Void 26.2.4) | radeonsi 26.1.2: one Valve commit, the DRI3 frame limiter for OpenGL (`GAMESCOPE_LIMITER_FILE`; applies to 26.2.4). RADV (Valve's 26.2-devel branch): 14 `STEAMOS:` commits (Forza fixes, explicit sync for VM operations, pageable device-local memory, BO list for gamescope, invariant outputs), 6 of them conflict with 26.2.4 | 2026-10-11: not now; look again at Void's next Mesa update. Needs 32-bit builds of the overlay (build.sh) |
+`claude/reports/eval-patched-arch.md` in the project) are all overlays now;
+the last, mesa, since 2026-10-17.
 
 Not candidates (upstream already, Steam Machine/OLED only, or systemd
 only): see the evaluation report.

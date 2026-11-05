@@ -1,0 +1,63 @@
+Io: recognise Steam by the caller when the app id is empty
+
+xdg-desktop-portal takes a host application's id from its systemd user
+unit; without systemd (Void with runit) every host application has an
+empty id, and Valve's check for app_id "steam" never matches. Steam is
+recognised by the process behind the request's sender instead.
+---
+diff --git a/src/screencast.cpp b/src/screencast.cpp
+index b4f6f80..1f1a758 100644
+--- a/src/screencast.cpp
++++ b/src/screencast.cpp
+@@ -27,6 +27,10 @@
+ 
+ #include <QDBusArgument>
+ #include <QDBusConnection>
++#include <QDBusConnectionInterface>
++#include <QDBusReply>
++#include <QDir>
++#include <QFileInfo>
+ #include <QDBusMetaType>
+ #include <QDataStream>
+ #include <QGuiApplication>
+@@ -300,6 +304,31 @@ std::pair<PortalResponse::Response, QVariantMap> continueStartAfterDialog(Screen
+     return {PortalResponse::Success, results};
+ }
+ 
++// Io: without systemd, xdg-desktop-portal cannot tell host applications
++// apart (it reads their id from their systemd user unit) and passes an empty
++// app id, so the check for Steam below never matched. Recognise Steam by the
++// caller instead: the request handle carries its unique bus name
++// (/org/freedesktop/portal/desktop/request/1_104/<token> for ":1.104"), the
++// session bus gives its process, and that process must be Steam's client
++// binary (steamrt64/steam, or ubuntu12_32/steam of the 32-bit client).
++static bool ioCallerIsSteam(const QDBusObjectPath &handle)
++{
++    const QStringList parts = handle.path().split(u'/', Qt::SkipEmptyParts);
++    if (parts.size() < 6 || parts.at(parts.size() - 3) != u"request") {
++        return false;
++    }
++    QString sender = parts.at(parts.size() - 2);
++    sender.replace(u'_', u'.');
++    sender.prepend(u':');
++    const QDBusReply<uint> pid = QDBusConnection::sessionBus().interface()->servicePid(sender);
++    if (!pid.isValid()) {
++        return false;
++    }
++    const QFileInfo exe(QFileInfo(QStringLiteral("/proc/%1/exe").arg(pid.value())).symLinkTarget());
++    const QString dir = exe.dir().dirName();
++    return exe.fileName() == u"steam" && (dir == u"steamrt64" || dir == u"ubuntu12_32");
++}
++
+ void ScreenCastPortal::Start(const QDBusObjectPath &handle,
+                              const QDBusObjectPath &session_handle,
+                              const QString &app_id,
+@@ -374,7 +403,7 @@ void ScreenCastPortal::Start(const QDBusObjectPath &handle,
+ 
+     // If steam is trying to stream and we don't have any valid restore data,
+     // allow streaming all screens.
+-    if (app_id == u"steam" && !valid) {
++    if (!valid && (app_id == u"steam" || (app_id.isEmpty() && ioCallerIsSteam(handle)))) {
+         OutputsModel model(OutputsModel::WorkspaceIncluded, this);
+         for (int i = 0, c = model.rowCount(); i < c; ++i) {
+             selectedOutputs << model.outputAt(i);

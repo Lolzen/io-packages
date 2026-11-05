@@ -1,4 +1,5 @@
 # Packages of the Io system (mkrootfs.sh). io-desktop pulls in everything.
+# io-factory-reset keeps this list as BASE_PACKAGES: change both together.
 io-desktop
 # Also in io-desktop's depends; listed here too so a rootfs built against an
 # older io-desktop still gets them. Without these the running system has no

@@ -1,9 +1,9 @@
 # Installation
 
-Io runs from an SD card. A recovery stick that installs Io onto a disk of
-the Deck exists as well, but installing with it is not released yet: it is
-tested together with the move to the internal NVMe (see
-[Milestones](Milestones)).
+Io runs from an SD card, written from the release image, or from the
+Deck's internal SSD, installed with the recovery stick. Both images are
+attached to every release since Beta 0.8. Installing with the stick and
+*Repair Io* are tested on the internal NVMe.
 
 ---
 
@@ -24,7 +24,7 @@ sudo dd if=io.img of=/dev/sdX bs=4M status=progress conv=fsync
 
 Boot the Deck from the card: hold **Volume Down**, press **Power**, pick the
 card in the boot manager. *Restart* from Io starts Io again; switching the
-Deck off and on starts the firmware's default system (SteamOS on the
+Deck off and on starts the firmware's default system (the one on the
 internal SSD, if there is one).
 
 **The first boot**
@@ -47,11 +47,20 @@ do not trust.
 
 A small writable Void system with Plasma on a USB drive, with Io's system
 tarball inside. It only has to boot to a desktop from which the install
-scripts run. How to build it is on [Building](Building).
+scripts run. Download all `recovery.img.xz.part*` files and
+`recovery.img.xz.sha256` from the
+[latest release](https://github.com/Lolzen/io-packages/releases/latest),
+join and check them, then write the image to a USB drive (replace `sdX`
+with the drive; everything on it is lost):
 
 ```
+cat recovery.img.xz.part* > recovery.img.xz
+sha256sum -c recovery.img.xz.sha256
+xz -d recovery.img.xz
 sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
 ```
+
+How to build it yourself is on [Building](Building).
 
 - **Boot:** hold Volume Down, press Power, pick the USB drive.
 - **Login:** automatic, user `iorecovery`. Its password and root's are
@@ -62,7 +71,13 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
     is **erased** and Io installed on it (`io-install` → `io-restore`). The
     disk the stick runs from, and disks with a mounted partition or active
     swap, are refused.
-  - *Repair Io* — a placeholder for now; it lists the disks.
+  - *Repair Io* — pick an Io installation (internal NVMe, SD card or USB
+    drive; found by its `IOROOT` partition) and the repairs: check and
+    repair the filesystems, rebuild the initramfs, reinstall the boot
+    loader, forget a hibernated session that does not resume (the session
+    is lost), check the installed packages, request a factory reset (Io
+    erases all user data at its next start), open a root shell in the
+    installation (`io-repair`). Tested on the internal NVMe (2026-10-20).
 - **Everything works by touch or with the trackpad.** The dialogs need no
   keyboard.
 - **The on-screen keyboard opens only on touch.** To type into the
@@ -73,5 +88,6 @@ sudo dd if=recovery.img of=/dev/sdX bs=4M status=progress conv=fsync
   SSH (OpenSSH's default `PermitRootLogin prohibit-password`); use `sudo`.
 
 **Status:** the stick boots, starts Plasma, and the disk dialog works.
-Installing is not released: do not install onto the internal SSD yet, it
-still holds SteamOS, the reference for Io.
+Installing to the internal NVMe and *Repair Io* are tested (2026-10-19
+and 20): take out SD cards you do not want listed as a target first, the
+dialog offers every disk but the stick's.

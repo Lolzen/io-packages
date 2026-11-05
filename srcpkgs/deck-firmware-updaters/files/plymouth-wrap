@@ -1,0 +1,344 @@
+#!/bin/bash
+
+set -eu
+shopt -s extglob
+
+declare -r FAKE_CMD=/usr/lib/hwsupport/jupiter-controller-fake-update
+declare msg=
+declare last_msg=
+declare -a cmdline=()
+declare -i spinner=0
+declare -i quiet=0     # whether to pass log messages on to the theme
+declare -i spin_logo=0 # whether to show+spin the theme's "spinner" logo
+declare _arg=
+declare -i retain_splash=0
+declare fade_out=0.5 # seconds to fade to the original splash at the end
+
+for _arg in "$@"
+do
+    case $_arg in
+        --help|-h)
+            cat - <<EOF
+Usage: ${0##*/} [--help] [LIFESPAN [THEME [TITLE [COMMAND...]]]]
+
+NOTES: If plymouthd is already running THEME has no effect: plymouthd
+has no mechanism to switch to a different theme after startup.
+Some ${0##*/} features need theme support, which holo has.
+
+  LIFESPAN is the expected life of the command in seconds, or 0 for unknown
+  default: 0
+
+  THEME is the name of the plymouth theme (cf plymouth-set-default-theme -l)
+  default: holo
+
+  TITLE is the title text to pass to the theme.
+  Note that this requires the theme to handle messages of the form
+  "<!COMMAND>ARGS" specially, so not all themes will support this
+
+  COMMAND... the remaining args are the command to wrap
+  default: ${FAKE_CMD}
+EOF
+            exit 0
+            ;;
+        --quiet|-q)
+            quiet=1
+            shift
+            ;;
+        --spin-logo)
+            spin_logo=1
+            shift
+            ;;
+    esac
+done
+
+declare -i DURATION="${1:-0}"
+declare    THEME="${2:-holo}"
+declare -r TITLE="${3:-}"
+declare -a CMD=("${@:4}")
+
+############################################################################
+# The kernel command line can't have certain args in it as they
+# would override any command line parameters we pass to plymouthd
+# It must say 'splash' though or plymouth simply won't render anything:
+# NOTE: not splash=<whatever> though. That has other unwanted behaviours.
+parse_kernel_cmdline()
+{
+    local -a arg=()
+
+    read -r -a arg < /proc/cmdline
+    for _arg in "${arg[@]}"
+    do
+        case ${_arg} in
+            (splash|splash=*|plymouth.*) true ;;
+            (*) cmdline+=("$_arg") ;;
+        esac
+    done
+
+    cmdline+=('splash')
+}
+
+############################################################################
+# figure out what theme to use
+set_theme ()
+{
+    local found_theme=
+    local theme=
+
+    if [ "$THEME" = default ]
+    then
+        THEME=
+    else
+        while read -r theme
+        do
+            if [ "$THEME" = "${theme:-}" ]
+            then
+                found_theme="${theme:-}"
+                # don't break here.
+                # plymouth-set-default-theme complains of a broken pipe if you do
+            fi
+        done < <(plymouth-set-default-theme -l)
+
+        if [ -z "${found_theme}" ]
+        then
+            echo "Plymouth theme $THEME not found" >&2
+            THEME=
+        else
+            # The kernel command line must specify the plymouth theme we want.
+            # Plymouth uses the configuration in /etc even if we specified otherwise
+            # in /run, even though /run is supposed to override /etc.
+            # Plymouth reads the config in /run but discards it before rendering
+            # if 'splash' is specified.
+            # If splash is _not_ specified, it keeps the /run config but doesn't
+            # even try to render anything.
+            # This is why we can't have nice things™.
+            cmdline+=("plymouth.splash=$THEME")
+        fi
+    fi
+}
+############################################################################
+# and what command we should wrap
+if [ -z "${CMD[0]:-}" ]
+then
+    CMD=("${FAKE_CMD}")
+fi
+
+############################################################################
+# Puts a splash friendly message on stdout and a duplicate on stderr
+# so it ends up in the journal as well (when run as a systemd unit):
+filter ()
+{
+    local line=
+    local -i json=0
+    local -i spinning=0
+    local -i spin_start=0
+    local spin_stub=
+    local spin_wait=
+    local last_wait=
+
+    # Tweak the firmware update tool output to be splash-screen format friendly
+    # - scrub the JSON controller device dump section entirely
+    # - strip the raw python prefix from INFO lines
+    # - remove the ASCII [####   …] progress bar(s)
+    # - convert ASCII |/-\ spinners into numeric timers
+    while read -r line
+    do
+        case $line in
+            \[) json=1 ;;
+            \]) json=0 ;;
+            *)
+                [ $json -eq 1 ] && continue
+
+                case $line in
+############################################################################
+# convert ASCII spinners to timers
+                    (*:+([ ])[-/\\\|])
+                        if [ $spinning -eq 0 ] ||
+                           [ "$spin_stub" != "${line%:*}" ];
+                        then
+                            spinning=1
+                            spin_stub="${line%:*}"
+                            spin_start=${EPOCHSECONDS}
+                        fi
+
+                        spin_wait=$((EPOCHSECONDS - spin_start))
+                        line="${spin_stub}:"\ ${spin_wait}s
+                        # don't bother repeating identical messages
+                        [ "$last_wait" = "$line" ] && continue
+                        last_wait="$line"
+                        ;;
+###########################################################################
+# strip python error messages and warnings
+                    (*__main__*\ -\ *)
+                        spinning=0
+                        continue
+                        ;;
+############################################################################
+# remove ASCII "[#####  ]" progress bars
+                    (*:\ \[*\]*%)
+                        spinning=0
+                        line="${line/ \[*\] / }"
+                        ;;
+############################################################################
+# default: just pass the message along
+                    (*)
+                        spinning=0
+                        ;;
+                esac
+                echo "$line"
+                echo "$line" >&2
+                ;;
+        esac
+    done
+}
+
+############################################################################
+centiseconds ()
+{
+    local ert=${EPOCHREALTIME}
+    local srt=${ert%%.*}
+    local crt=${ert#*.}
+    echo "$srt""${crt:0:2}"
+}
+
+spin ()
+{
+    # poke plymouth with a progress %age based on the estimated TTL
+    local -i ttl=${1:-60}
+    local -i start=0;
+    start=$(centiseconds)
+    local -i progress=0
+    local -i age=${start}
+    local -i end=$((start + ttl * 100))
+
+    while [ ${age} -lt ${end} ]
+    do
+        /usr/bin/plymouth system-update --progress=${progress} || :
+        sleep 0.5
+        age=$(centiseconds)
+        progress=$(((age - start) / ttl))
+    done
+}
+
+############################################################################
+# Start plymouthd if we haven't got a running daemon already
+# NOTE: If it _was_ already running it might not do what we want
+# as this is where we pass in the desired theme, mode, etc.
+if ! /usr/bin/plymouth --ping
+then
+    parse_kernel_cmdline # sets cmdline
+    set_theme            # adds plymouth.splash=THEME to cmdline
+    retain_splash=1
+    # Tell plymouthd to shut down if we exit unexpectedly:
+    trap "/usr/bin/plymouth quit --retain-splash || :" 0
+    echo "Start plymouthd for ${0##*/}; theme: ${THEME:-default}; cmd: ${CMD[*]}"
+    /usr/bin/plymouthd \
+        --mode=updates \
+        --ignore-serial-consoles \
+        --no-boot-log \
+        --pid-file=/run/plymouth/pid \
+        --kernel-command-line="${cmdline[*]}" || :
+else
+    echo "Using running plymouthd with unknown configuration"
+    /usr/bin/plymouth change-mode --updates || :
+fi
+
+echo "Displaying splash screen"
+/usr/bin/plymouth show-splash || :
+
+# Show the title if it's not empty (requires special handling in the theme)
+if [ ${quiet:0} -eq 0 ] && [ -n "${TITLE:-}" ]
+then
+    /usr/bin/plymouth display-message --text="<!set-title>${TITLE}" || :
+fi
+
+if [ ${spin_logo} -gt 0 ]
+then
+    /usr/bin/plymouth display-message --text="<!spin-logo>on"  || :
+else
+    /usr/bin/plymouth display-message --text="<!spin-logo>off" || :
+fi
+
+############################################################################
+# Drive the progress bar based on our expected lifespan.
+# It is up to the theme how to display progress (or not)
+# if we don't send it these updates:
+echo "plymouth-wrap TTL is ${DURATION:-0}, priming progress bar"
+if [ ${DURATION} -gt 0 ]
+then
+    # try to use the internal progress bar code in the theme
+    if ! /usr/bin/plymouth display-message --text="<!set-ttl>${DURATION}"
+    then
+        (spin ${DURATION}) &
+        spinner=$!
+        echo "plymouth-wrap spinner is PID $spinner"
+    fi
+fi
+############################################################################
+# Start the actual command and send its log messages to plymouth via filter()
+echo "Executing ${CMD[*]}"
+while read -r msg
+do
+    if [ -n "$msg" ]
+    then
+        if [ $quiet -eq 0 ]
+        then
+            /usr/bin/plymouth display-message --text="$msg" || :
+            last_msg="$msg"
+        fi
+    fi
+done < <("${CMD[@]}" 2>&1 | filter)
+
+############################################################################
+# clean up and shut down
+
+# This is for if we finish early - We don't want the spinner
+# hanging around prodding a plymouthd that has gone away:
+if [ ${spinner} -gt 0 ]
+then
+    # The spinner can exit before we kill it:
+    # No need to worry if the kill command succeeds
+    kill -TERM ${spinner} 2>/dev/null || :
+fi
+
+# If we had a duration, make sure the progress bar hits 100%
+if [ ${DURATION} -gt 0 ]
+then
+    echo "Set progress bar to 100%"
+    # we used to set the ttl to 0 here to freeze the progress bar
+    # but that's no longer desirable, as letting it update automatically
+    # hooks it up to the fade-to-original-splash mechanism
+    /usr/bin/plymouth system-update --progress=100 || :
+fi
+
+# clear the title (we used to set it to $last_msg here)
+if [ $quiet -eq 0 ]
+then
+    /usr/bin/plymouth display-message --text="<!set-title>" || :
+fi
+
+# we need to give plymouth enough time to fade back to the original splash
+if /usr/bin/plymouth display-message --text="<!fade-out>${fade_out}"
+then
+    sleep ${fade_out}
+fi
+
+if [ ${retain_splash} -gt 0 ]
+then
+    # The trap happens at exit, which is too late as systemd _immediately_
+    # reaps any children. So clear the fallback trap command and issue a
+    # manual retain-splash:
+    trap - 0
+    echo "Issuing plymouth quit --retain-splash command"
+    /usr/bin/plymouth quit --retain-splash || :
+
+    # Now we need to give a plymouthd started by us time to clean up or
+    # systemd gets _super_ stabby about it. It has no chill at all.
+    echo "Waiting for plymouthd to exit..."
+    while /usr/bin/plymouth --ping 2>/dev/null
+    do
+        sleep 0.2
+    done
+    echo "...plymouthd has stopped"
+fi
+
+exit 0

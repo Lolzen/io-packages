@@ -1,0 +1,103 @@
+--- a/hid/__init__.py
++++ b/hid/__init__.py
+@@ -1,8 +1,9 @@
+ import os
+ import ctypes
+ import atexit
++import enum
+ 
+-__all__ = ['HIDException', 'DeviceInfo', 'Device', 'enumerate']
++__all__ = ['HIDException', 'DeviceInfo', 'Device', 'enumerate', 'BusType']
+ 
+ 
+ hidapi = None
+@@ -37,6 +38,44 @@
+ class HIDException(Exception):
+     pass
+ 
++class APIVersion(ctypes.Structure):
++    _fields_ = [
++        ('major', ctypes.c_int),
++        ('minor', ctypes.c_int),
++        ('patch', ctypes.c_int),
++    ]
++
++try:
++    hidapi.hid_version.argtypes = []
++    hidapi.hid_version.restype = ctypes.POINTER(APIVersion)
++
++    version = hidapi.hid_version()
++    version = (
++        version.contents.major,
++        version.contents.minor,
++        version.contents.patch,
++    )
++except AttributeError:
++    #
++    # hid_version API was added in
++    # https://github.com/libusb/hidapi/commit/8f72236099290345928e646d2f2c48f0187ac4af
++    # so if it is missing we are dealing with hidapi 0.8.0 or older
++    #
++    version = (0, 8, 0)
++
++if version >= (0, 13, 0):
++    bus_type = [
++        ('bus_type', ctypes.c_int),
++    ]
++else:
++    bus_type = []
++
++class BusType(enum.Enum):
++    UNKNOWN = 0x00
++    USB = 0x01
++    BLUETOOTH = 0x02
++    I2C = 0x03
++    SPI = 0x04
+ 
+ class DeviceInfo(ctypes.Structure):
+     def as_dict(self):
+@@ -46,6 +85,9 @@
+                 continue
+             ret[name] = getattr(self, name, None)
+ 
++            if name == 'bus_type':
++                ret[name] = BusType(ret[name])
++
+         return ret
+ 
+ DeviceInfo._fields_ = [
+@@ -60,7 +102,7 @@
+     ('usage', ctypes.c_ushort),
+     ('interface_number', ctypes.c_int),
+     ('next', ctypes.POINTER(DeviceInfo)),
+-]
++] + bus_type
+ 
+ hidapi.hid_init.argtypes = []
+ hidapi.hid_init.restype = ctypes.c_int
+@@ -80,6 +122,8 @@
+ hidapi.hid_read_timeout.restype = ctypes.c_int
+ hidapi.hid_read.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t]
+ hidapi.hid_read.restype = ctypes.c_int
++hidapi.hid_get_input_report.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t]
++hidapi.hid_get_input_report.restype = ctypes.c_int
+ hidapi.hid_set_nonblocking.argtypes = [ctypes.c_void_p, ctypes.c_int]
+ hidapi.hid_set_nonblocking.restype = ctypes.c_int
+ hidapi.hid_send_feature_report.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
+@@ -165,6 +209,16 @@
+ 
+         return data.raw[:size]
+ 
++    def get_input_report(self, report_id, size):
++        data = ctypes.create_string_buffer(size)
++
++        # Pass the id of the report to be read.
++        data[0] = bytearray((report_id,))
++
++        size = self.__hidcall(
++            hidapi.hid_get_input_report, self.__dev, data, size)
++        return data.raw[:size]
++
+     def send_feature_report(self, data):
+         return self.__hidcall(hidapi.hid_send_feature_report,
+                               self.__dev, data, len(data))

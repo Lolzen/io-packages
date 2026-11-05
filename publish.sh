@@ -112,16 +112,45 @@ pkgname_of() {
 
 # Packages built for i686 only (archs="i686") are published as their
 # -32bit package from the multilib directory, never as the i686 package.
+# The -32bit packages of overlays with lib32=yes (mesa-dri-holo-32bit, ...)
+# come by that name from overlay/holo.sh and lie in multilib as well.
 is_lib32() { grep -q '^archs="i686"' "$SRCPKGS/$1/template" 2> /dev/null; }
 pubname() { if is_lib32 "$1"; then echo "$1-32bit"; else echo "$1"; fi; }
-bindir() { if is_lib32 "$1"; then echo "$BINPKGS/multilib"; else echo "$BINPKGS"; fi; }
+bindir() {
+    case "$1" in
+        *-holo-32bit) echo "$BINPKGS/multilib" ;;
+        *) if is_lib32 "$1"; then echo "$BINPKGS/multilib"; else echo "$BINPKGS"; fi ;;
+    esac
+}
 
-# newest file of package $2 in directory $1 (x86_64 or noarch)
+# Only x86_64 and noarch files belong in Io's repository. xbps-src puts the
+# i686 build of a lib32 overlay (mesa) into the same binpkgs directory, with
+# the same version as the x86_64 one; without this check the i686 file could
+# win the comparison below and be published in its place (2026-10-29).
+is_repo_arch() {
+    case "$1" in
+        *."$ARCH".xbps|*.noarch.xbps) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# newest file of package $2 in directory $1 (x86_64 or noarch), by xbps's
+# own version order: sort -V puts 26.4.1_1 above 26.4.1.20261022_1
 newest_in() {
+    best=""
     for f in "$1/$2"-[0-9]*.xbps; do
         [ -f "$f" ] || continue
-        [ "$(pkgname_of "$f")" = "$2" ] && echo "$f"
-    done | sort -V | tail -1
+        is_repo_arch "$f" || continue
+        [ "$(pkgname_of "$f")" = "$2" ] || continue
+        if [ -z "$best" ]; then
+            best=$f
+            continue
+        fi
+        rc=0
+        xbps-uhelper cmpver "$(pkgver_of "$f")" "$(pkgver_of "$best")" || rc=$?
+        [ "$rc" = 1 ] && best=$f
+    done
+    echo "$best"
 }
 
 # most recently built file of package $2 in directory $1 (for --replace)
@@ -129,6 +158,7 @@ latest_built_in() {
     best=""
     for f in "$1/$2"-[0-9]*.xbps; do
         [ -f "$f" ] || continue
+        is_repo_arch "$f" || continue
         [ "$(pkgname_of "$f")" = "$2" ] || continue
         if [ -z "$best" ] || [ "$f" -nt "$best" ]; then
             best=$f
@@ -214,6 +244,25 @@ for pkg in $COLLECT; do
     fi
 done
 
+# ------------------------------------- what the release has, here as well
+# The release workflow (.github/workflows/create-next-release.yml) publishes
+# io-release from GitHub Actions, so the release can hold a package this
+# copy has never seen. Without fetching it, the index made here would lack
+# it and the comparison below would delete it from the release as stale.
+echo "== fetching what only the release has"
+if gh release view "$GHTAG" --repo "$GHREPO" --json assets --jq '.assets[].name' > "$TMP/remote-first.txt" 2> "$GHLOG"; then
+    grep '\.xbps$' "$TMP/remote-first.txt" | while read -r f; do
+        [ -f "$PUBDIR/$f" ] && continue
+        gh_run release download "$GHTAG" --repo "$GHREPO" --dir "$PUBDIR" --pattern "$f" --pattern "$f.sig2" --clobber
+        echo "$PUBDIR/$f" >> "$TMP/new.txt"
+        echo "  $f: fetched"
+    done
+elif ! grep -q -i 'release not found' "$GHLOG"; then
+    echo "publish: gh release view $GHTAG failed:" >&2
+    cat "$GHLOG" >&2
+    exit 1
+fi
+
 # ------------------------------------------ one version per package only
 echo "== pruning"
 : > "$TMP/keep.txt"
@@ -257,6 +306,11 @@ done
 
 # ------------------------------------------------------ index and sign
 echo "== indexing"
+# what pruning removed again (a fetched older version) is not indexed
+while read -r f; do
+    [ -f "$f" ] && echo "$f"
+done < "$TMP/new.txt" > "$TMP/new-kept.txt" || true
+mv "$TMP/new-kept.txt" "$TMP/new.txt"
 if [ "$FULL" = 1 ]; then
     xbps-rindex -a "$PUBDIR"/*.xbps
 elif [ -s "$TMP/new.txt" ]; then
@@ -293,7 +347,15 @@ if [ -s "$TMP/unsigned.txt" ]; then
 fi
 
 # --------------------------------------------------------------- upload
+# Created only when GitHub says it does not exist: any other failure of
+# "release view" (network, rate limit, authentication) stops here, instead of
+# a create that fails with "tag_name already exists".
 if [ "$TESTING" = 1 ] && ! gh release view "$GHTAG" --repo "$GHREPO" > "$GHLOG" 2>&1; then
+    if ! grep -q -i 'release not found' "$GHLOG"; then
+        echo "publish: gh release view $GHTAG failed:" >&2
+        cat "$GHLOG" >&2
+        exit 1
+    fi
     echo "== creating release $GHTAG"
     gh_run release create "$GHTAG" --repo "$GHREPO" --prerelease --title "Io testing" --notes "Test builds that are not merged yet, for testing on a Deck only."
 fi
