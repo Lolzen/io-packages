@@ -148,6 +148,15 @@ is lost. `socklog-void` fixes it.
 refuses to start while there is no swap yet ("exceeds limit 0"); it has to
 wait for the zram service itself.
 
+**A running elogind is not yet a usable one.** Its process is up (and `sv
+check elogind` says so) before it owns `org.freedesktop.login1` on the
+system bus. A login in between gets no session from `pam_elogind` ("The name
+org.freedesktop.login1 was not provided by any .service files"), so no
+`XDG_RUNTIME_DIR`, and SDDM's autologin ended in `io-start` with the screen
+left on the boot splash. With kernel 7.3 the boot reached SDDM 300 ms before
+elogind's name; 7.2 had always been slow enough. `io-sddm` waits for the bus
+name (`NameHasOwner`) and otherwise exits so runsv retries.
+
 **`modprobe zram num_devices=1` only creates devices on the first load.** If
 the module is already loaded, nothing happens. `zramctl --find` creates a
 device through the kernel's `hot_add` interface in any state.
@@ -275,6 +284,15 @@ instead.
 ---
 
 ## Packaging (xbps-src)
+
+**`publish.sh --testing` from one branch drops the other branches' test
+packages.** It prunes every package the checked-out `srcpkgs/` and overlays
+do not know, the testing channel included: publishing the kernel from
+`test-kernel-73` removed `plymouth-holo` and `orca-holo` (from
+`test-plymouth-orca`) while `io-base` 0.7.2_2, which needs `plymouth-holo`,
+stayed. A Deck with the testing channel then cannot run `-Syu`; update the
+tested packages by name, and publish the other branch's packages again
+before testing it.
 
 **Never rebuild a package with the same version and revision.** xbps
 packages are not byte-identical between builds. `publish.sh` skips a file
@@ -453,6 +471,20 @@ in `binpkgs/multilib`. Publishing the i686 package itself would be wrong.
 ---
 
 ## Kernel and hardware
+
+**Valve's kernel source archive holds Valve's whole repository.** The
+`linux-neptune-*` source archives on `steamdeck-packages.steamos.cloud`
+carry `linux-integration` as a bare git repository with every branch, not
+just the tag the package builds: the 7.3 port came from `7.3/integration`
+in `linux-neptune-72` 7.2.10.valve1-3's archive (3.4 GB), long before Valve
+packaged 7.3. Valve's GitLab itself is not public.
+
+**A Valve branch without a release commit builds the wrong kernel
+release.** Valve sets `EXTRAVERSION` (`-valve2`) only in the commit that
+tags a release. Built from the untagged branch, the kernel was `7.3.1_1`
+while the template expected `7.3.1-neptune1_1`, and `do_install` stopped
+after hours of building at the module directory. Io's patch sets
+`EXTRAVERSION` itself until Valve tags 7.3.
 
 **iwd recreates the Wi-Fi interface under the kernel name (`wlan0`).** With
 predictable interface names udev renames it right away (`wlo1`), and

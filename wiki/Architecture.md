@@ -44,7 +44,10 @@ behind each difference, see [Deviations](Deviations).
    `earlyoom`, `jupiter-fan-control`, `socklog-unix` and `nanoklogd`,
    `jupiter-firewall`, `steam-web-debug-portforward`, and `io-sddm`. Steam's
    developer mode adds `avahi-daemon` and `steamos-devkit-service`.
-5. **`io-sddm`** removes a leftover one-shot login file, ends the splash with
+5. **`io-sddm`** waits until `dbus` runs and elogind owns
+   `org.freedesktop.login1` on the system bus (else it exits and runsv
+   tries again a second later: SDDM's autologin gets its session through
+   `pam_elogind`), removes a leftover one-shot login file, ends the splash with
    `plymouth quit --retain-splash` (the screen goes from splash to black to
    game mode, as on SteamOS) and starts SDDM. SDDM logs `deck` in on tty7;
    tty1–6 are plain login consoles.

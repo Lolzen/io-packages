@@ -19,8 +19,6 @@ testers yet.
 
 **Release by release**
 
-- Pull request #1 (Io's changelog in Steam's patch notes): the check of
-  Steam's update page
 - *Tests pending* and *Open observations* below
 - Valve's newer versions (*Catching up with Valve*)
 - Void's side: Mesa patches dropped as Void's Mesa takes them (the three
@@ -35,13 +33,11 @@ testers yet.
 
 Work that is built but not on `main` yet:
 
-- **Pull request #1** (`codex/io-cef-changelog`): Io's own changelog in
-  Steam's patch notes for system updates
 - **`test-plymouth-orca`:** Valve's plymouth and Orca patches as overlays
   (`plymouth-holo`: the splash stays on screen until the session takes
   over, Valve's TV settings; `orca-holo`: Orca reloads its settings and
   stops speaking on SteamOS Manager's signals instead of ending). Built,
-  testing on the Deck
+  rebased onto main on 2026-11-05 (`io-base` 0.7.3_2), testing on the Deck
 - **`test-torus-splash`:** the animated *Io Torus* boot splash
   (`io-branding` 0.4.0); works, kept on the branch for now (cosmetic)
 
@@ -148,7 +144,6 @@ have; they need someone with the hardware.
 
 ## Later milestones
 
-- **Kernel metapackage** `linux-neptune`, with the next kernel update
 - **Firmware updates:** Valve's BIOS updater (`h2offt` and the BIOS
   images) and controller updater (`deck-firmware-updaters`), the helpers,
   `UpdateBios1` and the updates at boot are in place; their check modes
@@ -196,16 +191,27 @@ have; they need someone with the hardware.
   three fixes wait for their upstream release and Void: SDDM comparing its
   configuration's times in UTC (a session switch after a timezone change),
   PipeWire 1.6.11's Bluetooth fixes, gamescope blanking the screen before
-  sleep. Mesa follows Void (26.2.6 since 2026-10-29). Comparisons are made
+  sleep. Mesa follows Void (26.2.6 since 2026-10-29). Valve's changes up to
+  2026-11-04 (checked 2026-11-05): 67 pure rebuilds for Arch's LLVM 23 and
+  OpenSSL 4; taken: the kernel (Io moved to 7.3, see [Kernel](Kernel), with
+  the metapackage `linux-neptune`), SteamOS's `amdgpu.dcdebugmask=0x60000`
+  (linear brightness), NetworkManager's ARP flux fix and jupiter-hw-support
+  20261028.1's udisks messages; waiting: iwd's four security fixes (until
+  Void or upstream has them), Plasma 6.8 (when Void has it; `kwin-holo`
+  then keeps two patches). Comparisons are made
   against Valve's manifests and source archives: the Deck runs only Io
   since 2026-10-31, so there are no new SteamOS captures
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*
   (a light desktop). The split is prepared: `io-base` is the core,
   `io-desktop` adds the desktop
-- **Automation, once Io changes less often:** GitHub Actions that build and
-  publish the packages; man pages; a version check that writes Valve's
-  newer versions to a file unless they are listed as already looked at
-  (`pkgcheck.sh` today reports what changed since its last run)
+- **Automation:** done since 2026-10-31: the upstream check (GitHub
+  Actions, every 8 hours: Valve's packages and release branches, the
+  overlays against Void, the Void packages Io waits for, Valve's, Void's
+  and kernel.org's kernels, SteamOS Manager against Valve's main; findings
+  in one issue labelled `upstream-check`) and *Create next release*
+  (version step, fresh images, release with notes; see
+  [Building](Building)). Still open: GitHub Actions that build and publish
+  the packages themselves; man pages
 - **For 1.0:** SSH off in images, as on SteamOS; a way to replace the
   default password on first boot; a sweep of Io's packages for Valve's
   artwork and trademarks (`steamdeck-kde-presets`' wallpapers, avatars and
@@ -217,8 +223,9 @@ have; they need someone with the hardware.
 
 ## Recurring
 
-- `pkgcheck.sh`: Valve's package versions against Io's (main and the
-  current release's branches)
+- The upstream check's issue (`upstream-check`): each finding taken or
+  decided; `./pkgcheck.sh` and committing `docs/` clears Valve's package
+  findings, `ci/void-watch.txt` lists what Io waits for in Void
 - SteamOS Manager: Io's seven runit commits rebased onto Valve's update,
   every commit built (`cargo check --all-targets`), tests, fmt and clippy
   on the result, then pushed to the fork's `runit` and the template raised
@@ -227,5 +234,6 @@ have; they need someone with the hardware.
   rebuilt; stops for a review when Void moved to a new version), see
   [Building](Building)
 - Valve's kernel updates, with the configuration review described on
-  [Kernel](Kernel)
+  [Kernel](Kernel); Valve's first 7.3 tag replaces Io's port of the
+  integration branch
 - Boot logs, for regressions and new warnings

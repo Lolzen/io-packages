@@ -284,23 +284,71 @@ start at which each boot stage began.
 ## Release workflow
 
 1. The milestone's items done, or left open on [Milestones](Milestones)
-2. Fresh image built (`build/`), written to a spare card, booted, storage grown,
-   `io-selftest.sh` passes; the recovery stick built from the same tarball
-   (`mkrecovery.sh`)
-3. The release page written (see [Changelog](Changelog)): goal,
+2. The release page written (see [Changelog](Changelog)): goal,
    highlights, changes by area, known limitations; done items removed from
    [Milestones](Milestones)
-4. Remove the previous release's `io.img.xz*` and `recovery.img.xz*` files
-   first — a leftover part would be joined into the new image. Then
-   compress both images and split them below GitHub's 2 GiB asset limit
-   (the same for `recovery.img`, from `/home/gee/io-build`):
-   ```
-   xz -T0 -k io.img
-   split -b 1900M -d io.img.xz io.img.xz.part
-   sha256sum io.img.xz > io.img.xz.sha256
-   ```
-   Check that `cat io.img.xz.part* | sha256sum` matches the checksum.
-5. Tag, create the release, attach the parts and the checksums
+3. **Actions → *Create next release* → Run workflow**, on `main`, with the
+   version step: `0.0.1` (0.8 → 0.8.1) or `0.1` (0.8.x → 0.9). The workflow
+   (`.github/workflows/create-next-release.yml`, scripts in `ci/release/`)
+   - raises `io-release` (version, `_name`, `_build` as date and counter,
+     revision 1) and builds it with xbps-src in a Void container
+   - builds a fresh rootfs, `io.img` and `recovery.img` from the published
+     repository plus the new `io-release` (`EXTRA_REPO`), and checks that
+     the rootfs has it
+   - xz-compresses both images and splits them into 1900 MB parts (GitHub
+     takes no file of 2 GiB or more), each with a checksum checked against
+     the joined parts
+   - only then signs `io-release` into current's index and uploads it to
+     `io-repo`, commits the raised template to `main`, tags `beta-<version>`
+     and creates the release with the parts, the checksums and the commits
+     since the previous release as notes
+
+   *Dry run* builds everything and publishes nothing; a run takes about
+   50 minutes. A real run needs two repository secrets: `IO_REPO_KEY` (the
+   content of `privkey.pem`) and `IO_REPO_TOKEN` (a token that may write
+   releases of `Lolzen/io-repo`).
+4. Fresh image written to a spare card, booted, storage grown,
+   `io-selftest.sh` passes; the recovery stick from the same release
 
 Users rebuild the images with `cat io.img.xz.part* > io.img.xz` (and the
 same for `recovery.img.xz`).
+
+`publish.sh` fetches packages the release has and its local copy lacks
+(the `io-release` the workflow published) before it prunes and indexes, so
+a local publish after a release keeps them.
+
+By hand (without the workflow): build the images as above, remove the
+previous release's `io.img.xz*` and `recovery.img.xz*` files first (a
+leftover part would be joined into the new image), then
+
+```
+xz -T0 -k io.img
+split -b 1900M -d io.img.xz io.img.xz.part
+sha256sum io.img.xz > io.img.xz.sha256
+```
+
+check that `cat io.img.xz.part* | sha256sum` matches, and attach the parts
+and checksums to the release.
+
+## Upstream check
+
+`.github/workflows/upstream-check.yml` runs `ci/upstream-check.py` every 8
+hours (and on demand from Actions). Findings go into one issue labelled
+`upstream-check`: opened at the first finding, a comment for each new one,
+closed when nothing is left; a table of Io's, Valve's, Void's and
+kernel.org's kernels is in every run. It reports:
+
+- Valve's package listings against `docs/*-latest.txt` (cleared by
+  `./pkgcheck.sh` and committing `docs/`; `ci/valve-ignore.txt` for
+  packages decided to be irrelevant) and new SteamOS release branches
+- each overlay whose Void package has a new version (patches to check) or
+  a revision `current` does not have yet (build and publish)
+- the Void packages Io waits for (`ci/void-watch.txt`: package, Void's
+  version now, what Io waits for)
+- a newer stable release of Io's kernel series, its end of life, a newer
+  series, and Valve's kernel of Io's series
+- Valve's steamos-manager `main` not in the fork's `runit`, and `runit`
+  ahead of the template's `_commit`
+
+It keeps itself enabled (GitHub disables scheduled workflows after 60 days
+without commits).

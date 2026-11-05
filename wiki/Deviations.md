@@ -303,8 +303,11 @@ its own implementation (`io-steamos-manager`).
 
 ## Kernel
 
-- **`linux-neptune-72`, 7.2.7**, as SteamOS 3.9.2, built from Valve's
-  `linux-integration` tree. The configuration is Void's as the base, the
+- **`linux-neptune-73`, 7.3.1**, ahead of SteamOS (3.9.5: 7.2.7), built
+  from Valve's `linux-integration` tree: Valve's untagged 7.3 branch with
+  the newer changes of Valve's 7.2.10-valve1 ported (not the HDMI 2.1
+  series and the commits Valve left out of 7.3, see [Kernel](Kernel)); the
+  7.2 kernel stays installed as a fallback. The configuration is Void's as the base, the
   full configuration Valve's package builds from and `config-neptune` on
   top, then a few Io overrides, each with its reason — see
   [Kernel](Kernel). Io builds without Rust (Valve: Rust Binder, panic QR
@@ -314,6 +317,8 @@ its own implementation (`io-steamos-manager`).
   the systemd- and A/B-specific options (`rd.systemd.gpt_auto`, `fsck.*`,
   `steamos.efi`). Io adds `net.ifnames=0`: SteamOS's Wi-Fi interface is
   `wlan0` as well, while Void's udev would rename it (see *Pitfalls*).
+  `amdgpu.dcdebugmask=0x60000` as SteamOS since 2026-10-28 (linear
+  brightness up to 100 %, see [Kernel](Kernel)).
 - **No reboot on kernel panic.** SteamOS's panic sysctls are left out:
   Valve pairs them with a crash log submitter, and without one a frozen
   device is more useful for debugging.
@@ -466,8 +471,8 @@ its own implementation (`io-steamos-manager`).
 - **Versions:** the ported Valve packages are the versions of SteamOS
   3.9.2 ([SteamOS packages](Valve-Package-Survey)), some of them newer
   (from 3.9.3 or Valve's main branch, see [Milestones](Milestones),
-  *Catching up with Valve*). The kernel is Valve's 3.9.3 kernel
-  (`7.2.7-valve2`) with stable 7.2.11 merged in ([Kernel](Kernel)).
+  *Catching up with Valve*). The kernel is newer than SteamOS's: Valve's
+  7.3 branch on stable 7.3.1 ([Kernel](Kernel)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
