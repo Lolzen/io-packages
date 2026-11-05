@@ -39,7 +39,8 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #     (408 commits on 7.3). Valve left out 17 older commits (the amdgpu VM
 #     explicit sync series and its follow-ups, the linear backlight curve,
 #     the linearizing LUT rework, YUV420 beyond HDMI, the HDA notify on
-#     disconnect, the dmem race fixup); Io follows that. Without the explicit
+#     disconnect, the dmem race fixup); Io follows that and waits for
+#     Valve's own port (decided 2026-11-05). Without the explicit
 #     sync series the amdgpu interface stays at 3.64, so Mesa's
 #     radv_vm_explicit_sync (mesa-holo 0005) stays off.
 #   stable 7.3.1 merged without conflicts.
@@ -52,7 +53,8 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #     rt721-sdca.c (7.3's sdca_asoc_pde_poll_actual_ps() has no device
 #     argument, as Valve's commit notes).
 #   Not ported: the HDMI 2.1 series (squashed, Steam Machine only; against
-#     7.3's split amdgpu_dm it is a rewrite, left for Valve's own port).
+#     7.3's split amdgpu_dm it is a rewrite; Io waits for Valve's own port,
+#     decided 2026-11-05).
 # _valvever: no Valve tag to name, so "neptune1"; Valve's first 7.3 tag
 # replaces it.
 _valvever=neptune1
