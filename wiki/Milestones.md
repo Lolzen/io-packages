@@ -31,10 +31,7 @@ testers yet.
 
 ## In branches
 
-Work that is built but not on `main` yet:
-
-- **`test-torus-splash`:** the animated *Io Torus* boot splash
-  (`io-branding` 0.4.0); works, kept on the branch for now (cosmetic)
+Work that is built but not on `main` yet: nothing at the moment.
 
 ---
 
@@ -128,9 +125,11 @@ have; they need someone with the hardware.
 
 ## Polish
 
-- Designed boot splash: the animated *Io Torus* is on `test-torus-splash`
-  (see *In branches*). On a static logo the screen goes black between the
-  splash and game mode; `plymouth-holo` keeps the splash image instead
+- Boot splash: done 2026-11-05 (`io-branding` 0.4.1: the still logo at
+  boot, kept on screen until game mode by `plymouth-holo`; the animated
+  *Io Torus* during firmware updates). On the Deck the simulated update's
+  animation seemed hidden behind the logo; harmless, to look at with the
+  next real update
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
   inside game mode; a first try with Valve's files: logging out of it did
   not end its session)
