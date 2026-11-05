@@ -60,11 +60,6 @@ are rebased onto each Valve update (*Recurring*).
 
 ## Open observations
 
-- **Wi-Fi next to the dock's Ethernet showed "can't reach network"** once,
-  during a day of heavy testing; plugging and unplugging the dock later
-  behaved correctly. If it comes back, record before reconnecting:
-  `nmcli -f DEVICE,STATE,IP4-CONNECTIVITY device; nmcli -f CONNECTIVITY
-  general; ip route`
 - **Touch only with the dock on SteamOS:** SteamOS switches the trackpads
   off while the dock is attached; Io does not (see [Deviations](Deviations))
 - **`€` from Steam's keyboard in the desktop** does not arrive (the AltGr
