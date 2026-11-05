@@ -24,10 +24,20 @@ XBPS_INSTALL="${IO_UPDATE_XBPS_INSTALL:-xbps-install}"
 XBPS_OPTS="${IO_UPDATE_XBPS_OPTS:-}"
 STATE="${IO_UPDATE_STATE:-/run/io-update}"
 LOG="${IO_UPDATE_LOG:-/var/log/io-update.log}"
+CHANGELOG_SUMMARY="${IO_UPDATE_CHANGELOG_STATE:-/run/io-update-changelog.json}"
+CLEAN_CHANGELOG_SUMMARY=0
 
 mkdir -p "$STATE"
 TMP=$(mktemp -d "$STATE/tmp.XXXXXX") || exit 1
-trap 'rm -rf "$TMP"' EXIT INT TERM
+cleanup() {
+    rm -rf "$TMP"
+    if [ "$CLEAN_CHANGELOG_SUMMARY" -eq 1 ]; then
+        rm -f "$CHANGELOG_SUMMARY"
+    fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 say() { echo "io-update: $*" >&2; log "$*"; }
@@ -74,10 +84,63 @@ pending() {
 
 count() { grep -c . "$TMP/pending"; }
 dlsize() { awk '{ s += $6 } END { printf "%d\n", s }' "$TMP/pending"; }
+
 buildid() { echo "$(date -u +%Y%m%d).$(count)"; }
+
+# Publish the exact pending transaction for the CEF patch-notes adapter.
+write_changelog_summary() {
+    python3 - "$TMP/pending" "$CHANGELOG_SUMMARY" "$(buildid)" "$(count)" "$(dlsize)" <<'PY'
+import json, os, re, subprocess, sys, tempfile
+pending, output, build_id, count, download_bytes = sys.argv[1:]
+def split_pending_pkgver(value):
+    name = subprocess.run(["xbps-uhelper", "getpkgname", value], text=True,
+                          capture_output=True, check=True).stdout.strip()
+    version = subprocess.run(["xbps-uhelper", "getpkgversion", value], text=True,
+                             capture_output=True, check=True).stdout.strip()
+    return name, version
+def split_installed_pkgver(value):
+    # xbps-query -l is one listing operation; don't spawn two helpers for
+    # every installed package just to find the old versions.
+    match = re.match(r"^(.*)-([0-9].*)$", value)
+    return (match.group(1), match.group(2)) if match else (value, "")
+installed = {}
+query = subprocess.run(["xbps-query", "-l"], text=True, capture_output=True, check=False)
+if query.returncode == 0:
+    for line in query.stdout.splitlines():
+        fields = line.split(maxsplit=2)
+        if len(fields) >= 2 and fields[0] == "ii":
+            name, version = split_installed_pkgver(fields[1])
+            installed[name] = version
+packages = []
+with open(pending, encoding="utf-8") as stream:
+    for line in stream:
+        fields = line.split()
+        if len(fields) < 2:
+            continue
+        name, new_version = split_pending_pkgver(fields[0])
+        old_version = installed.get(name) if fields[1] in ("update", "reinstall") else None
+        packages.append({"name": name, "from": old_version,
+                         "to": new_version, "action": fields[1]})
+summary = {"build_id": build_id, "package_count": int(count),
+           "download_bytes": int(download_bytes), "packages": packages}
+directory = os.path.dirname(output)
+fd, temp = tempfile.mkstemp(prefix="io-update-changelog.", dir=directory)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        json.dump(summary, stream, ensure_ascii=False, separators=(",", ":"))
+        stream.write("\n")
+    os.chmod(temp, 0o644)
+    os.replace(temp, output)
+finally:
+    try: os.unlink(temp)
+    except FileNotFoundError: pass
+PY
+}
+
 
 cmd_check() {
     lock
+    rm -f "${IO_UPDATE_CHANGELOG_STATE:-/run/io-update-changelog.json}" 2>> "$LOG"
     sync_repos
     pending
     if [ "$(count)" -eq 0 ]; then
@@ -85,6 +148,9 @@ cmd_check() {
         exit 7
     fi
     log "check: $(count) package(s): $(awk '{ printf "%s ", $1 }' "$TMP/pending")"
+    if ! write_changelog_summary >> "$LOG" 2>&1; then
+        log "check: could not write the patch-notes summary; continuing update check"
+    fi
     echo "$(buildid) $(count) $(dlsize)"
 }
 
@@ -138,6 +204,9 @@ progress_filter() {
 
 cmd_apply() {
     lock
+    # Clear the pending transaction after apply exits, on success or failure.
+    # Do not clear it when lock() fails: another check may own the summary.
+    CLEAN_CHANGELOG_SUMMARY=1
     sync_repos
     pending
     # xbps refuses to update anything else while it is outdated itself

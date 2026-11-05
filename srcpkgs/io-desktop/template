@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=56
+revision=57
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to Io's kernel (linux-neptune) and
@@ -28,7 +28,7 @@ depends="
  removed-packages glibc-locales
  void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree
 
- io-base io-branding io-session steamos-manager io-atomupd ec-log
+ io-base io-branding io-session steamos-manager io-atomupd io-changelog ec-log
  linux-neptune linux-firmware deck-firmware deck-hw-support
  deck-firmware-updaters jupiter-dock-updater-bin deck-controller-calibration
  jupiter-hibernate-disable
