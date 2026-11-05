@@ -195,13 +195,23 @@ def series_of(v):
 
 def check_kernel():
     """Io's kernel against Valve's, Void's and kernel.org's; lists all three."""
-    tpl = sorted(glob.glob(os.path.join(ROOT, "srcpkgs/linux-neptune-*/template")))[-1]
-    pkg = os.path.basename(os.path.dirname(tpl))
-    text = open(tpl).read()
+    # the kernel package of the newest series (linux-neptune-73, not its
+    # -headers/-dbg links or the linux-neptune metapackage)
+    pkgs = [d for d in os.listdir(os.path.join(ROOT, "srcpkgs")) if re.fullmatch(r"linux-neptune-\d+", d)]
+    pkg = max(pkgs, key=lambda d: int(d.rsplit("-", 1)[1]))
+    text = read(os.path.join("srcpkgs", pkg, "template"))
     io_ver = template_vars(text)["version"]
     io_series = series_of(io_ver)
+    # Valve's base: a tag ("Valve's 7.2.7-valve2") or, before Valve's first
+    # tag of a series, its integration branch ("Valve's 7.3/integration (<commit>")
     m = re.search(r"Valve's ([0-9.]+)-(valve\d+)", text)
-    io_valve = "%s.%s" % (m.group(1), m.group(2)) if m else "?"
+    m2 = re.search(r"Valve's (\d+\.\d+)/integration \(([0-9a-f]+)", text)
+    if m:
+        io_valve = "%s.%s" % (m.group(1), m.group(2))
+    elif m2:
+        io_valve = "%s/integration %s" % (m2.group(1), m2.group(2)[:12])
+    else:
+        io_valve = "?"
     kernel_overview.append("| Io | `%s` %s (Valve's %s on stable %s) |" % (pkg, io_ver, io_valve, io_ver))
 
     # kernel.org: every maintained release, and the newest point release of Io's series
@@ -250,9 +260,14 @@ def check_kernel():
     kernel_overview.append("| Valve | `%s` %s%s |" % (newest_name, regular[newest_name],
                                                       "; newest of all: `%s` %s" % (newest_any, valve[newest_any])
                                                       if newest_any != newest_name else ""))
-    if valve_ver != io_valve:
-        add("valve-kernel:" + valve_ver, "Kernel",
-            "Valve's kernel is **%s** (`%s`), Io carries %s" % (valve_ver, newest_name, io_valve))
+    # a Valve kernel of Io's own series that Io does not carry yet
+    same = {n: v for n, v in regular.items() if series_of(v) == io_series}
+    if same:
+        name = max(same, key=lambda n: vkey(same[n]))
+        ver = same[name].rsplit("-", 1)[0]
+        if ver != io_valve:
+            add("valve-kernel:" + ver, "Kernel",
+                "Valve's kernel is **%s** (`%s`), Io carries %s" % (ver, name, io_valve))
 
     # a newer series: one finding per series, its text follows the versions
     newer = set()

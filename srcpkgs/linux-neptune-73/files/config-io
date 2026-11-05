@@ -1,0 +1,26 @@
+# Io's own settings on top of Void's base config, Valve's config.x86_64 and
+# config-neptune (what SteamOS's linux-neptune-72 is built from). Each line
+# says why it differs from Valve's.
+# Not set because Io builds without Rust (xbps-src has no Rust toolchain in
+# the kernel build): Valve's Rust-only options, the Rust Binder (the C
+# Binder below takes its place) and the QR code on the panic screen.
+# Review on every kernel bump: compare Void, Valve and SteamOS and decide
+# per option (towards SteamOS, towards Void, or a deliberate Io choice).
+
+# Packaging (Void): xbps-src sets LOCALVERSION to the package revision.
+# CONFIG_LOCALVERSION_AUTO is not set
+# Packaging (Void): mv-debug splits off the debug info, then signs and
+# compresses each module itself; signing or compressing already in
+# modules_install would be undone by the strip.
+# CONFIG_MODULE_SIG_ALL is not set
+# CONFIG_MODULE_COMPRESS_ALL is not set
+# Arch-specific default; the real hostname comes from /etc/hostname.
+CONFIG_DEFAULT_HOSTNAME="(none)"
+# Towards SteamOS (and Void): Binder for Android containers (Waydroid).
+# SteamOS 3.8.4 has the C Binder, 3.9.2 the Rust Binder, which needs Rust.
+CONFIG_ANDROID_BINDER_IPC=y
+CONFIG_ANDROID_BINDERFS=y
+# Towards Void: TOMOYO (built, as in Valve's config, but not in the LSM
+# list, so inactive) would be switched on when this program runs; Valve's
+# value is Arch's systemd path, Io's init is Void's runit at /sbin/init.
+CONFIG_SECURITY_TOMOYO_ACTIVATION_TRIGGER="/sbin/init"

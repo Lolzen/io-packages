@@ -1,0 +1,20 @@
+# Template file for 'linux-neptune'
+pkgname=linux-neptune
+version=7.3
+revision=1
+metapackage=yes
+# Io's kernel series, as Void's "linux" names its default one: io-desktop
+# depends on this package, so a new series reaches installed systems
+# through its update. The previous series stays installed (and in GRUB's
+# menu) until it is removed by hand; vkpurge leaves kernels a package owns.
+depends="linux-neptune-${version/./}"
+short_desc="Steam Deck kernel meta package"
+maintainer="Georg <funer@gmx.at>"
+license="Public Domain"
+homepage="https://github.com/Lolzen/io-packages"
+
+linux-neptune-headers_package() {
+	metapackage=yes
+	short_desc="Steam Deck kernel headers meta package"
+	depends="linux-neptune-${version/./}-headers"
+}

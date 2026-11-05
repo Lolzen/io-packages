@@ -303,7 +303,7 @@ grub_install_removable() {
 grub_mkconfig() { chroot "$1" grub-mkconfig -o /boot/grub/grub.cfg; }
 
 # The newest kernel: a reused root keeps the previous one next to it
-# (linux-neptune-72 is preserve=yes), and GRUB boots the newest by default.
+# (linux-neptune-* are preserve=yes), and GRUB boots the newest by default.
 newest_kernel() { ls "$1/usr/lib/modules" | sort -V | tail -n 1; }
 make_initramfs() {
   _kver=$(newest_kernel "$1")

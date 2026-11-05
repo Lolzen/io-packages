@@ -1,11 +1,11 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=55
+revision=56
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
-# (linux), which would be installed next to linux-neptune-72 and does not
-# boot the Deck. Its other dependencies are listed below instead, without
+# (linux), which would be installed next to Io's kernel (linux-neptune) and
+# does not boot the Deck. Its other dependencies are listed below instead, without
 # linux and acpid (the power button goes through steamos-powerbuttond and
 # elogind).
 provides="base-system-9999_1"
@@ -29,7 +29,7 @@ depends="
  void-repo-nonfree void-repo-multilib void-repo-multilib-nonfree
 
  io-base io-branding io-session steamos-manager io-atomupd ec-log
- linux-neptune-72 linux-firmware deck-firmware deck-hw-support
+ linux-neptune linux-firmware deck-firmware deck-hw-support
  deck-firmware-updaters jupiter-dock-updater-bin deck-controller-calibration
  jupiter-hibernate-disable
  jupiter-fan-control steamos-powerbuttond

@@ -63,7 +63,7 @@ void-repo-multilib-nonfree
 sddm
 konsole
 parted
-linux-neptune-72
+linux-neptune
 mesa-dri
 elogind
 polkit
