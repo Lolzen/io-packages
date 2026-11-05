@@ -3,5 +3,8 @@
   "headline": "Io system update",
   "intro": "This update installs the following Io package changes:",
   "release_url": "https://github.com/Lolzen/io-packages/wiki/Changelog",
-  "notes": []
+  "notes": [
+    "TEST (2026-11-05): this text comes from Io's io-changelog 0.1.0_6, not from Valve.",
+    "If Steam shows this instead of Valve's SteamOS 3.9.5 notes, the patch-notes override works."
+  ]
 }
