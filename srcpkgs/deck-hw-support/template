@@ -1,7 +1,7 @@
 # Template file for 'deck-hw-support'
 pkgname=deck-hw-support
 version=20260807.1
-revision=20
+revision=21
 hostmakedepends="xcursorgen"
 depends="polkit jq alsa-utils dmidecode elogind-holo udisks2 parted e2fsprogs exfatprogs f3"
 short_desc="Steam Deck hardware support helpers from jupiter-hw-support"
@@ -32,6 +32,12 @@ homepage="https://gitlab.steamos.cloud/jupiter/jupiter-hw-support"
 # (BIOS, controller) and jupiter-dock-updater-bin (Valve's dock), which
 # carry Valve's updaters and firmware files. steamos-factory-reset-config
 # requests a reset of the user data from io-factory-reset.
+#
+# Checked against 20261028.1: taken are the udisks error messages naming
+# the device object (common-functions). Left out: NVMe and virtio drives
+# automounted and formattable (for the Steam Machine and VMs; Io hides the
+# internal SSD and never formats it) and the GRUB command line, which
+# io-base carries (amdgpu.dcdebugmask=0x60000).
 
 do_install() {
 	vmkdir usr/bin/steamos-polkit-helpers
