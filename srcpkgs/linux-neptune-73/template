@@ -56,7 +56,8 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #     7.3's split amdgpu_dm it is a rewrite; Io waits for Valve's own port,
 #     decided 2026-11-05).
 # _valvever: no Valve tag to name, so "neptune1"; Valve's first 7.3 tag
-# replaces it.
+# replaces it. The patch sets the kernel's EXTRAVERSION to match, as
+# Valve's release commits do (the module directory is named after it).
 _valvever=neptune1
 _kernver="${version}-${_valvever}_${revision}"
 triggers="kernel-hooks"

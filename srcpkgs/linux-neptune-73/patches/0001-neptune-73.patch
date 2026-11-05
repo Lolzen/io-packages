@@ -464,6 +464,19 @@ index 782389bd5cd3..2d3b3b15b10f 100644
  XC2028/3028 TUNER DRIVER
  M:	Mauro Carvalho Chehab <mchehab@kernel.org>
  L:	linux-media@vger.kernel.org
+diff --git a/Makefile b/Makefile
+index 677b43beb9c6..f5124583ac39 100644
+--- a/Makefile
++++ b/Makefile
+@@ -2,7 +2,7 @@
+ VERSION = 7
+ PATCHLEVEL = 3
+ SUBLEVEL = 1
+-EXTRAVERSION =
++EXTRAVERSION = -neptune1
+ NAME = Baby Opossum Posse
+ 
+ # *DOCUMENTATION*
 diff --git a/arch/x86/include/asm/tsc.h b/arch/x86/include/asm/tsc.h
 index 4d2d2f21ff06..77fa6e627ae0 100644
 --- a/arch/x86/include/asm/tsc.h
