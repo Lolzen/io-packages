@@ -98,6 +98,8 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `elogind-holo`, `libelogind-holo`, `elogind-devel-holo` | Void's elogind packages | The runit service skips logind's swap size check for hibernation, as Valve's logind drop-in does; elogind's fix for the crash of its shutdown and reboot helper (`e-poweroff`, `e-reboot`), from elogind main |
 | `mesa-holo`, `mesa-dri-holo`, `mesa-vulkan-radeon-holo`, ..., and their `-holo-32bit` packages | Void's Mesa packages, 64 and 32 bit | Steam's frame limit for OpenGL, RADV's explicit VM sync and per command buffer BO tracking for gamescope, game fixes |
 | `xdg-desktop-portal-kde-holo` | `xdg-desktop-portal-kde` | Steam shares the screen in the desktop without Plasma's dialog (Valve's patch), recognised by its client binary without systemd |
+| `plymouth-holo`, `plymouth-data-holo`, `plymouth-devel-holo` | Void's Plymouth packages | Splash kept until game mode (no black gap), TV and update splash, HDR metadata cleared (Valve's 14 patches); initramfs rebuilt on update |
+| `orca-holo` | `orca` | Settings reloaded and speech stopped on SteamOS Manager's signals instead of a restart (Valve's 3 patches) |
 
 ## Upstream sources
 

@@ -33,11 +33,6 @@ testers yet.
 
 Work that is built but not on `main` yet:
 
-- **`test-plymouth-orca`:** Valve's plymouth and Orca patches as overlays
-  (`plymouth-holo`: the splash stays on screen until the session takes
-  over, Valve's TV settings; `orca-holo`: Orca reloads its settings and
-  stops speaking on SteamOS Manager's signals instead of ending). Built,
-  rebased onto main on 2026-11-05 (`io-base` 0.7.3_2), testing on the Deck
 - **`test-torus-splash`:** the animated *Io Torus* boot splash
   (`io-branding` 0.4.0); works, kept on the branch for now (cosmetic)
 
@@ -187,7 +182,8 @@ have; they need someone with the hardware.
   Void has 1.1.3). SteamOS 3.9.4 and 3.9.5 (checked 2026-10-29 against
   their image manifests): nothing Io did not have; `jupiter-staging` and
   `holo-staging` have nothing newer. Of all Arch packages Valve rebuilds
-  for 3.9.5, plymouth and Orca carry patches Io needs (*In branches*);
+  for 3.9.5, plymouth and Orca carry patches Io needs (overlays since
+  2026-11-05);
   three fixes wait for their upstream release and Void: SDDM comparing its
   configuration's times in UTC (a session switch after a timezone change),
   PipeWire 1.6.11's Bluetooth fixes, gamescope blanking the screen before
