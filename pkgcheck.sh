@@ -1,11 +1,12 @@
 #!/bin/sh
 # pkgcheck.sh - fetch the package lists from Valve's source mirror (the
 # development branches jupiter-main, holo-main and the branches of the
-# current SteamOS release, jupiter-3.9, holo-3.9), keep the newest version
-# of each package in docs/, and report what changed since the last run.
-# The release branches matter on their own: a package can reach them before
-# main (xdg-desktop-portal-kde 6.7.3-1.2 did). With the next SteamOS
-# release, change RELEASE.
+# SteamOS releases in RELEASES, jupiter-<release>, holo-<release>), keep the
+# newest version of each package in docs/, and report what changed since the
+# last run. The release branches matter on their own: a package can reach
+# them before main (xdg-desktop-portal-kde 6.7.3-1.2 did). RELEASES holds the
+# stable release (point releases still come) and the next one once Valve
+# branches it; drop the old one when SteamOS has moved on.
 set -eu
 
 BASE=https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources
@@ -15,9 +16,14 @@ trap 'rm -rf "$TMP"' EXIT
 
 mkdir -p "$DOCS"
 
-RELEASE=${RELEASE:-3.9}
+RELEASES=${RELEASES:-"3.9 3.10"}
 
-for branch in jupiter-main holo-main jupiter-$RELEASE holo-$RELEASE; do
+branches="jupiter-main holo-main"
+for release in $RELEASES; do
+    branches="$branches jupiter-$release holo-$release"
+done
+
+for branch in $branches; do
     curl -sf "$BASE/$branch/" > "$TMP/$branch.html" || {
         echo "pkgcheck: $branch unreachable" >&2
         continue

@@ -86,7 +86,7 @@ def conf_lines(path):
 # --- Valve's packages -------------------------------------------------------
 
 def check_valve():
-    release = re.search(r"RELEASE=\$\{RELEASE:-([0-9.]+)\}", read("pkgcheck.sh")).group(1)
+    releases = pkg_releases()
     ignore = set(conf_lines("ci/valve-ignore.txt"))
     tmp = tempfile.mkdtemp()
     try:
@@ -98,7 +98,7 @@ def check_valve():
         for line in r.stderr.splitlines():
             if "unreachable" in line:
                 add("error:" + line, "Errors", line)
-        for branch in ("jupiter-main", "holo-main", "jupiter-" + release, "holo-" + release):
+        for branch in ["jupiter-main", "holo-main"] + [p + r for r in releases for p in ("jupiter-", "holo-")]:
             new_path = os.path.join(tmp, branch + "-latest.txt")
             old_path = os.path.join(ROOT, "docs", branch + "-latest.txt")
             if not os.path.exists(new_path):
@@ -129,9 +129,14 @@ def check_valve():
     index = fetch(VALVE_SOURCES)
     branches = set(re.findall(r'href="((?:jupiter|holo)-(\d+(?:\.\d+)*))/"', index))
     for name, ver in sorted(branches):
-        if vkey(ver) > vkey(release):
+        if vkey(ver) > max(vkey(r) for r in releases):
             add("valve-branch:" + name, "Valve's packages",
-                "new release branch `%s` on Valve's mirror (pkgcheck.sh has RELEASE=%s)" % (name, release))
+                "new release branch `%s` on Valve's mirror (pkgcheck.sh has RELEASES=%s)" % (name, " ".join(releases)))
+
+
+def pkg_releases():
+    """The SteamOS releases pkgcheck.sh watches (its RELEASES default)."""
+    return re.search(r'RELEASES=\$\{RELEASES:-"([0-9. ]+)"\}', read("pkgcheck.sh")).group(1).split()
 
 
 def pkgname(p):
@@ -219,7 +224,10 @@ def check_kernel():
     org = {r["moniker"] + " " + r["version"]: r for r in rel if r["moniker"] in ("mainline", "stable", "longterm")}
     stable = sorted((r["version"] for r in rel if r["moniker"] in ("stable", "longterm")), key=vkey)
     listing = fetch(KERNEL_DIR.format(io_ver.split(".")[0]))
-    found = sorted(set(re.findall(r"patch-(%s\.\d+)\.xz" % re.escape(io_series), listing)), key=vkey)
+    # the directory listing can lag behind releases.json (a cached copy), so both count
+    found = set(re.findall(r"patch-(%s\.\d+)\.xz" % re.escape(io_series), listing))
+    found |= {r["version"] for r in rel if series_of(r["version"]) == io_series and r["version"].count(".") == 2}
+    found = sorted(found, key=vkey)
     org_series = found[-1] if found else io_ver
     eol = [r for r in rel if series_of(r["version"]) == io_series and r["iseol"]]
     listed = any(series_of(r["version"]) == io_series for r in rel if r["moniker"] in ("stable", "longterm"))
@@ -245,10 +253,10 @@ def check_kernel():
         void_default, ", ".join("`linux%s` %s" % (k, v) for k, v in sorted(void.items(), key=lambda x: vkey(x[0])))
         or "no linux%s" % io_series))
 
-    # Valve: linux-neptune packages on the mirror (main and the release branch)
-    release = re.search(r"RELEASE=\$\{RELEASE:-([0-9.]+)\}", read("pkgcheck.sh")).group(1)
+    # Valve: linux-neptune packages on the mirror (main and the release branches)
+    releases = pkg_releases()
     valve = {}
-    for branch in ("jupiter-main", "jupiter-" + release):
+    for branch in ["jupiter-main"] + ["jupiter-" + r for r in releases]:
         for flavour_series, flavour, ver, prel in VALVE_KERNEL_RE.findall(fetch(VALVE_SOURCES + branch + "/")):
             name = "linux-neptune-" + flavour_series + flavour
             if name not in valve or vkey(ver + "-" + prel) > vkey(valve[name]):
@@ -327,7 +335,7 @@ HOWTO = """
 <details><summary>How a finding goes away</summary>
 
 - **Valve's packages:** evaluate, then run `./pkgcheck.sh` and commit `docs/` (unimportant packages: `ci/valve-ignore.txt`)
-- **New release branch:** raise `RELEASE` in `pkgcheck.sh`
+- **New release branch:** add it to `RELEASES` in `pkgcheck.sh`, run `./pkgcheck.sh`, commit `docs/` (drop the old release once SteamOS has moved on)
 - **Overlays:** raise `base_version` after checking the patches; build and publish to current
 - **Waiting for Void:** take the change, then update or remove the line in `ci/void-watch.txt`
 - **Kernel:** update the kernel package (a new stable or Valve version); a newer series stays listed until Io moves to it
