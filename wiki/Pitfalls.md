@@ -718,7 +718,10 @@ files.
 **A package can reach Valve's release branch before main.**
 `xdg-desktop-portal-kde` 6.7.3-1.2 was in `holo-3.9` (and in SteamOS
 3.9.3) while `holo-main` still had an old build. `pkgcheck.sh` therefore
-reads the release branches (`jupiter-3.9`, `holo-3.9`) too. Valve's rebuilds
+reads the release branches too. A new release branch starts as a copy of
+main (`holo-3.10` and `jupiter-3.10`, 2026-11-06), while the stable
+release's branch still gets point releases, so `RELEASES` in the script
+holds both (3.9 and 3.10) until SteamOS has moved on. Valve's rebuilds
 of Arch packages carry a pkgrel with a dot (`-1.2`); the image manifest
 (`steamdeck-images.steamos.cloud/steamdeck/<build>/…manifest.pacman`)
 lists every package of a release and shows them at a glance.

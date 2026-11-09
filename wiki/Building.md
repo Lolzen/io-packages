@@ -287,7 +287,12 @@ start at which each boot stage began.
 2. The release page written (see [Changelog](Changelog)): goal,
    highlights, changes by area, known limitations; done items removed from
    [Milestones](Milestones)
-3. **Actions → *Create next release* → Run workflow**, on `main`, with the
+3. Steam's patch notes: the summary into `notes` of
+   `srcpkgs/io-changelog/files/steam.json`, `headline` and `date` (ISO 8601)
+   new, `io-changelog`'s version raised, built and published. Valve's
+   SteamOS event shows Io's notes with that date when it is newer than
+   Valve's, so they are listed before later Steam client updates
+4. **Actions → *Create next release* → Run workflow**, on `main`, with the
    version step: `0.0.1` (0.8 → 0.8.1) or `0.1` (0.8.x → 0.9). The workflow
    (`.github/workflows/create-next-release.yml`, scripts in `ci/release/`)
    - raises `io-release` (version, `_name`, `_build` as date and counter,
@@ -307,7 +312,7 @@ start at which each boot stage began.
    50 minutes. A real run needs two repository secrets: `IO_REPO_KEY` (the
    content of `privkey.pem`) and `IO_REPO_TOKEN` (a token that may write
    releases of `Lolzen/io-repo`).
-4. Fresh image written to a spare card, booted, storage grown,
+5. Fresh image written to a spare card, booted, storage grown,
    `io-selftest.sh` passes; the recovery stick from the same release
 
 Users rebuild the images with `cat io.img.xz.part* > io.img.xz` (and the
@@ -340,13 +345,17 @@ kernel.org's kernels is in every run. It reports:
 
 - Valve's package listings against `docs/*-latest.txt` (cleared by
   `./pkgcheck.sh` and committing `docs/`; `ci/valve-ignore.txt` for
-  packages decided to be irrelevant) and new SteamOS release branches
+  packages decided to be irrelevant) and a SteamOS release branch newer
+  than all in `RELEASES` of `pkgcheck.sh` (cleared by adding it there,
+  running `./pkgcheck.sh` and committing `docs/`)
 - each overlay whose Void package has a new version (patches to check) or
   a revision `current` does not have yet (build and publish)
 - the Void packages Io waits for (`ci/void-watch.txt`: package, Void's
   version now, what Io waits for)
 - a newer stable release of Io's kernel series, its end of life, a newer
-  series, and Valve's kernel of Io's series
+  series, and Valve's kernel of Io's series (point releases from
+  kernel.org's `releases.json` and its directory listing, which can be a
+  cached copy)
 - Valve's steamos-manager `main` not in the fork's `runit`, and `runit`
   ahead of the template's `_commit`
 

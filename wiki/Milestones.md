@@ -170,8 +170,8 @@ have; they need someone with the hardware.
   credentials for custom updates). WirePlumber
   0.5.18 and PipeWire are Void's, newer than or equal to Valve's (Valve's
   loopback patches only rebased; its one new patch is for smart filters);
-  Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it)
-  and follows when Void has it. Valve's Mesa on its main branch is what
+  Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it;
+  `xorg-server-xwayland-holo` on Void's 24.1.14 since 2026-11-09). Valve's Mesa on its main branch is what
   Io's overlay was checked against (RADV `steamos-26.05.19`; radeonsi
   26.1.2-4 only adds a virgl patch for virtual machines). Valve's `scx`
   (`1.1.3.linux.steamos.2`) is a snapshot of upstream main of September
@@ -193,7 +193,9 @@ have; they need someone with the hardware.
   (linear brightness), NetworkManager's ARP flux fix and jupiter-hw-support
   20261028.1's udisks messages; waiting: iwd's four security fixes (until
   Void or upstream has them), Plasma 6.8 (when Void has it; `kwin-holo`
-  then keeps two patches). Comparisons are made
+  then keeps two patches). Valve's `holo-3.10` and `jupiter-3.10`
+  (2026-11-06) start as copies of main; `pkgcheck.sh` watches 3.9 and
+  3.10. Kernel 7.3.3 since 2026-11-08. Comparisons are made
   against Valve's manifests and source archives: the Deck runs only Io
   since 2026-10-31, so there are no new SteamOS captures
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*

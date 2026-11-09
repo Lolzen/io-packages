@@ -303,7 +303,7 @@ its own implementation (`io-steamos-manager`).
 
 ## Kernel
 
-- **`linux-neptune-73`, 7.3.1**, ahead of SteamOS (3.9.5: 7.2.7), built
+- **`linux-neptune-73`, 7.3.3**, ahead of SteamOS (3.9.5: 7.2.7), built
   from Valve's `linux-integration` tree: Valve's untagged 7.3 branch with
   the newer changes of Valve's 7.2.10-valve1 ported (not the HDMI 2.1
   series and the commits Valve left out of 7.3, see [Kernel](Kernel)); the
@@ -472,7 +472,7 @@ its own implementation (`io-steamos-manager`).
   3.9.2 ([SteamOS packages](Valve-Package-Survey)), some of them newer
   (from 3.9.3 or Valve's main branch, see [Milestones](Milestones),
   *Catching up with Valve*). The kernel is newer than SteamOS's: Valve's
-  7.3 branch on stable 7.3.1 ([Kernel](Kernel)).
+  7.3 branch on stable 7.3.3 ([Kernel](Kernel)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
@@ -567,7 +567,12 @@ interfaces Steam uses:
 - **Patch notes use Io's update summary.** The `io-changelog` runit service
   uses Steam's CEF remote debugging endpoint on localhost to replace only
   the SteamOS event for app 1675200 with Io's package summary and release
-  notes. It does not edit Steam's files or change the client. The service
+  notes. Steam sends more than one SteamOS event (3.9 and 3.8.28): the
+  newest becomes Io's notes, the older ones leave the list. The event takes
+  the date of Io's notes (`date` in `steam.json`, or the time `io-update`
+  found the pending update) when that is newer than Valve's, so it is not
+  listed behind later Steam client updates; client announcements stay
+  unchanged. It does not edit Steam's files or change the client. The service
   is linked by default in images and on first package install; remove
   `/var/service/io-changelog` to opt out. While it runs, it stops
   `steam-web-debug-portforward` so the adapter's debugging session is not

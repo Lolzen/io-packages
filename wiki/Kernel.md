@@ -1,9 +1,9 @@
 # Kernel
 
 `linux-neptune-73` is Io's Steam Deck kernel, built with Void's kernel
-packaging: 7.3.1, Valve's `7.3/integration` branch with stable 7.3.1 merged
-in and the changes of Valve's `7.2.10-valve1` that the branch does not have
-yet (since November 2026). Valve has no 7.3 package yet; SteamOS 3.9.5 runs
+packaging: 7.3.3, Valve's `7.3/integration` branch on stable 7.3.3, with
+the changes of Valve's `7.2.10-valve1` that the branch does not have yet
+(since November 2026). Valve has no 7.3 package yet; SteamOS 3.9.5 runs
 `7.2.7-valve2`, Valve's main branch `7.2.10-valve1`.
 
 The metapackage `linux-neptune` names Io's series (`linux-neptune-73`, and
@@ -17,15 +17,15 @@ removed by hand.
 History: 6.15.8 until September 2026, then Valve's 7.2 branch (NTSync, newer
 HID drivers, HDMI-CEC over the dock's DisplayPort link); 7.2.7-valve1 in
 Alpha 6 and 7, 7.2.7-valve2 on stable 7.2.11 in Beta 0.8; 7.3 since
-2026-11-05.
+2026-11-05 (7.3.1), 7.3.3 since 2026-11-08.
 
 ---
 
 ## Source
 
 Io does not keep a kernel fork. The package builds the kernel.org tarball
-(7.3 plus `patch-7.3.1`) and applies one patch,
-`patches/0001-neptune-73.patch`: the whole difference between stable 7.3.1
+(7.3 plus `patch-7.3.3`) and applies one patch,
+`patches/0001-neptune-73.patch`: the whole difference between stable 7.3.3
 and the tree described below (without Valve's `ci/` directory and CI
 files). Void's small build fixes (`fix-ccache.patch`,
 `fixdep-largefile.patch`, as `linux7.3`) come on top; Void's
@@ -43,9 +43,9 @@ the archive of `linux-neptune-72` 7.2.10.valve1-3, whose repository has
 | Part | What |
 |---|---|
 | Valve's `7.3/integration` (7415f40493e8) | Everything of `7.2.7-valve2` Valve carried over to 7.3: 408 commits on v7.3 |
-| Stable 7.3.1 | Merged without conflicts |
+| Stable 7.3.3 | 7.3.1 merged without conflicts; the port rebased onto 7.3.3 (2026-11-06). Stable 7.3.3 carries Valve's nine `[FROM-ML]` `hid-lenovo-go-s` fixes itself, so they dropped out of the patch; the tree equals a three-way merge of the 7.3.1 port with 7.3.3 |
 | From `7.2.10-valve1`, ported by Io | The merge requests Valve's branch does not have yet, 34 commits: ROG Xbox Ally X20 audio (SoundWire, TAS2783, RT721), `hid-lenovo-go`, GL9767 UHS-II, `asus-armoury`, `hid-asus-ally`, rtw88's decryption checks and ASPM (the Deck LCD's Wi-Fi) |
-| `EXTRAVERSION = -neptune1` | Valve's release commits set it (`-valve2`); the branch has none yet. The kernel release, and with it the module directory, is `7.3.1-neptune1_<revision>` |
+| `EXTRAVERSION = -neptune1` | Valve's release commits set it (`-valve2`); the branch has none yet. The kernel release, and with it the module directory, is `7.3.3-neptune1_<revision>` |
 
 Adapted while porting: `acp-config.c` and `amd-acp70-acpi-match.c` (7.3's
 new HP entries kept next to the Ally's), `tas2783-sdw.c` (both includes),
@@ -79,6 +79,15 @@ branch from time to time; Io does the same when it is ahead of Valve's tag:
    `git diff v7.N.M <merge> -- . ':(exclude)ci' ':(exclude).gitlab-ci.yml'`.
 4. Check that kernel.org 7.N + `patch-7.N.M` + the patch gives the merged
    tree, and that `EXTRAVERSION` matches `_valvever`.
+
+On top of an untagged branch (7.3 today) Io rebases instead: the port
+(Valve's branch, the ported merge requests, the `EXTRAVERSION` commit) goes
+onto the new stable tag with `git rebase --onto v7.N.M v7.N.L`. A commit
+that conflicts because stable already has it (same subject without
+Valve's `[FROM-ML]`-style tag) is skipped; the check is that the result
+equals `git merge-tree --write-tree <old port> v7.N.M` apart from the
+`Makefile`'s `SUBLEVEL`. Then the patch as in step 3, and the Kconfig diff
+between both stable tags (7.3.1 → 7.3.3: none).
 
 The conflicts of `linux-neptune-72`'s 7.2.11 merge (in its template):
 
@@ -140,7 +149,7 @@ it and uses the C Binder.
 
 | Option | Value | Direction | Why |
 |---|---|---|---|
-| `LOCALVERSION_AUTO` | off | Void packaging | xbps-src sets the local version from the package revision (`_1` in `7.3.1-neptune1_1`) |
+| `LOCALVERSION_AUTO` | off | Void packaging | xbps-src sets the local version from the package revision (`_1` in `7.3.3-neptune1_1`) |
 | `MODULE_SIG_ALL`, `MODULE_COMPRESS_ALL` | off | Void packaging | Void's `mv-debug` splits off the debug information, then signs and compresses each module itself; doing it in `modules_install` already would be undone by the strip |
 | `DEFAULT_HOSTNAME` | `(none)` | Io's own | Valve's value is Arch's (`archlinux`); the real name comes from `/etc/hostname` |
 | `ANDROID_BINDER_IPC`, `ANDROID_BINDERFS` | built in | Towards SteamOS | Binder for Android containers (Waydroid). SteamOS 3.8.4 has the C Binder, 3.9.2 the Rust Binder; Io builds without Rust, so the C one |
