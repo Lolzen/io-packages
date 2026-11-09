@@ -152,6 +152,12 @@ def redate(event, when):
     return True
 
 
+def is_steamos(event):
+    announcement = event.get("announcement_body")
+    fallback_name = announcement.get("headline", "") if isinstance(announcement, dict) else ""
+    return str(event.get("event_name") or fallback_name).strip().lower().startswith("steamos")
+
+
 def describe(events):
     return ", ".join("%s@%d" % (str(e.get("event_name", "?"))[:40], start_time(e))
                      for e in events if isinstance(e, dict))
@@ -169,16 +175,20 @@ def replace_steam_event(payload):
     title = str(spec.get("headline", "Io system update"))
     body = render_body(spec, summary)
     replaced = False
-    for event in events:
-        if not isinstance(event, dict):
-            continue
-        announcement = event.get("announcement_body")
-        fallback_name = announcement.get("headline", "") if isinstance(announcement, dict) else ""
-        name = str(event.get("event_name") or fallback_name).strip()
-        # App 1675200 also carries Steam client announcements. Replace only
-        # the OS update event; retain adjacent client notes unchanged.
-        if not name.lower().startswith("steamos"):
-            continue
+    # App 1675200 also carries Steam client announcements. Replace only the
+    # OS update events; retain adjacent client notes unchanged. Steam can
+    # send several SteamOS events (3.9.5 and an older one): the newest
+    # becomes Io's notes, the older ones leave the list, so neither Valve's
+    # text nor a second copy of Io's notes shows.
+    os_events = [e for e in events if isinstance(e, dict) and is_steamos(e)]
+    if not os_events:
+        return payload, False
+    keep = max(os_events, key=start_time)
+    dropped = [e for e in os_events if e is not keep]
+    if dropped:
+        events[:] = [e for e in events if not any(e is d for d in dropped)]
+        log("dropped older SteamOS events: " + describe(dropped))
+    for event in [keep]:
         event["event_name"] = title
         event["event_notes"] = "see announcement body"
         announcement = event.get("announcement_body")
