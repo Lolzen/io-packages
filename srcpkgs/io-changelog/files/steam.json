@@ -1,7 +1,19 @@
 {
   "schema_version": 1,
-  "headline": "Io system update",
-  "intro": "This update installs the following Io package changes:",
+  "date": "2026-11-09T14:00:00+01:00",
+  "headline": "Io updates since Beta 0.8",
+  "intro": "A summary of the Io changes since Beta 0.8:",
   "release_url": "https://github.com/Lolzen/io-packages/wiki/Changelog",
-  "notes": []
+  "notes": [
+    "Kernel: Linux 7.3.3 with Valve's Steam Deck patches (linux-neptune-73), the display setting amdgpu.dcdebugmask=0x60000 as on SteamOS.",
+    "Boot: no more hang at the boot logo (SDDM waits for elogind). The Io logo at boot, the animated Io Torus during firmware updates.",
+    "Patch notes: Io's own notes in Steam's SteamOS update page (this page).",
+    "Desktop: Steam shares the screen without a prompt; text from Steam's on-screen keyboard arrives correctly (Xwayland 24.1.14).",
+    "Screen reader: Orca with Valve's patches keeps running when speech settings change.",
+    "Wi-Fi: NetworkManager with Valve's ARP fix.",
+    "Power: shutdown and reboot from the power menu no longer crash elogind; hibernation stays off, as on SteamOS.",
+    "Storage: SD cards are rescanned through Valve's helper; clearer error messages from the SD card and format tools.",
+    "Graphics and audio: Mesa 26.2.6, gamescope-wsi 3.17.0, steamdeck-dsp 1.03.",
+    "SteamOS Manager: Valve's version of 2026-10-24."
+  ]
 }

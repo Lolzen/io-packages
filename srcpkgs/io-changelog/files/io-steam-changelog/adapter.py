@@ -113,11 +113,59 @@ def render_body(spec, summary):
     return "".join(lines)
 
 
+def notes_time(spec):
+    """When Io's notes were written: steam.json's "date" (ISO 8601) or the
+    time io-update wrote the pending update's summary, the newer of both."""
+    t = 0
+    try:
+        t = int(datetime.fromisoformat(str(spec.get("date", ""))).timestamp())
+    except ValueError:
+        pass
+    try:
+        t = max(t, int(SUMMARY.stat().st_mtime))
+    except OSError:
+        pass
+    return t
+
+
+def start_time(event):
+    try:
+        return int(event.get("rtime32_start_time") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def redate(event, when):
+    """Give the replaced event Io's time when that is newer than Valve's, so
+    Steam lists it by Io's date and not behind later client updates."""
+    if when <= start_time(event):
+        return False
+    event["rtime32_start_time"] = when
+    for key in ("rtime32_end_time", "rtime32_last_modified"):
+        if key in event and isinstance(event[key], int) and 0 < event[key] < when:
+            event[key] = when
+    body = event.get("announcement_body")
+    if isinstance(body, dict):
+        for key in ("posttime", "updatetime"):
+            if key in body and isinstance(body[key], int) and body[key] < when:
+                body[key] = when
+    return True
+
+
+def describe(events):
+    return ", ".join("%s@%d" % (str(e.get("event_name", "?"))[:40], start_time(e))
+                     for e in events if isinstance(e, dict))
+
+
 def replace_steam_event(payload):
     spec, summary = load_changelog()
     events = payload.get("events")
     if not isinstance(events, list):
         return payload, False
+    log("events before: " + describe(events))
+    times = [start_time(e) for e in events if isinstance(e, dict)]
+    newest_first = times == sorted(times, reverse=True)
+    when = notes_time(spec)
     title = str(spec.get("headline", "Io system update"))
     body = render_body(spec, summary)
     replaced = False
@@ -139,7 +187,14 @@ def replace_steam_event(payload):
             event["announcement_body"] = announcement
         announcement["headline"] = title
         announcement["body"] = body
+        if redate(event, when):
+            log(f"dated Io's notes {when} (Valve's event was older)")
         replaced = True
+    if replaced and newest_first:
+        # Steam's list is newest first: keep it so with the new date
+        events.sort(key=lambda e: start_time(e) if isinstance(e, dict) else 0, reverse=True)
+    if replaced:
+        log("events after: " + describe(events))
     return payload, replaced
 
 
