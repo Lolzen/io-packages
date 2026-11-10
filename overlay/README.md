@@ -96,7 +96,7 @@ one release, so the update removes the overlay package and installs Void's.
 |---|---|---|---|---|---|
 | [MangoHud](MangoHud/README.md) | MangoHud, MangoHud-mangoapp | 0.8.4 | mangoapp renders once per game frame (`2c1dc52`) | master, not in 0.8.4 | 2026-10-05 |
 | [NetworkManager](NetworkManager/README.md) | NetworkManager, libnm, NetworkManager-devel | 1.58.1 | Wi-Fi: after resume scan only the last-associated frequency; IPv4 conflict detection ignores ARP flux from the device's own interfaces | MR 2514, MR 2586, open | 2026-10-05 |
-| [bluez](bluez/README.md) | bluez, libbluetooth and subpackages | 5.86 | LE resolving list fix (Steam Controller suspend); Switch Pro Controller not forced active | not merged / not sent | 2026-10-05 |
+| [bluez](bluez/README.md) | bluez, libbluetooth and subpackages | 5.88 | LE resolving list fix (Steam Controller suspend); Switch Pro Controller not forced active | not merged / not sent | 2026-10-05 |
 | [iwd](iwd/README.md) | iwd | 3.12 | 3 station fixes (BSS cache, pending BSS, stale scans) | not in iwd | 2026-10-11 |
 | [kwin](kwin/README.md) | kwin, kwin-devel | 6.7.5 | brightness from the device; Steam keyboard input from libei past a grabbing input method; libei 1.6 keysyms and text; no modes below 480p | 0002/0006 not upstream; 0011/0013 in 6.8 | 2026-10-11 |
 | [wpa_supplicant](wpa_supplicant/README.md) | wpa_supplicant | 2.12 | SAE wrong-password detection; 2 rescan fixes (6 GHz); WNM, MBO and other options from Valve's configuration | not in hostap | 2026-10-11 |

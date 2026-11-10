@@ -397,10 +397,10 @@ with "this package cannot be built for x86_64"; leave `archs` out.
 
 **Void's autoconf 2.73 makes configure prefer C23.** A template that runs
 `autoreconf` gets a configure that adds `-std=gnu23`, where `false` is no
-longer a null pointer constant; older code such as bluez 5.86 then fails
-("incompatible types when returning type '_Bool'"). Void's own bluez
-template fails this way since; packages built before still install. Fix:
-`CFLAGS="-std=gnu17"` (the default of GCC 14).
+longer a null pointer constant; older code then fails ("incompatible
+types when returning type '_Bool'", bluez 5.86). Fix: a patch that returns
+`NULL` (Void's bluez 5.88 has one), or `CFLAGS="-std=gnu17"` (the default
+of GCC 14) until there is one.
 
 **A library from an Io package is unknown to Void's `common/shlibs`.**
 `xbps-src` stops at the consumer ("SONAME ... UNKNOWN PKG PLEASE FIX!",
