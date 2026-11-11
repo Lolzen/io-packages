@@ -33,8 +33,6 @@ testers yet.
 
 Work that is built but not on `main` yet:
 
-- `test-kernel-734`: `linux-neptune-73` 7.3.4 (stable 7.3.4 under the
-  same port; Deck test pending)
 - `test-sm-patches`: `steamos-manager` built from Valve's source archive
   with Io's seven runit commits as the package's patches, in place of the
   fork's `runit` branch; Valve's main of 2026-11-10 (Deck test pending)
@@ -204,7 +202,7 @@ have; they need someone with the hardware.
   Void or upstream has them), Plasma 6.8 (when Void has it; `kwin-holo`
   then keeps two patches). Valve's `holo-3.10` and `jupiter-3.10`
   (2026-11-06) start as copies of main; `pkgcheck.sh` watches 3.9 and
-  3.10. Kernel 7.3.3 since 2026-11-08; bluez 5.88 (Void's, with Io's two
+  3.10. Kernel 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11; bluez 5.88 (Void's, with Io's two
   patches, 2026-11-10). Valve's main of 2026-11-10: steamos-manager
   (`ds_inhibit` returns errors in fewer cases on shutdown; in
   `test-sm-patches`), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard

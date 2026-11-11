@@ -303,7 +303,7 @@ its own implementation (`io-steamos-manager`).
 
 ## Kernel
 
-- **`linux-neptune-73`, 7.3.3**, ahead of SteamOS (3.9.5: 7.2.7), built
+- **`linux-neptune-73`, 7.3.4**, ahead of SteamOS (3.9.5: 7.2.7), built
   from Valve's `linux-integration` tree: Valve's untagged 7.3 branch with
   the newer changes of Valve's 7.2.10-valve1 ported (not the HDMI 2.1
   series and the commits Valve left out of 7.3, see [Kernel](Kernel)); the
@@ -472,7 +472,7 @@ its own implementation (`io-steamos-manager`).
   3.9.2 ([SteamOS packages](Valve-Package-Survey)), some of them newer
   (from 3.9.3 or Valve's main branch, see [Milestones](Milestones),
   *Catching up with Valve*). The kernel is newer than SteamOS's: Valve's
-  7.3 branch on stable 7.3.3 ([Kernel](Kernel)).
+  7.3 branch on stable 7.3.4 ([Kernel](Kernel)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses

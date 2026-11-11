@@ -44,8 +44,9 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #     sync series the amdgpu interface stays at 3.64, so Mesa's
 #     radv_vm_explicit_sync (mesa-holo 0005) stays off.
 #   stable 7.3.1 merged without conflicts. Rebased onto 7.3.3: stable
-#     carries Valve's [FROM-ML] hid-lenovo-go-s fixes (9 commits) itself,
-#     so they dropped out; the tree equals a three-way merge of 7.3.3.
+#     carries eleven of Valve's commits itself (ten [FROM-ML] hid-lenovo-go-s
+#     fixes, the [FROM-UPSTREAM] snd_acp63_remove teardown fix), so they
+#     dropped out; the tree equals a three-way merge of 7.3.3.
 #   Rebased onto 7.3.4: two rtw89 fixes are in stable; xpad keeps stable's
 #     GameSir Nova Lite (Xbox 360) and drops the Xbox One entry with Valve's
 #     "Remove Xbox One support"; acp-config keeps both ACP 7.0 entries.
