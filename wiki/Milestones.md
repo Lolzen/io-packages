@@ -31,7 +31,13 @@ testers yet.
 
 ## In branches
 
-Work that is built but not on `main` yet: nothing at the moment.
+Work that is built but not on `main` yet:
+
+- `test-kernel-734`: `linux-neptune-73` 7.3.4 (stable 7.3.4 under the
+  same port; Deck test pending)
+- `test-sm-patches`: `steamos-manager` built from Valve's source archive
+  with Io's seven runit commits as the package's patches, in place of the
+  fork's `runit` branch; Valve's main of 2026-11-10 (Deck test pending)
 
 ---
 
@@ -128,8 +134,11 @@ have; they need someone with the hardware.
 - Boot splash: done 2026-11-05 (`io-branding` 0.4.1: the still logo at
   boot, kept on screen until game mode by `plymouth-holo`; the animated
   *Io Torus* during firmware updates). On the Deck the simulated update's
-  animation seemed hidden behind the logo; harmless, to look at with the
-  next real update
+  animation seemed hidden behind the logo. In an X test bed (plymouthd
+  with the same script and `plymouth-wrap`'s messages, 2026-11-11) the
+  Torus runs on top of the logo and fades back, so the script's drawing
+  order is not the cause; to look at on the Deck with the next update
+  (`plymouthd --debug` in `97-io-firmware-update.sh`)
 - Plasma: messages when switching modes, Valve's nested desktop (Plasma
   inside game mode; a first try with Valve's files: logging out of it did
   not end its session)
@@ -195,7 +204,16 @@ have; they need someone with the hardware.
   Void or upstream has them), Plasma 6.8 (when Void has it; `kwin-holo`
   then keeps two patches). Valve's `holo-3.10` and `jupiter-3.10`
   (2026-11-06) start as copies of main; `pkgcheck.sh` watches 3.9 and
-  3.10. Kernel 7.3.3 since 2026-11-08. Comparisons are made
+  3.10. Kernel 7.3.3 since 2026-11-08; bluez 5.88 (Void's, with Io's two
+  patches, 2026-11-10). Valve's main of 2026-11-10: steamos-manager
+  (`ds_inhibit` returns errors in fewer cases on shutdown; in
+  `test-sm-patches`), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard
+  in the lock screen, where Steam's cannot show; Plasma 6.8, in
+  `void-watch`), `holo-3.9`'s gamescope 3.16.30.2 (backports of 3.17.0).
+  The upstream side on 2026-11-11: nothing Io waits for has moved
+  (gamescope's newest tag is 3.17.0, SDDM's 0.21.0, iwd's 3.12, hostap's
+  2.12; PipeWire 1.6.11 and kwin 6.8.3 are released, Void has 1.6.10 and
+  6.7.5; scx 1.1.4 is out, Void has 1.1.3). Comparisons are made
   against Valve's manifests and source archives: the Deck runs only Io
   since 2026-10-31, so there are no new SteamOS captures
 - **Flavours:** *Plasma* (today's image), *Base* (game mode only), *Slim*

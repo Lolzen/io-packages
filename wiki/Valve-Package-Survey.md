@@ -7,8 +7,10 @@ build 20260925.101), captured with `pacman -Q` on the same Deck on
 brackets where they differ). Generic Arch packages are left out. Contents
 and sources of Io's packages are on [Packages](Packages).
 
-`pkgcheck.sh` reports new versions on Valve's source mirror
-(`jupiter-main`, `holo-main`); check it before acting on this page.
+`pkgcheck.sh` reports new versions on Valve's source mirror (`jupiter-main`,
+`holo-main` and the release branches in `RELEASES`), and the upstream check
+runs it every 8 hours ([Building](Building)); check its issue before acting
+on this page.
 
 ---
 
@@ -17,7 +19,7 @@ and sources of Io's packages are on [Packages](Packages).
 | SteamOS 3.9.2 | On Io | Notes |
 |---|---|---|
 | `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-73` 7.3.3 (metapackage `linux-neptune`; `linux-neptune-72` 7.2.11 kept) | Valve's untagged `7.3/integration` on stable 7.3.3 with 7.2.10-valve1's newer changes; built from the configuration Valve's package uses, see [Kernel](Kernel) |
-| `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps. From 20260930.1 (SteamOS 3.9.3): the firmware updaters (`deck-firmware-updaters`) and the thumbstick and trigger calibration tools (`deck-controller-calibration`) |
+| `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps. From 20260930.1 (SteamOS 3.9.3): the firmware updaters (`deck-firmware-updaters`) and the thumbstick and trigger calibration tools (`deck-controller-calibration`). From 20261028.1 (Valve's main): `amdgpu.dcdebugmask=0x60000` (in `io-base`, see [Kernel](Kernel)) and the automount scripts' messages; its automount of NVMe and virtio drives (Steam Machine, virtual machines) is not taken, Io hides the internal SSD |
 | `steamos-manager` 26.4.1 (26.1.0) | `steamos-manager` (Valve's main of 2026-10-24) | Valve's daemon with runit support (fork [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager), branch `runit`), see [Architecture](Architecture); until October 2026 Io's own implementation, `io-steamos-manager` |
 | `ec-log` 0.1 (new) | `ec-log` 0.1 | The Steam Machine's EC log; runit service linked with a `down` file, started by SteamOS Manager |
 | `jupiter-dock-updater-bin` | 20260811.01 (newest in jupiter-3.9) | Valve's dock updater as it is; untested without Valve's dock |
@@ -64,7 +66,7 @@ and sources of Io's packages are on [Packages](Packages).
 |---|---|
 | `holo-plymouth-themes` | `io-branding` (Valve's logos are Valve's trademarks) |
 | `holo-glibc-locales` | Void's `glibc-locales`; the image build generates the same set of locales |
-| `gamescope` 3.16.30 (3.16.23) | Void's gamescope 3.17.0 (Valve's main has 3.17.0 too) |
+| `gamescope` 3.16.30 (3.16.23; 3.16.30.2 in 3.9's branches, SteamOS backports) | Void's gamescope 3.17.0 (Valve's main has 3.17.0 too) |
 | `gamemode`, `orca`, `speech-dispatcher`, `espeak-ng`, `sof-firmware`, `sdl2-compat`, `sdl3`, `knighttime`, `plasma-keyboard`, `noto-fonts-cjk` | Void's packages |
 | `linux-firmware-neptune`, `amd-ucode-neptune` | Void's `linux-firmware` packages (the amplifier firmware, the Wi-Fi firmware and AMD's microcode are in them). Nothing the LCD needs is missing; Io's `deck-firmware` adds Valve's older `vangogh_vcn.bin` (AMD withdrew Void's) and Valve's Realtek Bluetooth firmware, see [Deviations](Deviations) |
 | `mesa`, `vulkan-radeon` (Valve's builds) | `mesa-holo`: Void's Mesa 26.2.6 with Valve's patches, 64 and 32 bit, see [Deviations](Deviations) (*Graphics*, *Io overlay*) |

@@ -43,7 +43,7 @@ the archive of `linux-neptune-72` 7.2.10.valve1-3, whose repository has
 | Part | What |
 |---|---|
 | Valve's `7.3/integration` (7415f40493e8) | Everything of `7.2.7-valve2` Valve carried over to 7.3: 408 commits on v7.3 |
-| Stable 7.3.3 | 7.3.1 merged without conflicts; the port rebased onto 7.3.3 (2026-11-06). Stable 7.3.3 carries Valve's nine `[FROM-ML]` `hid-lenovo-go-s` fixes itself, so they dropped out of the patch; the tree equals a three-way merge of the 7.3.1 port with 7.3.3 |
+| Stable 7.3.3 | 7.3.1 merged without conflicts; the port rebased onto 7.3.3 (2026-11-06). Stable 7.3.3 carries eleven of Valve's commits itself (the ten `[FROM-ML]` `hid-lenovo-go-s` fixes and the `[FROM-UPSTREAM]` `snd_acp63_remove()` teardown fix), so they dropped out of the patch; the tree equals a three-way merge of the 7.3.1 port with 7.3.3 |
 | From `7.2.10-valve1`, ported by Io | The merge requests Valve's branch does not have yet, 34 commits: ROG Xbox Ally X20 audio (SoundWire, TAS2783, RT721), `hid-lenovo-go`, GL9767 UHS-II, `asus-armoury`, `hid-asus-ally`, rtw88's decryption checks and ASPM (the Deck LCD's Wi-Fi) |
 | `EXTRAVERSION = -neptune1` | Valve's release commits set it (`-valve2`); the branch has none yet. The kernel release, and with it the module directory, is `7.3.3-neptune1_<revision>` |
 
