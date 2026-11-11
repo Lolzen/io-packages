@@ -120,14 +120,14 @@ its reason.
 
 ## SteamOS Manager
 
-Valve's `steamos-manager`, built from the branch `runit` of
-[Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager):
-Valve's main branch of 2026-10-24 (`a3b2013`, newer than SteamOS 3.9.2's
-26.4.1) with seven commits that let it run without systemd. They were
-offered to Valve, who declined them (2026-10-31: they do not want to ship
-what they do not test, and keeping it working would cost every release
-time for a niche case), so Io carries them and rebases them onto each of
-Valve's updates. How it does without systemd is on
+Valve's `steamos-manager`, built from Valve's source archive (main branch
+of 2026-11-10, `2c51fc8`, newer than SteamOS 3.9.2's 26.4.1) with seven
+commits that let it run without systemd, carried as the package's patches
+(`srcpkgs/steamos-manager/patches`; until 2026-11-11 as the branch `runit`
+of a fork). They were offered to Valve, who declined them (2026-10-31:
+they do not want to ship what they do not test, and keeping it working
+would cost every release time for a niche case), so Io rebases them onto
+each of Valve's updates. How it does without systemd is on
 [Architecture](Architecture), *SteamOS Manager*. Until October 2026 Io ran
 its own implementation (`io-steamos-manager`).
 

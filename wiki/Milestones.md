@@ -31,11 +31,7 @@ testers yet.
 
 ## In branches
 
-Work that is built but not on `main` yet:
-
-- `test-sm-patches`: `steamos-manager` built from Valve's source archive
-  with Io's seven runit commits as the package's patches, in place of the
-  fork's `runit` branch; Valve's main of 2026-11-10 (Deck test pending)
+Work that is built but not on `main` yet: nothing at the moment.
 
 ---
 
@@ -44,9 +40,9 @@ Work that is built but not on `main` yet:
 Nothing scheduled. SteamOS Manager's runit support stays Io's own: Valve
 declined it (2026-10-31, issue 32 on Valve's GitLab: shipping what they do
 not test would cost every release time, for a niche case). The seven
-commits live in the branch `runit` of
-[Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager) and
-are rebased onto each Valve update (*Recurring*).
+commits are the patches of `srcpkgs/steamos-manager` (since 2026-11-11;
+before that the branch `runit` of a fork) and are rebased onto each Valve
+update (*Recurring*).
 
 ---
 
@@ -204,8 +200,7 @@ have; they need someone with the hardware.
   (2026-11-06) start as copies of main; `pkgcheck.sh` watches 3.9 and
   3.10. Kernel 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11; bluez 5.88 (Void's, with Io's two
   patches, 2026-11-10). Valve's main of 2026-11-10: steamos-manager
-  (`ds_inhibit` returns errors in fewer cases on shutdown; in
-  `test-sm-patches`), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard
+  (`ds_inhibit` returns errors in fewer cases on shutdown), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard
   in the lock screen, where Steam's cannot show; Plasma 6.8, in
   `void-watch`), `holo-3.9`'s gamescope 3.16.30.2 (backports of 3.17.0).
   The upstream side on 2026-11-11: nothing Io waits for has moved
@@ -220,7 +215,7 @@ have; they need someone with the hardware.
 - **Automation:** done since 2026-10-31: the upstream check (GitHub
   Actions, every 8 hours: Valve's packages and release branches, the
   overlays against Void, the Void packages Io waits for, Valve's, Void's
-  and kernel.org's kernels, SteamOS Manager against Valve's main; findings
+  and kernel.org's kernels, Valve's steamos-manager against the template; findings
   in one issue labelled `upstream-check`) and *Create next release*
   (version step, fresh images, release with notes; see
   [Building](Building)). Still open: GitHub Actions that build and publish
@@ -239,10 +234,12 @@ have; they need someone with the hardware.
 - The upstream check's issue (`upstream-check`): each finding taken or
   decided; `./pkgcheck.sh` and committing `docs/` clears Valve's package
   findings, `ci/void-watch.txt` lists what Io waits for in Void
-- SteamOS Manager: Io's seven runit commits rebased onto Valve's update,
-  every commit built (`cargo check --all-targets`), tests, fmt and clippy
-  on the result, then pushed to the fork's `runit` and the template raised
-  (version: 26.4.1 with the date of Valve's newest commit)
+- SteamOS Manager: Io's seven runit commits (`git am` of the template's
+  patches onto Valve's main) rebased onto Valve's update, every commit
+  built (`cargo check --all-targets`), tests, fmt and clippy on the
+  result, then `git format-patch` back into `patches/` and the template
+  raised (`_commit`, checksum; version: 26.4.1 with the date of Valve's
+  newest commit)
 - After Void updates: `./build.sh -p --overlays` (rebuilds what Void
   rebuilt; stops for a review when Void moved to a new version), see
   [Building](Building)

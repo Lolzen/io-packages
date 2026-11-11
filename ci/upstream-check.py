@@ -11,8 +11,8 @@ Checks, each finding with a stable key so it is reported once:
              (linux and linuxX.Y) and kernel.org's; a newer stable of Io's
              series, a new Valve kernel, a newer series, end of life; the
              three are listed in a table every run
-  manager    Valve's steamos-manager main against the fork's runit branch;
-             the fork's runit against srcpkgs/steamos-manager's _commit
+  manager    Valve's steamos-manager main against srcpkgs/steamos-manager's
+             _commit (Io's runit support is the template's patches)
 
 Usage:
   ci/upstream-check.py               print the report
@@ -39,7 +39,6 @@ VOID_RAW = "https://raw.githubusercontent.com/void-linux/void-packages/master/sr
 IO_REPODATA = "https://github.com/Lolzen/io-repo/releases/download/current/x86_64-repodata"
 KERNEL_DIR = "https://cdn.kernel.org/pub/linux/kernel/v{}.x/"
 VALVE_MANAGER = "https://gitlab.steamos.cloud/holo/steamos-manager.git"
-FORK_MANAGER = "https://github.com/Lolzen/steamos-manager.git"
 LABEL = "upstream-check"
 
 findings = []   # (key, section, text)
@@ -303,28 +302,15 @@ def git(*args, cwd=None):
 
 def check_manager():
     commit = template_vars(read("srcpkgs/steamos-manager/template"))["_commit"]
-    tmp = tempfile.mkdtemp()
-    try:
-        r = git("clone", "-q", "--bare", "--filter=blob:none", FORK_MANAGER, tmp)
-        if r.returncode:
-            add("error:fork-clone", "Errors", "cloning the fork failed: " + r.stderr.strip()[:200])
-            return
-        runit = git("rev-parse", "refs/heads/runit", cwd=tmp).stdout.strip()
-        if runit != commit:
-            add("manager-template:" + runit, "SteamOS Manager",
-                "the fork's `runit` is at **%s**, `srcpkgs/steamos-manager` builds %s (raise the template)"
-                % (runit[:9], commit[:9]))
-        r = git("ls-remote", VALVE_MANAGER, "refs/heads/main")
-        if r.returncode or not r.stdout.strip():
-            add("error:valve-gitlab", "Errors", "Valve's GitLab not reachable: " + r.stderr.strip()[:200])
-            return
-        valve = r.stdout.split()[0]
-        contained = git("merge-base", "--is-ancestor", valve, runit, cwd=tmp).returncode == 0
-        if not contained:
-            add("manager-valve:" + valve, "SteamOS Manager",
-                "Valve's `main` is at **%s**, not in the fork's `runit` (rebase the runit commits)" % valve[:9])
-    finally:
-        shutil.rmtree(tmp)
+    r = git("ls-remote", VALVE_MANAGER, "refs/heads/main")
+    if r.returncode or not r.stdout.strip():
+        add("error:valve-gitlab", "Errors", "Valve's GitLab not reachable: " + r.stderr.strip()[:200])
+        return
+    valve = r.stdout.split()[0]
+    if valve != commit:
+        add("manager-valve:" + valve, "SteamOS Manager",
+            "Valve's `main` is at **%s**, `srcpkgs/steamos-manager` builds %s (rebase the patches, raise the template)"
+            % (valve[:9], commit[:9]))
 
 
 # --- report and issue ---------------------------------------------------------
@@ -339,7 +325,7 @@ HOWTO = """
 - **Overlays:** raise `base_version` after checking the patches; build and publish to current
 - **Waiting for Void:** take the change, then update or remove the line in `ci/void-watch.txt`
 - **Kernel:** update the kernel package (a new stable or Valve version); a newer series stays listed until Io moves to it
-- **SteamOS Manager:** rebase `runit` onto Valve's main; raise `_commit` in the template
+- **SteamOS Manager:** `git am` the template's patches onto Valve's main, `format-patch` them back; raise `_commit`, version and checksum
 </details>
 """
 
