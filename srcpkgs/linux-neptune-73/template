@@ -1,6 +1,6 @@
 # Template file for 'linux-neptune-73'
 pkgname=linux-neptune-73
-version=7.3.3
+version=7.3.4
 revision=1
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.3 series)"
 depends="linux-firmware-amd linux-firmware-network"
@@ -15,7 +15,7 @@ if [ "${version##*.}" != 0 ]; then
 fi
 
 checksum="87363c24f10e06321eb362765521094e94471f6bff8bce2d6b3e40f39f004953
- 4ebf04f150a2cfd11a435b3fbb1be1f2026dab1b42dc5921e4d86e8c4b23a72d"
+ 278d9d703b58a94f38d704a7ac6e6512da4f93251149d72ef29d0b8aec1f2f77"
 python_version=3
 
 # XXX Restrict archs until a proper <arch>-dotconfig is available in FILESDIR.
@@ -31,9 +31,9 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
  pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
 
 # Valve's 7.3/integration (7415f40493e8, untagged; Valve has no 7.3
-# release yet) on stable 7.3.3, with the merge requests of Valve's
+# release yet) on stable 7.3.4, with the merge requests of Valve's
 # 7.2.10-valve1 that the branch does not have yet ported by Io:
-# patches/0001-neptune-73.patch is the difference between stable 7.3.3 and
+# patches/0001-neptune-73.patch is the difference between stable 7.3.4 and
 # that tree (generated without Valve's ci/ and .gitlab-ci.yml).
 #   Valve's branch: everything of 7.2.7-valve2 that Valve carried over
 #     (408 commits on 7.3). Valve left out 17 older commits (the amdgpu VM
@@ -46,6 +46,9 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #   stable 7.3.1 merged without conflicts. Rebased onto 7.3.3: stable
 #     carries Valve's [FROM-ML] hid-lenovo-go-s fixes (9 commits) itself,
 #     so they dropped out; the tree equals a three-way merge of 7.3.3.
+#   Rebased onto 7.3.4: two rtw89 fixes are in stable; xpad keeps stable's
+#     GameSir Nova Lite (Xbox 360) and drops the Xbox One entry with Valve's
+#     "Remove Xbox One support"; acp-config keeps both ACP 7.0 entries.
 #   Ported from 7.2.10-valve1 (34 commits): ROG Xbox Ally X20 audio
 #     (SoundWire, TAS2783, RT721), hid-lenovo-go, GL9767 UHS-II, asus-armoury,
 #     hid-asus-ally, rtw88 decryption checks and ASPM. Adapted: acp-config.c

@@ -263,10 +263,10 @@ index d38da077905a..0147fbaaa985 100644
 +
 +		Notifications are only triggered on state transitions.
 diff --git a/Documentation/admin-guide/kernel-parameters.txt b/Documentation/admin-guide/kernel-parameters.txt
-index e75344f4e0cd..38048c46cbcc 100644
+index 4e64219c8da4..59de321d3309 100644
 --- a/Documentation/admin-guide/kernel-parameters.txt
 +++ b/Documentation/admin-guide/kernel-parameters.txt
-@@ -7977,6 +7977,8 @@ Kernel parameters
+@@ -7987,6 +7987,8 @@ Kernel parameters
  			obtained from HW or FW using either an MSR or CPUID(0x15).
  			Warn if the difference is more than 500 ppm.
  			[x86] watchdog: Enforce the clocksource watchdog on TSC
@@ -465,13 +465,13 @@ index 782389bd5cd3..2d3b3b15b10f 100644
  M:	Mauro Carvalho Chehab <mchehab@kernel.org>
  L:	linux-media@vger.kernel.org
 diff --git a/Makefile b/Makefile
-index a8f35bdca5d4..a9012bc23a47 100644
+index 05c5b682ad50..4243eea7d294 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -2,7 +2,7 @@
  VERSION = 7
  PATCHLEVEL = 3
- SUBLEVEL = 3
+ SUBLEVEL = 4
 -EXTRAVERSION =
 +EXTRAVERSION = -neptune1
  NAME = Baby Opossum Posse
@@ -1692,7 +1692,7 @@ index d29813331603..0aa69d19d986 100644
  MODULE_DESCRIPTION("Bluetooth support for Realtek devices ver " VERSION);
  MODULE_VERSION(VERSION);
 diff --git a/drivers/bluetooth/btusb.c b/drivers/bluetooth/btusb.c
-index dc7191bf4234..8b5fea816c04 100644
+index ece1fd426f12..14ef7f35a3dd 100644
 --- a/drivers/bluetooth/btusb.c
 +++ b/drivers/bluetooth/btusb.c
 @@ -424,6 +424,8 @@ static const struct usb_device_id quirks_table[] = {
@@ -1804,10 +1804,10 @@ index ced83fbb1a51..7ccbc3a7f18c 100644
  EXPORT_SYMBOL_GPL(mhi_power_down_keep_dev);
  
 diff --git a/drivers/cpufreq/amd-pstate.c b/drivers/cpufreq/amd-pstate.c
-index 8bfd46d60843..266cecfd7b44 100644
+index 6e00d200920a..f434ba5a7076 100644
 --- a/drivers/cpufreq/amd-pstate.c
 +++ b/drivers/cpufreq/amd-pstate.c
-@@ -1962,6 +1962,8 @@ static int amd_pstate_epp_cpu_init(struct cpufreq_policy *policy)
+@@ -1964,6 +1964,8 @@ static int amd_pstate_epp_cpu_init(struct cpufreq_policy *policy)
  
  	current_pstate_driver->adjust_perf = NULL;
  
@@ -2028,7 +2028,7 @@ index 000000000000..74f190adc8ea
 +MODULE_DESCRIPTION("Steam Deck extcon driver");
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu.h b/drivers/gpu/drm/amd/amdgpu/amdgpu.h
-index a9c6f5d4a639..183659431689 100644
+index a63404adc2d8..4f24555e101c 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu.h
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu.h
 @@ -52,6 +52,7 @@
@@ -2055,7 +2055,7 @@ index a9c6f5d4a639..183659431689 100644
  #ifdef CONFIG_HSA_AMD
  extern int sched_policy;
  extern bool debug_evictions;
-@@ -866,6 +869,7 @@ struct amdgpu_device {
+@@ -875,6 +878,7 @@ struct amdgpu_device {
  
  	int asic_reset_res;
  	struct work_struct		xgmi_reset_work;
@@ -2063,7 +2063,7 @@ index a9c6f5d4a639..183659431689 100644
  	struct list_head		reset_list;
  
  	long				gfx_timeout;
-@@ -901,6 +905,7 @@ struct amdgpu_device {
+@@ -910,6 +914,7 @@ struct amdgpu_device {
  	bool				barrier_has_auto_waitcnt;
  
  	struct amdgpu_reset_control     *reset_cntl;
@@ -2071,7 +2071,7 @@ index a9c6f5d4a639..183659431689 100644
  	uint32_t                        ip_versions[MAX_HWIP][HWIP_MAX_INSTANCE];
  
  	bool				ram_is_direct_mapped;
-@@ -925,6 +930,8 @@ struct amdgpu_device {
+@@ -934,6 +939,8 @@ struct amdgpu_device {
  	/* Mask of active clusters */
  	uint32_t			aid_mask;
  
@@ -2094,10 +2094,10 @@ index ca5860e493a6..258cc35d7eae 100644
  		dev_err(adev->dev, "(%d) failed to pin bo for amdkfd\n", r);
  		goto allocate_mem_pin_bo_failed;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c
-index d66881684ee5..d0d3be6a3507 100644
+index c5c2a73ddd94..a7f9e8ea76c9 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_amdkfd_gpuvm.c
-@@ -1531,7 +1531,7 @@ static int amdgpu_amdkfd_gpuvm_pin_bo(struct amdgpu_bo *bo, u32 domain)
+@@ -1542,7 +1542,7 @@ static int amdgpu_amdkfd_gpuvm_pin_bo(struct amdgpu_bo *bo, u32 domain)
  		}
  	}
  
@@ -2106,7 +2106,7 @@ index d66881684ee5..d0d3be6a3507 100644
  	if (ret)
  		pr_err("Error in Pinning BO to domain: %d\n", domain);
  
-@@ -2248,7 +2248,7 @@ int amdgpu_amdkfd_map_gtt_bo_to_gart(struct amdgpu_bo *bo, struct amdgpu_bo **bo
+@@ -2275,7 +2275,7 @@ int amdgpu_amdkfd_map_gtt_bo_to_gart(struct amdgpu_bo *bo, struct amdgpu_bo **bo
  		goto err_reserve_bo_failed;
  	}
  
@@ -2115,7 +2115,7 @@ index d66881684ee5..d0d3be6a3507 100644
  	if (ret) {
  		pr_err("Failed to pin bo. ret %d\n", ret);
  		goto err_pin_bo_failed;
-@@ -2318,7 +2318,7 @@ int amdgpu_amdkfd_gpuvm_map_bo_to_kernel(struct kgd_mem *mem, void **kptr,
+@@ -2345,7 +2345,7 @@ int amdgpu_amdkfd_gpuvm_map_bo_to_kernel(struct kgd_mem *mem, void **kptr,
  		goto bo_reserve_failed;
  	}
  
@@ -2125,10 +2125,10 @@ index d66881684ee5..d0d3be6a3507 100644
  		pr_err("Failed to pin bo. ret %d\n", ret);
  		goto pin_failed;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_cs.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_cs.c
-index ef8a61ce4b1d..d7507a399ec6 100644
+index 86a3dc3655b3..716230772f81 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_cs.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_cs.c
-@@ -817,14 +817,38 @@ static int amdgpu_cs_bo_validate(void *param, struct amdgpu_bo *bo)
+@@ -823,14 +823,38 @@ static int amdgpu_cs_bo_validate(void *param, struct amdgpu_bo *bo)
  	struct ttm_operation_ctx ctx = {
  		.interruptible = true,
  		.no_wait_gpu = false,
@@ -2168,7 +2168,7 @@ index ef8a61ce4b1d..d7507a399ec6 100644
  	/* Don't move this buffer if we have depleted our allowance
  	 * to move it. Don't move anything if the threshold is zero.
  	 */
-@@ -851,6 +875,7 @@ static int amdgpu_cs_bo_validate(void *param, struct amdgpu_bo *bo)
+@@ -857,6 +881,7 @@ static int amdgpu_cs_bo_validate(void *param, struct amdgpu_bo *bo)
  retry:
  	amdgpu_bo_placement_from_domain(bo, domain);
  	r = ttm_bo_validate(&bo->tbo, &bo->placement, &ctx);
@@ -2176,7 +2176,7 @@ index ef8a61ce4b1d..d7507a399ec6 100644
  
  	p->bytes_moved += ctx.bytes_moved;
  	if (!amdgpu_gmc_vram_full_visible(&adev->gmc) &&
-@@ -869,11 +894,13 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
+@@ -875,11 +900,13 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
  				union drm_amdgpu_cs *cs)
  {
  	struct amdgpu_fpriv *fpriv = p->filp->driver_priv;
@@ -2191,7 +2191,7 @@ index ef8a61ce4b1d..d7507a399ec6 100644
  	unsigned int i;
  	int r;
  
-@@ -929,6 +956,14 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
+@@ -935,6 +962,14 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
  		if (unlikely(r))
  			goto out_free_user_pages;
  
@@ -2206,7 +2206,7 @@ index ef8a61ce4b1d..d7507a399ec6 100644
  		amdgpu_bo_list_for_each_entry(e, list) {
  			r = drm_exec_prepare_obj(&p->exec, &e->bo->tbo.base,
  						 TTM_NUM_MOVE_FENCES + p->gang_size);
-@@ -946,47 +981,53 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
+@@ -952,47 +987,53 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
  			if (unlikely(r))
  				goto out_free_user_pages;
  		}
@@ -2293,7 +2293,7 @@ index ef8a61ce4b1d..d7507a399ec6 100644
  	}
  
  	if (p->uf_bo) {
-@@ -997,9 +1038,6 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
+@@ -1003,9 +1044,6 @@ static int amdgpu_cs_parser_bos(struct amdgpu_cs_parser *p,
  		p->gang_leader->uf_addr += amdgpu_bo_gpu_offset(p->uf_bo);
  	}
  
@@ -2303,7 +2303,7 @@ index ef8a61ce4b1d..d7507a399ec6 100644
  	for (i = 0; i < p->gang_size; ++i)
  		amdgpu_job_set_resources(p->jobs[i], list->gds_obj,
  					 list->gws_obj, list->oa_obj);
-@@ -1387,8 +1425,14 @@ static void amdgpu_cs_parser_fini(struct amdgpu_cs_parser *parser)
+@@ -1393,8 +1431,14 @@ static void amdgpu_cs_parser_fini(struct amdgpu_cs_parser *parser)
  {
  	struct amdgpu_device *adev = parser->adev;
  	struct amdgpu_bo_list_entry *e;
@@ -2333,7 +2333,7 @@ index 39c33ad100cb..de3defe72a41 100644
  	/* user fence */
  	struct amdgpu_bo		*uf_bo;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
-index 9269e780feb7..fcc503014216 100644
+index 5b72e4afb650..dbeca04feb03 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_device.c
 @@ -86,6 +86,7 @@
@@ -2344,7 +2344,7 @@ index 9269e780feb7..fcc503014216 100644
  
  #if IS_ENABLED(CONFIG_X86)
  #include <asm/intel-family.h>
-@@ -3524,6 +3525,17 @@ bool amdgpu_device_has_dc_support(struct amdgpu_device *adev)
+@@ -3528,6 +3529,17 @@ bool amdgpu_device_has_dc_support(struct amdgpu_device *adev)
  	return amdgpu_device_asic_has_dc_support(adev->pdev, adev->asic_type);
  }
  
@@ -2362,7 +2362,7 @@ index 9269e780feb7..fcc503014216 100644
  static void amdgpu_device_xgmi_reset_func(struct work_struct *__work)
  {
  	struct amdgpu_device *adev =
-@@ -3881,6 +3893,7 @@ int amdgpu_device_init(struct amdgpu_device *adev,
+@@ -3885,6 +3897,7 @@ int amdgpu_device_init(struct amdgpu_device *adev,
  	}
  
  	INIT_WORK(&adev->xgmi_reset_work, amdgpu_device_xgmi_reset_func);
@@ -2370,7 +2370,7 @@ index 9269e780feb7..fcc503014216 100644
  
  	amdgpu_coredump_init(adev);
  
-@@ -4583,6 +4596,11 @@ int amdgpu_device_suspend(struct drm_device *dev, bool notify_clients)
+@@ -4590,6 +4603,11 @@ int amdgpu_device_suspend(struct drm_device *dev, bool notify_clients)
  	if (amdgpu_sriov_vf(adev))
  		amdgpu_virt_release_full_gpu(adev, false);
  
@@ -2382,7 +2382,7 @@ index 9269e780feb7..fcc503014216 100644
  	return 0;
  
  unwind_evict:
-@@ -4770,6 +4788,11 @@ int amdgpu_device_resume(struct drm_device *dev, bool notify_clients)
+@@ -4777,6 +4795,11 @@ int amdgpu_device_resume(struct drm_device *dev, bool notify_clients)
  	if (amdgpu_acpi_smart_shift_update(adev, AMDGPU_SS_DEV_D0))
  		dev_warn(adev->dev, "smart shift update failed\n");
  
@@ -2394,7 +2394,7 @@ index 9269e780feb7..fcc503014216 100644
  	return 0;
  }
  
-@@ -5158,6 +5181,20 @@ int amdgpu_device_reinit_after_reset(struct amdgpu_reset_context *reset_context)
+@@ -5165,6 +5188,20 @@ int amdgpu_device_reinit_after_reset(struct amdgpu_reset_context *reset_context)
  				if (!test_bit(AMDGPU_SKIP_COREDUMP, &reset_context->flags))
  					amdgpu_coredump(tmp_adev, false, vram_lost, reset_context->job);
  
@@ -2566,7 +2566,7 @@ index 9adf3eed8822..c8124e7627a5 100644
  		return ret;
  	ret = drm_gem_dmabuf_vmap(dma_buf, map);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
-index d9d794a7db96..bf9624ea6429 100644
+index 69278026c935..1dcb7111a670 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
 @@ -229,6 +229,7 @@ int amdgpu_noretry = -1;
@@ -2753,7 +2753,7 @@ index c2a10b41804a..85c8fb244168 100644
  }
  
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_object.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_object.c
-index 1b6c32a177fb..b3895aaa86a1 100644
+index ee366d729abf..4e10ef3b001b 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_object.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_object.c
 @@ -279,7 +279,7 @@ int amdgpu_bo_create_reserved(struct amdgpu_device *adev,
@@ -2786,7 +2786,7 @@ index 1b6c32a177fb..b3895aaa86a1 100644
  	};
  	struct amdgpu_bo *bo;
  	unsigned long page_align, size = bp->size;
-@@ -931,10 +932,14 @@ void amdgpu_bo_unref(struct amdgpu_bo **bo)
+@@ -944,10 +945,14 @@ static int amdgpu_bo_get_xcp(struct amdgpu_bo *bo)
   * Returns:
   * 0 for success or a negative error code on failure.
   */
@@ -2803,7 +2803,7 @@ index 1b6c32a177fb..b3895aaa86a1 100644
  	int r, i;
  
  	if (amdgpu_ttm_tt_get_usermm(bo->tbo.ttm))
-@@ -988,7 +993,8 @@ int amdgpu_bo_pin(struct amdgpu_bo *bo, u32 domain)
+@@ -1001,7 +1006,8 @@ int amdgpu_bo_pin(struct amdgpu_bo *bo, u32 domain)
  
  	r = ttm_bo_validate(&bo->tbo, &bo->placement, &ctx);
  	if (unlikely(r)) {
@@ -2813,7 +2813,7 @@ index 1b6c32a177fb..b3895aaa86a1 100644
  		goto error;
  	}
  
-@@ -1277,7 +1283,10 @@ void amdgpu_bo_move_notify(struct ttm_buffer_object *bo,
+@@ -1310,7 +1316,10 @@ void amdgpu_bo_move_notify(struct ttm_buffer_object *bo,
  		return;
  
  	abo = ttm_to_amdgpu_bo(bo);
@@ -2900,10 +2900,10 @@ index 5922406d0a03..3675360ae22c 100644
  	       ktime_to_ns(ktime_sub(deadline, ktime_get())) > 0)
  		ring->funcs->soft_recovery(ring, vmid);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
-index 83968886c29a..b84b58970139 100644
+index 364be96c08df..154f3c212539 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_ttm.c
-@@ -1522,10 +1522,18 @@ static bool amdgpu_ttm_bo_eviction_valuable(struct ttm_buffer_object *bo,
+@@ -1523,10 +1523,18 @@ static bool amdgpu_ttm_bo_eviction_valuable(struct ttm_buffer_object *bo,
  			return false;
  	}
  
@@ -2938,7 +2938,7 @@ index b3dc5dd49a64..d809a9808a39 100644
  		drm_file_err(uq_mgr->file, "[Usermode queues] Failed to pin doorbell object\n");
  		goto unresv_bo;
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_uvd.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_uvd.c
-index ecd7caa95d4b..ea91756d5812 100644
+index cd35ff7ca864..1938174bab1e 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_uvd.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_uvd.c
 @@ -162,7 +162,7 @@ static int amdgpu_uvd_create_msg_bo_helper(struct amdgpu_device *adev,
@@ -2981,7 +2981,7 @@ index c835504fdf2b..b7b19ff60398 100644
  		if (r != -ERESTARTSYS)
  			DRM_ERROR("Failed to pin framebuffer with error %d\n", r);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c
-index 4a63b472f68e..1c513d15508a 100644
+index fc3a8d38d514..fa245bbd0eab 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_vm.c
 @@ -142,6 +142,7 @@ static void amdgpu_vm_assert_locked(struct amdgpu_vm *vm)
@@ -3380,7 +3380,7 @@ index d32183cd9e0f..6ba82fb52356 100644
  struct amdgpu_bo_va *amdgpu_vm_bo_find(struct amdgpu_vm *vm,
  				       struct amdgpu_bo *bo);
 diff --git a/drivers/gpu/drm/amd/amdgpu/amdgpu_vm_pt.c b/drivers/gpu/drm/amd/amdgpu/amdgpu_vm_pt.c
-index e43a60d09808..ac8b63d1b3f0 100644
+index cef4171b4ad0..6012bdb5bee6 100644
 --- a/drivers/gpu/drm/amd/amdgpu/amdgpu_vm_pt.c
 +++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_vm_pt.c
 @@ -518,7 +518,7 @@ static int amdgpu_vm_pt_alloc(struct amdgpu_device *adev,
@@ -3803,7 +3803,7 @@ index 85846fd08ce4..fa9cca935d3c 100644
  out:
  	return (wptr & ih->ptr_mask);
 diff --git a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
-index 4594824985e1..4b66151db0ec 100644
+index dd2c8ac7cb9c..7d3112a22353 100644
 --- a/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
 +++ b/drivers/gpu/drm/amd/amdkfd/kfd_device_queue_manager.c
 @@ -1342,7 +1342,7 @@ static int dqm_repin_mqd_bo(struct device_queue_manager *dqm, struct queue *q)
@@ -3832,7 +3832,7 @@ index 1727d25646cc..2b7226a74c31 100644
 +
  endmenu
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-index 47a0ff2ed035..7f8f5ad791ed 100644
+index f3551bd0b0a4..14ebb84874ad 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
 @@ -675,6 +675,9 @@ static int amdgpu_dm_init(struct amdgpu_device *adev)
@@ -3954,7 +3954,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  		}
  
  		return 0;
-@@ -2072,6 +2140,7 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
+@@ -2068,6 +2136,7 @@ static int dm_resume(struct amdgpu_ip_block *ip_block)
  
  	drm_kms_helper_hotplug_event(ddev);
  
@@ -3962,7 +3962,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	return 0;
  }
  
-@@ -2269,7 +2338,7 @@ static int amdgpu_dm_mode_config_init(struct amdgpu_device *adev)
+@@ -2265,7 +2334,7 @@ static int amdgpu_dm_mode_config_init(struct amdgpu_device *adev)
  	if (r)
  		return r;
  
@@ -3971,7 +3971,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	if (amdgpu_dm_create_color_properties(adev))
  		return -ENOMEM;
  #endif
-@@ -3396,41 +3465,44 @@ static void manage_dm_interrupts(struct amdgpu_device *adev,
+@@ -3392,41 +3461,44 @@ static void manage_dm_interrupts(struct amdgpu_device *adev,
  		drm_crtc_vblank_on_config(&acrtc->base,
  					  &config);
  		/*
@@ -4032,7 +4032,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  
  		drm_crtc_vblank_off(&acrtc->base);
  	}
-@@ -3817,6 +3889,7 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
+@@ -3813,6 +3885,7 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
  	unsigned long flags;
  	u32 target_vblank, last_flip_vblank;
  	bool vrr_active = amdgpu_dm_crtc_vrr_active(acrtc_state);
@@ -4040,7 +4040,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	bool cursor_update = false;
  	bool pflip_present = false;
  	bool immediate_flip = false;
-@@ -3831,6 +3904,13 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
+@@ -3827,6 +3900,13 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
  		struct dc_stream_update stream_update;
  	} *bundle;
  
@@ -4054,7 +4054,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	bundle = kzalloc_obj(*bundle);
  
  	if (!bundle) {
-@@ -4125,6 +4205,9 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
+@@ -4121,6 +4201,9 @@ static void amdgpu_dm_commit_planes(struct drm_atomic_commit *state,
  			spin_unlock_irqrestore(&pcrtc->dev->event_lock, flags);
  		}
  		mutex_lock(&dm->dc_lock);
@@ -4064,7 +4064,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  		/*
  		 * Tearing (immediate) flips cannot work with panel self-refresh
  		 * features. The event is cleared by
-@@ -4467,6 +4550,23 @@ static void amdgpu_dm_mod_power_setup_streams(struct drm_atomic_commit *state,
+@@ -4463,6 +4546,23 @@ static void amdgpu_dm_mod_power_setup_streams(struct drm_atomic_commit *state,
  
  }
  
@@ -4088,7 +4088,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  					struct dc_state *dc_state)
  {
-@@ -4481,7 +4581,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -4477,7 +4577,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  	bool mode_set_reset_required = false;
  	u32 i;
  	struct dc_commit_streams_params params = {dc_state->streams, dc_state->stream_count};
@@ -4096,7 +4096,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  
  	/* Disable writeback */
  	for_each_old_connector_in_state(state, connector, old_con_state, i) {
-@@ -4603,7 +4702,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -4597,7 +4696,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  			acrtc->hw_mode = new_crtc_state->mode;
  			crtc->hwmode = new_crtc_state->mode;
  			mode_set_reset_required = true;
@@ -4104,7 +4104,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  		} else if (modereset_required(new_crtc_state)) {
  			drm_dbg_atomic(dev,
  				       "Atomic commit: RESET. crtc id %d:[%p]\n",
-@@ -4627,6 +4725,19 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -4621,6 +4719,19 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  	dc_exit_ips_for_hw_access(dm->dc);
  	WARN_ON(!dc_commit_streams(dm->dc, &params));
  
@@ -4124,7 +4124,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	bool frl_stream_found = false;
  
  	for (i = 0; i < params.stream_count; i++) {
-@@ -4671,19 +4782,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
+@@ -4665,19 +4776,6 @@ static void amdgpu_dm_commit_streams(struct drm_atomic_commit *state,
  				acrtc->otg_inst = status->primary_otg_inst;
  		}
  	}
@@ -4144,7 +4144,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  }
  
  static void dm_set_writeback(struct amdgpu_display_manager *dm,
-@@ -5066,12 +5164,14 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -5060,12 +5158,14 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  	for_each_oldnew_connector_in_state(state, connector, old_con_state, new_con_state, i) {
  		struct dm_connector_state *dm_new_con_state = to_dm_connector_state(new_con_state);
  		struct dm_connector_state *dm_old_con_state = to_dm_connector_state(old_con_state);
@@ -4159,7 +4159,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  
  		memset(&stream_update, 0, sizeof(stream_update));
  
-@@ -5101,7 +5201,11 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -5095,7 +5195,11 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  		hdr_changed =
  			!drm_connector_atomic_hdr_metadata_equal(old_con_state, new_con_state);
  
@@ -4172,7 +4172,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  			continue;
  
  		stream_update.stream = dm_new_crtc_state->stream;
-@@ -5131,6 +5235,17 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -5125,6 +5229,17 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  			stream_update.hdr_static_metadata = &hdr_packet;
  		}
  
@@ -4190,7 +4190,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  		status = dc_stream_get_status(dm_new_crtc_state->stream);
  
  		if (WARN_ON(!status))
-@@ -5282,11 +5397,12 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -5281,11 +5396,12 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  	/* Update audio instances for each connector. */
  	amdgpu_dm_commit_audio(dev, state);
  
@@ -4208,7 +4208,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	}
  
  	/*
-@@ -5306,9 +5422,7 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
+@@ -5305,9 +5421,7 @@ static void amdgpu_dm_atomic_commit_tail(struct drm_atomic_commit *state)
  	/* Signal HW programming completion */
  	drm_atomic_helper_commit_hw_done(state);
  
@@ -4219,7 +4219,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  	drm_atomic_helper_cleanup_planes(dev, state);
  
  	/* Don't free the memory if we are hitting this as part of suspend.
-@@ -5399,6 +5513,7 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+@@ -5398,6 +5512,7 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
  	struct dc_stream_state *new_stream;
  	struct amdgpu_device *adev = dm->adev;
  	int ret = 0;
@@ -4227,7 +4227,7 @@ index 47a0ff2ed035..7f8f5ad791ed 100644
  
  	/*
  	 * TODO Move this code into dm_crtc_atomic_check once we get rid of dc_validation_set
-@@ -5656,6 +5771,27 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+@@ -5655,6 +5770,27 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
  	amdgpu_dm_get_freesync_config_for_crtc(dm_new_crtc_state,
  				     dm_new_conn_state);
  
@@ -5167,7 +5167,7 @@ index 7e484adb4120..27489ac7d06b 100644
  	spin_unlock_irqrestore(&adev_to_drm(adev)->event_lock, flags);
  }
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c
-index ced8b3d2d762..d646d66239d7 100644
+index 673b3cede7dd..abda08178b20 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c
 @@ -197,7 +197,12 @@ enum dc_edid_status dm_helpers_parse_edid_caps(
@@ -5184,7 +5184,7 @@ index ced8b3d2d762..d646d66239d7 100644
  
  	if (edid_caps->edid_hdmi) {
  		edid_caps->qs_bit = connector->display_info.rgb_quant_range_selectable;
-@@ -1650,6 +1655,7 @@ STATIC_IFN_KUNIT const uint32_t dm_freesync_pcon_whitelist[] = {
+@@ -1672,6 +1677,7 @@ STATIC_IFN_KUNIT const uint32_t dm_freesync_pcon_whitelist[] = {
  	DP_BRANCH_DEVICE_ID_90CC24,
  	DP_BRANCH_DEVICE_ID_001CF8,
  	DP_BRANCH_DEVICE_ID_001FF2,
@@ -5192,7 +5192,7 @@ index ced8b3d2d762..d646d66239d7 100644
  };
  EXPORT_IF_KUNIT(dm_freesync_pcon_whitelist);
  
-@@ -1663,6 +1669,11 @@ STATIC_IFN_KUNIT bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id
+@@ -1685,6 +1691,11 @@ STATIC_IFN_KUNIT bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id
  {
  	u32 i;
  
@@ -5204,7 +5204,7 @@ index ced8b3d2d762..d646d66239d7 100644
  	for (i = 0; i < dm_freesync_pcon_whitelist_count(); i++)
  		if (dm_freesync_pcon_whitelist[i] == branch_dev_id)
  			return true;
-@@ -1671,25 +1682,26 @@ STATIC_IFN_KUNIT bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id
+@@ -1693,25 +1704,26 @@ STATIC_IFN_KUNIT bool dm_is_freesync_pcon_whitelist(const uint32_t branch_dev_id
  }
  EXPORT_IF_KUNIT(dm_is_freesync_pcon_whitelist);
  
@@ -9039,7 +9039,7 @@ index e0d48eac74b0..ded2a47be0bc 100644
  
  #endif
 diff --git a/drivers/gpu/drm/ttm/ttm_bo_util.c b/drivers/gpu/drm/ttm/ttm_bo_util.c
-index bd0b23ac2cc4..fd9713eca39c 100644
+index f9458a4d5a09..b666f8084148 100644
 --- a/drivers/gpu/drm/ttm/ttm_bo_util.c
 +++ b/drivers/gpu/drm/ttm/ttm_bo_util.c
 @@ -29,6 +29,7 @@
@@ -9097,7 +9097,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  	} else {
  		fbo->base.bulk_move = NULL;
  	}
-@@ -824,13 +841,17 @@ static bool ttm_lru_walk_trylock(struct ttm_bo_lru_cursor *curs,
+@@ -831,13 +848,17 @@ static bool ttm_lru_walk_trylock(struct ttm_bo_lru_cursor *curs,
  	struct ttm_operation_ctx *ctx = curs->arg->ctx;
  
  	curs->needs_unlock = false;
@@ -9116,7 +9116,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  		dma_resv_assert_held(bo->base.resv);
  		return true;
  	}
-@@ -844,7 +865,9 @@ static int ttm_lru_walk_ticketlock(struct ttm_bo_lru_cursor *curs,
+@@ -851,7 +872,9 @@ static int ttm_lru_walk_ticketlock(struct ttm_bo_lru_cursor *curs,
  	struct ttm_lru_walk_arg *arg = curs->arg;
  	int ret;
  
@@ -9127,7 +9127,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  		ret = dma_resv_lock_interruptible(bo->base.resv, arg->ticket);
  	else
  		ret = dma_resv_lock(bo->base.resv, arg->ticket);
-@@ -858,14 +881,59 @@ static int ttm_lru_walk_ticketlock(struct ttm_bo_lru_cursor *curs,
+@@ -865,14 +888,59 @@ static int ttm_lru_walk_ticketlock(struct ttm_bo_lru_cursor *curs,
  		 * trylocking for this walk.
  		 */
  		arg->ticket = NULL;
@@ -9188,7 +9188,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  /**
   * ttm_lru_walk_for_evict() - Perform a LRU list walk, with actions taken on
   * valid items.
-@@ -906,7 +974,7 @@ s64 ttm_lru_walk_for_evict(struct ttm_lru_walk *walk, struct ttm_device *bdev,
+@@ -913,7 +981,7 @@ s64 ttm_lru_walk_for_evict(struct ttm_lru_walk *walk, struct ttm_device *bdev,
  	s64 lret;
  
  	ttm_bo_lru_for_each_reserved_guarded(&cursor, man, &walk->arg, bo) {
@@ -9197,7 +9197,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  		if (lret == -EBUSY || lret == -EALREADY)
  			lret = 0;
  		progress = (lret < 0) ? lret : progress + lret;
-@@ -924,12 +992,17 @@ static void ttm_bo_lru_cursor_cleanup_bo(struct ttm_bo_lru_cursor *curs)
+@@ -931,12 +999,17 @@ static void ttm_bo_lru_cursor_cleanup_bo(struct ttm_bo_lru_cursor *curs)
  {
  	struct ttm_buffer_object *bo = curs->bo;
  
@@ -9219,7 +9219,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  }
  
  /**
-@@ -953,6 +1026,8 @@ EXPORT_SYMBOL(ttm_bo_lru_cursor_fini);
+@@ -960,6 +1033,8 @@ EXPORT_SYMBOL(ttm_bo_lru_cursor_fini);
   * @curs: The ttm_bo_lru_cursor to initialize.
   * @man: The ttm resource_manager whose LRU lists to iterate over.
   * @arg: The ttm_lru_walk_arg to govern the walk.
@@ -9228,7 +9228,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
   *
   * Initialize a struct ttm_bo_lru_cursor.
   *
-@@ -961,11 +1036,14 @@ EXPORT_SYMBOL(ttm_bo_lru_cursor_fini);
+@@ -968,11 +1043,14 @@ EXPORT_SYMBOL(ttm_bo_lru_cursor_fini);
  struct ttm_bo_lru_cursor *
  ttm_bo_lru_cursor_init(struct ttm_bo_lru_cursor *curs,
  		       struct ttm_resource_manager *man,
@@ -9244,7 +9244,7 @@ index bd0b23ac2cc4..fd9713eca39c 100644
  
  	return curs;
  }
-@@ -988,24 +1066,32 @@ __ttm_bo_lru_cursor_next(struct ttm_bo_lru_cursor *curs)
+@@ -995,24 +1073,32 @@ __ttm_bo_lru_cursor_next(struct ttm_bo_lru_cursor *curs)
  		bool bo_locked = false;
  
  		if (first) {
@@ -20181,7 +20181,7 @@ index d7b89508311f..404ee0f4ea41 100644
  	help
  	  If you say yes to this option, support will be included for the Intel
 diff --git a/drivers/input/input.c b/drivers/input/input.c
-index 01c91fec9b7e..c477cbb0d66a 100644
+index 6c45a158047f..d11914861ad1 100644
 --- a/drivers/input/input.c
 +++ b/drivers/input/input.c
 @@ -26,6 +26,7 @@
@@ -25281,7 +25281,7 @@ index 000000000000..27aacfcb26d5
 +extern const struct gip_driver gip_driver_pdp_jaguar;
 +#endif
 diff --git a/drivers/input/joystick/xpad.c b/drivers/input/joystick/xpad.c
-index 810e52782ae8..939abda974a2 100644
+index d2eb48d98fea..2dd5d8e36b27 100644
 --- a/drivers/input/joystick/xpad.c
 +++ b/drivers/input/joystick/xpad.c
 @@ -17,7 +17,6 @@
@@ -25520,7 +25520,7 @@ index 810e52782ae8..939abda974a2 100644
  	{ 0x31e3, 0x1100, "Wooting One", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1200, "Wooting Two", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1210, "Wooting Lekker", 0, XTYPE_XBOX360 },
-@@ -398,18 +315,12 @@ static const struct xpad_device {
+@@ -398,19 +315,13 @@ static const struct xpad_device {
  	{ 0x31e3, 0x1230, "Wooting Two HE (ARM)", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1300, "Wooting 60HE (AVR)", 0, XTYPE_XBOX360 },
  	{ 0x31e3, 0x1310, "Wooting 60HE (ARM)", 0, XTYPE_XBOX360 },
@@ -25534,12 +25534,13 @@ index 810e52782ae8..939abda974a2 100644
  	{ 0x3537, 0x1004, "GameSir T4 Kaleid", 0, XTYPE_XBOX360 },
  	{ 0x3537, 0x100f, "GameSir Nova 2 Lite", 0, XTYPE_XBOX360 },
 -	{ 0x3537, 0x1010, "GameSir G7 SE", 0, XTYPE_XBOXONE },
+ 	{ 0x3537, 0x1040, "GameSir Nova Lite", 0, XTYPE_XBOX360 },
  	{ 0x3651, 0x1000, "CRKD SG", 0, XTYPE_XBOX360 },
 -	{ 0x366c, 0x0005, "ByoWave Proteus Controller", MAP_SHARE_BUTTON, XTYPE_XBOXONE, FLAG_DELAY_INIT },
  	{ 0x3767, 0x0101, "Fanatec Speedster 3 Forceshock Wheel", 0, XTYPE_XBOX },
  	{ 0x37d7, 0x2501, "Flydigi Apex 5", 0, XTYPE_XBOX360 },
  	{ 0x413d, 0x2104, "Black Shark Green Ghost Gamepad", 0, XTYPE_XBOX360 },
-@@ -467,13 +378,6 @@ static const signed short xpad_abs_triggers[] = {
+@@ -468,13 +379,6 @@ static const signed short xpad_abs_triggers[] = {
  	-1
  };
  
@@ -25553,7 +25554,7 @@ index 810e52782ae8..939abda974a2 100644
  /*
   * Xbox 360 has a vendor-specific class, so we cannot match it with only
   * USB_INTERFACE_INFO (also specifically refused by USB subsystem), so we
-@@ -490,49 +394,31 @@ static const signed short xpad_btn_paddles[] = {
+@@ -491,49 +395,31 @@ static const signed short xpad_btn_paddles[] = {
  	{ XPAD_XBOX360_VENDOR_PROTOCOL((vend), 1) }, \
  	{ XPAD_XBOX360_VENDOR_PROTOCOL((vend), 129) }
  
@@ -25605,7 +25606,7 @@ index 810e52782ae8..939abda974a2 100644
  	XPAD_XBOX360_VENDOR(0x11c9),		/* Nacon GC100XF */
  	XPAD_XBOX360_VENDOR(0x11ff),		/* PXN V900 */
  	XPAD_XBOX360_VENDOR(0x1209),		/* Ardwiino Controllers */
-@@ -540,7 +426,6 @@ static const struct usb_device_id xpad_table[] = {
+@@ -541,7 +427,6 @@ static const struct usb_device_id xpad_table[] = {
  	XPAD_XBOX360_VENDOR(0x1430),		/* RedOctane Xbox 360 controllers */
  	XPAD_XBOX360_VENDOR(0x146b),		/* Bigben Interactive controllers */
  	XPAD_XBOX360_VENDOR(0x1532),		/* Razer Sabertooth */
@@ -25613,7 +25614,7 @@ index 810e52782ae8..939abda974a2 100644
  	XPAD_XBOX360_VENDOR(0x15e4),		/* Numark Xbox 360 controllers */
  	XPAD_XBOX360_VENDOR(0x162e),		/* Joytech Xbox 360 controllers */
  	XPAD_XBOX360_VENDOR(0x1689),		/* Razer Onza */
-@@ -550,31 +435,24 @@ static const struct usb_device_id xpad_table[] = {
+@@ -551,31 +436,24 @@ static const struct usb_device_id xpad_table[] = {
  	XPAD_XBOX360_VENDOR(0x1a86),		/* Nanjing Qinheng Microelectronics (WCH) */
  	XPAD_XBOX360_VENDOR(0x1b1c),		/* Corsair controllers */
  	XPAD_XBOX360_VENDOR(0x1bad),		/* Harmonix Rock Band guitar and drums */
@@ -25647,7 +25648,7 @@ index 810e52782ae8..939abda974a2 100644
  	XPAD_XBOX360_VENDOR(0x37d7),		/* Flydigi Controllers */
  	XPAD_XBOX360_VENDOR(0x3958),		/* RedOctane Games Controllers */
  	XPAD_XBOX360_VENDOR(0x413d),		/* Black Shark Green Ghost Controller */
-@@ -583,162 +461,6 @@ static const struct usb_device_id xpad_table[] = {
+@@ -584,162 +462,6 @@ static const struct usb_device_id xpad_table[] = {
  
  MODULE_DEVICE_TABLE(usb, xpad_table);
  
@@ -25810,7 +25811,7 @@ index 810e52782ae8..939abda974a2 100644
  struct xpad_output_packet {
  	u8 data[XPAD_PKT_LEN];
  	u8 len;
-@@ -768,7 +490,6 @@ struct usb_xpad {
+@@ -769,7 +491,6 @@ struct usb_xpad {
  	struct urb *irq_out;		/* urb for interrupt out report */
  	struct usb_anchor irq_out_anchor;
  	bool irq_out_active;		/* we must not use an active URB */
@@ -25818,7 +25819,7 @@ index 810e52782ae8..939abda974a2 100644
  	unsigned char *odata;		/* output data */
  	dma_addr_t odata_dma;
  	spinlock_t odata_lock;
-@@ -790,14 +511,10 @@ struct usb_xpad {
+@@ -791,14 +512,10 @@ struct usb_xpad {
  	const char *name;		/* name of the device */
  	struct work_struct work;	/* init/remove device from callback */
  	time64_t mode_btn_down_ts;
@@ -25833,7 +25834,7 @@ index 810e52782ae8..939abda974a2 100644
  static void xpad360w_poweroff_controller(struct usb_xpad *xpad);
  
  /*
-@@ -1035,187 +752,6 @@ static void xpad360w_process_packet(struct usb_xpad *xpad, u16 cmd, unsigned cha
+@@ -1036,187 +753,6 @@ static void xpad360w_process_packet(struct usb_xpad *xpad, u16 cmd, unsigned cha
  	rcu_read_unlock();
  }
  
@@ -26021,7 +26022,7 @@ index 810e52782ae8..939abda974a2 100644
  static void xpad_irq_in(struct urb *urb)
  {
  	struct usb_xpad *xpad = urb->context;
-@@ -1248,9 +784,6 @@ static void xpad_irq_in(struct urb *urb)
+@@ -1249,9 +785,6 @@ static void xpad_irq_in(struct urb *urb)
  	case XTYPE_XBOX360W:
  		xpad360w_process_packet(xpad, 0, xpad->idata);
  		break;
@@ -26031,7 +26032,7 @@ index 810e52782ae8..939abda974a2 100644
  	default:
  		xpad_process_packet(xpad, 0, xpad->idata);
  	}
-@@ -1262,56 +795,12 @@ static void xpad_irq_in(struct urb *urb)
+@@ -1263,56 +796,12 @@ static void xpad_irq_in(struct urb *urb)
  			__func__, retval);
  }
  
@@ -26088,7 +26089,7 @@ index 810e52782ae8..939abda974a2 100644
  	for (i = 0; i < XPAD_NUM_OUT_PACKETS; i++) {
  		if (++xpad->last_out_packet >= XPAD_NUM_OUT_PACKETS)
  			xpad->last_out_packet = 0;
-@@ -1487,57 +976,6 @@ static int xpad_inquiry_pad_presence(struct usb_xpad *xpad)
+@@ -1488,57 +977,6 @@ static int xpad_inquiry_pad_presence(struct usb_xpad *xpad)
  	return xpad_try_sending_next_out_packet(xpad);
  }
  
@@ -26146,7 +26147,7 @@ index 810e52782ae8..939abda974a2 100644
  #ifdef CONFIG_JOYSTICK_XPAD_FF
  static int xpad_play_effect(struct input_dev *dev, void *data, struct ff_effect *effect)
  {
-@@ -1596,24 +1034,6 @@ static int xpad_play_effect(struct input_dev *dev, void *data, struct ff_effect
+@@ -1597,24 +1035,6 @@ static int xpad_play_effect(struct input_dev *dev, void *data, struct ff_effect
  		packet->pending = true;
  		break;
  
@@ -26171,7 +26172,7 @@ index 810e52782ae8..939abda974a2 100644
  	default:
  		dev_dbg(&xpad->dev->dev,
  			"%s - rumble command sent to unsupported xpad type: %d\n",
-@@ -1792,13 +1212,6 @@ static int xpad_start_input(struct usb_xpad *xpad)
+@@ -1793,13 +1213,6 @@ static int xpad_start_input(struct usb_xpad *xpad)
  	if (usb_submit_urb(xpad->irq_in, GFP_KERNEL))
  		return -EIO;
  
@@ -26185,7 +26186,7 @@ index 810e52782ae8..939abda974a2 100644
  	if (xpad->xtype == XTYPE_XBOX360) {
  		/*
  		 * Some third-party controllers Xbox 360-style controllers
-@@ -1904,8 +1317,6 @@ static void xpad_close(struct input_dev *dev)
+@@ -1905,8 +1318,6 @@ static void xpad_close(struct input_dev *dev)
  
  static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs)
  {
@@ -26194,7 +26195,7 @@ index 810e52782ae8..939abda974a2 100644
  	switch (abs) {
  	case ABS_X:
  	case ABS_Y:
-@@ -1915,18 +1326,12 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs)
+@@ -1916,18 +1327,12 @@ static void xpad_set_up_abs(struct input_dev *input_dev, signed short abs)
  		break;
  	case ABS_Z:
  	case ABS_RZ:	/* the triggers (if mapped to axes) */
@@ -26214,7 +26215,7 @@ index 810e52782ae8..939abda974a2 100644
  	default:
  		input_set_abs_params(input_dev, abs, 0, 0, 0, 0);
  		break;
-@@ -1981,12 +1386,9 @@ static int xpad_init_input(struct usb_xpad *xpad)
+@@ -1982,12 +1387,9 @@ static int xpad_init_input(struct usb_xpad *xpad)
  		input_set_capability(input_dev, EV_KEY, xpad_common_btn[i]);
  
  	/* set up model-specific ones */
@@ -26228,7 +26229,7 @@ index 810e52782ae8..939abda974a2 100644
  	} else {
  		for (i = 0; xpad_btn[i] >= 0; i++)
  			input_set_capability(input_dev, EV_KEY, xpad_btn[i]);
-@@ -1998,12 +1400,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
+@@ -1999,12 +1401,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
  					     xpad_btn_pad[i]);
  	}
  
@@ -26241,7 +26242,7 @@ index 810e52782ae8..939abda974a2 100644
  	/*
  	 * This should be a simple else block. However historically
  	 * xbox360w has mapped DPAD to buttons while xbox360 did not. This
-@@ -2025,10 +1421,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
+@@ -2026,10 +1422,6 @@ static int xpad_init_input(struct usb_xpad *xpad)
  			xpad_set_up_abs(input_dev, xpad_abs_triggers[i]);
  	}
  
@@ -26252,7 +26253,7 @@ index 810e52782ae8..939abda974a2 100644
  	error = xpad_init_ff(xpad);
  	if (error)
  		goto err_free_input;
-@@ -2094,8 +1486,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
+@@ -2095,8 +1487,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
  	xpad->mapping = xpad_device[i].mapping;
  	xpad->xtype = xpad_device[i].xtype;
  	xpad->name = xpad_device[i].name;
@@ -26261,7 +26262,7 @@ index 810e52782ae8..939abda974a2 100644
  
  	xpad->packet_type = PKT_XB;
  	INIT_WORK(&xpad->work, xpad_presence_work);
-@@ -2104,8 +1494,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
+@@ -2105,8 +1495,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
  		if (intf->cur_altsetting->desc.bInterfaceClass == USB_CLASS_VENDOR_SPEC) {
  			if (intf->cur_altsetting->desc.bInterfaceProtocol == 129)
  				xpad->xtype = XTYPE_XBOX360W;
@@ -26270,7 +26271,7 @@ index 810e52782ae8..939abda974a2 100644
  			else
  				xpad->xtype = XTYPE_XBOX360;
  		} else {
-@@ -2120,17 +1508,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
+@@ -2121,17 +1509,6 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
  			xpad->mapping |= MAP_STICKS_TO_NULL;
  	}
  
@@ -26288,7 +26289,7 @@ index 810e52782ae8..939abda974a2 100644
  	ep_irq_in = ep_irq_out = NULL;
  
  	for (i = 0; i < 2; i++) {
-@@ -2296,7 +1673,6 @@ static int xpad_resume(struct usb_interface *intf)
+@@ -2297,7 +1674,6 @@ static int xpad_resume(struct usb_interface *intf)
  	struct usb_xpad *xpad = usb_get_intfdata(intf);
  	struct input_dev *input = xpad->dev;
  
@@ -26296,7 +26297,7 @@ index 810e52782ae8..939abda974a2 100644
  	if (xpad->xtype == XTYPE_XBOX360W)
  		return xpad360w_start_input(xpad);
  
-@@ -2305,15 +1681,6 @@ static int xpad_resume(struct usb_interface *intf)
+@@ -2306,15 +1682,6 @@ static int xpad_resume(struct usb_interface *intf)
  	if (input_device_enabled(input))
  		return xpad_start_input(xpad);
  
@@ -27361,10 +27362,10 @@ index 1fe9c537671d..874e26b2c14b 100644
  
  static struct device *cros_ec_cec_find_hdmi_dev(struct device *dev,
 diff --git a/drivers/mfd/Kconfig b/drivers/mfd/Kconfig
-index e4fd4572472f..b87a3ee6b156 100644
+index 857ca3bb0d5b..477a07cde0b8 100644
 --- a/drivers/mfd/Kconfig
 +++ b/drivers/mfd/Kconfig
-@@ -2578,5 +2578,16 @@ config MFD_MAX7360
+@@ -2580,5 +2580,16 @@ config MFD_MAX7360
  	  additional drivers must be enabled in order to use the functionality
  	  of the device.
  
@@ -28806,7 +28807,7 @@ index ee87f00bc5de..680adecd702c 100644
  
  void ath12k_mhi_suspend(struct ath12k_pci *ab_pci)
 diff --git a/drivers/net/wireless/realtek/rtw88/mac80211.c b/drivers/net/wireless/realtek/rtw88/mac80211.c
-index b01b98d24b0a..5b3a39c6c6d7 100644
+index 0b622d7663b6..32873c8977af 100644
 --- a/drivers/net/wireless/realtek/rtw88/mac80211.c
 +++ b/drivers/net/wireless/realtek/rtw88/mac80211.c
 @@ -564,6 +564,9 @@ static int rtw_ops_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
@@ -30926,35 +30927,10 @@ index 7e640c7166e4..3a430bd082c3 100644
  			rtw89_chip_rfk_channel(rtwdev, rtwvif_link);
  }
 diff --git a/drivers/net/wireless/realtek/rtw89/fw.c b/drivers/net/wireless/realtek/rtw89/fw.c
-index 0099c5c03e7a..c31b60608ecf 100644
+index b2991bc93f85..c31b60608ecf 100644
 --- a/drivers/net/wireless/realtek/rtw89/fw.c
 +++ b/drivers/net/wireless/realtek/rtw89/fw.c
-@@ -156,8 +156,24 @@ static int rtw89_fw_hdr_parser_v0(struct rtw89_dev *rtwdev, const u8 *fw, u32 le
- 	if (!info)
- 		return -EINVAL;
- 
-+	if (len < sizeof(*fw_hdr)) {
-+		rtw89_err(rtwdev, "[ERR]fw header truncated\n");
-+		return -EINVAL;
-+	}
-+
- 	info->section_num = le32_get_bits(fw_hdr->w6, FW_HDR_W6_SEC_NUM);
-+	if (!info->section_num || info->section_num > FWDL_SECTION_MAX_NUM) {
-+		rtw89_err(rtwdev, "[ERR]invalid fw section num %u\n",
-+			  info->section_num);
-+		return -EINVAL;
-+	}
-+
- 	base_hdr_len = struct_size(fw_hdr, sections, info->section_num);
-+	if (base_hdr_len > len) {
-+		rtw89_err(rtwdev, "[ERR]fw header truncated\n");
-+		return -EINVAL;
-+	}
-+
- 	info->dynamic_hdr_en = le32_get_bits(fw_hdr->w7, FW_HDR_W7_DYN_HDR);
- 	info->idmem_share_mode = le32_get_bits(fw_hdr->w7, FW_HDR_W7_IDMEM_SHARE_MODE);
- 
-@@ -306,7 +322,7 @@ static int __parse_formatted_mssc(struct rtw89_dev *rtwdev,
+@@ -322,7 +322,7 @@ static int __parse_formatted_mssc(struct rtw89_dev *rtwdev,
  		if (mss_hdr->defen)
  			rmp_tbl_size += FWDL_MSS_POOL_DEFKEYSETS_SIZE;
  	} else {
@@ -30963,33 +30939,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  			  mss_hdr->rmpfmt);
  		return -EINVAL;
  	}
-@@ -455,9 +471,25 @@ static int rtw89_fw_hdr_parser_v1(struct rtw89_dev *rtwdev, const u8 *fw, u32 le
- 	int ret;
- 	u32 i;
- 
-+	if (len < sizeof(*fw_hdr)) {
-+		rtw89_err(rtwdev, "[ERR]fw header truncated\n");
-+		return -EINVAL;
-+	}
-+
- 	info->section_num = le32_get_bits(fw_hdr->w6, FW_HDR_V1_W6_SEC_NUM);
-+	if (!info->section_num || info->section_num > FWDL_SECTION_MAX_NUM) {
-+		rtw89_err(rtwdev, "[ERR]invalid fw section num %u\n",
-+			  info->section_num);
-+		return -EINVAL;
-+	}
-+
- 	info->dsp_checksum = le32_get_bits(fw_hdr->w6, FW_HDR_V1_W6_DSP_CHKSUM);
- 	base_hdr_len = struct_size(fw_hdr, sections, info->section_num);
-+	if (base_hdr_len > len) {
-+		rtw89_err(rtwdev, "[ERR]fw header truncated\n");
-+		return -EINVAL;
-+	}
-+
- 	info->dynamic_hdr_en = le32_get_bits(fw_hdr->w7, FW_HDR_V1_W7_DYN_HDR);
- 	info->idmem_share_mode = le32_get_bits(fw_hdr->w7, FW_HDR_V1_W7_IDMEM_SHARE_MODE);
- 
-@@ -860,6 +892,7 @@ static const struct __fw_feat_cfg fw_feat_tbl[] = {
+@@ -892,6 +892,7 @@ static const struct __fw_feat_cfg fw_feat_tbl[] = {
  	__CFG_FW_FEAT(RTL8851B, ge, 0, 29, 37, 1, TX_WAKE),
  	__CFG_FW_FEAT(RTL8851B, ge, 0, 29, 37, 1, SCAN_OFFLOAD),
  	__CFG_FW_FEAT(RTL8851B, ge, 0, 29, 41, 0, CRASH_TRIGGER_TYPE_0),
@@ -30997,7 +30947,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	__CFG_FW_FEAT(RTL8851B, ge, 0, 29, 127, 0, SER_L1_BY_EVENT),
  	__CFG_FW_FEAT(RTL8851B, ge, 0, 29, 130, 0, SIM_SER_L0L1_BY_HALT_H2C),
  	__CFG_FW_FEAT(RTL8852A, le, 0, 13, 29, 0, OLD_HT_RA_FORMAT),
-@@ -935,6 +968,7 @@ static const struct __fw_feat_cfg fw_feat_tbl[] = {
+@@ -967,6 +968,7 @@ static const struct __fw_feat_cfg fw_feat_tbl[] = {
  	__CFG_FW_FEAT(RTL8922A, ge, 0, 35, 108, 0, SIM_SER_L0L1_BY_HALT_H2C),
  	__CFG_FW_FEAT(RTL8922A, lt, 0, 35, 109, 1, SCAN_OFFLOAD_BE_V1),
  	__CFG_FW_FEAT(RTL8922A, lt, 0, 35, 113, 2, SCAN_OFFLOAD_BE_V2),
@@ -31005,7 +30955,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	__CFG_FW_FEAT(RTL8922D, ge, 0, 0, 0, 0, MACID_PAUSE_SLEEP),
  	__CFG_FW_FEAT(RTL8922D, ge, 0, 35, 75, 2, SCAN_OFFLOAD),
  	__CFG_FW_FEAT(RTL8922D, ge, 0, 35, 75, 2, BEACON_FILTER),
-@@ -951,6 +985,8 @@ static const struct __fw_feat_cfg fw_feat_tbl[] = {
+@@ -983,6 +985,8 @@ static const struct __fw_feat_cfg fw_feat_tbl[] = {
  	__CFG_FW_FEAT(RTL8922D, lt, 0, 35, 109, 1, SCAN_OFFLOAD_BE_V1),
  	__CFG_FW_FEAT(RTL8922D, lt, 0, 35, 113, 0, RFK_TXIQK_V0),
  	__CFG_FW_FEAT(RTL8922D, lt, 0, 35, 113, 2, SCAN_OFFLOAD_BE_V2),
@@ -31014,7 +30964,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  };
  
  static void rtw89_fw_iterate_feature_cfg(struct rtw89_fw_info *fw,
-@@ -1371,10 +1407,11 @@ int rtw89_recognize_regd_from_elm(struct rtw89_dev *rtwdev,
+@@ -1403,10 +1407,11 @@ int rtw89_recognize_regd_from_elm(struct rtw89_dev *rtwdev,
  {
  	const struct __rtw89_fw_regd_element *regd_elm = &elm->u.regd;
  	struct rtw89_fw_elm_info *elm_info = &rtwdev->fw.elm_info;
@@ -31028,7 +30978,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	if (num_ents > RTW89_REGD_MAX_COUNTRY_NUM) {
  		rtw89_warn(rtwdev,
-@@ -1397,6 +1434,7 @@ int rtw89_recognize_regd_from_elm(struct rtw89_dev *rtwdev,
+@@ -1429,6 +1434,7 @@ int rtw89_recognize_regd_from_elm(struct rtw89_dev *rtwdev,
  		return -ENOMEM;
  
  	p->nr = num_ents;
@@ -31036,7 +30986,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	rtw89_for_each_in_regd_element(&regd, regd_elm)
  		p->map[i++] = regd;
  
-@@ -2571,23 +2609,28 @@ int rtw89_fw_h2c_default_dmac_tbl_v3(struct rtw89_dev *rtwdev,
+@@ -2603,23 +2609,28 @@ int rtw89_fw_h2c_default_dmac_tbl_v3(struct rtw89_dev *rtwdev,
  }
  EXPORT_SYMBOL(rtw89_fw_h2c_default_dmac_tbl_v3);
  
@@ -31071,7 +31021,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  					      &entry_idx);
  	if (ret) {
  		/* it still works even if we don't have static BA CAM, because
-@@ -2706,24 +2749,33 @@ void rtw89_fw_h2c_init_dynamic_ba_cam_v0_ext(struct rtw89_dev *rtwdev)
+@@ -2738,24 +2749,33 @@ void rtw89_fw_h2c_init_dynamic_ba_cam_v0_ext(struct rtw89_dev *rtwdev)
  	}
  }
  
@@ -31111,7 +31061,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  					      &entry_idx);
  	if (ret) {
  		/* it still works even if we don't have static BA CAM, because
-@@ -2762,6 +2814,7 @@ int rtw89_fw_h2c_ba_cam_v1(struct rtw89_dev *rtwdev,
+@@ -2794,6 +2814,7 @@ int rtw89_fw_h2c_ba_cam_v1(struct rtw89_dev *rtwdev,
  	entry_idx += chip->bacam_dynamic_num; /* std entry right after dynamic ones */
  	h2c->w1 = le32_encode_bits(entry_idx, RTW89_H2C_BA_CAM_V1_W1_ENTRY_IDX_MASK) |
  		  le32_encode_bits(1, RTW89_H2C_BA_CAM_V1_W1_STD_ENTRY_EN) |
@@ -31119,7 +31069,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  		  le32_encode_bits(!!rtwvif_link->mac_idx,
  				   RTW89_H2C_BA_CAM_V1_W1_BAND_SEL);
  
-@@ -2785,6 +2838,96 @@ int rtw89_fw_h2c_ba_cam_v1(struct rtw89_dev *rtwdev,
+@@ -2817,6 +2838,96 @@ int rtw89_fw_h2c_ba_cam_v1(struct rtw89_dev *rtwdev,
  }
  EXPORT_SYMBOL(rtw89_fw_h2c_ba_cam_v1);
  
@@ -31216,7 +31166,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  int rtw89_fw_h2c_init_ba_cam_users(struct rtw89_dev *rtwdev, u8 users,
  				   u8 offset, u8 mac_idx)
  {
-@@ -3059,11 +3202,14 @@ static int rtw89_fw_h2c_add_general_pkt(struct rtw89_dev *rtwdev,
+@@ -3091,11 +3202,14 @@ static int rtw89_fw_h2c_add_general_pkt(struct rtw89_dev *rtwdev,
  		skb = rtw89_arp_response_get(rtwdev, rtwvif_link);
  		break;
  	default:
@@ -31232,7 +31182,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	ret = rtw89_fw_h2c_add_pkt_offload(rtwdev, &info->id, skb);
  	kfree_skb(skb);
-@@ -3077,7 +3223,7 @@ static int rtw89_fw_h2c_add_general_pkt(struct rtw89_dev *rtwdev,
+@@ -3109,7 +3223,7 @@ static int rtw89_fw_h2c_add_general_pkt(struct rtw89_dev *rtwdev,
  
  err:
  	kfree(info);
@@ -31241,7 +31191,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  }
  
  void rtw89_fw_release_general_pkt_list_vif(struct rtw89_dev *rtwdev,
-@@ -3451,26 +3597,59 @@ void rtw89_bb_lps_cmn_info_rx_gain_fill(struct rtw89_dev *rtwdev,
+@@ -3483,26 +3597,59 @@ void rtw89_bb_lps_cmn_info_rx_gain_fill(struct rtw89_dev *rtwdev,
  	}
  }
  
@@ -31302,7 +31252,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	skb = rtw89_fw_h2c_alloc_skb_with_hdr(rtwdev, len);
  	if (!skb) {
  		rtw89_err(rtwdev, "failed to alloc skb for h2c lps_ml_cmn_info_v1\n");
-@@ -3479,7 +3658,13 @@ int rtw89_fw_h2c_lps_ml_cmn_info_v1(struct rtw89_dev *rtwdev,
+@@ -3511,7 +3658,13 @@ int rtw89_fw_h2c_lps_ml_cmn_info_v1(struct rtw89_dev *rtwdev,
  	skb_put(skb, len);
  	h2c = (struct rtw89_h2c_lps_ml_cmn_info_v1 *)skb->data;
  
@@ -31317,7 +31267,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	h2c->mlo_dbcc_mode = cpu_to_le32(rtwdev->mlo_dbcc_mode);
  	h2c->rfe_type = efuse->rfe_type;
-@@ -3535,6 +3720,46 @@ int rtw89_fw_h2c_lps_ml_cmn_info_v1(struct rtw89_dev *rtwdev,
+@@ -3567,6 +3720,46 @@ int rtw89_fw_h2c_lps_ml_cmn_info_v1(struct rtw89_dev *rtwdev,
  	return ret;
  }
  
@@ -31364,7 +31314,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  #define H2C_P2P_ACT_LEN 20
  int rtw89_fw_h2c_p2p_act(struct rtw89_dev *rtwdev,
  			 struct rtw89_vif_link *rtwvif_link,
-@@ -5118,10 +5343,10 @@ int rtw89_fw_h2c_join_info(struct rtw89_dev *rtwdev, struct rtw89_vif_link *rtwv
+@@ -5150,10 +5343,10 @@ int rtw89_fw_h2c_join_info(struct rtw89_dev *rtwdev, struct rtw89_vif_link *rtwv
  				      RTW89_H2C_JOININFO_W1_EMLSR_PADDING) |
  		     le32_encode_bits(IEEE80211_EML_CAP_EMLSR_TRANSITION_DELAY_256US,
  				      RTW89_H2C_JOININFO_W1_EMLSR_TRANS_DELAY) |
@@ -31378,7 +31328,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  done:
  	rtw89_h2c_pkt_set_hdr(rtwdev, skb, FWCMD_TYPE_H2C,
-@@ -7026,8 +7251,8 @@ int rtw89_fw_h2c_cxdrv_trx_v7(struct rtw89_dev *rtwdev, u8 type)
+@@ -7058,8 +7251,8 @@ int rtw89_fw_h2c_cxdrv_trx_v7(struct rtw89_dev *rtwdev, u8 type)
  	h2c->v7_u8.zb_rx_gain = trx->zb_rx_gain[BTC_BT_1ST];
  	h2c->v7_u8.cn = trx->cn;
  	h2c->v7_u8.nhm = trx->nhm;
@@ -31389,7 +31339,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	h2c->v7_le.tx_rate = cpu_to_le16(trx->tx_rate);
  	h2c->v7_le.rx_rate = cpu_to_le16(trx->rx_rate);
  	h2c->v7_le.tx_tp = cpu_to_le32(trx->tx_tp);
-@@ -7093,8 +7318,8 @@ int rtw89_fw_h2c_cxdrv_trx_v9(struct rtw89_dev *rtwdev, u8 type)
+@@ -7125,8 +7318,8 @@ int rtw89_fw_h2c_cxdrv_trx_v9(struct rtw89_dev *rtwdev, u8 type)
  	}
  	h2c->v9_u8.cn = trx->cn;
  	h2c->v9_u8.nhm = trx->nhm;
@@ -31400,7 +31350,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	h2c->v9_le.tx_rate = cpu_to_le16(trx->tx_rate);
  	h2c->v9_le.rx_rate = cpu_to_le16(trx->rx_rate);
  	h2c->v9_le.tx_tp = cpu_to_le32(trx->tx_tp);
-@@ -7151,8 +7376,8 @@ int rtw89_fw_h2c_cxdrv_trx_v107(struct rtw89_dev *rtwdev, u8 type)
+@@ -7183,8 +7376,8 @@ int rtw89_fw_h2c_cxdrv_trx_v107(struct rtw89_dev *rtwdev, u8 type)
  	h2c->v107_u8.bt_rx_gain = trx->bt_rx_gain[BTC_BT_1ST];
  	h2c->v107_u8.cn = trx->cn;
  	h2c->v107_u8.nhm = trx->nhm;
@@ -31411,7 +31361,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	h2c->v7_le.tx_rate = cpu_to_le16(trx->tx_rate);
  	h2c->v7_le.rx_rate = cpu_to_le16(trx->rx_rate);
  	h2c->v7_le.tx_tp = cpu_to_le32(trx->tx_tp);
-@@ -7261,7 +7486,7 @@ int rtw89_fw_h2c_cxtxpwr_v7(struct rtw89_dev *rtwdev, u8 type)
+@@ -7293,7 +7486,7 @@ int rtw89_fw_h2c_cxtxpwr_v7(struct rtw89_dev *rtwdev, u8 type)
  	return ret;
  }
  
@@ -31420,7 +31370,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  {
  	struct rtw89_btc *btc = &rtwdev->btc;
  	struct rtw89_btc_dm *dm = &btc->dm;
-@@ -7273,14 +7498,14 @@ int rtw89_fw_h2c_cxtxpwr_v9(struct rtw89_dev *rtwdev, u8 type)
+@@ -7305,14 +7498,14 @@ int rtw89_fw_h2c_cxtxpwr_v9(struct rtw89_dev *rtwdev, u8 type)
  
  	skb = rtw89_fw_h2c_alloc_skb_with_hdr(rtwdev, len);
  	if (!skb) {
@@ -31437,7 +31387,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	h2c->hdr.len = sizeof(*h2c) - H2C_LEN_CXDRVHDR_V7;
  	if (dm->wl_tx_pwr_phy_map == BIT(RTW89_PHY_1))
  		h2c->pwr = rp.wl_tx_power[RTW89_PHY_1] & 0xff;
-@@ -7500,24 +7725,34 @@ int rtw89_fw_h2c_scan_list_offload_be(struct rtw89_dev *rtwdev, int ch_num,
+@@ -7532,24 +7725,34 @@ int rtw89_fw_h2c_scan_list_offload_be(struct rtw89_dev *rtwdev, int ch_num,
  	struct rtw89_h2c_chinfo_elem_be *elem;
  	struct rtw89_mac_chinfo_be *ch_info;
  	struct rtw89_h2c_chinfo_be *h2c;
@@ -31473,7 +31423,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	wildcard_by_drv = !(RTW89_CHK_FW_FEATURE(SCAN_OFFLOAD_BE_V0, &rtwdev->fw) ||
  			    RTW89_CHK_FW_FEATURE(SCAN_OFFLOAD_BE_V1, &rtwdev->fw) ||
-@@ -7527,14 +7762,14 @@ int rtw89_fw_h2c_scan_list_offload_be(struct rtw89_dev *rtwdev, int ch_num,
+@@ -7559,14 +7762,14 @@ int rtw89_fw_h2c_scan_list_offload_be(struct rtw89_dev *rtwdev, int ch_num,
  	h2c = (struct rtw89_h2c_chinfo_be *)skb->data;
  
  	h2c->ch_num = ch_num;
@@ -31490,7 +31440,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  		elem->w0 = le32_encode_bits(ch_info->dwell_time, RTW89_H2C_CHINFO_BE_W0_DWELL) |
  			   le32_encode_bits(ch_info->central_ch,
-@@ -7589,11 +7824,16 @@ int rtw89_fw_h2c_scan_list_offload_be(struct rtw89_dev *rtwdev, int ch_num,
+@@ -7621,11 +7824,16 @@ int rtw89_fw_h2c_scan_list_offload_be(struct rtw89_dev *rtwdev, int ch_num,
  		else
  			elem->w7 = le32_encode_bits(ch_info->period,
  						    RTW89_H2C_CHINFO_BE_W7_PERIOD_V1);
@@ -31508,7 +31458,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	cond = RTW89_SCANOFLD_WAIT_COND_ADD_CH;
  
-@@ -7814,6 +8054,8 @@ int rtw89_fw_h2c_scan_offload_be(struct rtw89_dev *rtwdev,
+@@ -7846,6 +8054,8 @@ int rtw89_fw_h2c_scan_offload_be(struct rtw89_dev *rtwdev,
  
  	if (RTW89_CHK_FW_FEATURE(CH_INFO_BE_V0, &rtwdev->fw))
  		ver = 0;
@@ -31517,7 +31467,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	h2c->w0 = le32_encode_bits(option->operation, RTW89_H2C_SCANOFLD_BE_W0_OP) |
  		  le32_encode_bits(option->scan_mode,
-@@ -10271,7 +10513,6 @@ static void rtw89_hw_scan_update_link_beacon_noa(struct rtw89_dev *rtwdev,
+@@ -10303,7 +10513,6 @@ static void rtw89_hw_scan_update_link_beacon_noa(struct rtw89_dev *rtwdev,
  
  static void rtw89_hw_scan_update_beacon_noa(struct rtw89_dev *rtwdev, bool scan)
  {
@@ -31525,7 +31475,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	const struct rtw89_hw_scan_info *scan_info = &rtwdev->scan_info;
  	const struct rtw89_chip_info *chip = rtwdev->chip;
  	struct rtw89_mac_chinfo_ax *chinfo_ax;
-@@ -10311,7 +10552,7 @@ static void rtw89_hw_scan_update_beacon_noa(struct rtw89_dev *rtwdev, bool scan)
+@@ -10343,7 +10552,7 @@ static void rtw89_hw_scan_update_beacon_noa(struct rtw89_dev *rtwdev, bool scan)
  	}
  
  update:
@@ -31534,7 +31484,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  		unsigned int link_id;
  
  		vif = rtwvif_to_vif(rtwvif);
-@@ -10328,7 +10569,6 @@ static void rtw89_hw_scan_set_extra_op_info(struct rtw89_dev *rtwdev,
+@@ -10360,7 +10569,6 @@ static void rtw89_hw_scan_set_extra_op_info(struct rtw89_dev *rtwdev,
  					    struct rtw89_vif *scan_rtwvif,
  					    const struct rtw89_chan *scan_op)
  {
@@ -31542,7 +31492,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	struct rtw89_hw_scan_info *scan_info = &rtwdev->scan_info;
  	struct rtw89_hw_scan_extra_op *ext = &scan_info->extra_op;
  	struct rtw89_vif *tmp;
-@@ -10337,7 +10577,7 @@ static void rtw89_hw_scan_set_extra_op_info(struct rtw89_dev *rtwdev,
+@@ -10369,7 +10577,7 @@ static void rtw89_hw_scan_set_extra_op_info(struct rtw89_dev *rtwdev,
  	if (!RTW89_CHK_FW_FEATURE(SCAN_OFFLOAD_EXTRA_OP, &rtwdev->fw))
  		return;
  
@@ -31551,7 +31501,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  		const struct rtw89_chan *tmp_chan;
  		struct rtw89_vif_link *tmp_link;
  
-@@ -10372,7 +10612,6 @@ int rtw89_hw_scan_start(struct rtw89_dev *rtwdev,
+@@ -10404,7 +10612,6 @@ int rtw89_hw_scan_start(struct rtw89_dev *rtwdev,
  	struct cfg80211_scan_request *req = &scan_req->req;
  	const struct rtw89_chan *chan = rtw89_chan_get(rtwdev,
  						       rtwvif_link->chanctx_idx);
@@ -31559,7 +31509,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	struct rtw89_vif *rtwvif = rtwvif_link->rtwvif;
  	struct rtw89_chanctx_pause_parm pause_parm = {
  		.rsn = RTW89_CHANCTX_PAUSE_REASON_HW_SCAN,
-@@ -10405,8 +10644,6 @@ int rtw89_hw_scan_start(struct rtw89_dev *rtwdev,
+@@ -10437,8 +10644,6 @@ int rtw89_hw_scan_start(struct rtw89_dev *rtwdev,
  	if (req->flags & NL80211_SCAN_FLAG_RANDOM_ADDR)
  		get_random_mask_addr(mac_addr, req->mac_addr,
  				     req->mac_addr_mask);
@@ -31568,7 +31518,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	else
  		ether_addr_copy(mac_addr, rtwvif_link->mac_addr);
  
-@@ -11214,7 +11451,7 @@ int rtw89_fw_h2c_wow_request_aoac(struct rtw89_dev *rtwdev)
+@@ -11246,7 +11451,7 @@ int rtw89_fw_h2c_wow_request_aoac(struct rtw89_dev *rtwdev)
  
  	skb_put(skb, len);
  
@@ -31577,7 +31527,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	 * no need any parameter.
  	 */
  	rtw89_h2c_pkt_set_hdr(rtwdev, skb, FWCMD_TYPE_H2C,
-@@ -12573,9 +12810,9 @@ static int rtw89_fw_cmd_ofld_pack(struct rtw89_dev *rtwdev)
+@@ -12605,9 +12810,9 @@ static int rtw89_fw_cmd_ofld_pack(struct rtw89_dev *rtwdev)
  	return 0;
  }
  
@@ -31589,7 +31539,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	struct sk_buff *skb;
  	int ret;
  	u32 len;
-@@ -12584,7 +12821,7 @@ static void rtw89_fw_cmd_ofld_flush(struct rtw89_dev *rtwdev)
+@@ -12616,7 +12821,7 @@ static void rtw89_fw_cmd_ofld_flush(struct rtw89_dev *rtwdev)
  	skb = rtw89_fw_h2c_alloc_skb_with_hdr(rtwdev, len);
  	if (!skb) {
  		rtw89_err(rtwdev, "alloc skb fail\n");
@@ -31598,7 +31548,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	}
  
  	skb_put_data(skb, info->cmds, len);
-@@ -12599,12 +12836,13 @@ static void rtw89_fw_cmd_ofld_flush(struct rtw89_dev *rtwdev)
+@@ -12631,12 +12836,13 @@ static void rtw89_fw_cmd_ofld_flush(struct rtw89_dev *rtwdev)
  	if (ret) {
  		rtw89_err(rtwdev, "failed to send cmd ofld\n");
  		dev_kfree_skb_any(skb);
@@ -31613,7 +31563,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  	info->cnt = 0;
  	info->accu_delay = 0;
  }
-@@ -12624,7 +12862,7 @@ static int rtw89_fw_cmd_ofld_unpack(struct rtw89_dev *rtwdev)
+@@ -12656,7 +12862,7 @@ static int rtw89_fw_cmd_ofld_unpack(struct rtw89_dev *rtwdev)
  	if (info->cnt == 0)
  		return 0;
  
@@ -31622,7 +31572,7 @@ index 0099c5c03e7a..c31b60608ecf 100644
  
  	return 0;
  }
-@@ -12651,7 +12889,7 @@ static int rtw89_fw_cmd_ofld_enqueue(struct rtw89_dev *rtwdev,
+@@ -12683,7 +12889,7 @@ static int rtw89_fw_cmd_ofld_enqueue(struct rtw89_dev *rtwdev,
  		return -EFAULT;
  
  	if (info->cnt >= ARRAY_SIZE(info->cmds))
@@ -32688,21 +32638,6 @@ index 14fab6b1a74a..31e8f2076ee0 100644
  		rtw89_vif_for_each_link(rtwvif, rtwvif_link, link_id) {
  			chan = rtw89_chan_get(rtwdev, rtwvif_link->chanctx_idx);
  			if (chan->band_type != RTW89_BAND_6G)
-diff --git a/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk.c b/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk.c
-index c63f0e6364da..71342461f2b3 100644
---- a/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk.c
-+++ b/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk.c
-@@ -1895,8 +1895,8 @@ static void _dpk_information(struct rtw89_dev *rtwdev, enum rtw89_phy_idx phy,
- 	u8 kidx = dpk->cur_idx[path];
- 
- 	dpk->bp[path][kidx].band = chan->band_type;
--	dpk->bp[path][kidx].ch = chan->band_width;
--	dpk->bp[path][kidx].bw = chan->channel;
-+	dpk->bp[path][kidx].ch = chan->channel;
-+	dpk->bp[path][kidx].bw = chan->band_width;
- 
- 	rtw89_debug(rtwdev, RTW89_DBG_RFK,
- 		    "[DPK] S%d[%d] (PHY%d): TSSI %s/ DBCC %s/ %s/ CH%d/ %s\n",
 diff --git a/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk_table.c b/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk_table.c
 index c5f70c045692..beae5749d07d 100644
 --- a/drivers/net/wireless/realtek/rtw89/rtw8851b_rfk_table.c
@@ -33346,10 +33281,10 @@ index a507ce1fcd63..701440bd7be1 100644
  }
  
 diff --git a/drivers/net/wireless/realtek/rtw89/usb.c b/drivers/net/wireless/realtek/rtw89/usb.c
-index aafa8b9e93df..dbad42c17761 100644
+index 22a1a988f307..8dc2c93e502e 100644
 --- a/drivers/net/wireless/realtek/rtw89/usb.c
 +++ b/drivers/net/wireless/realtek/rtw89/usb.c
-@@ -1201,7 +1201,8 @@ static const struct attribute_group rtw89_usb_group = {
+@@ -1206,7 +1206,8 @@ static const struct attribute_group rtw89_usb_group = {
  __ATTRIBUTE_GROUPS(rtw89_usb);
  
  int rtw89_usb_probe(struct usb_interface *intf,
@@ -33359,7 +33294,7 @@ index aafa8b9e93df..dbad42c17761 100644
  {
  	const struct rtw89_driver_info *info;
  	struct rtw89_dev *rtwdev;
-@@ -1209,6 +1210,8 @@ int rtw89_usb_probe(struct usb_interface *intf,
+@@ -1214,6 +1215,8 @@ int rtw89_usb_probe(struct usb_interface *intf,
  	int ret;
  
  	info = (const struct rtw89_driver_info *)id->driver_info;
@@ -33398,10 +33333,10 @@ index c16e7a7f8bc9..aa87a520bdc3 100644
   * in some case such as SER L2 happen during WoWLAN flow, calling reconfig
   * twice cause the list to be added twice.
 diff --git a/drivers/net/wireless/realtek/rtw89/wow.c b/drivers/net/wireless/realtek/rtw89/wow.c
-index 2dfa24c54e7d..0bf34692c7ce 100644
+index 178c59692b13..d1c7d4182474 100644
 --- a/drivers/net/wireless/realtek/rtw89/wow.c
 +++ b/drivers/net/wireless/realtek/rtw89/wow.c
-@@ -473,10 +473,8 @@ static void rtw89_wow_construct_key_info(struct rtw89_dev *rtwdev)
+@@ -477,10 +477,8 @@ static void rtw89_wow_construct_key_info(struct rtw89_dev *rtwdev)
  	struct ieee80211_vif *wow_vif = rtwvif_link_to_vif(rtwvif_link);
  	bool err = false;
  
@@ -33414,7 +33349,7 @@ index 2dfa24c54e7d..0bf34692c7ce 100644
  
  	if (err) {
  		rtw89_wow_key_clear(rtwdev);
-@@ -695,10 +693,8 @@ static void rtw89_wow_update_key_info(struct rtw89_dev *rtwdev, bool rx_ready)
+@@ -699,10 +697,8 @@ static void rtw89_wow_update_key_info(struct rtw89_dev *rtwdev, bool rx_ready)
  	struct ieee80211_bss_conf *bss_conf;
  	struct ieee80211_key_conf *key;
  
@@ -33482,10 +33417,10 @@ index a9cbfc1d2bc7..31b7e2953959 100644
  
  static const struct dev_pm_ops pcie_portdrv_pm_ops = {
 diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
-index 1aa87a3ef9ed..3d6d92b0d53b 100644
+index d4fcc336bc2a..a268380aa19c 100644
 --- a/drivers/pci/quirks.c
 +++ b/drivers/pci/quirks.c
-@@ -6427,22 +6427,224 @@ static void pci_fixup_d3cold_delay_1sec(struct pci_dev *pdev)
+@@ -6451,22 +6451,224 @@ static void pci_fixup_d3cold_delay_1sec(struct pci_dev *pdev)
  }
  DECLARE_PCI_FIXUP_FINAL(0x5555, 0x0004, pci_fixup_d3cold_delay_1sec);
  
@@ -34089,10 +34024,10 @@ index 0e301d663d0c..12b716e8e578 100644
  };
  
 diff --git a/drivers/platform/x86/asus-wmi.c b/drivers/platform/x86/asus-wmi.c
-index daf8bd17e638..948fbc9cc9fd 100644
+index e4f8636f6462..58db4dd1b19b 100644
 --- a/drivers/platform/x86/asus-wmi.c
 +++ b/drivers/platform/x86/asus-wmi.c
-@@ -318,6 +318,9 @@ struct asus_wmi {
+@@ -320,6 +320,9 @@ struct asus_wmi {
  	bool gpu_fan_curve_available;
  	bool mid_fan_curve_available;
  	struct fan_curve_data custom_fan_curves[3];
@@ -34102,7 +34037,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  
  	struct device *ppdev;
  	bool platform_profile_support;
-@@ -4034,6 +4037,63 @@ static const struct attribute_group asus_fan_curve_attr_group = {
+@@ -4047,6 +4050,63 @@ static const struct attribute_group asus_fan_curve_attr_group = {
  };
  __ATTRIBUTE_GROUPS(asus_fan_curve_attr);
  
@@ -34166,7 +34101,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  /*
   * Must be initialised after throttle_thermal_policy_dev is set as
   * we check the status of throttle_thermal_policy_dev during init.
-@@ -4073,6 +4133,12 @@ static int asus_wmi_custom_fan_curve_init(struct asus_wmi *asus)
+@@ -4086,6 +4146,12 @@ static int asus_wmi_custom_fan_curve_init(struct asus_wmi *asus)
  		&& !asus->mid_fan_curve_available)
  		return 0;
  
@@ -34179,7 +34114,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  	hwmon = devm_hwmon_device_register_with_groups(
  		dev, "asus_custom_fan_curve", asus, asus_fan_curve_attr_groups);
  
-@@ -4228,7 +4294,7 @@ static int asus_wmi_platform_profile_get(struct device *dev,
+@@ -4241,7 +4307,7 @@ static int asus_wmi_platform_profile_get(struct device *dev,
  		*profile = PLATFORM_PROFILE_PERFORMANCE;
  		break;
  	case ASUS_THROTTLE_THERMAL_POLICY_SILENT:
@@ -34188,7 +34123,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  		break;
  	default:
  		return -EINVAL;
-@@ -4252,7 +4318,7 @@ static int asus_wmi_platform_profile_set(struct device *dev,
+@@ -4265,7 +4331,7 @@ static int asus_wmi_platform_profile_set(struct device *dev,
  	case PLATFORM_PROFILE_BALANCED:
  		tp = ASUS_THROTTLE_THERMAL_POLICY_DEFAULT;
  		break;
@@ -34197,7 +34132,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  		tp = ASUS_THROTTLE_THERMAL_POLICY_SILENT;
  		break;
  	default:
-@@ -4265,7 +4331,7 @@ static int asus_wmi_platform_profile_set(struct device *dev,
+@@ -4278,7 +4344,7 @@ static int asus_wmi_platform_profile_set(struct device *dev,
  
  static int asus_wmi_platform_profile_probe(void *drvdata, unsigned long *choices)
  {
@@ -34206,7 +34141,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  	set_bit(PLATFORM_PROFILE_BALANCED, choices);
  	set_bit(PLATFORM_PROFILE_PERFORMANCE, choices);
  
-@@ -5317,6 +5383,8 @@ static void asus_wmi_remove(struct platform_device *device)
+@@ -5343,6 +5409,8 @@ static void asus_wmi_remove(struct platform_device *device)
  	asus_wmi_debugfs_exit(asus);
  	asus_wmi_sysfs_exit(asus->platform_device);
  	asus_fan_set_auto(asus);
@@ -34215,7 +34150,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  	throttle_thermal_policy_set_default(asus);
  	asus_wmi_battery_exit(asus);
  
-@@ -5344,10 +5412,25 @@ static int asus_hotk_thaw(struct device *device)
+@@ -5370,10 +5438,25 @@ static int asus_hotk_thaw(struct device *device)
  	return 0;
  }
  
@@ -34241,7 +34176,7 @@ index daf8bd17e638..948fbc9cc9fd 100644
  	if (!IS_ERR_OR_NULL(asus->kbd_led.dev))
  		kbd_led_update(asus);
  
-@@ -5449,6 +5532,7 @@ static void asus_s2idle_check_unregister(void) {}
+@@ -5475,6 +5558,7 @@ static void asus_s2idle_check_unregister(void) {}
  static const struct dev_pm_ops asus_pm_ops = {
  	.thaw = asus_hotk_thaw,
  	.restore = asus_hotk_restore,
@@ -37617,7 +37552,7 @@ index ba84f02c2a10..a2403062d770 100644
  			    struct mmc_clk_phase_map *map);
  int mmc_of_parse(struct mmc_host *host);
 diff --git a/include/linux/pci.h b/include/linux/pci.h
-index 5ffcf5ce8c96..9b952fbd2b07 100644
+index 272378dd8973..199704dcbcbf 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
 @@ -419,6 +419,7 @@ struct pci_dev {
@@ -38371,11 +38306,11 @@ index 11665e0a7efc..6f02c310d922 100644
  	while (country->coll_ptr) {
  		if (alpha2_equal(alpha2, country->alpha2))
 diff --git a/sound/soc/amd/acp-config.c b/sound/soc/amd/acp-config.c
-index 3d48bb0f100f..ff9f5c02aadd 100644
+index f190d3cdc81e..04b7c75b10e6 100644
 --- a/sound/soc/amd/acp-config.c
 +++ b/sound/soc/amd/acp-config.c
-@@ -98,6 +98,13 @@ static const struct dmi_system_id acp70_acpi_flag_override_table[] = {
- 			DMI_MATCH(DMI_BOARD_NAME, "8EA2"),
+@@ -105,6 +105,13 @@ static const struct dmi_system_id acp70_acpi_flag_override_table[] = {
+ 			DMI_MATCH(DMI_PRODUCT_NAME, "Dell 14S DS14265"),
  		},
  	},
 +	{
