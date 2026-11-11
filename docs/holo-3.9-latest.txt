@@ -71,7 +71,7 @@ kscreenlocker-6.7.3-1.1
 kupdate-notifier-git-r59.7e34c35-4
 kwin-5.27.10-4
 kwindowsystem-6.16.0-1.1
-lib32-gamescope-3.16.30.1-1
+lib32-gamescope-3.16.30.2-1
 lib32-glm-1.0.0-1
 lib32-libdisplay-info-0.3.0-1
 lib32-libdrm-2.4.133-1.1
