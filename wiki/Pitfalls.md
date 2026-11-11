@@ -285,15 +285,6 @@ instead.
 
 ## Packaging (xbps-src)
 
-**`publish.sh --testing` from one branch drops the other branches' test
-packages.** It prunes every package the checked-out `srcpkgs/` and overlays
-do not know, the testing channel included: publishing the kernel from
-`test-kernel-73` removed `plymouth-holo` and `orca-holo` (from
-`test-plymouth-orca`) while `io-base` 0.7.2_2, which needs `plymouth-holo`,
-stayed. A Deck with the testing channel then cannot run `-Syu`; update the
-tested packages by name, and publish the other branch's packages again
-before testing it.
-
 **Never rebuild a package with the same version and revision.** xbps
 packages are not byte-identical between builds. `publish.sh` skips a file
 that is already uploaded but re-indexes from the new build, so the index

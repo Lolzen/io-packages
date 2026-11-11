@@ -38,7 +38,8 @@
 #                             on first use). Only the named packages go
 #                             there; packages that the main repository has
 #                             in the same or a higher version are dropped
-#                             from it on every --testing run. A Deck uses it
+#                             from it on every --testing run, other
+#                             branches' test packages stay. A Deck uses it
 #                             with /etc/xbps.d/10-io-testing.conf containing
 #                             repository=https://github.com/Lolzen/io-repo/releases/download/testing
 #                             (sorted before Io's 20-io.conf, so a test build
@@ -264,12 +265,25 @@ elif ! grep -q -i 'release not found' "$GHLOG"; then
 fi
 
 # ------------------------------------------ one version per package only
+# The main repository keeps the packages the checked-out srcpkgs/ and
+# overlays know. The testing channel holds other branches' builds, which
+# this branch may not know (a package or overlay that only exists there),
+# so there every published name is kept; it leaves the channel when the
+# main repository catches up (below) or with --replace.
 echo "== pruning"
 : > "$TMP/keep.txt"
-for pkg in $ALL; do
-    f=$(newest_in "$PUBDIR" "$(pubname "$pkg")")
-    [ -n "$f" ] && echo "${f##*/}" >> "$TMP/keep.txt"
-done
+if [ "$TESTING" = 1 ]; then
+    NAMES=$(for f in "$PUBDIR"/*.xbps; do [ -f "$f" ] && pkgname_of "$f"; done | sort -u)
+    for name in $NAMES; do
+        f=$(newest_in "$PUBDIR" "$name")
+        [ -n "$f" ] && echo "${f##*/}" >> "$TMP/keep.txt"
+    done
+else
+    for pkg in $ALL; do
+        f=$(newest_in "$PUBDIR" "$(pubname "$pkg")")
+        [ -n "$f" ] && echo "${f##*/}" >> "$TMP/keep.txt"
+    done
+fi
 for f in "$PUBDIR"/*.xbps; do
     [ -f "$f" ] || continue
     if ! grep -qxF "${f##*/}" "$TMP/keep.txt"; then

@@ -85,7 +85,9 @@ Builds that are not merged yet (a branch, a pull request) go to the
 `testing` release of `io-repo` instead: `build.sh --testing` or
 `publish.sh --testing` with package names (only the named packages go
 there; the local copy is `~/io-repo-test`). Each `--testing` run drops the
-packages that the main repository has caught up with. A Deck uses the
+packages that the main repository has caught up with; test packages of
+other branches, which the checked-out branch may not know, stay (since
+2026-11-11; before, a `--testing` run pruned them). A Deck uses the
 channel with
 
 ```
