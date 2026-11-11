@@ -356,8 +356,8 @@ kernel.org's kernels is in every run. It reports:
   series, and Valve's kernel of Io's series (point releases from
   kernel.org's `releases.json` and its directory listing, which can be a
   cached copy)
-- Valve's steamos-manager `main` not in the fork's `runit`, and `runit`
-  ahead of the template's `_commit`
+- Valve's steamos-manager `main` newer than the template's `_commit`
+  (rebase the patches, raise the template)
 
 It keeps itself enabled (GitHub disables scheduled workflows after 60 days
 without commits).

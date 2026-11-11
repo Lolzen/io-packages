@@ -22,7 +22,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 
 | Package | Upstream | Contents |
 |---|---|---|
-| `steamos-manager` | `steamos-manager` (Valve's main of 2026-10-24, after 26.4.1, from the branch `runit` of [Lolzen/steamos-manager](https://github.com/Lolzen/steamos-manager)) | Valve's SteamOS Manager, root half as runit service `steamos-manager`, session half through D-Bus activation; runit service `scx` (linked with a `down` file) for the LAVD scheduler; Io's D-Bus policy (root and `wheel`). Depends on `trace-cmd` for the OLED's Wi-Fi debug mode |
+| `steamos-manager` | `steamos-manager` (Valve's main of 2026-11-10, after 26.4.1, from Valve's GitLab archive; Io's seven runit commits are the package's patches) | Valve's SteamOS Manager, root half as runit service `steamos-manager`, session half through D-Bus activation; runit service `scx` (linked with a `down` file) for the LAVD scheduler; Io's D-Bus policy (root and `wheel`). Depends on `trace-cmd` for the OLED's Wi-Fi debug mode |
 | `linux-neptune` | – | Metapackage for Io's kernel series (7.3: `linux-neptune-73`), with `linux-neptune-headers`, as Void's `linux`; `io-desktop` and the recovery image depend on it |
 | `linux-neptune-73` | `linux-integration` (`7.3/integration` on stable 7.3.3, with 7.2.10-valve1's newer merge requests) | Steam Deck kernel: the kernel.org tarball with one patch generated from Valve's tree; configuration in layers (Void, the configuration Valve's package builds from, `config-neptune`, Io's overrides), see [Kernel](Kernel) |
 | `linux-neptune-72` | `linux-integration` (7.2.7-valve2, with stable 7.2.11 merged in) | The previous series, kept in the repository and on installed systems as a fallback |
