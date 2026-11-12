@@ -1,7 +1,7 @@
 # Template file for 'linux-neptune-73'
 pkgname=linux-neptune-73
 version=7.3.4
-revision=1
+revision=2
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.3 series)"
 depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
@@ -30,41 +30,29 @@ preserve=yes
 hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
  pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
 
-# Valve's 7.3/integration (7415f40493e8, untagged; Valve has no 7.3
-# release yet) on stable 7.3.4, with the merge requests of Valve's
-# 7.2.10-valve1 that the branch does not have yet ported by Io:
+# Valve's 7.3.1-valve1 (linux-neptune-73 7.3.1.valve1-1, 2026-11-11, from
+# the archive's linux-integration repository) with stable 7.3.4 merged in:
 # patches/0001-neptune-73.patch is the difference between stable 7.3.4 and
-# that tree (generated without Valve's ci/ and .gitlab-ci.yml).
-#   Valve's branch: everything of 7.2.7-valve2 that Valve carried over
-#     (408 commits on 7.3). Valve left out 17 older commits (the amdgpu VM
-#     explicit sync series and its follow-ups, the linear backlight curve,
-#     the linearizing LUT rework, YUV420 beyond HDMI, the HDA notify on
-#     disconnect, the dmem race fixup); Io follows that and waits for
-#     Valve's own port (decided 2026-11-05). Without the explicit
-#     sync series the amdgpu interface stays at 3.64, so Mesa's
-#     radv_vm_explicit_sync (mesa-holo 0005) stays off.
-#   stable 7.3.1 merged without conflicts. Rebased onto 7.3.3: stable
-#     carries eleven of Valve's commits itself (ten [FROM-ML] hid-lenovo-go-s
-#     fixes, the [FROM-UPSTREAM] snd_acp63_remove teardown fix), so they
-#     dropped out; the tree equals a three-way merge of 7.3.3.
-#   Rebased onto 7.3.4: two rtw89 fixes are in stable; xpad keeps stable's
-#     GameSir Nova Lite (Xbox 360) and drops the Xbox One entry with Valve's
-#     "Remove Xbox One support"; acp-config keeps both ACP 7.0 entries.
-#   Ported from 7.2.10-valve1 (34 commits): ROG Xbox Ally X20 audio
-#     (SoundWire, TAS2783, RT721), hid-lenovo-go, GL9767 UHS-II, asus-armoury,
-#     hid-asus-ally, rtw88 decryption checks and ASPM. Adapted: acp-config.c
-#     and amd-acp70-acpi-match.c (7.3's new HP entries kept next to the
-#     Ally's), tas2783-sdw.c (both includes), soc_sdw_utils.c (the DisCo
-#     port check on 7.3's asoc_sdw_parse_sdw_endpoints(dev, ...)),
-#     rt721-sdca.c (7.3's sdca_asoc_pde_poll_actual_ps() has no device
-#     argument, as Valve's commit notes).
-#   Not ported: the HDMI 2.1 series (squashed, Steam Machine only; against
-#     7.3's split amdgpu_dm it is a rewrite; Io waits for Valve's own port,
-#     decided 2026-11-05).
-# _valvever: no Valve tag to name, so "neptune1"; Valve's first 7.3 tag
-# replaces it. The patch sets the kernel's EXTRAVERSION to match, as
-# Valve's release commits do (the module directory is named after it).
-_valvever=neptune1
+# that merge (generated without Valve's ci/ and .gitlab-ci.yml).
+#   Valve's tag: 508 commits on 7.3.1, everything Io's port of 2026-11-05
+#     (7.3/integration 7415f40493e8 plus 34 ported commits) had and 79
+#     more: the amdgpu VM explicit sync series (12, amdgpu interface 3.65,
+#     so Mesa's radv_vm_explicit_sync in mesa-holo is active again), 48
+#     rtw89 and 7 mac80211/iwlwifi backports, the hid-lenovo-go-s and
+#     snd_acp63_remove fixes (stable has them too) and the release commit.
+#     Of the 17 older commits Valve had left out of 7.3/integration, the
+#     explicit sync series is back; the linear backlight curve, the LUT
+#     rework, YUV420 beyond HDMI, the HDA notify and the dmem fixup are
+#     not, nor the HDMI 2.1 series (Steam Machine).
+#   stable 7.3.4 merged: three conflicts. Makefile (SUBLEVEL 4 with
+#     EXTRAVERSION -valve1); xpad.c (stable's GameSir Nova Lite, Xbox 360,
+#     kept; the Xbox One entry goes with Valve's "Remove Xbox One
+#     support"); acp-config.c (stable's and Valve's ACP 7.0 entries both
+#     kept). Valve's and Io's config layers are unchanged from 7.2.10 and
+#     the generated .config equals the port's.
+# _valvever names Valve's tag; Valve's release commit sets the kernel's
+# EXTRAVERSION to match (the module directory is named after it).
+_valvever=valve1
 _kernver="${version}-${_valvever}_${revision}"
 triggers="kernel-hooks"
 kernel_hooks_version="${_kernver}"

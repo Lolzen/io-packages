@@ -18,7 +18,7 @@ on this page.
 
 | SteamOS 3.9.2 | On Io | Notes |
 |---|---|---|
-| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12) | `linux-neptune-73` 7.3.4 (metapackage `linux-neptune`; `linux-neptune-72` 7.2.11 kept) | Valve's untagged `7.3/integration` on stable 7.3.4 with 7.2.10-valve1's newer changes; built from the configuration Valve's package uses, see [Kernel](Kernel) |
+| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12; Valve's main: `linux-neptune-73` 7.3.1.valve1) | `linux-neptune-73` 7.3.4 (metapackage `linux-neptune`; `linux-neptune-72` 7.2.11 kept) | Valve's `7.3.1-valve1` (its first 7.3 release, 2026-11-11) with stable 7.3.4 merged in; built from the configuration Valve's package uses, see [Kernel](Kernel) |
 | `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps. From 20260930.1 (SteamOS 3.9.3): the firmware updaters (`deck-firmware-updaters`) and the thumbstick and trigger calibration tools (`deck-controller-calibration`). From 20261028.1 (Valve's main): `amdgpu.dcdebugmask=0x60000` (in `io-base`, see [Kernel](Kernel)) and the automount scripts' messages; its automount of NVMe and virtio drives (Steam Machine, virtual machines) is not taken, Io hides the internal SSD |
 | `steamos-manager` 26.4.1 (26.1.0) | `steamos-manager` (Valve's main of 2026-11-10) | Valve's daemon with runit support (seven commits as the package's patches), see [Architecture](Architecture); until October 2026 Io's own implementation, `io-steamos-manager` |
 | `ec-log` 0.1 (new) | `ec-log` 0.1 | The Steam Machine's EC log; runit service linked with a `down` file, started by SteamOS Manager |

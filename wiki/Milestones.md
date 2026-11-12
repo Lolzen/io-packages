@@ -198,7 +198,10 @@ have; they need someone with the hardware.
   Void or upstream has them), Plasma 6.8 (when Void has it; `kwin-holo`
   then keeps two patches). Valve's `holo-3.10` and `jupiter-3.10`
   (2026-11-06) start as copies of main; `pkgcheck.sh` watches 3.9 and
-  3.10. Kernel 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11; bluez 5.88 (Void's, with Io's two
+  3.10. Kernel 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11, Valve's
+  7.3.1-valve1 (its first 7.3 release; the amdgpu explicit sync series is
+  back, so `mesa-holo`'s `radv_vm_explicit_sync` works again) with 7.3.4
+  since 2026-11-12, replacing Io's port; bluez 5.88 (Void's, with Io's two
   patches, 2026-11-10). Valve's main of 2026-11-10: steamos-manager
   (`ds_inhibit` returns errors in fewer cases on shutdown), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard
   in the lock screen, where Steam's cannot show; Plasma 6.8, in
@@ -244,6 +247,5 @@ have; they need someone with the hardware.
   rebuilt; stops for a review when Void moved to a new version), see
   [Building](Building)
 - Valve's kernel updates, with the configuration review described on
-  [Kernel](Kernel); Valve's first 7.3 tag replaces Io's port of the
-  integration branch
+  [Kernel](Kernel)
 - Boot logs, for regressions and new warnings

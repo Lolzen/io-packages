@@ -1,10 +1,9 @@
 # Kernel
 
 `linux-neptune-73` is Io's Steam Deck kernel, built with Void's kernel
-packaging: 7.3.4, Valve's `7.3/integration` branch on stable 7.3.4, with
-the changes of Valve's `7.2.10-valve1` that the branch does not have yet
-(since November 2026). Valve has no 7.3 package yet; SteamOS 3.9.5 runs
-`7.2.7-valve2`, Valve's main branch `7.2.10-valve1`.
+packaging: Valve's `7.3.1-valve1` (Valve's first 7.3 release, main branch,
+2026-11-11) with stable 7.3.4 merged in. SteamOS 3.9.5 runs `7.2.7-valve2`,
+Valve's main branch `7.2.10-valve1` and, since 2026-11-11, `7.3.1-valve1`.
 
 The metapackage `linux-neptune` names Io's series (`linux-neptune-73`, and
 `linux-neptune-headers`), as Void's `linux` does: `io-desktop` and the
@@ -17,7 +16,9 @@ removed by hand.
 History: 6.15.8 until September 2026, then Valve's 7.2 branch (NTSync, newer
 HID drivers, HDMI-CEC over the dock's DisplayPort link); 7.2.7-valve1 in
 Alpha 6 and 7, 7.2.7-valve2 on stable 7.2.11 in Beta 0.8; 7.3 since
-2026-11-05 (7.3.1), 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11.
+2026-11-05 as Io's own port of Valve's branch (7.3.1; 7.3.3 since
+2026-11-08, 7.3.4 since 2026-11-11); Valve's `7.3.1-valve1` with 7.3.4
+since 2026-11-12.
 
 ---
 
@@ -34,71 +35,30 @@ files). Void's small build fixes (`fix-ccache.patch`,
 **Where Valve's tree comes from.** Valve's `linux-integration` repository
 is not public, but the source archive of each `linux-neptune-*` package on
 `steamdeck-packages.steamos.cloud` carries it as a bare git repository with
-all of Valve's branches, not only the packaged tag. The 7.3 port comes from
-the archive of `linux-neptune-72` 7.2.10.valve1-3, whose repository has
-`7.3/integration` (2026-11-03).
+all of Valve's branches, not only the packaged tag. Valve's 7.3 tag comes
+from the archive of `linux-neptune-73` 7.3.1.valve1-1 (3.4 GB; Io's earlier
+port came from `linux-neptune-72` 7.2.10.valve1-3, whose repository had
+`7.3/integration` of 2026-11-03). The public mirror on gitlab.com (evlaV)
+has no 7.x tags.
 
 **What the tree is:**
 
 | Part | What |
 |---|---|
-| Valve's `7.3/integration` (7415f40493e8) | Everything of `7.2.7-valve2` Valve carried over to 7.3: 408 commits on v7.3 |
-| Stable 7.3.3 | 7.3.1 merged without conflicts; the port rebased onto 7.3.3 (2026-11-06). Stable 7.3.3 carries eleven of Valve's commits itself (the ten `[FROM-ML]` `hid-lenovo-go-s` fixes and the `[FROM-UPSTREAM]` `snd_acp63_remove()` teardown fix), so they dropped out of the patch; the tree equals a three-way merge of the 7.3.1 port with 7.3.3 |
-| Stable 7.3.4 | The port rebased onto 7.3.4 (2026-11-11): two of Valve's `[FROM-UPSTREAM]` rtw89 fixes are in stable and dropped out. Two conflicts: `xpad.c` (stable adds the GameSir Nova Lite as an Xbox 360 pad next to an Xbox One entry that Valve's "Remove Xbox One support" drops: the new entry kept, the Xbox One one dropped) and `acp-config.c` (stable and the ported Xbox Ally X20 commit each add an ACP 7.0 entry: both kept). Apart from these the tree equals the three-way merge; the generated configuration differs from 7.3.3's only by `SATA_INIC162X`, which 7.3.4 removed |
-| From `7.2.10-valve1`, ported by Io | The merge requests Valve's branch does not have yet, 34 commits: ROG Xbox Ally X20 audio (SoundWire, TAS2783, RT721), `hid-lenovo-go`, GL9767 UHS-II, `asus-armoury`, `hid-asus-ally`, rtw88's decryption checks and ASPM (the Deck LCD's Wi-Fi) |
-| `EXTRAVERSION = -neptune1` | Valve's release commits set it (`-valve2`); the branch has none yet. The kernel release, and with it the module directory, is `7.3.4-neptune1_<revision>` |
+| Valve's `7.3.1-valve1` | 508 commits on v7.3.1: everything of `7.2.7-valve2` Valve carried over to 7.3, the merge requests of `7.2.10-valve1` (ROG Xbox Ally X20 audio, `hid-lenovo-go`, GL9767 UHS-II, `asus-armoury`, `hid-asus-ally`, rtw88's decryption checks and ASPM), the amdgpu VM explicit sync series (12 commits; amdgpu interface 3.65, so Mesa's `radv_vm_explicit_sync` in `mesa-holo` works again), 48 rtw89 and 7 mac80211/iwlwifi backports. The tag has everything Io's own port (2026-11-05 to 11-11) had |
+| Stable 7.3.4 | Merged into the tag (2026-11-12). Three conflicts: `Makefile` (`SUBLEVEL` 4 with Valve's `EXTRAVERSION`); `xpad.c` (stable adds the GameSir Nova Lite as an Xbox 360 pad next to an Xbox One entry that Valve's "Remove Xbox One support" drops: the new entry kept, the Xbox One one dropped); `acp-config.c` (stable and Valve's Xbox Ally X20 commit each add an ACP 7.0 entry: both kept). Stable's own copies of Valve's `hid-lenovo-go-s`, `snd_acp63_remove()` and two rtw89 fixes merge cleanly. The generated configuration equals the port's |
+| `EXTRAVERSION = -valve1` | Valve's release commit sets it. The kernel release, and with it the module directory, is `7.3.4-valve1_<revision>` |
 
-Adapted while porting: `acp-config.c` and `amd-acp70-acpi-match.c` (7.3's
-new HP entries kept next to the Ally's), `tas2783-sdw.c` (both includes),
-`soc_sdw_utils.c` (the DisCo port check on 7.3's
-`asoc_sdw_parse_sdw_endpoints(dev, ...)`), `rt721-sdca.c` (7.3's
-`sdca_asoc_pde_poll_actual_ps()` has no device argument, as Valve's commit
-notes).
+**Still not in Valve's 7.3** (of the 17 older commits Valve left out of
+its branch; the 7.2 kernel is there for whoever needs them): the linear
+backlight curve (see *Kernel command line*), the linearizing LUT rework,
+YUV420 beyond HDMI, the HDA notify on disconnect, the dmem race fixup, and
+the HDMI 2.1 series (Steam Machine only).
 
-**Left for Valve's own port** (decided 2026-11-05; the 7.2 kernel is there
-for whoever needs them):
-
-- The HDMI 2.1 series (one squashed commit, Steam Machine only): against
-  7.3's split `amdgpu_dm` it is a rewrite.
-- 17 older commits Valve itself left out of its 7.3 branch: the amdgpu VM
-  explicit sync series and its follow-ups, the linear backlight curve (see
-  *Kernel command line*), the linearizing LUT rework, YUV420 beyond HDMI,
-  the HDA notify on disconnect, the dmem race fixup. Without the explicit
-  sync series the amdgpu interface stays at 3.64 (Valve's 7.2: 3.65), so
-  Mesa's `radv_vm_explicit_sync` (`mesa-holo`, for Forza) stays off.
-
-When Valve tags its first 7.3 release, Io moves to that tag; the upstream
-check reports Valve's `linux-neptune-73` as soon as it is on the mirror.
-
-**Stable releases.** Valve merges `stable/linux-7.N.y` into its integration
-branch from time to time; Io does the same when it is ahead of Valve's tag:
-
-1. In Valve's tree, check out Valve's tag (or branch) and `git merge` the
-   stable tag.
-2. Resolve the conflicts, each with its reason in the template's comment.
-3. Generate the patch against the stable tag:
-   `git diff v7.N.M <merge> -- . ':(exclude)ci' ':(exclude).gitlab-ci.yml'`.
-4. Check that kernel.org 7.N + `patch-7.N.M` + the patch gives the merged
-   tree, and that `EXTRAVERSION` matches `_valvever`.
-
-On top of an untagged branch (7.3 today) Io rebases instead: the port
-(Valve's branch, the ported merge requests, the `EXTRAVERSION` commit) goes
-onto the new stable tag with `git rebase --onto v7.N.M v7.N.L`. A commit
-that conflicts because stable already has it (same subject without
-Valve's `[FROM-ML]`-style tag) is skipped; the check is that the result
-equals `git merge-tree --write-tree <old port> v7.N.M` apart from the
-`Makefile`'s `SUBLEVEL`. Then the patch as in step 3, and the Kconfig diff
-between both stable tags (7.3.1 → 7.3.3: none; 7.3.3 → 7.3.4: one driver
-removed), and the generated `.config` compared with the previous one.
-
-The conflicts of `linux-neptune-72`'s 7.2.11 merge (in its template):
-
-| File | Resolution |
-|---|---|
-| `hid-steam.c`, `hid-oxp.c` | Valve's: it already has stable's commits and later ones |
-| `xpad.c` | Valve's table (Xbox One pads go through Valve's gip driver) plus stable's new Xbox 360 entries |
-| `ttm_bo.c` | stable's fix on Valve's code (`if (ret > 0)`: a use-after-free after hibernation) |
-| `amdgpu_dm.c` | Valve's file with four of stable's display fixes; stable's PWM backlight curve stays out, Valve keeps the linear curve |
+Io's own port (2026-11-05 to 2026-11-12, `7.3.4-neptune1`): Valve's
+`7.3/integration` (7415f40493e8, 408 commits) plus 34 commits ported from
+`7.2.10-valve1`, rebased onto each stable release. Valve's tag carries the
+same commits and replaced it.
 
 ---
 
@@ -128,8 +88,9 @@ apart from Valve's.
 
 Since Valve's configuration is a full one, it overrides nearly every option
 Void's base sets; Void's value survives only where it has no entry.
-Valve has no 7.3 configuration yet; layers 2 and 3 are those of
-`linux-neptune-72` 7.2.10.valve1, unchanged since 7.2.7. Against Io's 7.2
+Layers 2 and 3 are Valve's files from `linux-neptune-73` 7.3.1.valve1-1,
+byte for byte those of `linux-neptune-72` 7.2.10.valve1 and unchanged since
+7.2.7. Against Io's 7.2
 configuration, 7.3 drops 20 options upstream removed (`PROC_SYSCTL` is part
 of `SYSCTL` now; Open vSwitch's GRE, VXLAN and GENEVE options) and adds 88,
 nearly all off; `config-io` applies unchanged. Checked for 7.2.7 (and
@@ -151,7 +112,7 @@ it and uses the C Binder.
 
 | Option | Value | Direction | Why |
 |---|---|---|---|
-| `LOCALVERSION_AUTO` | off | Void packaging | xbps-src sets the local version from the package revision (`_1` in `7.3.4-neptune1_1`) |
+| `LOCALVERSION_AUTO` | off | Void packaging | xbps-src sets the local version from the package revision (`_2` in `7.3.4-valve1_2`) |
 | `MODULE_SIG_ALL`, `MODULE_COMPRESS_ALL` | off | Void packaging | Void's `mv-debug` splits off the debug information, then signs and compresses each module itself; doing it in `modules_install` already would be undone by the strip |
 | `DEFAULT_HOSTNAME` | `(none)` | Io's own | Valve's value is Arch's (`archlinux`); the real name comes from `/etc/hostname` |
 | `ANDROID_BINDER_IPC`, `ANDROID_BINDERFS` | built in | Towards SteamOS | Binder for Android containers (Waydroid). SteamOS 3.8.4 has the C Binder, 3.9.2 the Rust Binder; Io builds without Rust, so the C one |

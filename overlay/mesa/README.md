@@ -20,7 +20,7 @@ entry fails) are in 26.2.6.
 |---|---|---|
 | 0001 | **OpenGL frame limiter:** with gamescope's `GAMESCOPE_LIMITER_FILE`, DRI3 (OpenGL under Xwayland) follows Steam's frame limit | Valve only |
 | 0002 | Forza Horizon 5: at least 4 swapchain images (`vk_x11_override_min_image_count`), else the game can get stuck in low clocks with gamescope's vblank reservation | Valve only |
-| 0003, 0004 | `amdgpu_drm.h` synced with the kernel, `AMDGPU_VM_EXPLICIT_SYNC` | uapi in Valve's kernel (Io's `linux-neptune-72`) |
+| 0003, 0004 | `amdgpu_drm.h` synced with the kernel, `AMDGPU_VM_EXPLICIT_SYNC` | uapi in Valve's kernel (Io's `linux-neptune-72`; `linux-neptune-73` since Valve's 7.3.1-valve1, whose explicit sync series Valve's 7.3 branch had left out) |
 | 0005-0009 | **Explicit synchronisation for VM operations** (sparse binding without implicit sync), behind the driconf option `radv_vm_explicit_sync` | Valve only |
 | 0010, 0011 | `radv_vm_explicit_sync` for Forza Horizon 4, 5 and 6 (stutter) | Valve only |
 | 0012 | `VK_EXT_pageable_device_local_memory` (memory priorities for DXVK and vkd3d-proton); a no-op on kernels without Valve's ioctl | Valve only |

@@ -64,6 +64,8 @@ linux-neptune-65-kasan-6.5.0.valve11-3
 linux-neptune-68-6.8.12.valve12-1
 linux-neptune-72-7.2.10.valve1-3
 linux-neptune-72-devel-7.2.4.valve1-2
+linux-neptune-73-7.3.1.valve1-1
+linux-neptune-73-devel-7.3.1.valve1-1
 linux-neptune-rtw-debug-5.13.0.valve38.rtwdbg.6-1
 mangohud-josh.core.fix.r2.ge9d9f68-1
 mesa-26.1.2.221562.radeonsi_26.1.2-5
