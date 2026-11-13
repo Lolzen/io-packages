@@ -189,7 +189,8 @@ have; they need someone with the hardware.
   three fixes wait for their upstream release and Void: SDDM comparing its
   configuration's times in UTC (a session switch after a timezone change),
   PipeWire 1.6.11's Bluetooth fixes, gamescope blanking the screen before
-  sleep. Mesa follows Void (26.2.6 since 2026-10-29). Valve's changes up to
+  sleep. Mesa follows Void (26.2.6 since 2026-10-29, 26.2.7 since
+  2026-11-13). Valve's changes up to
   2026-11-04 (checked 2026-11-05): 67 pure rebuilds for Arch's LLVM 23 and
   OpenSSL 4; taken: the kernel (Io moved to 7.3, see [Kernel](Kernel), with
   the metapackage `linux-neptune`), SteamOS's `amdgpu.dcdebugmask=0x60000`

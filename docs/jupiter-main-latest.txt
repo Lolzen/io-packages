@@ -10,7 +10,7 @@ filesystem-2021.12.07-1.22
 flatpak-1.14.4-2
 foxnet-1.5-5
 foxnetstatsd-1.4-5
-galileo-mura-v0.10-3
+galileo-mura-v0.20-1
 gamescope-3.17.0-3
 gpu-trace-2.17-1.2
 holo-dmi-rules-1.0-1
@@ -92,7 +92,7 @@ steam-jupiter-oobe-1.0.0.79-1.30
 steam-jupiter-stable-1.0.0.85-13
 steam_notif_daemon-v1.0.1-5
 steamdeck-dsp-1.03-2
-steamdeck-kde-presets-3.9.4-2
+steamdeck-kde-presets-3.9.6-1
 steamos-alias-2.0-1
 steamos-customizations-jupiter-20260916.1-1
 steamos-devkit-service-0.20250916.0-1

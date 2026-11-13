@@ -1,16 +1,17 @@
 # Template file for 'steamdeck-kde-presets'
 pkgname=steamdeck-kde-presets
-version=3.9.4
-revision=3
+version=3.9.6
+revision=1
 wrksrc="steamdeck-kde-presets"
 hostmakedepends="git tar"
 depends="kdialog jq python3 ibus steam-jupiter bash qt6-tools steamos-manager"
 short_desc="Valve's Plasma defaults for the Steam Deck"
 maintainer="Georg <funer@gmx.at>"
 license="GPL-2.0-only"
+_pkgrel=1
 homepage="https://gitlab.steamos.cloud/jupiter/steamdeck-kde-presets"
-distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-2.src.tar.gz"
-checksum=bf6ec9404e96b6357b447a6b9722dbbd3ff0984cc3ff45b2bb5fe5770c9e954d
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
+checksum=3015723b9a87b56b9965a31ff42fd484ad3e0cecfbe6ed6ac5ada919eef9aaeb
 
 # Valve's Plasma setup for the Deck, taken as is where it applies:
 # - Steam autostarts in the desktop (steam -silent). That is where the

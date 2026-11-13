@@ -9,10 +9,10 @@ template's own `subpackages=` list; nothing is written by hand.
 SteamOS 3.9.2 builds Mesa from two sources: OpenGL from `radeonsi-26.1.2`
 (Mesa 26.1.2 plus one Valve commit) and Vulkan (RADV) from
 `steamos-26.05.19` (a Mesa main snapshot of May 2026 plus backports and
-Valve's own commits). Void's 26.2.6 is newer than both, so only Valve's own
+Valve's own commits). Void's 26.2.7 is newer than both, so only Valve's own
 commits (`STEAMOS:`) are taken over (checked against Valve's `jupiter-3.9`
 sources of 2026-10-15; no newer RADV snapshot on Valve's mirror on
-2026-10-29). The three RADV fixes from Mesa main that Io carried for 26.2.5
+2026-11-13: `jupiter-main` still has `steamos_26.05.19`). The three RADV fixes from Mesa main that Io carried for 26.2.5
 (descriptor set allocator heap size, memory leak and error code when a pool
 entry fails) are in 26.2.6.
 
@@ -31,7 +31,10 @@ upstream, sync type moved out of the winsys), 0009 and 0014 (RADV's driconf
 options are declared in `radv_drirc_gen.py` there), 0013 (small conflicts).
 Compile-tested (RADV and radeonsi, x86_64) before committing. All 14 apply
 to 26.2.6 unchanged, without fuzz, and compile (RADV and radeonsi, x86_64,
-2026-10-29).
+2026-10-29); the same for 26.2.7 after Void's musl patches (2026-11-13;
+of the 28 files the patches touch, 26.2.7 changed `ac_gpu_info.c`, CU
+count per shader array, and `radv_cmd_buffer.c`, conditional rendering,
+both away from the patched lines).
 
 Left out: Valve's `radv: always consider some outputs as invariant` (in
 26.2.5 already), CI expectation files and Valve's pick script.

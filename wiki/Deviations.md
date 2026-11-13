@@ -327,7 +327,7 @@ its own implementation (`io-steamos-manager`).
 
 ## Graphics
 
-- **Mesa is Void's 26.2.6 with Valve's patches** (`mesa-holo`, 64 and 32
+- **Mesa is Void's 26.2.7 with Valve's patches** (`mesa-holo`, 64 and 32
   bit, see *Io overlay*), not Valve's builds (SteamOS 3.9.2: radeonsi
   26.1.2 with one Valve patch, RADV from Valve's `steamos-26.05` branch, a
   Mesa main snapshot of May 2026). Void's release is newer than both;

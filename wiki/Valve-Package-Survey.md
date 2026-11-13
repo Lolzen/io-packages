@@ -24,11 +24,11 @@ on this page.
 | `ec-log` 0.1 (new) | `ec-log` 0.1 | The Steam Machine's EC log; runit service linked with a `down` file, started by SteamOS Manager |
 | `jupiter-dock-updater-bin` | 20260811.01 (newest in jupiter-3.9) | Valve's dock updater as it is; untested without Valve's dock |
 | `holo-session-selection` (new) | in `io-session` | `holo-session-select` (also as `steamos-session-select`, which Steam calls) with Io's desktop session, and SDDM's settings under its name `holo.conf`. Its `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
-| `galileo-mura` v0.10 | `galileo-mura` v0.10 | Started by the game mode session on the OLED (Valve: a user service); untested |
+| `galileo-mura` v0.10 (v0.20 in 3.9's and main's branches) | `galileo-mura` v0.20 | v0.20 drops root rights before writing the mura blob. Started by the game mode session on the OLED (Valve: a user service); untested |
 | `steam-jupiter-stable` 1.0.0.85-12 (-8) | `steam-jupiter` (-12) | |
 | `steamdeck-dsp` 1.02 (0.91) | `steamdeck-dsp` 1.03 (Valve's main) | Sink loopbacks kept as in 0.91; 1.03's headphone suspend timeout |
 | `jupiter-hibernate-disable` 0.1 (Valve's main, not on 3.9.2) | `jupiter-hibernate-disable` 0.1 | Core service instead of a oneshot unit; DMI from sysfs instead of `dmidecode` |
-| `steamdeck-kde-presets` 3.9.4 (3.8.5) | 3.9.4 | |
+| `steamdeck-kde-presets` 3.9.4 (3.8.5; 3.9.6 in 3.9's and main's branches) | 3.9.6 | 3.9.6: "Add to Steam" passes the file name to Python as an argument instead of into its code; shell scripts of the newer MIME type; the Plasma login KCM hidden |
 | `jupiter-fan-control` 20260902.1 (20260422.2) | 20260902.1 | runit service |
 | `vpower` 1.6.3 (1.5.7) | 1.6.3 | Patched hwmon path |
 | `xdg-desktop-portal-gamescope` 0.1.38 (0.1.33) | 0.1.38 | |
@@ -69,7 +69,7 @@ on this page.
 | `gamescope` 3.16.30 (3.16.23; 3.16.30.2 in 3.9's branches, SteamOS backports) | Void's gamescope 3.17.0 (Valve's main has 3.17.0 too) |
 | `gamemode`, `orca`, `speech-dispatcher`, `espeak-ng`, `sof-firmware`, `sdl2-compat`, `sdl3`, `knighttime`, `plasma-keyboard`, `noto-fonts-cjk` | Void's packages |
 | `linux-firmware-neptune`, `amd-ucode-neptune` | Void's `linux-firmware` packages (the amplifier firmware, the Wi-Fi firmware and AMD's microcode are in them). Nothing the LCD needs is missing; Io's `deck-firmware` adds Valve's older `vangogh_vcn.bin` (AMD withdrew Void's) and Valve's Realtek Bluetooth firmware, see [Deviations](Deviations) |
-| `mesa`, `vulkan-radeon` (Valve's builds) | `mesa-holo`: Void's Mesa 26.2.6 with Valve's patches, 64 and 32 bit, see [Deviations](Deviations) (*Graphics*, *Io overlay*) |
+| `mesa`, `vulkan-radeon` (Valve's builds) | `mesa-holo`: Void's Mesa 26.2.7 with Valve's patches, 64 and 32 bit, see [Deviations](Deviations) (*Graphics*, *Io overlay*) |
 | `scx-scheds` | Void's `scx`, switched by SteamOS Manager through the runit service `scx` |
 | `iio-sensor-proxy` (new in 3.9.2) | Not on Io: removed in Alpha 5, when SteamOS 3.8.4 did not have it either; Steam reads the light sensor itself. On 3.9.2 it runs, but nothing in game mode uses it |
 

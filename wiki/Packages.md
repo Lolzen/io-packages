@@ -51,7 +51,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `steamos-passwd` | `steamos-passwd` | Password setter used by Steam's UI |
 | `steam-jupiter` | `steam-jupiter-stable` 1.0.0.85 | Valve's Deck packaging of Steam, replacing Void's `steam`: preinstalled client on the Deck branch, Valve's wrapper, udev rules for input, status LED and wakeup; 32-bit PipeWire with all its plugins |
 | `steam-im-modules` | `steam-im-modules` 20240131 | Steam's on-screen keyboard as input method for GTK 3/4 and Qt 5 |
-| `steamdeck-kde-presets` | `steamdeck-kde-presets` 3.9.4 | Valve's Plasma defaults: Steam in the desktop, Vapor theme, power and locker settings, KWallet, IBus, *Return to Gaming Mode* |
+| `steamdeck-kde-presets` | `steamdeck-kde-presets` 3.9.6 | Valve's Plasma defaults: Steam in the desktop, Vapor theme, power and locker settings, KWallet, IBus, *Return to Gaming Mode* |
 | `vpower` | `vpower` 1.6.3 | Valve's battery daemon: metrics for Steam, controlled shutdown at 0.5 %. Patched to find the charge limit file |
 | `holo-upower-config` | `holo-upower-config` 1.0 | Hands UPower's critical battery action to vpower (with a fix for Valve's `yes`/`true` bug) |
 | `holo-sudo` | `holo-sudo` | Valve's sudoers files: `wheel`, `sudo`, `no-fqdn` |
@@ -65,7 +65,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `gamescope-wsi` (published as `gamescope-wsi-32bit`) | gamescope 3.17.0 (SteamOS: `lib32-gamescope`) | gamescope's Vulkan WSI layer for 32-bit games (frame limiter, bypass, HDR), built for i686; only the layer, not gamescope |
 | `ttf-twemoji-default` | `ttf-twemoji-default` 13.1.0 (Valve's build of Fedora's Twemoji) | SteamOS's emoji font: colour bitmaps, without the glyphs for digits, `#`, `*`, space, © and ® (so plain text never falls back to emoji), and a fontconfig file that makes it the emoji font for everything |
 | `wireless-domain-setter` | `wireless-domain-setter` 1.2 (holo-3.9) | Copies a self-managed Wi-Fi card's regulatory domain (the OLED's ath11k) to the kernel, for cards that follow the global domain; runit service on every model; on the LCD it ends at once (only reloads the driver of Valve's USB streaming dongle if that is plugged in) |
-| `galileo-mura` | `galileo-mura` v0.10 (jupiter-3.9) | The Steam Deck OLED's mura correction: reads the panel's factory data (setuid extractor) or downloads it once and hands it to gamescope; started in game mode on the OLED only |
+| `galileo-mura` | `galileo-mura` v0.20 (jupiter-3.9) | The Steam Deck OLED's mura correction: reads the panel's factory data (setuid extractor) or downloads it once and hands it to gamescope; started in game mode on the OLED only |
 
 ## From elsewhere
 
