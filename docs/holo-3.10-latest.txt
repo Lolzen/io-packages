@@ -79,7 +79,7 @@ kdumpst-1.3-1.2
 kmod-34.2-1.3
 kpmcore-23.04.2-2.1
 krdp-6.7.3-2
-kscreenlocker-6.7.3-1.1
+kscreenlocker-6.8.2-2
 kupdate-notifier-git-r59.7e34c35-4
 kwin-5.27.10-4
 kwindowsystem-6.16.0-1.1
@@ -113,7 +113,7 @@ makedumpfile-1.7.0-4
 maliit-framework-2.3.0-3.1
 maliit-keyboard-2.3.1-4.3
 mpg123-1.32.9-1
-networkmanager-1.58.1-3.2
+networkmanager-1.58.1-3.3
 nfs-utils-2.6.3-1.1
 noise-suppression-for-voice-git-0.91.r8.g6922453-2
 noisetorch-0.12.2.r47.g6d895f3-4
@@ -125,9 +125,9 @@ pacman-system-update-1.1-3
 paru-2.2.0-1
 pcre2-10.47-1.1
 perl-5.40.0-1.1
-plasma-desktop-6.4.3-1
+plasma-desktop-6.8.2-2
 plasma-pa-6.8.2-1.1
-plasma-workspace-6.8.2-1.1
+plasma-workspace-6.8.2-1.2
 plymouth-22.02.122-7.8
 podman-6.1.4-1.1
 pulseaudio-qt-1.9.0-1.1
@@ -173,6 +173,6 @@ xdg-desktop-portal-gtk-1.15.3-1.3
 xdg-desktop-portal-holo-0.1.18.5ad92bf-3
 xdg-desktop-portal-kde-6.8.2-1.1
 xone-dkms-git-0.1.r54.gc93db68-2
-xorg-server-21.1.25-2.1
-xorg-xwayland-24.1.14-1.2
+xorg-server-21.1.26-1.1
+xorg-xwayland-24.1.15-1.1
 zenity-gtk3-3.44.5-1.2

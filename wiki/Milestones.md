@@ -202,11 +202,15 @@ have; they need someone with the hardware.
   3.10. Kernel 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11, Valve's
   7.3.1-valve1 (its first 7.3 release; the amdgpu explicit sync series is
   back, so `mesa-holo`'s `radv_vm_explicit_sync` works again) with 7.3.4
-  since 2026-11-12, replacing Io's port; bluez 5.88 (Void's, with Io's two
+  since 2026-11-12, replacing Io's port; `7.3.1-valve2` (HDMI 2.1 for the
+  Steam Machine) since 2026-11-14; bluez 5.88 (Void's, with Io's two
   patches, 2026-11-10). Valve's main of 2026-11-10: steamos-manager
   (`ds_inhibit` returns errors in fewer cases on shutdown), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard
   in the lock screen, where Steam's cannot show; Plasma 6.8, in
   `void-watch`), `holo-3.9`'s gamescope 3.16.30.2 (backports of 3.17.0).
+  Xwayland 24.1.15 (2026-11-10) fixes the X.Org advisory of that day
+  (eight issues in the X server and Xwayland); Void has xorg-server
+  21.1.26 but Xwayland still at 24.1.14, and Io's overlay follows Void.
   The upstream side on 2026-11-11: nothing Io waits for has moved
   (gamescope's newest tag is 3.17.0, SDDM's 0.21.0, iwd's 3.12, hostap's
   2.12; PipeWire 1.6.11 and kwin 6.8.3 are released, Void has 1.6.10 and

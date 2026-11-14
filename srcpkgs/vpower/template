@@ -1,7 +1,7 @@
 # Template file for 'vpower'
 pkgname=vpower
-version=1.6.3
-revision=4
+version=1.6.4
+revision=1
 wrksrc="vpower"
 build_style=cargo
 hostmakedepends="git tar"
@@ -13,7 +13,7 @@ maintainer="Georg <funer@gmx.at>"
 license="MIT"
 homepage="https://gitlab.steamos.cloud/jupiter/vpower"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
-checksum=701c1cf1b326e3ce55b27a4ea49cecb6463f3784e32e0896ce7deae307bc0585
+checksum=d2f2a98947147c6018b950431b2244e46c2d660547f685dd8bde8cca157e3bb8
 
 # On SteamOS vpower runs as a system service. It writes battery metrics to
 # /run/vpower/ (read by Steam), and at 0.5 % battery it asks Steam to shut

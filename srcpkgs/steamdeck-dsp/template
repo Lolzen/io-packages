@@ -1,6 +1,6 @@
 # Template file for 'steamdeck-dsp'
 pkgname=steamdeck-dsp
-version=1.03
+version=1.04
 revision=1
 wrksrc="${pkgname}"
 hostmakedepends="git tar which"
@@ -11,7 +11,7 @@ maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
 homepage="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main"
 distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-1.src.tar.gz"
-checksum=d4365c0f67a3792d310bee8a18058bc8859c3540960fe6503c6795fce5098558
+checksum=6046434c80cb62534846106aa4cfe1b38b3c5dc2436a26487c12dd404659816c
 
 # Both Deck models. Jupiter (LCD, card acp5x) is what Io is built and tested
 # on. Galileo (OLED, card sof-nau8821-max, untested: no hardware) gets

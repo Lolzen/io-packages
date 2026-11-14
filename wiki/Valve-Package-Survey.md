@@ -18,7 +18,7 @@ on this page.
 
 | SteamOS 3.9.2 | On Io | Notes |
 |---|---|---|
-| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12; Valve's main: `linux-neptune-73` 7.3.1.valve1) | `linux-neptune-73` 7.3.4 (metapackage `linux-neptune`; `linux-neptune-72` 7.2.11 kept) | Valve's `7.3.1-valve1` (its first 7.3 release, 2026-11-11) with stable 7.3.4 merged in; built from the configuration Valve's package uses, see [Kernel](Kernel) |
+| `linux-neptune-72` 7.2.7 (3.8.4: `linux-neptune-616` 6.16.12; Valve's main: `linux-neptune-73` 7.3.1.valve1, 3.10: 7.3.1.valve2) | `linux-neptune-73` 7.3.4 (metapackage `linux-neptune`; `linux-neptune-72` 7.2.11 kept) | Valve's `7.3.1-valve1` (its first 7.3 release, 2026-11-11) with stable 7.3.4 merged in; built from the configuration Valve's package uses, see [Kernel](Kernel) |
 | `jupiter-hw-support` 20260807.1 (20260327.1) | `deck-hw-support` 20260807.1 | Helpers under their `steamos-*` names, see [Helper status](Helper-Status); `steamos-update` behind them is Io's, with xbps. From 20260930.1 (SteamOS 3.9.3): the firmware updaters (`deck-firmware-updaters`) and the thumbstick and trigger calibration tools (`deck-controller-calibration`). From 20261028.1 (Valve's main): `amdgpu.dcdebugmask=0x60000` (in `io-base`, see [Kernel](Kernel)) and the automount scripts' messages; its automount of NVMe and virtio drives (Steam Machine, virtual machines) is not taken, Io hides the internal SSD |
 | `steamos-manager` 26.4.1 (26.1.0) | `steamos-manager` (Valve's main of 2026-11-10) | Valve's daemon with runit support (seven commits as the package's patches), see [Architecture](Architecture); until October 2026 Io's own implementation, `io-steamos-manager` |
 | `ec-log` 0.1 (new) | `ec-log` 0.1 | The Steam Machine's EC log; runit service linked with a `down` file, started by SteamOS Manager |
@@ -26,11 +26,11 @@ on this page.
 | `holo-session-selection` (new) | in `io-session` | `holo-session-select` (also as `steamos-session-select`, which Steam calls) with Io's desktop session, and SDDM's settings under its name `holo.conf`. Its `InputMethod=qtvirtualkeyboard` is SDDM's default and has no effect on a Wayland greeter |
 | `galileo-mura` v0.10 (v0.20 in 3.9's and main's branches) | `galileo-mura` v0.20 | v0.20 drops root rights before writing the mura blob. Started by the game mode session on the OLED (Valve: a user service); untested |
 | `steam-jupiter-stable` 1.0.0.85-12 (-8) | `steam-jupiter` (-12) | |
-| `steamdeck-dsp` 1.02 (0.91) | `steamdeck-dsp` 1.03 (Valve's main) | Sink loopbacks kept as in 0.91; 1.03's headphone suspend timeout |
+| `steamdeck-dsp` 1.02 (0.91) | `steamdeck-dsp` 1.04 (Valve's main and 3.10) | Sink loopbacks kept as in 0.91; 1.03's headphone suspend timeout; 1.04's Bluetooth monitor rule under WirePlumber 0.5.18's script name (Void has 0.5.18; with the old name the Bluetooth monitor depended on logind again) |
 | `jupiter-hibernate-disable` 0.1 (Valve's main, not on 3.9.2) | `jupiter-hibernate-disable` 0.1 | Core service instead of a oneshot unit; DMI from sysfs instead of `dmidecode` |
 | `steamdeck-kde-presets` 3.9.4 (3.8.5; 3.9.6 in 3.9's and main's branches) | 3.9.6 | 3.9.6: "Add to Steam" passes the file name to Python as an argument instead of into its code; shell scripts of the newer MIME type; the Plasma login KCM hidden |
 | `jupiter-fan-control` 20260902.1 (20260422.2) | 20260902.1 | runit service |
-| `vpower` 1.6.3 (1.5.7) | 1.6.3 | Patched hwmon path |
+| `vpower` 1.6.3 (1.5.7; 1.6.4 in main and 3.10) | 1.6.4 | Patched hwmon path; 1.6.4 estimates charge and discharge times from `voltage_now` and detects charging after a short disconnect |
 | `xdg-desktop-portal-gamescope` 0.1.38 (0.1.33) | 0.1.38 | |
 | `xdg-desktop-portal-holo` 0.1.18 | 0.1.18 | Started by D-Bus, no systemd unit |
 | `steamos-systemreport` 1.23 (0.16) | 1.23 | socklog and xbps instead of journal and pacman |

@@ -1,7 +1,7 @@
 # Template file for 'linux-neptune-73'
 pkgname=linux-neptune-73
 version=7.3.4
-revision=2
+revision=3
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.3 series)"
 depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
@@ -30,11 +30,12 @@ preserve=yes
 hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
  pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
 
-# Valve's 7.3.1-valve1 (linux-neptune-73 7.3.1.valve1-1, 2026-11-11, from
-# the archive's linux-integration repository) with stable 7.3.4 merged in:
+# Valve's 7.3.1-valve2 (linux-neptune-73 7.3.1.valve2-1, jupiter-3.10,
+# 2026-11-13, from the archive's linux-integration repository) with stable
+# 7.3.4 merged in:
 # patches/0001-neptune-73.patch is the difference between stable 7.3.4 and
 # that merge (generated without Valve's ci/ and .gitlab-ci.yml).
-#   Valve's tag: 508 commits on 7.3.1, everything Io's port of 2026-11-05
+#   Valve's 7.3.1-valve1: 508 commits on 7.3.1, everything Io's port of 2026-11-05
 #     (7.3/integration 7415f40493e8 plus 34 ported commits) had and 79
 #     more: the amdgpu VM explicit sync series (12, amdgpu interface 3.65,
 #     so Mesa's radv_vm_explicit_sync in mesa-holo is active again), 48
@@ -43,16 +44,20 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #     Of the 17 older commits Valve had left out of 7.3/integration, the
 #     explicit sync series is back; the linear backlight curve, the LUT
 #     rework, YUV420 beyond HDMI, the HDA notify and the dmem fixup are
-#     not, nor the HDMI 2.1 series (Steam Machine).
+#     not.
+#   7.3.1-valve2 adds the HDMI 2.1 series (VRR, FRL, ALLM over HDMI 2.1;
+#     Steam Machine; MR 323) and nouveau's atomic modesetting by default.
+#     The 7.3.4 merge of valve2 changes exactly the lines valve1..valve2
+#     changes compared with the merge of valve1.
 #   stable 7.3.4 merged: three conflicts. Makefile (SUBLEVEL 4 with
-#     EXTRAVERSION -valve1); xpad.c (stable's GameSir Nova Lite, Xbox 360,
+#     EXTRAVERSION -valve2); xpad.c (stable's GameSir Nova Lite, Xbox 360,
 #     kept; the Xbox One entry goes with Valve's "Remove Xbox One
 #     support"); acp-config.c (stable's and Valve's ACP 7.0 entries both
 #     kept). Valve's and Io's config layers are unchanged from 7.2.10 and
-#     the generated .config equals the port's.
+#     the generated .config equals the port's (and valve1's).
 # _valvever names Valve's tag; Valve's release commit sets the kernel's
 # EXTRAVERSION to match (the module directory is named after it).
-_valvever=valve1
+_valvever=valve2
 _kernver="${version}-${_valvever}_${revision}"
 triggers="kernel-hooks"
 kernel_hooks_version="${_kernver}"

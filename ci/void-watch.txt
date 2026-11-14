@@ -9,3 +9,4 @@ sddm        0.21.0   SDDM release after 0.21.0: config times compared in UTC (up
 orca        48.6     Orca 49+: SIGUSR1 opens preferences, no SIGUSR2; Valve's patch (orca-holo) needs a new look
 iwd         3.12_1   Void with the 4 iwd security fixes (oss-security 2026-08-02; in Valve 3.12-2.2, Arch 3.12-2) or iwd 3.13
 plasma-workspace 6.7.5   Plasma 6.8: Valve's lock screen keyboard (6.8.2-1.2, Qt Virtual Keyboard in the greeter; kscreenlocker patch gone)
+kwin        6.7.5    Plasma 6.8.3: default scale for handhelds (built-in screen without lid no longer treated as a phone; Valve's kwin 6.8.2-1.3 0007/0008)

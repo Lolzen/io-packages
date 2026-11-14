@@ -304,9 +304,9 @@ its own implementation (`io-steamos-manager`).
 ## Kernel
 
 - **`linux-neptune-73`, 7.3.4**, ahead of SteamOS (3.9.5: 7.2.7), built
-  from Valve's `linux-integration` tree: Valve's `7.3.1-valve1` (its first
-  7.3 release, main branch) with stable 7.3.4 merged in (Valve left a few
-  older commits and the HDMI 2.1 series out of 7.3, see [Kernel](Kernel));
+  from Valve's `linux-integration` tree: Valve's `7.3.1-valve2` (3.10
+  branch) with stable 7.3.4 merged in (Valve left a few older commits out
+  of 7.3, see [Kernel](Kernel));
   the 7.2 kernel stays installed as a fallback. The configuration is Void's as the base, the
   full configuration Valve's package builds from and `config-neptune` on
   top, then a few Io overrides, each with its reason — see
@@ -346,12 +346,14 @@ its own implementation (`io-steamos-manager`).
   plugin (label `nt-filter`). Io builds werman/noise-suppression-for-voice as
   `rnnoise-ladspa` (label `noise_suppressor_mono`), because Void's NoiseTorch
   package ships no system-wide plugin.
-- **Version:** `steamdeck-dsp` 1.03 from Valve's main branch: it lets the
+- **Version:** `steamdeck-dsp` 1.04 from Valve's main branch: 1.03 lets the
   headphone output stay awake for 15 minutes of silence, against clicks
   (Valve's rule for Galileo's card in a file of Io's own,
   `93-io-galileo-headphones.conf`). SteamOS 3.9.2 runs 1.02; 3.8.4 ran
   0.91, which kept the microphone filter from suspending; 1.02 drops that,
-  and Io follows.
+  and Io follows. 1.04 matches WirePlumber 0.5.18's renamed Bluetooth
+  monitor script, so Bluetooth audio stays independent of logind's seat
+  state (Void has 0.5.18).
 - **UCM profile:** Valve's profile from `steamdeck-dsp` (`Internal Mic`,
   headphone sink), as on SteamOS. Void's `alsa-ucm-conf` also ships
   `conf.d/acp5x/Valve-Jupiter-1.conf`, which UCM would pick first by the
@@ -472,7 +474,7 @@ its own implementation (`io-steamos-manager`).
   3.9.2 ([SteamOS packages](Valve-Package-Survey)), some of them newer
   (from 3.9.3 or Valve's main branch, see [Milestones](Milestones),
   *Catching up with Valve*). The kernel is newer than SteamOS's: Valve's
-  7.3.1-valve1 with stable 7.3.4 ([Kernel](Kernel)).
+  7.3.1-valve2 with stable 7.3.4 ([Kernel](Kernel)).
 - **`steamos-systemreport`** reads socklog and Io's session logs instead of
   the journal, and checks packages with xbps instead of pacman.
 - **`timedatectl`** is a small replacement script; Steam only uses
