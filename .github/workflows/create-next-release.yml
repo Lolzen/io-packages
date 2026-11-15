@@ -77,6 +77,15 @@ jobs:
           [ -n "$IO_REPO_KEY" ] || { echo "::error::Secret IO_REPO_KEY is missing."; exit 1; }
           [ -n "$IO_REPO_TOKEN" ] || { echo "::error::Secret IO_REPO_TOKEN is missing."; exit 1; }
           GH_TOKEN=$IO_REPO_TOKEN gh release view current --repo Lolzen/io-repo --json name > /dev/null
+          # reading is not enough: upload a probe file and delete it again, so a
+          # token without "Contents: Read and write" fails here, not after the build
+          probe="io-release-probe-$GITHUB_RUN_ID.txt"
+          echo "write check of run $GITHUB_RUN_ID" > "$RUNNER_TEMP/$probe"
+          GH_TOKEN=$IO_REPO_TOKEN gh release upload current "$RUNNER_TEMP/$probe" --repo Lolzen/io-repo || {
+            echo "::error::IO_REPO_TOKEN may read but not write io-repo's releases (fine-grained token: Contents must be Read and write)."
+            exit 1
+          }
+          GH_TOKEN=$IO_REPO_TOKEN gh release delete-asset current "$probe" --repo Lolzen/io-repo --yes
 
       - name: Free disk space
         run: |

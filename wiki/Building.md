@@ -312,8 +312,10 @@ start at which each boot stage began.
 
    *Dry run* builds everything and publishes nothing; a run takes about
    50 minutes. A real run needs two repository secrets: `IO_REPO_KEY` (the
-   content of `privkey.pem`) and `IO_REPO_TOKEN` (a token that may write
-   releases of `Lolzen/io-repo`).
+   content of `privkey.pem`) and `IO_REPO_TOKEN` (a fine-grained token for
+   `Lolzen/io-repo` with *Contents: Read and write*). The run checks both
+   first, the token with a probe upload to io-repo's current release that
+   it deletes again.
 5. Fresh image written to a spare card, booted, storage grown,
    `io-selftest.sh` passes; the recovery stick from the same release
 
