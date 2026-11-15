@@ -166,7 +166,7 @@ jobs:
           git add srcpkgs/io-release/template
           git commit -q -m "io-release $VERSION: $NAME (build $BUILD)"
           git push origin HEAD:main || { git pull -q --rebase origin main && git push origin HEAD:main; }
-          bash ci/release/notes.sh "$TITLE" "$PREV" "$PREV_NAME" HEAD > "$RUNNER_TEMP/notes.md"
+          bash ci/release/notes.sh "$TITLE" "$PREV" "$PREV_NAME" HEAD "$TAG" > "$RUNNER_TEMP/notes.md"
           gh release create "$TAG" "$WORK/out/"*.part* "$WORK/out/"*.sha256 --target "$(git rev-parse HEAD)" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" --latest
           echo "Released: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
 

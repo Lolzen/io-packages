@@ -1,15 +1,17 @@
 #!/bin/bash
-# notes.sh <title> <previous tag> <previous name> <range end> - release notes:
-# the commits since the previous release, then how to install.
+# notes.sh <title> <previous tag> <previous name> <range end> [<new tag>] -
+# release notes: the commits since the previous release, then how to install.
+# The full-diff link ends at <new tag> when given (the range end is HEAD
+# before the tag exists, and HEAD's link would move on with main).
 set -euo pipefail
-title=$1 prev=$2 prev_name=$3 end=$4
+title=$1 prev=$2 prev_name=$3 end=$4 link_end=${5:-$4}
 repo=${GITHUB_REPOSITORY:-Lolzen/io-packages}
 url=https://github.com/$repo
 count=$(git rev-list --no-merges --count "$prev..$end")
 
 echo "## $title"
 echo
-echo "Changes since [$prev_name]($url/releases/tag/$prev) ($count commits, [full diff]($url/compare/$prev...$end)):"
+echo "Changes since [$prev_name]($url/releases/tag/$prev) ($count commits, [full diff]($url/compare/$prev...$link_end)):"
 echo
 git log --no-merges --reverse --format="- %s ([%h]($url/commit/%H))" "$prev..$end"
 cat << EOF
