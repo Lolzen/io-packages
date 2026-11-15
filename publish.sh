@@ -17,8 +17,10 @@
 #
 # Usage:
 #   ./publish.sh              collect all Io packages
-#   ./publish.sh io-base ...  collect only these (index and release are
-#                             still brought fully up to date)
+#   ./publish.sh io-base ...  collect only these, each with the other
+#                             packages of its source (subpackages, -32bit);
+#                             index and release are still brought fully up
+#                             to date
 #   ./publish.sh --full       re-index and re-upload everything
 #   ./publish.sh --replace io-base ...
 #                             publish the latest *built* file of these
@@ -198,8 +200,42 @@ if [ -f "$HOLO" ]; then
     }
 fi
 ALL="$(ls "$SRCPKGS") $HOLONAMES"
+
+# A named package brings the other packages built from the same source: the
+# subpackages of a srcpkgs template (its symlinks: linux-neptune-73-headers)
+# or of an overlay (mesa-holo: mesa-dri-holo, libgbm-holo, ..., and their
+# -32bit packages). Published alone, a main package whose subpackages stay
+# older leaves the repository with unresolved dependencies.
+family() {
+    case "$1" in
+    *-holo|*-holo-32bit)
+        for o in $(ls "${SRCPKGS%/srcpkgs}/overlay"); do
+            [ -f "${SRCPKGS%/srcpkgs}/overlay/$o/overlay.conf" ] || continue
+            [ -f "$TMP/family-$o" ] || IO_DIR="${SRCPKGS%/srcpkgs}" sh "$HOLO" names "$o" > "$TMP/family-$o" || return 1
+            if grep -qxF -- "$1" "$TMP/family-$o"; then
+                cat "$TMP/family-$o"
+                return 0
+            fi
+        done
+        echo "$1"
+        ;;
+    *)
+        if [ -e "$SRCPKGS/$1" ]; then
+            real=$(readlink -f "$SRCPKGS/$1")
+            for s in $(ls "$SRCPKGS"); do
+                [ "$(readlink -f "$SRCPKGS/$s")" = "$real" ] && echo "$s"
+            done
+        else
+            echo "$1"
+        fi
+        ;;
+    esac
+}
 if [ $# -gt 0 ]; then
-    COLLECT="$*"
+    COLLECT=$(for p in "$@"; do family "$p" || exit 1; done | awk '!seen[$0]++') || {
+        echo "publish: overlay/holo.sh names failed - not publishing" >&2
+        exit 1
+    }
 elif [ "$TESTING" = 1 ]; then
     COLLECT=""    # the testing channel only gets what is named
 else

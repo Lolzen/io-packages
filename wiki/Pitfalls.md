@@ -285,6 +285,16 @@ instead.
 
 ## Packaging (xbps-src)
 
+**A package published without its subpackages breaks updates.** Until
+2026-11-15 `publish.sh <name>` collected only the names given: `mesa-holo`
+26.2.7 went to current while its 33 subpackages (`mesa-dri-holo`,
+`libgbm-holo`, ...) stayed at 26.2.6, and `NetworkManager-holo`,
+`bluez-holo` and `linux-neptune-72` the same way. xbps then refuses the
+update (`MISSING: mesa-libgallium-holo>=26.2.7_101`), on a Deck as in the
+release workflow's image build, which found it. A named package now brings
+its family (`holo.sh names <overlay>`, a template's symlinks in
+`srcpkgs/`); a run without names always took every name.
+
 **Never rebuild a package with the same version and revision.** xbps
 packages are not byte-identical between builds. `publish.sh` skips a file
 that is already uploaded but re-indexes from the new build, so the index
