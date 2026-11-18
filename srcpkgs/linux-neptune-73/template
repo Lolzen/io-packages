@@ -1,7 +1,7 @@
 # Template file for 'linux-neptune-73'
 pkgname=linux-neptune-73
-version=7.3.4
-revision=3
+version=7.3.5
+revision=1
 short_desc="Linux kernel with Valve neptune patches for Steam Deck (7.3 series)"
 depends="linux-firmware-amd linux-firmware-network"
 maintainer="Georg <funer@gmx.at>"
@@ -15,7 +15,7 @@ if [ "${version##*.}" != 0 ]; then
 fi
 
 checksum="87363c24f10e06321eb362765521094e94471f6bff8bce2d6b3e40f39f004953
- 278d9d703b58a94f38d704a7ac6e6512da4f93251149d72ef29d0b8aec1f2f77"
+ e4e0d4e145487087840f123650bed49f642756c34b4e613742c0a0019e0f15f4"
 python_version=3
 
 # XXX Restrict archs until a proper <arch>-dotconfig is available in FILESDIR.
@@ -30,15 +30,16 @@ preserve=yes
 hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
  pkg-config openssl-devel perl uboot-mkimage cpio pahole python3 zstd"
 
-# Valve's 7.3.1-valve2 (linux-neptune-73 7.3.1.valve2-1, jupiter-3.10,
-# 2026-11-13, from the archive's linux-integration repository) with stable
-# 7.3.4 merged in:
-# patches/0001-neptune-73.patch is the difference between stable 7.3.4 and
+# Valve's 7.3.1-valve3 (linux-neptune-73 7.3.1.valve3-1, jupiter-main and
+# jupiter-3.10, 2026-11-16, from the archive's linux-integration repository)
+# with stable 7.3.5 merged in:
+# patches/0001-neptune-73.patch is the difference between stable 7.3.5 and
 # that merge (generated without Valve's ci/ and .gitlab-ci.yml).
 #   Valve's 7.3.1-valve1: 508 commits on 7.3.1, everything Io's port of 2026-11-05
 #     (7.3/integration 7415f40493e8 plus 34 ported commits) had and 79
-#     more: the amdgpu VM explicit sync series (12, amdgpu interface 3.65,
-#     so Mesa's radv_vm_explicit_sync in mesa-holo is active again), 48
+#     more: the amdgpu VM explicit sync series (12, with Valve's
+#     AMDGPU_GEM_VA2 ioctl: amdgpu interface 3.66, so Mesa's
+#     radv_vm_explicit_sync in mesa-holo is active again), 48
 #     rtw89 and 7 mac80211/iwlwifi backports, the hid-lenovo-go-s and
 #     snd_acp63_remove fixes (stable has them too) and the release commit.
 #     Of the 17 older commits Valve had left out of 7.3/integration, the
@@ -47,17 +48,22 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 #     not.
 #   7.3.1-valve2 adds the HDMI 2.1 series (VRR, FRL, ALLM over HDMI 2.1;
 #     Steam Machine; MR 323) and nouveau's atomic modesetting by default.
-#     The 7.3.4 merge of valve2 changes exactly the lines valve1..valve2
-#     changes compared with the merge of valve1.
-#   stable 7.3.4 merged: three conflicts. Makefile (SUBLEVEL 4 with
-#     EXTRAVERSION -valve2); xpad.c (stable's GameSir Nova Lite, Xbox 360,
+#   7.3.1-valve3 reverts one HDMI patch: TVs and monitors that can do FRL
+#     stayed dark in TMDS mode (Dell G3223Q, LG; MR 324).
+#   stable 7.3.5 merged: four conflicts. Makefile (SUBLEVEL 5 with
+#     EXTRAVERSION -valve3); xpad.c (stable's GameSir Nova Lite, Xbox 360,
 #     kept; the Xbox One entry goes with Valve's "Remove Xbox One
 #     support"); acp-config.c (stable's and Valve's ACP 7.0 entries both
-#     kept). Valve's and Io's config layers are unchanged from 7.2.10 and
-#     the generated .config equals the port's (and valve1's).
+#     kept); amdgpu_vm.c, VM state reset (stable's "rewrite all PTEs of
+#     the BOs after a VM reset" around Valve's soft-evicted list walk,
+#     both kept). Against the 7.3.4 merge of valve2 the tree changes
+#     exactly by stable 7.3.4..7.3.5 plus valve2..valve3. Valve's and
+#     Io's config layers are unchanged from 7.2.10; with Void's 7.3.5
+#     base the generated .config gains only two Intel camera sensor
+#     modules (IMX471, IMX678).
 # _valvever names Valve's tag; Valve's release commit sets the kernel's
 # EXTRAVERSION to match (the module directory is named after it).
-_valvever=valve2
+_valvever=valve3
 _kernver="${version}-${_valvever}_${revision}"
 triggers="kernel-hooks"
 kernel_hooks_version="${_kernver}"
