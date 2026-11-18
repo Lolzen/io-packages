@@ -175,7 +175,9 @@ have; they need someone with the hardware.
   loopback patches only rebased; its one new patch is for smart filters);
   Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it;
   `xorg-server-xwayland-holo` on Void's 24.1.14 since 2026-11-09). Valve's Mesa on its main branch is what
-  Io's overlay was checked against (RADV `steamos-26.05.19`; radeonsi
+  Io's overlay was checked against (RADV `steamos-26.05.19`, and since
+  2026-11-18 `steamos-26.05.20`'s six commits: sparse binding through the
+  kernel's `AMDGPU_GEM_VA2`; radeonsi
   26.1.2-4 only adds a virgl patch for virtual machines). Valve's `scx`
   (`1.1.3.linux.steamos.2`) is a snapshot of upstream main of September
   2026 plus 26 LAVD changes by its author that upstream does not have yet;
@@ -211,6 +213,13 @@ have; they need someone with the hardware.
   Xwayland 24.1.15 (2026-11-10) fixes the X.Org advisory of that day
   (eight issues in the X server and Xwayland); Void has xorg-server
   21.1.26 but Xwayland still at 24.1.14, and Io's overlay follows Void.
+  Valve's main of 2026-11-17: WirePlumber 0.5.18-1.4 (two upstream fixes,
+  merged after 0.5.19: switching mono audio no longer drops streams; Io
+  takes them with Void's next WirePlumber, `void-watch`) and holo's
+  `lib32-zlib` 1.4 (Void has zlib 1.4). Valve's `7.3.1-valve3` (one HDMI
+  2.1 patch reverted: FRL-capable TVs stayed dark in TMDS mode, Steam
+  Machine) and stable 7.3.5 are not built: nothing for the Deck; they come
+  with the next kernel that is.
   The upstream side on 2026-11-11: nothing Io waits for has moved
   (gamescope's newest tag is 3.17.0, SDDM's 0.21.0, iwd's 3.12, hostap's
   2.12; PipeWire 1.6.11 and kwin 6.8.3 are released, Void has 1.6.10 and

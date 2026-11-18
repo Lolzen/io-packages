@@ -37,8 +37,9 @@ hostmakedepends="tar xz bc elfutils-devel flex gmp-devel kmod libmpc-devel
 # that merge (generated without Valve's ci/ and .gitlab-ci.yml).
 #   Valve's 7.3.1-valve1: 508 commits on 7.3.1, everything Io's port of 2026-11-05
 #     (7.3/integration 7415f40493e8 plus 34 ported commits) had and 79
-#     more: the amdgpu VM explicit sync series (12, amdgpu interface 3.65,
-#     so Mesa's radv_vm_explicit_sync in mesa-holo is active again), 48
+#     more: the amdgpu VM explicit sync series (12, with Valve's
+#     AMDGPU_GEM_VA2 ioctl: amdgpu interface 3.66, so Mesa's
+#     radv_vm_explicit_sync in mesa-holo is active again), 48
 #     rtw89 and 7 mac80211/iwlwifi backports, the hid-lenovo-go-s and
 #     snd_acp63_remove fixes (stable has them too) and the release commit.
 #     Of the 17 older commits Valve had left out of 7.3/integration, the
