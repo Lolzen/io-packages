@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Natalie Vock <nat@pixelcluster.dev>
+Date: Mon, 16 Nov 2026 17:16:36 +0100
+Subject: [PATCH 17/20] ac/drm: Add va2 ioctl wrapper
+
+---
+ src/amd/common/ac_linux_drm.c | 21 +++++++++++++++++++++
+ src/amd/common/ac_linux_drm.h |  3 +++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/src/amd/common/ac_linux_drm.c b/src/amd/common/ac_linux_drm.c
+index 21fb2c9e4e3..19fe4546782 100644
+--- a/src/amd/common/ac_linux_drm.c
++++ b/src/amd/common/ac_linux_drm.c
+@@ -291,6 +291,27 @@ int ac_drm_bo_va_op_raw2(ac_drm_device *dev, uint32_t bo_handle, uint64_t offset
+ 
+    return r;
+ }
++int ac_drm_bo_va2_op_raw(ac_drm_device *dev, uint32_t num_mappings, uint64_t mappings,
++                                  uint32_t num_in_syncobjs, uint64_t in_syncobjs, uint64_t in_syncobj_points,
++                                  uint32_t num_out_syncobjs, uint64_t out_syncobjs, uint64_t out_syncobj_points)
++{
++   struct drm_amdgpu_gem_va2 va;
++   int r;
++
++   memset(&va, 0, sizeof(va));
++   va.num_mappings = num_mappings;
++   va.mappings = mappings;
++   va.num_syncobjs_in = num_in_syncobjs;
++   va.syncobjs_in = in_syncobjs;
++   va.timeline_points_in = in_syncobj_points;
++   va.num_syncobjs_out = num_out_syncobjs;
++   va.syncobjs_out = out_syncobjs;
++   va.timeline_points_out = out_syncobj_points;
++
++   r = drm_ioctl_write(dev->fd, DRM_AMDGPU_GEM_VA2, &va, sizeof(va));
++
++   return r;
++}
+ 
+ int ac_drm_cs_ctx_create2(ac_drm_device *dev, uint32_t priority, uint32_t *ctx_id)
+ {
+diff --git a/src/amd/common/ac_linux_drm.h b/src/amd/common/ac_linux_drm.h
+index 3843b2519ca..383330abf93 100644
+--- a/src/amd/common/ac_linux_drm.h
++++ b/src/amd/common/ac_linux_drm.h
+@@ -373,6 +373,9 @@ MESAPROC int ac_drm_bo_va_op_raw2(ac_drm_device *dev, uint32_t bo_handle, uint64
+                               uint32_t vm_timeline_syncobj_out, uint64_t vm_timeline_point,
+                               uint64_t input_fence_syncobj_handles,
+                               uint32_t num_syncobj_handles) TAIL;
++MESAPROC int ac_drm_bo_va2_op_raw(ac_drm_device *dev, uint32_t num_mappings, uint64_t mappings,
++                                  uint32_t num_in_syncobjs, uint64_t in_syncobjs, uint64_t in_syncobj_points,
++                                  uint32_t num_out_syncobjs, uint64_t out_syncobjs, uint64_t out_syncobj_points) TAIL;
+ MESAPROC int ac_drm_cs_ctx_create2(ac_drm_device *dev, uint32_t priority, uint32_t *ctx_id) TAIL;
+ MESAPROC int ac_drm_cs_ctx_free(ac_drm_device *dev, uint32_t ctx_id) TAIL;
+ MESAPROC int ac_drm_cs_ctx_stable_pstate(ac_drm_device *dev, uint32_t ctx_id, uint32_t op,
+-- 
+2.43.0
+
