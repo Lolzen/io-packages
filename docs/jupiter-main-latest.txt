@@ -40,7 +40,7 @@ lib32-libdrm-2.4.120-1
 lib32-libnm-1.40.0-1.1
 lib32-mesa-26.1.2.221562.radeonsi_26.1.2-5
 lib32-mesa-nvk-26.2.6.227269.nvk_steamos_26.11.0-3
-lib32-mesa-radv-26.2.0_devel.222147.steamos_26.05.19-2
+lib32-mesa-radv-26.2.0_devel.222153.steamos_26.05.20-1
 lib32-mesa-unstable-23.1.2.170169.radeonsi_3.5.0-2.1
 lib32-renderdoc-minimal-1.45-2
 lib32-wayland-1.21.0-1
@@ -64,13 +64,13 @@ linux-neptune-65-kasan-6.5.0.valve11-3
 linux-neptune-68-6.8.12.valve12-1
 linux-neptune-72-7.2.10.valve1-3
 linux-neptune-72-devel-7.2.4.valve1-2
-linux-neptune-73-7.3.1.valve1-1
-linux-neptune-73-devel-7.3.1.valve1-1
+linux-neptune-73-7.3.1.valve3-1
+linux-neptune-73-devel-7.3.1.valve3-1
 linux-neptune-rtw-debug-5.13.0.valve38.rtwdbg.6-1
 mangohud-josh.core.fix.r2.ge9d9f68-1
 mesa-26.1.2.221562.radeonsi_26.1.2-5
 mesa-nvk-26.2.6.227269.nvk_steamos_26.11.0-3
-mesa-radv-26.2.0_devel.222147.steamos_26.05.19-2
+mesa-radv-26.2.0_devel.222153.steamos_26.05.20-1
 mesa-unstable-23.1.2.170169.radeonsi_3.5.0-1.2
 neptune-ctl-20230928.1-5
 networkmanager-1.44.2-3.4
@@ -109,7 +109,7 @@ wakehook-2.1-3
 wayland-1.23.0-1
 wayland-protocols-1.36-1
 webrtc-audio-processing-1-1.3-2
-wireplumber-0.5.18-1.3
+wireplumber-0.5.18-1.4
 xdg-desktop-portal-1.17.1-1.0
 xdg-desktop-portal-gtk-1.15.1-1.1
 xdg-desktop-portal-kde-5.27.8-3.1
