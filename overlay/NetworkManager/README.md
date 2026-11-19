@@ -5,6 +5,7 @@ Replaces Void's `NetworkManager`, `libnm` and `NetworkManager-devel`.
 | Patch | Source | Upstream |
 |---|---|---|
 | `wifi-scan-only-last-associated-freq-after-resume.patch` | Valve's networkmanager 1.58.0-1.8 (SteamOS 3.9.2), `0001-wifi-supplicant-scan-only-the-last-associated-freq.patch` (Vignesh Raman, Collabora, 2026-07-31); unchanged in 1.58.0-1.9 and 1.58.1-3.2 | MR 2514 (`wpa-slow-reconnect`), not in 1.58.1 and not on main as of 2026-10-21 |
+| `wifi-scan-unrestricted-after-resume.patch` | Valve's networkmanager 1.58.1-3.4 (holo-main, 2026-11-19), `0001-wifi-schedule-an-unrestricted-scan-after-resume.patch` (Vignesh Raman, 2026-10-21); one hunk's context rebased (Valve's iwd mirror patch adds lines next to it, Io does not carry that patch), the changed lines are Valve's | Not on main as of 2026-11-18 |
 | `l3cfg-ignore-local-arp-flux-conflicts.patch` | Valve's networkmanager 1.58.1-3.2 (holo-main, 2026-11), `0001-l3cfg-ignore-local-ARP-flux-conflicts-while-defendin.patch` (Matthew Schwartz, 2026-10-28) | MR 2586, issue 1681; not on main as of 2026-11-03 |
 
 Why: after resume NetworkManager has wpa_supplicant scan all channels
@@ -13,6 +14,16 @@ seconds. The patch remembers the frequency in use before suspend and scans
 only that one on resume; an explicit scan request gets its full scan once
 the device is connected again. Io's Wi-Fi backend is wpa_supplicant, as on
 SteamOS.
+
+**Unrestricted scan after resume** (`wifi-scan-unrestricted-...`, a fix to
+the patch above): when the frequency-only scan after resume does not find
+the previous access point (the Deck woke up somewhere else, or the network
+moved to another channel), NetworkManager now starts the full scan at once,
+also when the restricted scan was a periodic one; before, only an explicit
+scan request got its full scan, so the Deck could wait for the next
+periodic scan before it saw other networks. When the access point is
+found, it connects as before, and the full scan follows only if the
+restricted scan was explicit.
 
 Applies to 1.58.1 without offsets (dry run against the 1.58.1 tag, after
 Void's `fix-cross-gir.patch`). Not compiled here; the gee build is the
@@ -35,7 +46,10 @@ belongs to another local interface that does not have the address itself;
 a real duplicate is still reported, probing is unchanged.
 
 All patches apply to 1.58.1 without offsets after Void's
-`fix-cross-clat.patch` and `fix-cross-gir.patch` (checked 2026-11-05).
+`fix-cross-clat.patch` and `fix-cross-gir.patch` (checked 2026-11-05); the
+unrestricted scan patch applies without fuzz after the other two, and
+`nm-device-wifi.c` compiles with all three (2026-11-19, meson with
+NetworkManager's warning flags).
 
 ## Build setting (`template.append`)
 
