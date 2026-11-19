@@ -1,6 +1,6 @@
 # Template file for 'jupiter-dock-updater-bin'
 pkgname=jupiter-dock-updater-bin
-version=20260811.01
+version=20261116.01
 revision=1
 _pkgrel=1
 archs="x86_64"
@@ -11,11 +11,12 @@ short_desc="Steam Deck Dock firmware updater (Valve's prebuilt binaries)"
 maintainer="Georg <funer@gmx.at>"
 license="custom:Proprietary"
 homepage="https://gitlab.steamos.cloud/jupiter/jupiter-dock-updater-bin"
-distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-3.9/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
-checksum=ad15a70e80bab774d2c4c86431ae1bbb1ffd9ec784e87b7ad98d223cf38b4f7d
+distfiles="https://steamdeck-packages.steamos.cloud/archlinux-mirror/sources/jupiter-main/${pkgname}-${version}-${_pkgrel}.src.tar.gz"
+checksum=50f1ef46874c8c3a3aad7154445c04c5f31f65003ef19e2bec507f9460249ee6
 nostrip=yes
 
-# Valve's package as it is (newest in jupiter-3.9): hub_update (Kinetic's
+# Valve's package as it is (jupiter-main; 20261116.01 = dock firmware
+# V0.013.15.0.135, no other change): hub_update (Kinetic's
 # flasher, needs libusb), the dock firmware images, update.ini and the
 # wrapper jupiter-dock-updater.sh, which Steam reaches through
 # steamos-polkit-helpers/jupiter-dock-updater (deck-hw-support), and
