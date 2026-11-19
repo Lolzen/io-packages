@@ -1,6 +1,6 @@
 7zip-26.02-1.1
 archlinux-keyring-20221123-1.1
-atomupd-daemon-0.20260907.1-2
+atomupd-daemon-0.20261110.0-2
 atomupd-daemon-git-0.20240626.1.r0.gf8ad510-2
 bluez-5.87-2.5
 bmap-tools-3.6-6.4
@@ -19,7 +19,7 @@ clang-22.1.8-1.1
 ddcutil-2.1.4-1.1
 desync-1.1.5-1.1
 desync-git-0.9.2.r19.gb545768-2
-dirlock-0.0.1.463.10f85a7-1
+dirlock-0.0.1.463.10f85a7-2
 discover-6.8.2-1.1
 dkms-3.0.7-1.1
 dmemcg-booster-0.1.1-4
@@ -46,7 +46,7 @@ holo-desync-config-1.0-2
 holo-dmi-rules-1.1-1
 holo-earlyoom-1.1-3
 holo-flatpak-tmpfiles-0.1-1
-holo-fs-offload-1.0-2
+holo-fs-offload-1.0-3
 holo-fstab-repair-0.2-1
 holo-glibc-locales-2.44+r50+g1848099f063e-1
 holo-grant-cap-sys-nice-1.0-1
@@ -61,7 +61,7 @@ holo-plymouth-config-1.0-1
 holo-plymouth-themes-0.7-1
 holo-realtek-firmware-toggles-1.4-1
 holo-rust-packaging-tools-0.1.2-1
-holo-session-selection-1.0-1
+holo-session-selection-1.1-1
 holo-sudo-config-1.0-2
 holo-systemreport-1.24-2
 holo-upower-config-1.0-1
@@ -71,7 +71,7 @@ ibus-1.5.32-2.2
 inputattach-cec-units-2-3
 iwd-3.12-2.2
 jq-1.8.1-1.1
-kcgroups-0.0.dmemcg.experimental.3-3
+kcgroups-0.0.dmemcg.experimental.4-1
 kcoreaddons-6.16.0-1.2
 kdeconnect-25.04.3-1.1
 kdump-steamos-0.92-6
@@ -114,7 +114,7 @@ makedumpfile-1.7.0-4
 maliit-framework-2.3.0-3.1
 maliit-keyboard-2.3.1-4.3
 mpg123-1.32.9-1
-networkmanager-1.58.1-3.3
+networkmanager-1.58.1-3.4
 nfs-utils-2.6.3-1.1
 noise-suppression-for-voice-git-0.91.r8.g6922453-2
 noisetorch-0.12.2.r47.g6d895f3-4
@@ -126,7 +126,7 @@ pacman-system-update-1.1-3
 paru-2.2.0-1
 pcre2-10.47-1.1
 perl-5.40.0-1.1
-plasma-desktop-6.8.2-2
+plasma-desktop-6.8.2-3
 plasma-pa-6.8.2-1.1
 plasma-workspace-6.8.2-1.2
 plymouth-22.02.122-7.8
@@ -137,10 +137,10 @@ python-vdf-3.4-2.1
 pyzy-1.1-1.1
 rauc-1.15.2-2.1
 rtkit-0.14-1
-scx-scheds-1.1.3.linux.steamos.2-2
+scx-scheds-1.1.4.linux.steamos.2-1
 sddm-0.21.0-7.3
 speech-dispatcher-0.12.1-1
-steamos-atomupd-client-0.20260821.1-2
+steamos-atomupd-client-0.20261110.1-1
 steamos-atomupd-client-git-r419.20bcefb-1.1
 steamos-customizations-20261027.1-2
 steamos-customizations-git-r835.be55fcc-1

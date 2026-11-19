@@ -20,7 +20,7 @@ ibus-anthy-1.5.14-4.6
 ibus-pinyin-1.5.1-2.5
 ibus-table-cangjie-lite-1.8.8-2.6
 inputplumber-0.78.0-1
-jupiter-dock-updater-bin-20260811.01-1
+jupiter-dock-updater-bin-20261116.01-1
 jupiter-fan-control-20260902.1-1
 jupiter-fan-controller-fancontrol.20220412.2-1
 jupiter-firewall-0.1-1
@@ -42,7 +42,7 @@ lib32-mesa-26.1.2.221562.radeonsi_26.1.2-5
 lib32-mesa-nvk-26.2.6.227269.nvk_steamos_26.11.0-3
 lib32-mesa-radv-26.2.0_devel.222153.steamos_26.05.20-1
 lib32-mesa-unstable-23.1.2.170169.radeonsi_3.5.0-2.1
-lib32-renderdoc-minimal-1.45-2
+lib32-renderdoc-minimal-1.47-1.0
 lib32-wayland-1.21.0-1
 libdrm-2.4.120-1
 libevdi-1.12.0-1
@@ -62,8 +62,8 @@ linux-neptune-618-drm-exec-6.18.33.drmexec.valve2-3
 linux-neptune-65-6.5.0.valve23-1
 linux-neptune-65-kasan-6.5.0.valve11-3
 linux-neptune-68-6.8.12.valve12-1
-linux-neptune-72-7.2.10.valve1-3
-linux-neptune-72-devel-7.2.4.valve1-2
+linux-neptune-72-7.2.15.valve1-1
+linux-neptune-72-devel-7.2.15.valve1-1
 linux-neptune-73-7.3.1.valve3-1
 linux-neptune-73-devel-7.3.1.valve3-1
 linux-neptune-rtw-debug-5.13.0.valve38.rtwdbg.6-1
@@ -83,8 +83,8 @@ python-crcmod-1.7-1
 python-pylink-square-1.2.1-2
 python-vdf-3.4-2.1
 pyzy-1.1-2.7
-renderdoc-1.46-1.1
-renderdoc-minimal-1.46-1.1
+renderdoc-1.47-1.0
+renderdoc-minimal-1.47-1.0
 rtl88x2ce-dkms-5.12.1.6-1
 sddm-wayland-v0.19.0.valve4.d19813cb03c7d71b896aead28e5285bc131500a9-1.1
 steam-im-modules-jupiter.20240131-5

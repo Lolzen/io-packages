@@ -216,7 +216,19 @@ have; they need someone with the hardware.
   Valve's main of 2026-11-17: WirePlumber 0.5.18-1.4 (two upstream fixes,
   merged after 0.5.19: switching mono audio no longer drops streams; Io
   takes them with Void's next WirePlumber, `void-watch`) and holo's
-  `lib32-zlib` 1.4 (Void has zlib 1.4). Valve's `7.3.1-valve3` (one HDMI
+  `lib32-zlib` 1.4 (Void has zlib 1.4). Valve's main of 2026-11-19:
+  NetworkManager 1.58.1-3.4 (after resume, a full scan at once when the
+  previous access point is not on its old frequency; taken),
+  `holo-session-selection` 1.1 (session name `plasma-persistent`, Plasma's
+  X11 session gone; taken in `io-session`), dock firmware
+  V0.013.15.0.135 (`jupiter-dock-updater-bin` 20261116.01; taken, untested
+  without Valve's dock); not needed: `linux-neptune-72` 7.2.15.valve1 (the
+  fallback series, end of life), `atomupd-daemon` and
+  `steamos-atomupd-client` 20261110 (Valve's update servers; Io has
+  `io-atomupd`), `kcgroups` (needs systemd's slices), `holo-fs-offload`
+  (`/nix`), RenderDoc 1.47 (not in Io), `scx-scheds` 1.1.4 (Io follows
+  Void's `scx`, still 1.1.3), plasma-desktop 6.8.2-3 (Plasma 6.8, in
+  `void-watch`). Valve's `7.3.1-valve3` (one HDMI
   2.1 patch reverted: FRL-capable TVs stayed dark in TMDS mode, Steam
   Machine) and stable 7.3.5 are not built: nothing for the Deck; they come
   with the next kernel that is.

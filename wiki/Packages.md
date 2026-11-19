@@ -30,7 +30,7 @@ else. Differences to Valve's originals are listed in [Deviations](Deviations).
 | `deck-hw-support` | `jupiter-hw-support` 20260807.1 | Polkit helpers (the `steamos-update` helper calls `io-atomupd`'s script, `jupiter-dock-updater` Valve's dock updater), udev rules, hwsupport scripts (automount, trimming, formatting), Valve's cursor theme; automount through `io-detach`, Io's rule hiding the internal SSD, `io-root-disk`; pulls in `udisks2` and the formatting tools |
 | `deck-firmware-updaters` | `jupiter-hw-support` 20260930.1 (SteamOS 3.9.3) | Valve's BIOS updater (`jupiter-biosupdate`, BIOS images, Insyde's `h2offt`) and controller updater (firmware, flashing scripts, update splash), `steamos-firmware-update`, `plymouth-wrap`; both run at boot. The controller updater never flashes older firmware over newer |
 | `deck-controller-calibration` | `jupiter-hw-support` 20260930.1 (files) | Valve's thumbstick and trigger calibration tools (`thumbstick_cal`, `thumbstick_fine_cal`, `trigger_cal`), run by hand in a terminal; they stop Steam and write the new calibration to the controller |
-| `jupiter-dock-updater-bin` | `jupiter-dock-updater-bin` 20260811.01 | Valve's dock firmware updater (`hub_update`, `jupiter-dock-updater.sh`) and the dock firmware, for Steam's dock check and `UpdateDock1` |
+| `jupiter-dock-updater-bin` | `jupiter-dock-updater-bin` 20261116.01 (Valve's main branch) | Valve's dock firmware updater (`hub_update`, `jupiter-dock-updater.sh`) and the dock firmware, for Steam's dock check and `UpdateDock1` |
 | `ec-log` | `ec-log` 0.1 | The Steam Machine's EC console log to syslog, runit service linked with a `down` file, started by SteamOS Manager for Steam's EC logging (`FirmwareDebug1`) |
 | `jupiter-hibernate-disable` | `jupiter-hibernate-disable` 0.1 | No hibernation on the Steam Deck (Jupiter, Galileo): a core service writes elogind's drop-in, as Valve's unit does for logind |
 | `jupiter-fan-control` | `jupiter-fan-control` | Valve's fan daemon, as a runit service |
@@ -88,7 +88,7 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | Package | Replaces | Patches |
 |---|---|---|
 | `MangoHud-holo`, `MangoHud-mangoapp-holo` | `MangoHud`, `MangoHud-mangoapp` | mangoapp draws once per game frame |
-| `NetworkManager-holo`, `libnm-holo`, `NetworkManager-devel-holo` | Void's NetworkManager packages | Wi-Fi after resume scans the last frequency only; no false address conflict between Wi-Fi and the dock's Ethernet in the same network (ARP flux); `wheel` may save networks for all users without a password, as on SteamOS (`polkit_noauth_group`) |
+| `NetworkManager-holo`, `libnm-holo`, `NetworkManager-devel-holo` | Void's NetworkManager packages | Wi-Fi after resume scans the last frequency first, all channels at once when the network is not there; no false address conflict between Wi-Fi and the dock's Ethernet in the same network (ARP flux); `wheel` may save networks for all users without a password, as on SteamOS (`polkit_noauth_group`) |
 | `bluez-holo`, `libbluetooth-holo`, ... | Void's bluez packages | LE resolving list fix, Switch Pro Controller |
 | `kwin-holo`, `kwin-devel-holo` | `kwin`, `kwin-devel` | Current brightness at start, Steam's keyboard past the input method, libei 1.6, no modes below 480p, screens off and a correct sleep delay at suspend |
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | Text from Steam's keyboard as keysyms over libei |
