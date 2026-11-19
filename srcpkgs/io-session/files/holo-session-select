@@ -2,10 +2,12 @@
 # This script is now deprecated, please use steamosctl.
 # It exists for Steam client compatibility
 #
-# Valve's holo-session-select (holo-session-selection 1.0), which Steam calls
+# Valve's holo-session-select (holo-session-selection 1.1), which Steam calls
 # as steamos-session-select. Io: its one desktop session, io-desktop.desktop,
 # in place of Plasma's session files (plasma.desktop, plasmax11.desktop),
-# which start Plasma without Io's session setup.
+# which start Plasma without Io's session setup. 1.1 names the persistent
+# desktop session plasma-persistent (Plasma's X11 session is gone);
+# plasma-x11-persistent stays accepted for older Steam clients.
 
 set -e
 
@@ -14,7 +16,7 @@ session="${1:-gamescope}"
 die() { echo >&2 "!! $*"; exit 1; }
 
 case "$session" in
-  plasma-wayland-persistent|plasma-x11-persistent)
+  plasma-persistent|plasma-wayland-persistent|plasma-x11-persistent)
     steamosctl set-default-login-mode desktop
     steamosctl set-default-desktop-session io-desktop.desktop
     steamosctl switch-to-desktop-mode
