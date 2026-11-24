@@ -4,7 +4,7 @@ Replaces Void's `xdg-desktop-portal-kde`.
 
 | Patch | Source | Upstream |
 |---|---|---|
-| `screencast-1-steam-without-prompt.patch` | Valve's xdg-desktop-portal-kde 6.7.3-1.2 (SteamOS 3.9.3, holo-main), `0001-Skip-authentication-checks-for-Steam-in-the-screenca.patch` (Arjen Hiemstra, 2026-06-04) | not upstream (Valve: "to be documented") |
+| `screencast-1-steam-without-prompt.patch` | Valve's xdg-desktop-portal-kde 6.7.3-1.2 (SteamOS 3.9.3) and 6.8.2-1.1 (holo-main, unchanged), `0001-Skip-authentication-checks-for-Steam-in-the-screenca.patch` (Arjen Hiemstra, 2026-06-04); rebased onto 6.8.3, the added lines are Valve's | not upstream (Valve: "to be documented") |
 | `screencast-2-steam-by-caller.patch` | Io | Io only (needed without systemd) |
 
 Why:
@@ -32,7 +32,12 @@ Steam's saved choice wins: with valid restore data (a choice made in the
 dialog earlier, with *Allow restoring*) the portal restores that choice and
 the patches do not apply.
 
-Both apply to 6.7.5 in this order.
+Both apply to 6.8.3 in this order after Void's
+`0001-Revert-Add-a-test-for-the-settingsportal.patch` (autotests only),
+without fuzz (checked 2026-11-24). 6.8.3 rewrote `Start()` (the dialog and
+the stream start became futures), so Valve's block now sits before
+`message.setDelayedReply(true)`, right after the restore data is read, as
+in 6.7/6.8.2; Io's function and the changed condition are unchanged.
 
 Way back: when Valve's patch is upstream, the first goes; the second stays
 as long as xdg-desktop-portal gives host applications no id without
