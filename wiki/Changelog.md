@@ -7,6 +7,7 @@ afterwards. What is still open is on [Milestones](Milestones).
 
 | Release | Theme | |
 |---|---|---|
+| [Beta 0.8.2](Beta-0.8.2) | Plasma 6.8, Valve's sparse binding | [beta-0.8.2](https://github.com/Lolzen/io-packages/releases/tag/beta-0.8.2) |
 | [Beta 0.8.1](Beta-0.8.1) | Kernel 7.3, Io's own patch notes, release automation | [beta-0.8.1](https://github.com/Lolzen/io-packages/releases/tag/beta-0.8.1) |
 | [Beta 0.8](Beta-0.8) | Valve's SteamOS Manager, Io on the internal SSD | [beta-0.8](https://github.com/Lolzen/io-packages/releases/tag/beta-0.8) |
 | [Alpha 7](Alpha-7) | Valve's patches, restart into Io | [alpha7](https://github.com/Lolzen/io-packages/releases/tag/alpha7) |

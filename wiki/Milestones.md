@@ -1,7 +1,7 @@
 # Milestones
 
 What is still open, and where it is headed. What each release brought is in
-the [Changelog](Changelog). The latest release is [Beta 0.8.1](Beta-0.8.1).
+the [Changelog](Changelog). The latest release is [Beta 0.8.2](Beta-0.8.2).
 
 ---
 

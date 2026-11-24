@@ -1,19 +1,15 @@
 {
   "schema_version": 1,
-  "date": "2026-11-15T12:00:00+01:00",
-  "headline": "Io Beta 0.8.1",
-  "intro": "Io Beta 0.8.1: the changes since Beta 0.8.",
-  "release_url": "https://github.com/Lolzen/io-packages/wiki/Beta-0.8.1",
+  "date": "2026-11-24T18:00:00+01:00",
+  "headline": "Io Beta 0.8.2",
+  "intro": "Io Beta 0.8.2: the changes since Beta 0.8.1.",
+  "release_url": "https://github.com/Lolzen/io-packages/wiki/Beta-0.8.2",
   "notes": [
-    "Kernel: Linux 7.3: Valve's 7.3.1-valve2 with stable 7.3.4 (linux-neptune-73); the display setting amdgpu.dcdebugmask=0x60000 as on SteamOS. Kernel 7.2 stays installed as a fallback.",
-    "Boot: no more hang at the boot logo (SDDM waits for elogind). The Io logo at boot, the animated Io Torus during firmware updates.",
-    "Patch notes: Io's own notes on Steam's SteamOS update page (this page), listed before later Steam client updates.",
-    "Desktop: Steam shares the screen without a prompt; text from Steam's on-screen keyboard arrives correctly; \"Add to Steam\" in Dolphin is safe with any file name.",
-    "Screen reader: Orca with Valve's patches keeps running when speech settings change.",
-    "Wi-Fi and Bluetooth: NetworkManager with Valve's ARP fix, bluez 5.88.",
-    "Power: shutdown and reboot from the power menu no longer crash elogind; hibernation stays off, as on SteamOS; better battery time estimates (vpower 1.6.4).",
-    "Storage: SD cards are rescanned through Valve's helper; clearer error messages from the SD card and format tools.",
-    "Graphics and audio: Mesa 26.2.7, gamescope-wsi 3.17.0, steamdeck-dsp 1.04.",
-    "SteamOS Manager: Valve's version of 2026-11-10."
+    "Desktop: Plasma 6.8.3 with Io's patches; the lock screen has its own on-screen keyboard again.",
+    "Graphics: Valve's newest RADV changes: DX12 games bind sparse resources in one step, the waiting is done by the kernel.",
+    "Wi-Fi: after standby, other networks show up at once when the previous one is not in range.",
+    "Desktop mode: Steam's new desktop session name starts Io's desktop.",
+    "Dock: Valve's dock firmware V0.013.15.0.135.",
+    "Kernel: unchanged, Linux 7.3.4 with Valve's 7.3.1-valve2."
   ]
 }
