@@ -1,0 +1,4 @@
+# Io: Valve's lock screen patch shows Qt Virtual Keyboard in the lock
+# screen's own process (QtQuick.VirtualKeyboard); Arch's and Valve's
+# plasma-workspace depend on it, Void's not (plasma-keyboard pulls it in).
+depends+=" qt6-virtualkeyboard"

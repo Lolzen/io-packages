@@ -6,11 +6,8 @@ Subject: [PATCH 1/2] Revert "lockscreen: drop vkb wrapper, use
 
 This reverts commit 568514271dfa49398ba4c4deb95ffd3116a452fa.
 ---
- .../contents/lockscreen/LockScreenUi.qml      | 35 +++++++++++--------
- 1 file changed, 21 insertions(+), 14 deletions(-)
-
 diff --git a/desktoppackage/contents/lockscreen/LockScreenUi.qml b/desktoppackage/contents/lockscreen/LockScreenUi.qml
-index 9d38014014..8b521902cc 100644
+index 451ade8..0273662 100644
 --- a/desktoppackage/contents/lockscreen/LockScreenUi.qml
 +++ b/desktoppackage/contents/lockscreen/LockScreenUi.qml
 @@ -1,6 +1,5 @@
@@ -28,7 +25,7 @@ index 9d38014014..8b521902cc 100644
  import org.kde.plasma.private.keyboardindicator as KeyboardIndicator
  import org.kde.kirigami as Kirigami
  import org.kde.kscreenlocker as ScreenLocker
-@@ -137,7 +135,7 @@ Item {
+@@ -140,7 +138,7 @@ Item {
  
          property bool uiVisible: false
          property bool seenPositionChange: false
@@ -37,7 +34,7 @@ index 9d38014014..8b521902cc 100644
  
          x: parent.x
          y: parent.y
-@@ -194,8 +192,8 @@ Item {
+@@ -197,8 +195,8 @@ Item {
              // We do not want to show the password prompt in this case.
              if (uiVisible) {
                  uiVisible = false;
@@ -48,7 +45,7 @@ index 9d38014014..8b521902cc 100644
                  }
                  root.clearPassword();
              }
-@@ -438,6 +436,17 @@ Item {
+@@ -441,6 +439,17 @@ Item {
              }
          }
  
@@ -66,7 +63,7 @@ index 9d38014014..8b521902cc 100644
          Loader {
              z: 2
              active: root.viewVisible
-@@ -470,18 +479,16 @@ Item {
+@@ -473,18 +482,16 @@ Item {
  
                  focusPolicy: Qt.TabFocus
                  text: i18ndc("plasma_shell_org.kde.plasma.desktop", "Button to show/hide virtual keyboard", "Virtual Keyboard")
@@ -92,6 +89,3 @@ index 9d38014014..8b521902cc 100644
                  Layout.fillHeight: true
                  containmentMask: Item {
                      parent: virtualKeyboardButton
--- 
-2.56.0
-
