@@ -90,7 +90,8 @@ overlay*). They live in io-packages' `overlay/`, not in `srcpkgs/`.
 | `MangoHud-holo`, `MangoHud-mangoapp-holo` | `MangoHud`, `MangoHud-mangoapp` | mangoapp draws once per game frame |
 | `NetworkManager-holo`, `libnm-holo`, `NetworkManager-devel-holo` | Void's NetworkManager packages | Wi-Fi after resume scans the last frequency first, all channels at once when the network is not there; no false address conflict between Wi-Fi and the dock's Ethernet in the same network (ARP flux); `wheel` may save networks for all users without a password, as on SteamOS (`polkit_noauth_group`) |
 | `bluez-holo`, `libbluetooth-holo`, ... | Void's bluez packages | LE resolving list fix, Switch Pro Controller |
-| `kwin-holo`, `kwin-devel-holo` | `kwin`, `kwin-devel` | Current brightness at start, Steam's keyboard past the input method, libei 1.6, no modes below 480p, screens off and a correct sleep delay at suspend |
+| `kwin-holo`, `kwin-devel-holo` | `kwin`, `kwin-devel` | Current brightness at start, Steam's keyboard past the input method, two input start-up fixes from kwin master (crash, lost switch state) |
+| `plasma-workspace-holo` (and `kworkspace-holo`, `plasma-workspace-x11-holo`, `plasma-workspace-devel-holo`), `plasma-desktop-holo` | `plasma-workspace` and its subpackages, `plasma-desktop` | On-screen keyboard in the lock screen (Valve's Qt Virtual Keyboard patches for Plasma 6.8) |
 | `xorg-server-xwayland-holo` | `xorg-server-xwayland` | Text from Steam's keyboard as keysyms over libei |
 | `wpa_supplicant-holo` | `wpa_supplicant` | WPA3 wrong-password detection, fewer rescans after resume (hostap's merged commits), WNM/MBO and some of Valve's other build options |
 | `iwd-holo` | `iwd` | Valve's scanning and connecting fixes |

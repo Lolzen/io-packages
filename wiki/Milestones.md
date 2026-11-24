@@ -198,8 +198,8 @@ have; they need someone with the hardware.
   the metapackage `linux-neptune`), SteamOS's `amdgpu.dcdebugmask=0x60000`
   (linear brightness), NetworkManager's ARP flux fix and jupiter-hw-support
   20261028.1's udisks messages; waiting: iwd's four security fixes (until
-  Void or upstream has them), Plasma 6.8 (when Void has it; `kwin-holo`
-  then keeps two patches). Valve's `holo-3.10` and `jupiter-3.10`
+  Void or upstream has them), Plasma 6.8 (came with Void's 6.8.3 on
+  2026-11-24). Valve's `holo-3.10` and `jupiter-3.10`
   (2026-11-06) start as copies of main; `pkgcheck.sh` watches 3.9 and
   3.10. Kernel 7.3.3 since 2026-11-08, 7.3.4 since 2026-11-11, Valve's
   7.3.1-valve1 (its first 7.3 release; the amdgpu explicit sync series is
@@ -208,8 +208,7 @@ have; they need someone with the hardware.
   Steam Machine) since 2026-11-14; bluez 5.88 (Void's, with Io's two
   patches, 2026-11-10). Valve's main of 2026-11-10: steamos-manager
   (`ds_inhibit` returns errors in fewer cases on shutdown), plasma-workspace 6.8.2-1.2 (a Qt virtual keyboard
-  in the lock screen, where Steam's cannot show; Plasma 6.8, in
-  `void-watch`), `holo-3.9`'s gamescope 3.16.30.2 (backports of 3.17.0).
+  in the lock screen, where Steam's cannot show; taken with Plasma 6.8.3), `holo-3.9`'s gamescope 3.16.30.2 (backports of 3.17.0).
   Xwayland 24.1.15 (2026-11-10) fixes the X.Org advisory of that day
   (eight issues in the X server and Xwayland); Void has xorg-server
   21.1.26 but Xwayland still at 24.1.14, and Io's overlay follows Void.
@@ -227,11 +226,17 @@ have; they need someone with the hardware.
   `steamos-atomupd-client` 20261110 (Valve's update servers; Io has
   `io-atomupd`), `kcgroups` (needs systemd's slices), `holo-fs-offload`
   (`/nix`), RenderDoc 1.47 (not in Io), `scx-scheds` 1.1.4 (Io follows
-  Void's `scx`, still 1.1.3), plasma-desktop 6.8.2-3 (Plasma 6.8, in
-  `void-watch`). Valve's `7.3.1-valve3` (one HDMI
+  Void's `scx`, still 1.1.3), plasma-desktop 6.8.2-3 (lock screen part taken
+  with Plasma 6.8.3). Valve's `7.3.1-valve3` (one HDMI
   2.1 patch reverted: FRL-capable TVs stayed dark in TMDS mode, Steam
   Machine) and stable 7.3.5 are not built: nothing for the Deck; they come
-  with the next kernel that is.
+  with the next kernel that is. Void's Plasma 6.8.3 (2026-11-23): `kwin-holo`
+  on 6.8.3 with Valve's kwin 6.8.2-1.4 (brightness, Steam's keyboard past
+  the input method, two input start-up fixes from kwin master); its other
+  former patches (libei 1.6, small modes, the suspend fixes) and Valve's
+  handheld default scale are in 6.8.3. `xdg-desktop-portal-kde-holo`
+  rebased onto 6.8.3; new overlays `plasma-workspace-holo` and
+  `plasma-desktop-holo` for the lock screen keyboard.
   The upstream side on 2026-11-11: nothing Io waits for has moved
   (gamescope's newest tag is 3.17.0, SDDM's 0.21.0, iwd's 3.12, hostap's
   2.12; PipeWire 1.6.11 and kwin 6.8.3 are released, Void has 1.6.10 and
