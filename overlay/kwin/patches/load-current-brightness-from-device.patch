@@ -8,14 +8,11 @@ another session or at the login screen.
 
 Kwin should load that value, instead of restoring from a config.
 ---
- src/workspace.cpp | 4 ++++
- 1 file changed, 4 insertions(+)
-
 diff --git a/src/workspace.cpp b/src/workspace.cpp
-index 866abb8080..ec04c96d30 100644
+index f362ea0..28745ec 100644
 --- a/src/workspace.cpp
 +++ b/src/workspace.cpp
-@@ -1322,6 +1322,10 @@ void Workspace::assignBrightnessDevices(OutputConfiguration &outputConfig)
+@@ -1571,6 +1571,10 @@ void Workspace::assignBrightnessDevices(OutputConfiguration &outputConfig)
              if (device->usesDdcCi()) {
                  changeset->detectedDdcCi = true;
              }
@@ -26,6 +23,3 @@ index 866abb8080..ec04c96d30 100644
              if (changeset->allowSdrSoftwareBrightness.value_or(output->allowSdrSoftwareBrightness())) {
                  changeset->allowSdrSoftwareBrightness = false;
                  changeset->brightness = device->observedBrightness();
--- 
-2.50.1
-

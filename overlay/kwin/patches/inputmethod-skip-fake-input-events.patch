@@ -13,14 +13,11 @@ up getting lost.
 This patch allows input from a physical to use the configured input
 method as usual, but skips input that comes from libei.
 ---
- src/input.cpp | 7 +++++++
- 1 file changed, 7 insertions(+)
-
 diff --git a/src/input.cpp b/src/input.cpp
-index 849ff36301..48fdb66e18 100644
+index 327e713..011b7f5 100644
 --- a/src/input.cpp
 +++ b/src/input.cpp
-@@ -254,6 +254,13 @@ bool InputEventFilter::passToInputMethod(KeyboardKeyEvent *event)
+@@ -255,6 +255,13 @@ bool InputEventFilter::passToInputMethod(KeyboardKeyEvent *event)
      if (!kwinApp()->inputMethod()) {
          return false;
      }
@@ -31,9 +28,6 @@ index 849ff36301..48fdb66e18 100644
 +        return false;
 +    }
 +
-     if (auto keyboardGrab = kwinApp()->inputMethod()->keyboardGrab()) {
-         const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(event->timestamp);
-         keyboardGrab->sendKey(waylandServer()->display()->nextSerial(), std::chrono::duration_cast<std::chrono::milliseconds>(timestamp).count(), event->nativeScanCode, event->state);
--- 
-2.51.2
-
+     if (event->device && s_deviceSkipsInputMethods.contains(event->device->name())) {
+         return false;
+     }

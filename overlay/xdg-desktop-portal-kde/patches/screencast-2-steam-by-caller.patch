@@ -6,10 +6,10 @@ empty id, and Valve's check for app_id "steam" never matches. Steam is
 recognised by the process behind the request's sender instead.
 ---
 diff --git a/src/screencast.cpp b/src/screencast.cpp
-index b4f6f80..1f1a758 100644
+index d2f29f5..b9d6158 100644
 --- a/src/screencast.cpp
 +++ b/src/screencast.cpp
-@@ -27,6 +27,10 @@
+@@ -28,6 +28,10 @@
  
  #include <QDBusArgument>
  #include <QDBusConnection>
@@ -20,8 +20,8 @@ index b4f6f80..1f1a758 100644
  #include <QDBusMetaType>
  #include <QDataStream>
  #include <QGuiApplication>
-@@ -300,6 +304,31 @@ std::pair<PortalResponse::Response, QVariantMap> continueStartAfterDialog(Screen
-     return {PortalResponse::Success, results};
+@@ -308,6 +312,31 @@ QFuture<QVariantList> continueStartAfterDialog(ScreenCastSession *session,
+         });
  }
  
 +// Io: without systemd, xdg-desktop-portal cannot tell host applications
@@ -52,7 +52,7 @@ index b4f6f80..1f1a758 100644
  void ScreenCastPortal::Start(const QDBusObjectPath &handle,
                               const QDBusObjectPath &session_handle,
                               const QString &app_id,
-@@ -374,7 +403,7 @@ void ScreenCastPortal::Start(const QDBusObjectPath &handle,
+@@ -387,7 +416,7 @@ void ScreenCastPortal::Start(const QDBusObjectPath &handle,
  
      // If steam is trying to stream and we don't have any valid restore data,
      // allow streaming all screens.
