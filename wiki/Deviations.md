@@ -339,7 +339,9 @@ its own implementation (`io-steamos-manager`).
   Valve's own commits are carried on top, since 2026-11-18 including
   `steamos-26.05.20`'s sparse binding through the kernel's
   `AMDGPU_GEM_VA2` (one ioctl per submission, waits and signals in the
-  kernel instead of a CPU wait; Valve's main and 3.10 branches, not 3.9).
+  kernel instead of a CPU wait; Valve's main and 3.10 branches, not 3.9),
+  since 2026-11-25 with `steamos-26.05.22`'s two fixes for unbinding
+  sparse ranges on the Deck's GPU.
   Valve's older fix for *No Rest for the Wicked* (NGG culling off) is not
   in `steamos-26.05` either.
 - **gamescope's WSI layer for 32-bit games** is Io's `gamescope-wsi-32bit`,

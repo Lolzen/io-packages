@@ -40,7 +40,7 @@ lib32-libdrm-2.4.120-1
 lib32-libnm-1.40.0-1.1
 lib32-mesa-26.1.2.221562.radeonsi_26.1.2-5
 lib32-mesa-nvk-26.2.6.227269.nvk_steamos_26.11.0-3
-lib32-mesa-radv-26.2.0_devel.222155.steamos_26.05.21-1
+lib32-mesa-radv-26.2.0_devel.222157.steamos_26.05.22-1
 lib32-mesa-unstable-23.1.2.170169.radeonsi_3.5.0-2.1
 lib32-renderdoc-minimal-1.47-1.0
 lib32-wayland-1.21.0-1
@@ -70,7 +70,7 @@ linux-neptune-rtw-debug-5.13.0.valve38.rtwdbg.6-1
 mangohud-josh.core.fix.r2.ge9d9f68-1
 mesa-26.1.2.221562.radeonsi_26.1.2-5
 mesa-nvk-26.2.6.227269.nvk_steamos_26.11.0-3
-mesa-radv-26.2.0_devel.222155.steamos_26.05.21-1
+mesa-radv-26.2.0_devel.222157.steamos_26.05.22-1
 mesa-unstable-23.1.2.170169.radeonsi_3.5.0-1.2
 neptune-ctl-20230928.1-5
 networkmanager-1.44.2-3.4

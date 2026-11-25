@@ -1,0 +1,31 @@
+From 7ab4d1842ef19c737b9c564670c60a2f3b9c3904 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Tue, 17 Nov 2026 17:21:44 -0800
+Subject: [PATCH 22/22] radv/winsys: Set page flags for null PRT mappings in
+ batched bind
+
+The null PRT BO was mapped without any access flags when unmapping a
+range with emulated sparse residency. Use the same flags as the
+non-batched path.
+
+Fixes: 0f90a0487c4 ("radv/winsys: Add batched virtual bind function")
+---
+ src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c b/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c
+index 7f0e73363d6..447445e77f2 100644
+--- a/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c
++++ b/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c
+@@ -441,7 +441,7 @@ radv_amdgpu_winsys_bo_virtual_bind_many(struct radeon_winsys *_ws, uint32_t bind
+                mappings[emulated_mapping_index] = mappings[i];
+                mappings[emulated_mapping_index].va = low_va + binds[i].offset + offset;
+                mappings[emulated_mapping_index].map_size = chunk_size;
+-               mappings[emulated_mapping_index].flags = 0;
++               mappings[emulated_mapping_index].flags = radv_amdgpu_va_op_flags(ws, 0);
+                mappings[emulated_mapping_index].handle = radv_amdgpu_winsys_bo(ws->null_prt_bug.bo)->bo_handle;
+ 
+                ++emulated_mapping_index;
+-- 
+2.43.0
+

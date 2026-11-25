@@ -1,0 +1,30 @@
+From d46ac932389360d364a2ec45796c477a5961f487 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Tue, 17 Nov 2026 17:13:07 -0800
+Subject: [PATCH 21/22] radv/winsys: Set chunk size for null PRT mappings in
+ batched bind
+
+When unmapping a range with emulated sparse residency, each null PRT
+BO mapping inherited the page-aligned size of the whole range. If
+that size exceeded the BO size, the VA2 ioctl failed with -EINVAL.
+
+Fixes: 0f90a0487c4 ("radv/winsys: Add batched virtual bind function")
+---
+ src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c b/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c
+index 933a2ec5187..7f0e73363d6 100644
+--- a/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c
++++ b/src/amd/vulkan/winsys/amdgpu/radv_amdgpu_bo.c
+@@ -440,6 +440,7 @@ radv_amdgpu_winsys_bo_virtual_bind_many(struct radeon_winsys *_ws, uint32_t bind
+ 
+                mappings[emulated_mapping_index] = mappings[i];
+                mappings[emulated_mapping_index].va = low_va + binds[i].offset + offset;
++               mappings[emulated_mapping_index].map_size = chunk_size;
+                mappings[emulated_mapping_index].flags = 0;
+                mappings[emulated_mapping_index].handle = radv_amdgpu_winsys_bo(ws->null_prt_bug.bo)->bo_handle;
+ 
+-- 
+2.43.0
+

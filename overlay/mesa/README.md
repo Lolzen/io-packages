@@ -14,7 +14,8 @@ Valve's own commits); Valve's main and 3.10 branches have RADV
 only Valve's own commits are taken over: the `STEAMOS:` commits (checked
 against Valve's `jupiter-3.9` sources of 2026-10-15) and the six commits
 of `steamos-26.05.20` (2026-11-16), which have no prefix but exist only in
-Valve's tree, for the kernel interface of Valve's kernel.
+Valve's tree, for the kernel interface of Valve's kernel, with the two
+fixes for them from `steamos-26.05.22` (2026-11-25).
 The three RADV fixes from Mesa main that Io carried for 26.2.5
 (descriptor set allocator heap size, memory leak and error code when a pool
 entry fails) are in 26.2.6.
@@ -31,6 +32,7 @@ entry fails) are in 26.2.6.
 | 0015 | `amdgpu_drm.h` synced again: `AMDGPU_GEM_VA2` (0x1B, a batch of mappings with syncobj waits and signals) and `AMDGPU_PROC_OPTIONS` (0x1A), identical to the kernel's header | uapi in Valve's kernel (`[FOR-UPSTREAM]`, amdgpu interface 3.66; in `linux-neptune-73` since `7.3.1-valve1`) |
 | 0016 | Explicit synchronisation for VM operations from amdgpu 3.66 on (was 3.65: upstream's 3.65 is a different feature, which Valve's kernel skips) | Valve only |
 | 0017-0020 | **Sparse binding in one ioctl:** RADV collects a submission's sparse binds and hands them to the kernel with `AMDGPU_GEM_VA2`, with the submission's semaphores as kernel-side waits and signals, instead of one ioctl per bind after a CPU wait. Active whenever the kernel has amdgpu 3.66 (not tied to `radv_vm_explicit_sync`); other kernels keep the old path (one ioctl per bind after a CPU wait). With it the `AMDGPU_VM_EXPLICIT_SYNC` path of 0005-0009 goes: `radv_vm_explicit_sync` now only keeps 0006's wait for an idle queue before old preambles are freed | Valve only |
+| 0021, 0022 | Fixes for 0019 (Matthew Schwartz): when a sparse range is unbound on a GPU with the null PRT bug (GFX10 to GFX12 except GFX9, so the Deck), each mapping of RADV's 8 MiB zero buffer now has the size of its chunk instead of the whole range (a range over 8 MiB made the `AMDGPU_GEM_VA2` ioctl fail with `-EINVAL`) and the same page flags as the old path (it was mapped without access flags) | Valve only |
 
 Rebased onto 26.2.5 by Io (noted in each patch): 0008 (calls changed
 upstream, sync type moved out of the winsys), 0009 and 0014 (RADV's driconf
@@ -47,6 +49,10 @@ x86_64, 2026-11-18; the structs in 0015 compared with the kernel's
 `include/uapi/drm/amdgpu_drm.h` of `7.3.1-valve3`). Valve's
 `ac_drm_bo_va2_op_raw()` call in 0019 passes the full wait and signal
 counts although the arrays skip dummy syncs; kept as Valve has it.
+0021 and 0022 apply after them with offset 1, without fuzz, and RADV
+compiles (2026-11-25). Valve's `jupiter-3.9` reverted 0015-0020 on
+2026-11-24 (`steamos-26.05.21.1`, stable branch); its main took these two
+fixes instead, and Io follows main.
 
 Left out: Valve's `radv: always consider some outputs as invariant` (in
 26.2.5 already), CI expectation files and Valve's pick script.
