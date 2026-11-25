@@ -4,7 +4,7 @@ Replaces Void's `xorg-server-xwayland`.
 
 | Patch | Source | Upstream |
 |---|---|---|
-| `libei-forward-text-as-keysyms.patch` | Valve's xorg-xwayland 24.1.13-1.2 (SteamOS 3.9.2), `0003-LibEi-keysyms.patch` (David Edmundson, KDE, 2026); unchanged in Valve's 24.1.14-1.1 and 1.2 | not in 24.1.13 or 24.1.14 |
+| `libei-forward-text-as-keysyms.patch` | Valve's xorg-xwayland 24.1.13-1.2 (SteamOS 3.9.2), `0003-LibEi-keysyms.patch` (David Edmundson, KDE, 2026); unchanged in Valve's 24.1.14-1.1, 1.2 and 24.1.15-1.1 | not in 24.1.13, 24.1.14 or 24.1.15 |
 
 Why: an X11 client's text input through XTEST (Steam's on-screen keyboard
 in the desktop) is forwarded to the compositor as keysyms instead of
@@ -25,9 +25,11 @@ mode showed a black flash with them (io_revision 1) and none without them
 desktop's last picture stays on screen until Steam's boot animation, as on
 SteamOS.
 
-The patch applies to the 24.1.14 sources without offset (checked
-2026-11-08): to GitLab's archive of the `xwayland-24.1.14` tag, which Void
-builds from, and to the release tarball, which Valve builds from.
-`hw/xwayland/xwayland-xtest.c` is the same in 24.1.13 and 24.1.14.
+The patch applies to the 24.1.15 sources without offset (checked
+2026-11-25): to GitLab's archive of the `xwayland-24.1.15` tag, which Void
+builds from (sha256 `6b2ae147...` as in Void's template), and to the
+release tarball, which Valve builds from. 24.1.15 is X.Org's security
+release of 2026-11-10; `hw/xwayland/xwayland-xtest.c` takes the patch as
+in 24.1.13 and 24.1.14.
 
 Way back: drop it once it is in an xwayland release Void ships.
