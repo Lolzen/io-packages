@@ -11,7 +11,7 @@ flatpak-1.14.4-2
 foxnet-1.5-5
 foxnetstatsd-1.4-5
 galileo-mura-v0.20-1
-gamescope-3.16.30.2-1
+gamescope-3.16.30.2-2
 gpu-trace-2.17-1.1
 holo-dmi-rules-1.0-1
 holo-nix-offload-0.3-1
@@ -40,7 +40,7 @@ lib32-libdrm-2.4.120-1
 lib32-libnm-1.40.0-1.1
 lib32-mesa-26.1.2.221562.radeonsi_26.1.2-2.1
 lib32-mesa-nvk-26.1.2.221562.radeonsi_26.1.2-2
-lib32-mesa-radv-26.2.0_devel.222147.steamos_26.05.19-1
+lib32-mesa-radv-26.2.0_devel.222155.steamos_26.05.21-1
 lib32-mesa-unstable-23.1.2.170169.radeonsi_3.5.0-2.1
 lib32-renderdoc-minimal-1.45-1
 lib32-wayland-1.21.0-1
@@ -62,13 +62,13 @@ linux-neptune-618-drm-exec-6.18.33.drmexec.valve2-2
 linux-neptune-65-6.5.0.valve23-1
 linux-neptune-65-kasan-6.5.0.valve11-3
 linux-neptune-68-6.8.12.valve12-1
-linux-neptune-72-7.2.7.valve2-2
-linux-neptune-72-devel-7.2.4.valve1-1
+linux-neptune-72-7.2.15.valve1-1
+linux-neptune-72-devel-7.2.15.valve1-1
 linux-neptune-rtw-debug-5.13.0.valve38.rtwdbg.6-1
 mangohud-josh.core.fix.r2.ge9d9f68-1
 mesa-26.1.2.221562.radeonsi_26.1.2-2.1
 mesa-nvk-26.1.2.221562.radeonsi_26.1.2-2
-mesa-radv-26.2.0_devel.222147.steamos_26.05.19-1
+mesa-radv-26.2.0_devel.222155.steamos_26.05.21-1
 mesa-unstable-23.1.2.170169.radeonsi_3.5.0-1.2
 neptune-ctl-20230928.1-5
 networkmanager-1.44.2-3.4

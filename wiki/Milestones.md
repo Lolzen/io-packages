@@ -173,8 +173,9 @@ have; they need someone with the hardware.
   credentials for custom updates). WirePlumber
   0.5.18 and PipeWire are Void's, newer than or equal to Valve's (Valve's
   loopback patches only rebased; its one new patch is for smart filters);
-  Xwayland 24.1.14 still needs Io's overlay (the keysym patch is not in it;
-  `xorg-server-xwayland-holo` on Void's 24.1.14 since 2026-11-09). Valve's Mesa on its main branch is what
+  Xwayland still needs Io's overlay (the keysym patch is not in 24.1.15
+  either; `xorg-server-xwayland-holo` on Void's 24.1.14 since 2026-11-09,
+  on 24.1.15 since 2026-11-25). Valve's Mesa on its main branch is what
   Io's overlay was checked against (RADV `steamos-26.05.19`, and since
   2026-11-18 `steamos-26.05.20`'s six commits: sparse binding through the
   kernel's `AMDGPU_GEM_VA2`; radeonsi
@@ -211,7 +212,8 @@ have; they need someone with the hardware.
   in the lock screen, where Steam's cannot show; taken with Plasma 6.8.3), `holo-3.9`'s gamescope 3.16.30.2 (backports of 3.17.0).
   Xwayland 24.1.15 (2026-11-10) fixes the X.Org advisory of that day
   (eight issues in the X server and Xwayland); Void has xorg-server
-  21.1.26 but Xwayland still at 24.1.14, and Io's overlay follows Void.
+  21.1.26, Xwayland 24.1.15 since 2026-11-25, and Io's overlay follows
+  Void.
   Valve's main of 2026-11-17: WirePlumber 0.5.18-1.4 (two upstream fixes,
   merged after 0.5.19: switching mono audio no longer drops streams; Io
   takes them with Void's next WirePlumber, `void-watch`) and holo's
@@ -237,6 +239,17 @@ have; they need someone with the hardware.
   handheld default scale are in 6.8.3. `xdg-desktop-portal-kde-holo`
   rebased onto 6.8.3; new overlays `plasma-workspace-holo` and
   `plasma-desktop-holo` for the lock screen keyboard.
+  Valve's changes of 2026-11-25 (checked that day): Void's Xwayland 24.1.15
+  (X.Org's security fixes; `xorg-server-xwayland-holo` follows, the
+  keysym patch unchanged); not needed: RADV `steamos-26.05.21` (two
+  commits for a DCC fast clear bug of GFX11 and Strix only, plus a
+  Monster Hunter Wilds entry; the Deck is GFX10.3), `linux-neptune-72`
+  7.2.15.valve1-2 (the fallback series; Valve's neptune fragment no
+  longer turns off `CONFIG_HYPERVISOR_GUEST`; 7.3's fragment still does),
+  `jupiter-3.9`/`holo-3.9` (gamescope 3.16.30.2-2 with the screen-off
+  before sleep commit `a962a4dc` that Io takes with a gamescope release,
+  iwd 3.12-2.201 with the four security fixes Io takes from Void,
+  `steamos-log-submitter` 0.8.4, `tzdata` 2026f, which Void has).
   The upstream side on 2026-11-11: nothing Io waits for has moved
   (gamescope's newest tag is 3.17.0, SDDM's 0.21.0, iwd's 3.12, hostap's
   2.12; PipeWire 1.6.11 and kwin 6.8.3 are released, Void has 1.6.10 and
