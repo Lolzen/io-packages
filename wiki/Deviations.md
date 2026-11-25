@@ -127,7 +127,12 @@ commits that let it run without systemd, carried as the package's patches
 of a fork). They were offered to Valve, who declined them (2026-10-31:
 they do not want to ship what they do not test, and keeping it working
 would cost every release time for a niche case), so Io rebases them onto
-each of Valve's updates. How it does without systemd is on
+each of Valve's updates. An eighth patch fixes a bug that only shows
+without systemd --user: when a session's bus went away, the session half
+spun on one core at 100 % (two of its D-Bus signal loops took the end of a
+stream for a signal) and ignored SIGTERM, so it outlived the logout and
+the fan stayed loud after every switch between game mode and the desktop;
+it now stops when its bus is gone. How it does without systemd is on
 [Architecture](Architecture), *SteamOS Manager*. Until October 2026 Io ran
 its own implementation (`io-steamos-manager`).
 

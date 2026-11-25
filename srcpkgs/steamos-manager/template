@@ -1,7 +1,7 @@
 # Template file for 'steamos-manager'
 pkgname=steamos-manager
 version=26.4.1.20261110
-revision=1
+revision=2
 _commit=2c51fc82eabc95f9a61235ca98d4a5249c14239f
 wrksrc="steamos-manager-${_commit}"
 build_style=cargo
@@ -30,6 +30,11 @@ checksum=dfb3c28f9b5342664ebec465465bbe2ee88309a72d2b37646100c0d7fae44934
 # series (git am them onto Valve's main to rebase, then format-patch).
 # Until 2026-11-11 the series lived on the branch "runit" of the fork
 # github.com/Lolzen/steamos-manager.
+# 0008 is a bug fix, not runit support (could go to Valve on its own): the
+# cecd listener and the signal relay matched a D-Bus stream's end with `_`
+# and spun on it at 100 % CPU without yielding once the session bus was
+# gone, and then ignored SIGTERM; on Io after every switch between game
+# mode and the desktop (the fan stayed loud). They now stop with an error.
 #
 # Io's side, in place of Valve's systemd units:
 # - root half: the runit service steamos-manager (linked by INSTALL on

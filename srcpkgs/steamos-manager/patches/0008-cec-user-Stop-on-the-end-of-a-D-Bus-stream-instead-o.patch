@@ -1,0 +1,82 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lolzen <funer@gmx.at>
+Date: Wed, 25 Nov 2026 16:00:00 +0100
+Subject: [PATCH] cec, user: Stop on the end of a D-Bus stream instead of
+ spinning
+
+The cecd listener drains the ObjectManager signals it does not use with
+`_ = stream.next() => ()`, and the signal relay forwards
+MaxChargeLevelChanged with `_ = stream.next()`. `_` also matches the
+`None` a stream returns once its connection is closed, and the stream then
+returns `None` again at once: the select runs that branch forever. The
+future never returns Pending, so the task never yields: one tokio worker
+stays at 100 % CPU, and the task's cancellation is never polled, so the
+daemon no longer exits on SIGTERM either (it waits for that task).
+
+This happens to the session half whenever its session bus goes away while
+it keeps running, as on systems without systemd --user, where each login
+has its own session bus: after every switch between game mode and the
+desktop, the old session's steamos-manager kept a core busy and survived
+the logout's SIGTERM, and the fan stayed loud.
+
+The end of the stream now ends the service with an error, as a closed
+connection elsewhere in the daemon does, and the daemon shuts down.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+--- a/steamos-manager/src/cec.rs
++++ b/steamos-manager/src/cec.rs
+@@ -481,7 +481,13 @@
+                             None
+                         };
+                     },
+-                    _ = device_added.next() => (), // Drain these ever if we're not using them
++                    // Drain these even if we're not using them. The stream
++                    // only ends when the connection to cecd's bus is gone;
++                    // matching that end with `_` would run this branch again
++                    // at once, forever, without ever yielding.
++                    signal = device_added.next() => if signal.is_none() {
++                        bail!("Connection to cecd closed");
++                    },
+                 };
+             } else {
+                 select! {
+@@ -500,7 +506,10 @@
+                             None
+                         };
+                     },
+-                    _ = device_removed.next() => (), // Drain these even if we're not using them
++                    // Drain these even if we're not using them (see above)
++                    signal = device_removed.next() => if signal.is_none() {
++                        bail!("Connection to cecd closed");
++                    },
+                 };
+             }
+         }
+--- a/steamos-manager/src/manager/user.rs
++++ b/steamos-manager/src/manager/user.rs
+@@ -6,7 +6,7 @@
+  * SPDX-License-Identifier: MIT
+  */
+ 
+-use anyhow::{Error, Result};
++use anyhow::{Error, Result, bail};
+ use async_trait::async_trait;
+ use cecd_proxy::Config1Proxy;
+ use serde::Deserialize;
+@@ -1653,7 +1653,12 @@
+ 
+         loop {
+             select! {
+-                _ = max_charge_level_changed.next() => {
++                signal = max_charge_level_changed.next() => {
++                    // The stream only ends with the system bus connection;
++                    // `_` would match that end over and over (busy loop).
++                    if signal.is_none() {
++                        bail!("Connection to the system bus closed");
++                    }
+                     if let Some(battery_charge_limit1) = battery_charge_limit1.as_mut() {
+                         battery_charge_limit1.signal_emitter().max_charge_level_changed().await?;
+                     }
+-- 
+2.47.0
