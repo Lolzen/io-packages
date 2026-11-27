@@ -234,7 +234,8 @@ have; they need someone with the hardware.
   with Plasma 6.8.3). Valve's `7.3.1-valve3` (one HDMI
   2.1 patch reverted: FRL-capable TVs stayed dark in TMDS mode, Steam
   Machine) and stable 7.3.5 are not built: nothing for the Deck; they come
-  with the next kernel that is. Void's Plasma 6.8.3 (2026-11-23): `kwin-holo`
+  with the next kernel that is (2026-11-27: Valve's `7.3.5-valve1` with
+  stable 7.3.6, built on Georg's request, see [Kernel](Kernel)). Void's Plasma 6.8.3 (2026-11-23): `kwin-holo`
   on 6.8.3 with Valve's kwin 6.8.2-1.4 (brightness, Steam's keyboard past
   the input method, two input start-up fixes from kwin master); its other
   former patches (libei 1.6, small modes, the suspend fixes) and Valve's
