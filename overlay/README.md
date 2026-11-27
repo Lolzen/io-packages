@@ -108,6 +108,7 @@ one release, so the update removes the overlay package and installs Void's.
 | [plymouth](plymouth/README.md) | plymouth, plymouth-devel, plymouth-data | 22.02.122 | Splash kept on screen when plymouth quits; HDR/content type for TVs; Valve's script and scraping extensions | Valve only | 2026-10-29 |
 | [plasma-workspace](plasma-workspace/README.md) | plasma-workspace, kworkspace, plasma-workspace-x11, plasma-workspace-devel | 6.8.3 | Qt Virtual Keyboard components for the lock screen | Valve only | 2026-11-24 |
 | [plasma-desktop](plasma-desktop/README.md) | plasma-desktop | 6.8.3 | lock screen shows its own on-screen keyboard again (revert) | Valve only | 2026-11-24 |
+| [wireplumber](wireplumber/README.md) | wireplumber, wireplumber-devel, wireplumber-elogind | 0.5.19 | Steam's mono audio switch no longer drops playing streams (MR 942, 943) | master, not in 0.5.19 | 2026-11-27 |
 | [orca](orca/README.md) | orca | 48.6 | SIGUSR1 reloads settings, SIGUSR2 stops speaking (SteamOS Manager sends them); language switching | Valve only | 2026-10-29 |
 
 ## Hand-written stand-ins

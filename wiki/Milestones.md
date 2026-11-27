@@ -170,9 +170,11 @@ have; they need someone with the hardware.
   `holo-networking-tools` 1.4; `holo-networkmanager-config` 1.0 was taken
   on 2026-10-28 in place of Io's `steamos-networking-tools`),
   `atomupd-daemon` 0.20260907.1 (`Atomupd1` version 9 only adds
-  credentials for custom updates). WirePlumber
-  0.5.18 and PipeWire are Void's, newer than or equal to Valve's (Valve's
-  loopback patches only rebased; its one new patch is for smart filters);
+  credentials for custom updates). PipeWire is Void's (1.6.12 since
+  2026-11-27, with the Bluetooth fixes of Valve's 3.9.5 build from 1.6.11);
+  WirePlumber is Void's 0.5.19 with Valve's two backports for the mono
+  audio switch (`wireplumber-holo` since 2026-11-27; Valve's loopback
+  patches are Io's own script, its smart filter patch is in 0.5.19);
   Xwayland still needs Io's overlay (the keysym patch is not in 24.1.15
   either; `xorg-server-xwayland-holo` on Void's 24.1.14 since 2026-11-09,
   on 24.1.15 since 2026-11-25). Valve's Mesa on its main branch is what
@@ -189,10 +191,10 @@ have; they need someone with the hardware.
   `holo-staging` have nothing newer. Of all Arch packages Valve rebuilds
   for 3.9.5, plymouth and Orca carry patches Io needs (overlays since
   2026-11-05);
-  three fixes wait for their upstream release and Void: SDDM comparing its
+  three fixes waited for their upstream release and Void: SDDM comparing its
   configuration's times in UTC (a session switch after a timezone change),
-  PipeWire 1.6.11's Bluetooth fixes, gamescope blanking the screen before
-  sleep. Mesa follows Void (26.2.6 since 2026-10-29, 26.2.7 since
+  PipeWire 1.6.11's Bluetooth fixes (in Void's 1.6.12 since 2026-11-27),
+  gamescope blanking the screen before sleep. Mesa follows Void (26.2.6 since 2026-10-29, 26.2.7 since
   2026-11-13). Valve's changes up to
   2026-11-04 (checked 2026-11-05): 67 pure rebuilds for Arch's LLVM 23 and
   OpenSSL 4; taken: the kernel (Io moved to 7.3, see [Kernel](Kernel), with

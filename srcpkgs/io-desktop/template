@@ -1,7 +1,7 @@
 # Template file for 'io-desktop'
 pkgname=io-desktop
 version=0.3.0
-revision=58
+revision=59
 metapackage=yes
 # Stands in for Void's base-system: base-system depends on Void's own kernel
 # (linux), which would be installed next to Io's kernel (linux-neptune) and
@@ -47,7 +47,7 @@ depends="
  mesa-dri-holo mesa-dri-holo-32bit
  mesa-vulkan-radeon-holo mesa-vulkan-radeon-holo-32bit libcurl-32bit
  mesa-vaapi-holo mesa-vaapi-holo-32bit
- pipewire wireplumber wireplumber-elogind alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
+ pipewire wireplumber-holo wireplumber-elogind-holo alsa-pipewire sof-firmware alsa-utils libspa-bluetooth
 
  NetworkManager-holo elogind-holo polkit dbus io-factory-reset
  xdg-desktop-portal xdg-desktop-portal-gamescope xdg-desktop-portal-holo xdg-desktop-portal-kde-holo
