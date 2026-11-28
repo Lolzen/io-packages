@@ -1,0 +1,15 @@
+# Io: vsconf installs 10-wireplumber.conf into usr/share/examples/${pkgname},
+# which is wireplumber-holo here. io-session links PipeWire's autostart of
+# WirePlumber to Void's path, usr/share/examples/wireplumber; without it
+# PipeWire did not start WirePlumber and game mode hung at the logo
+# (gamescope waits for its PipeWire stream). Void's post_install is kept
+# and the directory moved back to Void's name afterwards.
+# (Guarded, so that sourcing the template twice cannot make the wrapper
+# call itself.)
+if ! declare -f post_install | grep -q _void_post_install; then
+	eval "$(declare -f post_install | sed '1s/^post_install/_void_post_install/')"
+fi
+post_install() {
+	_void_post_install
+	mv "${DESTDIR}/usr/share/examples/${pkgname}" "${DESTDIR}/usr/share/examples/${sourcepkg%-holo}"
+}

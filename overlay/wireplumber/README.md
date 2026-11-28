@@ -28,5 +28,15 @@ Both apply to 0.5.19 after Void's `test.patch` without fuzz (the
 `wireplumber.conf` hunk with offset 1); WirePlumber builds without
 warnings and its 63 tests pass (2026-11-27, against PipeWire 1.0.5 here).
 
+`template.append`: Void's template installs PipeWire's autostart of
+WirePlumber with `vsconf`, into `usr/share/examples/${pkgname}`, which for
+the overlay is `wireplumber-holo`. `io-session` links
+`/etc/pipewire/pipewire.conf.d/10-wireplumber.conf` to Void's path,
+`usr/share/examples/wireplumber`; with 0.5.19_101 the link pointed to
+nothing, PipeWire did not start WirePlumber, and game mode stayed at the
+boot logo (gamescope waits for its PipeWire stream before it starts Steam;
+2026-11-28). The append keeps Void's `post_install` and moves the
+directory back to Void's name (0.5.19_102).
+
 Way back: when Void ships a WirePlumber release with MR 942 and 943 (the
 next one after 0.5.19; master has them since 2026-11).
