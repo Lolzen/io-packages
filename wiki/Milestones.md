@@ -258,6 +258,8 @@ have; they need someone with the hardware.
   Deck's GPU failed, and its zero pages were mapped without access flags;
   taken, `mesa-holo` 26.2.7_103); `jupiter-3.9`'s `steamos-26.05.21.1`
   reverts the whole batched sparse binding for the stable branch.
+  Void's Mesa 26.2.8 (2026-11-28): the 22 patches apply unchanged,
+  `mesa-holo` 26.2.8_101.
   The upstream side on 2026-11-11: nothing Io waits for has moved
   (gamescope's newest tag is 3.17.0, SDDM's 0.21.0, iwd's 3.12, hostap's
   2.12; PipeWire 1.6.11 and kwin 6.8.3 are released, Void has 1.6.10 and

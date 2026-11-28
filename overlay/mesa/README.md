@@ -10,7 +10,7 @@ SteamOS 3.9.2 builds Mesa from two sources: OpenGL from `radeonsi-26.1.2`
 (Mesa 26.1.2 plus one Valve commit) and Vulkan (RADV) from
 `steamos-26.05.19` (a Mesa main snapshot of May 2026 plus backports and
 Valve's own commits); Valve's main and 3.10 branches have RADV
-`steamos-26.05.20` since 2026-11-17. Void's 26.2.7 is newer than both, so
+`steamos-26.05.20` since 2026-11-17. Void's 26.2.8 is newer than both, so
 only Valve's own commits are taken over: the `STEAMOS:` commits (checked
 against Valve's `jupiter-3.9` sources of 2026-10-15) and the six commits
 of `steamos-26.05.20` (2026-11-16), which have no prefix but exist only in
@@ -53,6 +53,15 @@ counts although the arrays skip dummy syncs; kept as Valve has it.
 compiles (2026-11-25). Valve's `jupiter-3.9` reverted 0015-0020 on
 2026-11-24 (`steamos-26.05.21.1`, stable branch); its main took these two
 fixes instead, and Io follows main.
+
+Void's 26.2.8 (2026-11-28): all 22 apply after Void's patches without fuzz
+(the same offsets as on 26.2.7; Void's musl hunk in
+`radv_amdgpu_winsys.h` needs fuzz there as before). Of the files the
+patches touch, 26.2.8 changes `radv_cmd_buffer.c` (push constant stages
+for compute and ray tracing) and `00-radv-defaults.conf` (a World of
+Warcraft entry), both away from the patched lines. RADV, radeonsi and
+`loader_dri3_helper.c` compile (x86_64; the one warning in
+`loader_dri3_helper.c`, an unchecked `pread()`, is in Valve's 0001).
 
 Left out: Valve's `radv: always consider some outputs as invariant` (in
 26.2.5 already), CI expectation files and Valve's pick script.
